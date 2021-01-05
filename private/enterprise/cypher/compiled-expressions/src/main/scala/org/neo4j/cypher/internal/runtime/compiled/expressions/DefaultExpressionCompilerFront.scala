@@ -60,12 +60,12 @@ class DefaultExpressionCompilerFront(slots: SlotConfiguration,
     val variableName = namer.nextVariableName()
     block(
       declareAndAssign(typeRefOf[Value], variableName, getCachedPropertyFromExecutionContext(property.cachedPropertyOffset)),
-      condition(isNull(load(variableName)))(
+      condition(isNull(load[Value](variableName)))(
         block(
           assign(variableName, getFromStore),
-          setCachedPropertyAt(property.cachedPropertyOffset, load(variableName)))
+          setCachedPropertyAt(property.cachedPropertyOffset, load[Value](variableName)))
       ),
-      load(variableName))
+      load[Value](variableName))
   }
 
   override protected def isLabelSetOnNode(labelToken: IntermediateRepresentation,

@@ -208,10 +208,10 @@ class ConditionalOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
         }
       },
       genAdvanceOnCancelledRow,
-      loop(and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
+      loop(and(invoke(self[ContinuableOperatorTask], method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
         block(
           innermost.resetBelowLimitAndAdvanceToNextArgument,
-          ifElse(not(load(codeGen.fromLHSName))) {
+          ifElse(not(load[Boolean](codeGen.fromLHSName))) {
             block(
               block((0 until rhsSlots.size().nLongs).map(offset => codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))): _*),
               block(refsToCopy.map(offset => codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, INPUT_CURSOR))): _*),

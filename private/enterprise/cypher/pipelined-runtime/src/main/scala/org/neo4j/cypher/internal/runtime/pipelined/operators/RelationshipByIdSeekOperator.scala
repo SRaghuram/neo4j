@@ -554,13 +554,13 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
           invokeStatic(asIdMethod, cast[AnyValue](
             invoke(loadField(idCursor),
               method[IteratorCursor, AnyValue]("value"))))),
-        condition(greaterThanOrEqual(load(idVariable), constant(0L))) {
-          singleRelationship(load(idVariable), loadField(cursor)) },
+        condition(greaterThanOrEqual(load[Long](idVariable), constant(0L))) {
+          singleRelationship(load[Long](idVariable), loadField(cursor)) },
 
-        condition(and(greaterThanOrEqual(load(idVariable), constant(0L)), cursorNext[RelationshipScanCursor](loadField(cursor))))(
+        condition(and(greaterThanOrEqual(load[Long](idVariable), constant(0L)), cursorNext[RelationshipScanCursor](loadField(cursor))))(
           block(
             codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-            codeGen.setLongAt(relationshipOffset, load(idVariable)),
+            codeGen.setLongAt(relationshipOffset, load[Long](idVariable)),
             codeGen.setLongAt(fromOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
             codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
             inner.genOperateWithExpressions,
@@ -628,13 +628,13 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
               invoke(loadField(idCursor),
                 method[IteratorCursor, AnyValue]("value")))),
             invoke(loadField(cursor), method[RelationshipScanCursor, Long]("relationshipReference")))),
-        condition(greaterThanOrEqual(load(idVariable), constant(0L))) {
-          singleRelationship(load(idVariable), loadField(cursor)) },
-        condition(and(greaterThanOrEqual(load(idVariable), constant(0L)),
+        condition(greaterThanOrEqual(load[Long](idVariable), constant(0L))) {
+          singleRelationship(load[Long](idVariable), loadField(cursor)) },
+        condition(and(greaterThanOrEqual(load[Long](idVariable), constant(0L)),
          cursorNext[RelationshipScanCursor](loadField(cursor))))(
           block(
             codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-            codeGen.setLongAt(relationshipOffset, load(idVariable)),
+            codeGen.setLongAt(relationshipOffset, load[Long](idVariable)),
             ifElse(loadField(forwardDirection))(block(
               codeGen.setLongAt(fromOffset,
                 invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),

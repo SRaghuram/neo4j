@@ -257,7 +257,7 @@ abstract class BaseDistinctSinglePrimitiveOperatorTaskTemplate(val inner: Operat
     block(
       beginOperate,
       declareAndAssign(typeRefOf[Long], keyVar, codeGen.getLongAt(offset)),
-      condition(or(innerCanContinue, seen(loadField(distinctStateField), load(keyVar)))) {
+      condition(or(innerCanContinue, seen(loadField(distinctStateField), load[Long](keyVar)))) {
         block(
           computeProjection,
           inner.genOperateWithExpressions,
@@ -319,7 +319,7 @@ class SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(inner: Opera
                                                                    (val codeGen: OperatorExpressionCompiler)
   extends BaseDistinctSinglePrimitiveOperatorTaskTemplate(inner, id, toSlot, offset, generateExpression, codeGen) {
   private val argumentMaps: InstanceField = field[ArgumentStateMaps](codeGen.namer.nextVariableName("stateMaps"),
-    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name))
+    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER))
   private val localArgument = codeGen.namer.nextVariableName("argument")
 
   override def genMoreFields: Seq[Field] = Seq(argumentMaps, field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
@@ -334,12 +334,12 @@ class SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(inner: Opera
   override protected def beginOperate: IntermediateRepresentation =
     block(
       declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
-      condition(not(equal(load(argumentVarName(argumentStateMapId)), load(localArgument)))) {
+      condition(not(equal(load[Long](argumentVarName(argumentStateMapId)), load[Long](localArgument)))) {
         block(
           condition(IntermediateRepresentation.isNotNull(loadField(distinctStateField))){
-            removeState(loadField(argumentMaps), argumentStateMapId, load(localArgument))
+            removeState(loadField(argumentMaps), argumentStateMapId, load[Long](localArgument))
           },
-          assign(localArgument, load(argumentVarName(argumentStateMapId))),
+          assign(localArgument, load[Long](argumentVarName(argumentStateMapId))),
           setField(distinctStateField, cast[DistinctSinglePrimitiveState](OperatorCodeGenHelperTemplates.fetchState(loadField(argumentMaps), argumentStateMapId))),
           invoke(loadField(distinctStateField),
             method[DistinctSinglePrimitiveState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)

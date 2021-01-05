@@ -270,16 +270,19 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
   override def compileGroupingKey(orderedGroupings: Seq[Expression], id: Id): Option[IntermediateExpression] = {
     val projections = orderedGroupings.flatMap(p => compileExpression(p, id))
-    if (projections.size < orderedGroupings.size) None
-    else {
+    if (projections.size < orderedGroupings.size) {
+      None
+    } else {
       require(projections.nonEmpty)
       val singleValue = projections.size == 1
 
       val computeKeyOps = projections.map(p => nullCheckIfRequired(p))
       val computeKey =
-        if (singleValue) computeKeyOps.head
-        else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](computeKeyOps: _*))
-
+        if (singleValue) {
+          computeKeyOps.head
+        } else {
+          invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](computeKeyOps: _*))
+        }
       Some(IntermediateExpression(computeKey, projections.flatMap(_.fields), projections.flatMap(_.variables), Set.empty))
     }
   }
@@ -372,8 +375,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case _: False => Some(IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
     case ListLiteral(args) =>
       val in = args.flatMap(a => compileExpression(a, id))
-      if (in.size < args.size) None
-      else {
+      if (in.size < args.size) {
+        None
+      } else {
         val fields: Seq[Field] = in.foldLeft(Seq.empty[Field])((a, b) => a ++ b.fields)
         val variables: Seq[LocalVariable] = in.foldLeft(Seq.empty[LocalVariable])((a, b) => a ++ b.variables)
         Some(IntermediateExpression(
@@ -384,10 +388,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case MapExpression(items) =>
       val compiled = (for {(k, v) <- items
                            c <- compileExpression(v, id)} yield k -> c).toMap
-      if (compiled.size < items.size) None
-      else if (compiled.isEmpty) {
+      if (compiled.size < items.size) {
+        None
+      } else if (compiled.isEmpty) {
         Some(IntermediateExpression(
-            getStatic[VirtualValues, MapValue]("EMPTY_MAP"), Seq.empty, Seq.empty, Set.empty, requireNullCheck = false) )
+          getStatic[VirtualValues, MapValue]("EMPTY_MAP"), Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
       }
       else {
         val tempVariable = namer.nextVariableName()
@@ -395,13 +400,13 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           declare[MapValueBuilder](tempVariable),
           assign(tempVariable, newInstance(constructor[MapValueBuilder, Int], constant(compiled.size)))
         ) ++ compiled.map {
-          case (k, v) => invokeSideEffect(load(tempVariable),
-                                          method[MapValueBuilder, AnyValue, String, AnyValue]("add"),
-                                          constant(k.name), nullCheckIfRequired(v))
-        } :+ invoke(load(tempVariable), method[MapValueBuilder, MapValue]("build"))
+          case (k, v) => invokeSideEffect(load[MapValueBuilder](tempVariable),
+            method[MapValueBuilder, AnyValue, String, AnyValue]("add"),
+            constant(k.name), nullCheckIfRequired(v))
+        } :+ invoke(load[MapValueBuilder](tempVariable), method[MapValueBuilder, MapValue]("build"))
 
         Some(IntermediateExpression(block(ops: _*), compiled.values.flatMap(_.fields).toSeq,
-                                    compiled.values.flatMap(_.variables).toSeq, Set.empty, requireNullCheck = false))
+          compiled.values.flatMap(_.variables).toSeq, Set.empty, requireNullCheck = false))
       }
 
     case _: MapProjection => throw new InternalException("should have been rewritten away")
@@ -412,26 +417,29 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         nameExpr <- compileExpression(name, id)
         (expressionMap, expressionsFields, expressionsVariables) <- {
           val expressions = items.flatMap(i => compileExpression(i.exp, id))
-          if (expressions.size < items.size) None
-          else Some((
-            items.map(_.key.name).zip(expressions),
-            expressions.flatMap(_.fields),
-            expressions.flatMap(_.variables),
-          ))
+          if (expressions.size < items.size) {
+            None
+          } else {
+            Some((
+              items.map(_.key.name).zip(expressions),
+              expressions.flatMap(_.fields),
+              expressions.flatMap(_.variables),
+            ))
+          }
         }
       } yield {
         val builderVar = namer.nextVariableName()
         val buildMapValue = {
-          val builderInstance = if (expressionMap.isEmpty)
+          val builderInstance = if (expressionMap.isEmpty) {
             newInstance(constructor[MapValueBuilder])
-          else
+          } else {
             newInstance(constructor[MapValueBuilder, Int], constant(expressionMap.size))
-
+          }
           Seq(
             declare[MapValueBuilder](builderVar),
             assign(builderVar, builderInstance)) ++
             expressionMap.map {
-              case (key, exp) => invokeSideEffect(load(builderVar),
+              case (key, exp) => invokeSideEffect(load[MapValueBuilder](builderVar),
                                                   method[MapValueBuilder, AnyValue, String, AnyValue]("add"),
                                                   constant(key), nullCheckIfRequired(exp))
             }
@@ -439,7 +447,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
         if (!includeAllProps) {
           IntermediateExpression(
-            block(buildMapValue :+ invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")): _*),
+            block(buildMapValue :+ invoke(load[MapValueBuilder](builderVar), method[MapValueBuilder, MapValue]("build")): _*),
             expressionsFields, expressionsVariables, nameExpr.nullChecks)
         } else {
           val nameExprAsMapValue = invokeStatic(
@@ -456,7 +464,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                 invoke(
                   nameExprAsMapValue,
                   method[MapValue, MapValue, MapValue]("updatedWith"),
-                  invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")))): _*),
+                  invoke(load[MapValueBuilder](builderVar), method[MapValueBuilder, MapValue]("build")))): _*),
               expressionsFields, expressionsVariables ++ vCURSORS, nameExpr.nullChecks)
           }
         }
@@ -552,15 +560,15 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           // {
           //    AnyValue currentValue = listIterator.next();
           declare[java.util.Iterator[AnyValue]](iterVariable),
-          assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-          loop(and(lessThan(load(matches), constant(2)),
-                   invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))) {
+          assign(iterVariable, invoke(load[ListValue](listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
+          loop(and(lessThan(load[Int](matches), constant(2)),
+                   invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))) {
             block(Seq(
               declare[AnyValue](currentValue),
               assign(currentValue,
-                     cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
+                     cast[AnyValue](invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
               // expressionVariables[innerVarOffset] = currentValue;
-              setExpressionVariable(innerVariable, load(currentValue)),
+              setExpressionVariable(innerVariable, load[AnyValue](currentValue)),
               // Value isMatch = [result from inner expression]
               // if (isMatch == Values.TRUE)
               // {
@@ -568,28 +576,28 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
               // }
               declare[Value](isMatch),
               assign(isMatch, nullCheckIfRequired(coercedPredicate)),
-              condition(equal(load(isMatch), trueValue))(
-                assign(matches, add(load(matches), constant(1)))
+              condition(equal(load[Value](isMatch), trueValue))(
+                assign(matches, add(load[Int](matches), constant(1)))
               ),
               // if (isMatch == Values.NO_VALUE)
               // {
               //     isNull=true;
               // }
-              condition(equal(load(isMatch), noValue))(
+              condition(equal(load[Value](isMatch), noValue))(
                 assign(isNull, constant(true))
               )
             ): _*)
           },
           // }
           // return (matches < 2 && isNull) ? Values.NO_VALUE : Values.booleanValue(matches==1);
-          ternary(and(lessThan(load(matches), constant(2)), load(isNull)),
+          ternary(and(lessThan(load[Int](matches), constant(2)), load[Boolean](isNull)),
                   noValue,
                   invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
-                               equal(load(matches), constant(1))))
+                               equal(load[Int](matches), constant(1))))
         )))
 
-        val ops = block(lazySet, load(result))
-        val resultNullCheck = block(lazySet, equal(load(result), noValue))
+        val ops = block(lazySet, load[Value](result))
+        val resultNullCheck = block(lazySet, equal(load[Value](result), noValue))
 
         IntermediateExpression(ops, collection.fields ++ inner.fields,
                                collection.variables ++ inner.variables,
@@ -632,11 +640,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           declare[ListValue](listVar),
           assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), nullCheckIfRequired(collection))),
           declare[java.util.Iterator[AnyValue]](iterVariable),
-          assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
+          assign(iterVariable, invoke(load[ListValue](listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
           declare[Value](isMatch),
           // assign(isMatch, noValue),
           assign(isMatch,
-                 ternary(invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")), noValue,
+                 ternary(invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")), noValue,
                          falseValue)),
           declare[Boolean](isNull),
           assign(isNull, constant(false)),
@@ -644,34 +652,34 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           // while( isMatch != Values.TRUE, && listIterator.hasNext() )
           // {
           //    AnyValue currentValue = listIterator.next();
-          loop(and(notEqual(load(isMatch), trueValue),
-                   invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))) {
+          loop(and(notEqual(load[Value](isMatch), trueValue),
+                   invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))) {
             block(Seq(
               declare[AnyValue](currentValue),
               assign(currentValue,
-                     cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
+                     cast[AnyValue](invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
               // expressionVariables[innerVarOffset] = currentValue;
-              setExpressionVariable(innerVariable, load(currentValue)),
+              setExpressionVariable(innerVariable, load[AnyValue](currentValue)),
               // isMatch = [result from inner expression]
               assign(isMatch, nullCheckIfRequired(coercedPredicate)),
               // if (isMatch == Values.NO_VALUE)
               // {
               //     isNull=true;
               // }
-              condition(equal(load(isMatch), noValue))(
+              condition(equal(load[Value](isMatch), noValue))(
                 assign(isNull, constant(true))
               )
             ): _*)
           },
           // }
           // return (isNull && isMatch != Values.TRUE) ? Values.NO_VALUE : Values.booleanValue(isMatch == Values.FALSE);
-          ternary(and(load(isNull), notEqual(load(isMatch), trueValue)),
+          ternary(and(load[Boolean](isNull), notEqual(load[Value](isMatch), trueValue)),
                   noValue,
-                  invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"), equal(load(isMatch), falseValue)))
+                  invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"), equal(load[Value](isMatch), falseValue)))
         )))
 
-        val ops = block(lazySet, load(result))
-        val resultNullCheck = block(lazySet, equal(load(result), noValue))
+        val ops = block(lazySet, load[Value](result))
+        val resultNullCheck = block(lazySet, equal(load[Value](result), noValue))
 
         IntermediateExpression(ops, collection.fields ++ inner.fields,
                                collection.variables ++ inner.variables,
@@ -722,35 +730,35 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           // {
           //    AnyValue currentValue = listIterator.next();
           declare[java.util.Iterator[AnyValue]](iterVariable),
-          assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-          loop(and(notEqual(load(isMatch), trueValue),
-                   invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))) {
+          assign(iterVariable, invoke(load[ListValue](listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
+          loop(and(notEqual(load[Value](isMatch), trueValue),
+                   invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))) {
             block(Seq(
               declare[AnyValue](currentValue),
               assign(currentValue,
-                     cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
+                     cast[AnyValue](invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
               // expressionVariables[innerVarOffset] = currentValue;
-              setExpressionVariable(innerVariable, load(currentValue)),
+              setExpressionVariable(innerVariable, load[AnyValue](currentValue)),
               // isMatch = [result from inner expression]
               assign(isMatch, nullCheckIfRequired(coercedPredicate)),
               // if (isMatch == Values.NO_VALUE)
               // {
               //     isNull=true;
               // }
-              condition(equal(load(isMatch), noValue))(
+              condition(equal(load[Value](isMatch), noValue))(
                 assign(isNull, constant(true))
               )
             ): _*)
           },
           // }
           // return (isNull && isMatch != Values.TRUE) ? Values.NO_VALUE : isMatch;
-          ternary(and(load(isNull), notEqual(load(isMatch), trueValue)),
+          ternary(and(load[Boolean](isNull), notEqual(load[Value](isMatch), trueValue)),
                   noValue,
-                  load(isMatch))
+                  load[Value](isMatch))
         )))
 
-        val ops = block(lazySet, load(result))
-        val resultNullCheck = block(lazySet, equal(load(result), noValue))
+        val ops = block(lazySet, load[Value](result))
+        val resultNullCheck = block(lazySet, equal(load[Value](result), noValue))
 
         IntermediateExpression(ops, collection.fields ++ inner.fields,
                                collection.variables ++ inner.variables,
@@ -791,15 +799,15 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           // {
           //    AnyValue currentValue = listIterator.next();
           declare[java.util.Iterator[AnyValue]](iterVariable),
-          assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-          loop(and(equal(load(isMatch), trueValue),
-                   invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))) {
+          assign(iterVariable, invoke(load[ListValue](listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
+          loop(and(equal(load[AnyValue](isMatch), trueValue),
+                   invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))) {
             block(Seq(
               declare[AnyValue](currentValue),
               assign(currentValue,
-                     cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
+                     cast[AnyValue](invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
               // expressionVariables[innerVarOffset] = currentValue;
-              setExpressionVariable(innerVariable, load(currentValue)),
+              setExpressionVariable(innerVariable, load[AnyValue](currentValue)),
               // isMatch = [result from inner expression]
               assign(isMatch, nullCheckIfRequired(coercedPredicate))
             ): _*)
@@ -807,8 +815,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         ))
         // }
         // return isMatch;
-        val ops = block(lazySet, load(isMatch))
-        val resultNullCheck = block(lazySet, equal(load(isMatch), noValue))
+        val ops = block(lazySet, load[AnyValue](isMatch))
+        val resultNullCheck = block(lazySet, equal(load[AnyValue](isMatch), noValue))
 
         IntermediateExpression(ops, collection.fields ++ inner.fields,
                                collection.variables ++ inner.variables,
@@ -859,14 +867,14 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           // while (iter.hasNext) {
           //   AnyValue currentValue = iter.next();
           declare[java.util.Iterator[AnyValue]](iterVariable),
-          assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-          loop(invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
+          assign(iterVariable, invoke(load[ListValue](listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
+          loop(invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
             block(Seq(
               declare[AnyValue](currentValue),
               assign(currentValue,
-                     cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
+                     cast[AnyValue](invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
               // expressionVariables[iterOffset] = currentValue;
-              setExpressionVariable(innerVar, load(currentValue)),
+              setExpressionVariable(innerVar, load[AnyValue](currentValue)),
               // expressionVariables[accOffset] = [inner expression];
               setExpressionVariable(accVar, nullCheckIfRequired(inner))
             ): _*)
@@ -948,9 +956,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     case AndedPropertyInequalities(_, _, inequalities) =>
       val compiledInequalities = inequalities.toIndexedSeq.flatMap(i => compileExpression(i, id))
-      if (compiledInequalities.size < inequalities.size) None
-      else Some(generateAnds(compiledInequalities.toList))
-
+      if (compiledInequalities.size < inequalities.size) {
+        None
+      } else {
+        Some(generateAnds(compiledInequalities.toList))
+      }
     case expressions.Not(arg) =>
       compileExpression(arg, id).map(a => {
         val in = if (isPredicate(arg)) a else coerceToPredicate(a)
@@ -965,8 +975,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, noValueOr(l, r)(
           invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("equals"), l.ir, r.ir))))
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[Value](variableName))
+        val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
         IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables, Set(nullChecks), requireNullCheck = false)
       }
 
@@ -978,8 +988,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, noValueOr(l, r)(
           invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("notEquals"), l.ir, r.ir))))
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[Value](variableName))
+        val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
         IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables, Set(nullChecks), requireNullCheck = false)
       }
 
@@ -996,10 +1006,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             //if (f == null) { f = Pattern.compile(...) }
             condition(isNull(loadField(f)))(
               setField(f, invokeStatic(method[regex.Pattern, regex.Pattern, String]("compile"), constant(name)))),
-            invokeStatic(method[CypherBoolean, BooleanValue, TextValue, regex.Pattern]("regex"), cast[TextValue](load(regexVar)),
+            invokeStatic(method[CypherBoolean, BooleanValue, TextValue, regex.Pattern]("regex"), cast[TextValue](load[AnyValue](regexVar)),
                          loadField(f)))
 
-          IntermediateExpression(ops, e.fields :+ f, e.variables, Set(block(lazySet, not(instanceOf[TextValue](load(regexVar))))))
+          IntermediateExpression(ops, e.fields :+ f, e.variables, Set(block(lazySet, not(instanceOf[TextValue](load[AnyValue](regexVar))))))
         }
 
       case _ =>
@@ -1012,9 +1022,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             block(
               lazySet,
               invokeStatic(method[CypherBoolean, BooleanValue, TextValue, TextValue]("regex"),
-                         cast[TextValue](load(regexVar)),
+                         cast[TextValue](load[AnyValue](regexVar)),
                          invokeStatic(method[CypherFunctions, TextValue, AnyValue]("asTextValue"), r.ir))),
-            l.fields ++ r.fields, l.variables ++ r.variables, l.nullChecks ++ r.nullChecks + block(lazySet, not(instanceOf[TextValue](load(regexVar)))))
+            l.fields ++ r.fields, l.variables ++ r.variables, l.nullChecks ++ r.nullChecks + block(lazySet, not(instanceOf[TextValue](load[AnyValue](regexVar)))))
         }
     }
 
@@ -1028,11 +1038,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
-            invoke(block(lazyLeft, cast[TextValue](load(leftVariableName))), method[TextValue, Boolean, TextValue]("startsWith"),
-              block(lazyRight, cast[TextValue](load(rightVariableName))))),
+            invoke(block(lazyLeft, cast[TextValue](load[AnyValue](leftVariableName))), method[TextValue, Boolean, TextValue]("startsWith"),
+              block(lazyRight, cast[TextValue](load[AnyValue](rightVariableName))))),
           l.fields ++ r.fields, l.variables ++ r.variables,
-          Set(block(lazyLeft, not(instanceOf[TextValue](load(leftVariableName)))),
-            block(lazyRight, not(instanceOf[TextValue](load(rightVariableName))))))
+          Set(block(lazyLeft, not(instanceOf[TextValue](load[AnyValue](leftVariableName)))),
+            block(lazyRight, not(instanceOf[TextValue](load[AnyValue](rightVariableName))))))
       }
 
     case EndsWith(lhs, rhs) =>
@@ -1045,11 +1055,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
-            invoke(block(lazyLeft, cast[TextValue](load(leftVariableName))), method[TextValue, Boolean, TextValue]("endsWith"),
-              block(lazyRight, cast[TextValue](load(rightVariableName))))),
+            invoke(block(lazyLeft, cast[TextValue](load[AnyValue](leftVariableName))), method[TextValue, Boolean, TextValue]("endsWith"),
+              block(lazyRight, cast[TextValue](load[AnyValue](rightVariableName))))),
           l.fields ++ r.fields, l.variables ++ r.variables,
-          Set(block(lazyLeft, not(instanceOf[TextValue](load(leftVariableName)))),
-            block(lazyRight, not(instanceOf[TextValue](load(rightVariableName))))))
+          Set(block(lazyLeft, not(instanceOf[TextValue](load[AnyValue](leftVariableName)))),
+            block(lazyRight, not(instanceOf[TextValue](load[AnyValue](rightVariableName))))))
       }
 
     case Contains(lhs, rhs) =>
@@ -1062,11 +1072,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
-            invoke(block(lazyLeft, cast[TextValue](load(leftVariableName))), method[TextValue, Boolean, TextValue]("contains"),
-              block(lazyRight, cast[TextValue](load(rightVariableName))))),
+            invoke(block(lazyLeft, cast[TextValue](load[AnyValue](leftVariableName))), method[TextValue, Boolean, TextValue]("contains"),
+              block(lazyRight, cast[TextValue](load[AnyValue](rightVariableName))))),
           l.fields ++ r.fields, l.variables ++ r.variables,
-          Set(block(lazyLeft, not(instanceOf[TextValue](load(leftVariableName)))),
-            block(lazyRight, not(instanceOf[TextValue](load(rightVariableName))))))
+          Set(block(lazyLeft, not(instanceOf[TextValue](load[AnyValue](leftVariableName)))),
+            block(lazyRight, not(instanceOf[TextValue](load[AnyValue](rightVariableName))))))
       }
 
     case expressions.IsNull(test) =>
@@ -1093,8 +1103,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                                        invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("lessThan"), l.ir,
                                                     r.ir))))
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[Value](variableName))
+        val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
         IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables, Set(nullChecks), requireNullCheck = false)
       }
 
@@ -1107,8 +1117,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                                        invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("lessThanOrEqual"),
                                                     l.ir, r.ir))))
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[Value](variableName))
+        val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
         IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables, Set(nullChecks), requireNullCheck = false)
       }
 
@@ -1121,8 +1131,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                                        invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("greaterThan"),
                                                     l.ir, r.ir))))
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[Value](variableName))
+        val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
         IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables, Set(nullChecks), requireNullCheck = false)
       }
 
@@ -1135,8 +1145,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                                        method[CypherBoolean, Value, AnyValue, AnyValue]("greaterThanOrEqual"), l.ir,
                                        r.ir))))
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[Value](variableName))
+        val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
         IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables, Set(nullChecks), requireNullCheck = false)
       }
 
@@ -1256,8 +1266,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       val parameterVariable = namer.parameterName(name)
       val local = variable[AnyValue](parameterVariable,
                                       arrayLoad(ExpressionCompilation.PARAMS, offset))
-      Some(IntermediateExpression(load(parameterVariable), Seq.empty, Seq(local),
-                                  Set(equal(load(parameterVariable), noValue)), requireNullCheck = false))
+      Some(IntermediateExpression(load[AnyValue](parameterVariable), Seq.empty, Seq(local),
+                                  Set(equal(load[AnyValue](parameterVariable), noValue)), requireNullCheck = false))
 
     case CaseExpression(Some(innerExpression), alternativeExpressions, defaultExpression) =>
 
@@ -1269,10 +1279,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
       val checks = checkExpressions.flatMap(e => compileExpression(e, id))
       val loads = loadExpressions.flatMap(e => compileExpression(e, id))
-      if (checks.size != loads.size || checks.isEmpty || maybeDefault.isEmpty) None
-      else {
+      if (checks.size != loads.size || checks.isEmpty || maybeDefault.isEmpty) {
+        None
+      } else {
         for {inner: IntermediateExpression <- compileExpression(innerExpression, id)
-        } yield {
+             } yield {
 
           //AnyValue compare = inner;
           //AnyValue returnValue = null;
@@ -1286,14 +1297,13 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           //}
           //return returnValue == null ? default : returnValue
           val default = maybeDefault.get
-          val returnVariable = namer.nextVariableName()
-          val local = variable[AnyValue](returnVariable, constant(null))
-          val ops = caseExpression(returnVariable, checks.map(nullCheckIfRequired(_)), loads.map(nullCheckIfRequired(_)), nullCheckIfRequired(default),
-                          toCheck => invoke(nullCheckIfRequired(inner), method[AnyValue, Boolean, AnyRef]("equals"), toCheck))
+          val retunrVariable = variable[AnyValue](namer.nextVariableName(), constant(null))
+          val ops = caseExpression(retunrVariable, checks.map(nullCheckIfRequired(_)), loads.map(nullCheckIfRequired(_)), nullCheckIfRequired(default),
+            toCheck => invoke(nullCheckIfRequired(inner), method[AnyValue, Boolean, AnyRef]("equals"), toCheck))
           IntermediateExpression(ops,
-                                 inner.fields ++ checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
-                                 inner.variables ++ checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default.variables :+ local,
-                                 Set(block(equal(load(returnVariable), noValue))))
+            inner.fields ++ checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
+            inner.variables ++ checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default.variables :+ retunrVariable,
+            Set(block(equal(load(retunrVariable), noValue))))
         }
       }
 
@@ -1305,13 +1315,17 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
       val (checkExpressions, loadExpressions) = alternativeExpressions.unzip
       val checks = checkExpressions.flatMap { e =>
-        if (isPredicate(e)) compileExpression(e, id)
-        else compileExpression(e, id).map(coerceToPredicate)
+        if (isPredicate(e)) {
+          compileExpression(e, id)
+        } else {
+          compileExpression(e, id).map(coerceToPredicate)
+        }
       }
 
       val loads = loadExpressions.flatMap(e => compileExpression(e, id))
-      if (checks.size != loads.size || maybeDefault.isEmpty) None
-      else {
+      if (checks.size != loads.size || maybeDefault.isEmpty) {
+        None
+      } else {
 
         //AnyValue compare = inner;
         //AnyValue returnValue = null;
@@ -1325,15 +1339,14 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         //}
         //return returnValue == null ? default : returnValue
         val default = maybeDefault.get
-        val returnVariable = namer.nextVariableName()
-        val local = variable[AnyValue](returnVariable, constant(null))
+        val returnVariable = variable[AnyValue](namer.nextVariableName(), constant(null))
         val ops = caseExpression(returnVariable, checks.map(nullCheckIfRequired(_)), loads.map(nullCheckIfRequired(_)), nullCheckIfRequired(default),
-                        toCheck => equal(toCheck, trueValue))
+          toCheck => equal(toCheck, trueValue))
         Some(IntermediateExpression(ops,
-                                    checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
-                                    checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default
-                                      .variables :+ local,
-                                    Set(block(equal(load(returnVariable), noValue)))))
+          checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
+          checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default
+            .variables :+ returnVariable,
+          Set(block(equal(load(returnVariable), noValue)))))
       }
 
     case Property(targetExpression, PropertyKeyName(key)) =>
@@ -1342,8 +1355,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val propertyGet = getProperty(key, nullCheckIfRequired(map))
         val call = noValueOr(map)(propertyGet)
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, call))
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
         IntermediateExpression(ops, map.fields, map.variables ++ vCURSORS , Set(nullChecks), requireNullCheck = false)
       }
 
@@ -1352,57 +1365,59 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
         getNodeProperty(constant(token), offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE)))
 
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      val ops = block(lazySet, load[Value](variableName))
+      val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
     case property@SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, _, entityType, nullable) =>
-      if (token == StatementConstants.NO_SUCH_PROPERTY_KEY) Some(
-        IntermediateExpression(noValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
-      else {
+      if (token == StatementConstants.NO_SUCH_PROPERTY_KEY) {
+        Some(
+          IntermediateExpression(noValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
+      } else {
         val variableName = namer.nextVariableName()
         val entityId = getEntityId(offsetIsForLongSlot, offset, entityType, nullable)
         val (getFromStore, txStatePropertyGet, cursorVar) = callPropertyGet(entityType, constant(token), offset, offsetIsForLongSlot, nullable)
         def checkPropertyTxState(continuation: IntermediateRepresentation): IntermediateRepresentation = {
-          if (readOnly) continuation
-          else {
+          if (readOnly) {
+            continuation
+          } else {
             block(
               assign(variableName, invoke(DB_ACCESS, txStatePropertyGet, entityId, constant(token))),
-              condition(isNull(load(variableName)))(continuation))
+              condition(isNull(load[Value](variableName)))(continuation))
           }
         }
         /**
-          * {{{
-          *   var property = NO_VALUE
-          *   if (id != -1L) {
-          *     property = [get property from tx state]
-          *     if (property == null) {
-          *       property = [getCachedProperty]
-          *       if (property == null) {
-          *         property = [get property from store]
-          *         [cacheProperty]
-          *       }
-          *     }
-          *   }
-          * }}}
-          */
+         * {{{
+         *   var property = NO_VALUE
+         *   if (id != -1L) {
+         *     property = [get property from tx state]
+         *     if (property == null) {
+         *       property = [getCachedProperty]
+         *       if (property == null) {
+         *         property = [get property from store]
+         *         [cacheProperty]
+         *       }
+         *     }
+         *   }
+         * }}}
+         */
         val getAndCacheProperty = oneTime(
           block(
             declareAndAssign(typeRefOf[Value], variableName, noValue),
             condition(notEqual(entityId, constant(-1L)))(
               checkPropertyTxState(
-                  block(
-                    assign(variableName,
-                           getCachedPropertyAt(property,
-                                               getFromStore)))
-                    )
-                  )
-                )
+                block(
+                  assign(variableName,
+                    getCachedPropertyAt(property,
+                      getFromStore)))
               )
-        val ops = block(getAndCacheProperty, load(variableName))
-        val nullChecks = block(getAndCacheProperty, equal(load(variableName), noValue))
+            )
+          )
+        )
+        val ops = block(getAndCacheProperty, load[Value](variableName))
+        val nullChecks = block(getAndCacheProperty, equal(load[Value](variableName), noValue))
         Some(IntermediateExpression(ops, Seq.empty, Seq(cursorVar, vPROPERTY_CURSOR), Set(nullChecks),
-                                    requireNullCheck = false))
+          requireNullCheck = false))
       }
 
     case NodePropertyLate(offset, key, _) =>
@@ -1413,8 +1428,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
           getNodeProperty(loadField(f), offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE))))
 
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      val ops = block(lazySet, load[Value](variableName))
+      val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
       Some(IntermediateExpression(ops, Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
     case property@SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propKey, _, entityType, nullable) =>
@@ -1423,11 +1438,12 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       val entityId = getEntityId(offsetIsForLongSlot, offset, entityType, nullable)
       val (getFromStore, txStatePropertyGet, cursorVar) = callPropertyGet(entityType, loadField(f), offset, offsetIsForLongSlot, nullable)
       def checkPropertyTxState(continuation: IntermediateRepresentation): IntermediateRepresentation = {
-        if (readOnly) continuation
-        else {
+        if (readOnly) {
+          continuation
+        } else {
           block(
             assign(variableName, invoke(DB_ACCESS, txStatePropertyGet, entityId, loadField(f))),
-            condition(isNull(load(variableName)))(continuation))
+            condition(isNull(load[Value](variableName)))(continuation))
         }
       }
 
@@ -1467,8 +1483,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             condition(equal(loadField(f), constant(-1)))(
               setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(propKey)))),
             getAndCacheProperty))
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      val ops = block(lazySet, load[Value](variableName))
+      val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
       Some(IntermediateExpression(ops, Seq(f), Seq(cursorVar, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
     case NodePropertyExists(offset, token, _) =>
@@ -1491,8 +1507,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
         getRelationshipProperty(constant(token), offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE)))
 
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      val ops = block(lazySet, load[Value](variableName))
+      val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
     case RelationshipPropertyLate(offset, key, _) =>
@@ -1503,8 +1519,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
         getRelationshipProperty(loadField(f), offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE))))
 
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      val ops = block(lazySet, load[Value](variableName))
+      val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
 
       Some(IntermediateExpression(ops, Seq(f), Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
@@ -1629,8 +1645,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           Some(IntermediateExpression(getStatic[AnyValue](constant.name), Seq(constant), Seq.empty, Set.empty))
         case _ => None
       }
-      if (inputArgs.size != signature.inputSignature.size) None
-      else {
+      if (inputArgs.size != signature.inputSignature.size) {
+        None
+      } else {
         val variableName = namer.nextVariableName()
         val allowed = staticConstant[Array[String]](namer.nextVariableName(), signature.allowed)
         val fields = inputArgs.flatMap(_.fields) :+ allowed
@@ -1642,8 +1659,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           arrayOf[AnyValue](inputArgs.map(nullCheckIfRequired(_)): _*),
           getStatic[Array[String]](allowed.name))))
 
-        Some(IntermediateExpression(block(ops, load(variableName)), fields, variables,
-                                    Set(block(ops, equal(load(variableName), noValue))), requireNullCheck = false))
+        Some(IntermediateExpression(block(ops, load[AnyValue](variableName)), fields, variables,
+          Set(block(ops, equal(load[AnyValue](variableName), noValue))), requireNullCheck = false))
       }
 
 
@@ -1657,10 +1674,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         case NilPathStep => true
       }
 
-      if (isStaticallyKnown(steps)) compileStaticPath(steps, id)
-      else compileDynamicPath(steps, id)
-
-    //slotted operations
+      if (isStaticallyKnown(steps)) {
+        compileStaticPath(steps, id)
+      } else {
+        compileDynamicPath(steps, id)
+      } //slotted operations
     case ReferenceFromSlot(offset, name) =>
       //NOTE we must call getRefAt before using it in the nullcheck because of how getRefAt might be extended
       //and have side effects, if it happens that we never use the nullcheck later things may not have been properly
@@ -1761,34 +1779,34 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       case None =>
         for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
           val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
-          val nullCheck = Set(block(lazySet, equal(load(localDegree), noValue)))
+          val nullCheck = Set(block(lazySet, equal(load[AnyValue](localDegree), noValue)))
           IntermediateExpression(
             block(
               lazySet,
               declareAndAssign(typeRefOf[Int], localDegreeInt,
-                ternary(equal(load(localDegree), noValue),
+                ternary(equal(load[AnyValue](localDegree), noValue),
                   constant(-1),
-                  invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load(localDegree)))),
+                  invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load[AnyValue](localDegree)))),
               ternary(
                 comparison(
-                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, NodeCursor](methodName), computeMax(load(localDegreeInt)), getLongAt(offset), NODE_CURSOR), load(localDegreeInt)
+                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), getLongAt(offset), NODE_CURSOR), load[Int](localDegreeInt)
                 ), trueValue, falseValue)
             ), maxDegree.fields, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }
       case Some(Left(typeId)) =>
         for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
           val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
-          val nullCheck = Set(block(lazySet, equal(load(localDegree), noValue)))
+          val nullCheck = Set(block(lazySet, equal(load[AnyValue](localDegree), noValue)))
           IntermediateExpression(
             block(
               lazySet,
               declareAndAssign(typeRefOf[Int], localDegreeInt,
-                ternary(equal(load(localDegree), noValue),
+                ternary(equal(load[AnyValue](localDegree), noValue),
                   constant(-1),
-                  invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load(localDegree)))),
+                  invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load[AnyValue](localDegree)))),
               ternary(
                 comparison(
-                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load(localDegreeInt)), getLongAt(offset), constant(typeId), NODE_CURSOR), load(localDegreeInt)
+                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), getLongAt(offset), constant(typeId), NODE_CURSOR), load[Int](localDegreeInt)
                 ), trueValue, falseValue)
             ), maxDegree.fields, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }
@@ -1796,19 +1814,19 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val f = field[Int](namer.nextVariableName(), constant(-1))
         for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
           val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
-          val nullCheck = Set(block(lazySet, equal(load(localDegree), noValue)))
+          val nullCheck = Set(block(lazySet, equal(load[AnyValue](localDegree), noValue)))
           IntermediateExpression(
             block(
               lazySet,
               declareAndAssign(typeRefOf[Int], localDegreeInt,
-                ternary(equal(load(localDegree), noValue),
+                ternary(equal(load[AnyValue](localDegree), noValue),
                   constant(-1),
-                  invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load(localDegree)))),
+                  invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load[AnyValue](localDegree)))),
               condition(equal(loadField(f), constant(-1)))(
                 setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typeName)))),
               ternary(
                 comparison(
-                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load(localDegreeInt)), getLongAt(offset), loadField(f), NODE_CURSOR), load(localDegreeInt)
+                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), getLongAt(offset), loadField(f), NODE_CURSOR), load[Int](localDegreeInt)
                 ), trueValue, falseValue)
             ), maxDegree.fields :+ f, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }
@@ -1942,8 +1960,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     case functions.Coalesce =>
       val args = c.args.flatMap(e => compileExpression(e, id))
-      if (args.size < c.args.size) None
-      else {
+      if (args.size < c.args.size) {
+        None
+      } else {
         val tempVariable = namer.nextVariableName()
         val local = variable[AnyValue](tempVariable, noValue)
         // This loop will generate:
@@ -1959,17 +1978,20 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           case expression :: Nil => assign(tempVariable, nullCheckIfRequired(expression))
           case expression :: tail =>
             //tempVariable = hd; if (tempVariable == NO_VALUE){[continue with tail]}
-            if (expression.nullChecks.nonEmpty) block(assign(tempVariable, nullCheckIfRequired(expression)),
-                                                      condition(expression.nullChecks.reduceLeft((acc, current) => or(acc, current)))(loop(tail)))
-            // WHOAH[Keanu Reeves voice] if not nullable we don't even need to generate code for the coming expressions,
-            else assign(tempVariable, expression.ir)
+            if (expression.nullChecks.nonEmpty) {
+              block(assign(tempVariable, nullCheckIfRequired(expression)),
+                condition(expression.nullChecks.reduceLeft((acc, current) => or(acc, current)))(loop(tail)))
+            } // WHOAH[Keanu Reeves voice] if not nullable we don't even need to generate code for the coming expressions,
+            else {
+              assign(tempVariable, expression.ir)
+            }
         }
         val repr = block(loop(args.toList),
-                          load(tempVariable))
+          load(local))
 
-        Some(IntermediateExpression(repr, args.foldLeft(Seq.empty[Field])((a,b) => a ++ b.fields),
-                                    args.foldLeft(Seq.empty[LocalVariable])((a,b) => a ++ b.variables) :+ local,
-                                    Set(equal(load(tempVariable), noValue))))
+        Some(IntermediateExpression(repr, args.foldLeft(Seq.empty[Field])((a, b) => a ++ b.fields),
+          args.foldLeft(Seq.empty[LocalVariable])((a, b) => a ++ b.variables) :+ local,
+          Set(equal(load(local), noValue))))
       }
 
     case functions.Distance =>
@@ -1979,8 +2001,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                        invokeStatic(method[CypherFunctions, Value, AnyValue, AnyValue]("distance"), p1.ir, p2.ir)))
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
         IntermediateExpression(ops, p1.fields ++ p2.fields,  p1.variables ++ p2.variables, Set(nullChecks))
       }
 
@@ -2027,8 +2049,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("head"), in.ir))))
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
 
         IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)
       })
@@ -2054,8 +2076,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("last"), in.ir))))
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
 
         IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)
       })
@@ -2212,8 +2234,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toBoolean"), in.ir))))
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
 
         IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)
       }
@@ -2224,8 +2246,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toFloat"), in.ir))))
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
 
         IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)
       }
@@ -2236,8 +2258,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toInteger"), in.ir))))
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
 
         IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)
       }
@@ -2254,8 +2276,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           method[CypherFunctions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("properties"),
           in.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR))))
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
 
         IntermediateExpression(ops, in.fields, in.variables ++ vCURSORS, Set(nullChecks), requireNullCheck = false)
       }
@@ -2269,13 +2291,14 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     val compiled = for {(k, v) <- projections.toSeq
                         c <- compileExpression(v, id) if !slots(k).isLongSlot}
       yield slots(k).offset -> c
-    if (compiled.size + removed < projections.size) None
-    else {
+    if (compiled.size + removed < projections.size) {
+      None
+    } else {
       val all = compiled.map {
         case (slot, value) => setRefAt(slot, nullCheckIfRequired(value))
       }
       Some(IntermediateExpression(block(all: _*), compiled.flatMap(_._2.fields),
-                             compiled.flatMap(_._2.variables), Set.empty))
+        compiled.flatMap(_._2.variables), Set.empty))
     }
   }
 
@@ -2287,13 +2310,19 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     val singleValue = orderedGroupings.size == 1
     def id[T](value: IntermediateRepresentation, nullable: Boolean)(implicit m: Manifest[T]) =  {
       val getId = invoke(cast[T](value), method[T, Long]("id"))
-      if (!nullable) getId
-      else ternary(equal(value, noValue), constant(-1L), getId)
+      if (!nullable) {
+        getId
+      } else {
+        ternary(equal(value, noValue), constant(-1L), getId)
+      }
     }
 
     def accessValue(i: Int) =  {
-      if (singleValue) load(keyName)
-      else invoke(load(listVar), method[ListValue, AnyValue, Int]("value"), constant(i))
+      if (singleValue) {
+        load[AnyValue](keyName)
+      } else {
+        invoke(load[ListValue](listVar), method[ListValue, AnyValue, Int]("value"), constant(i))
+      }
     }
 
     val projectKeyOps = orderedGroupings.map(_._1).zipWithIndex.map {
@@ -2307,32 +2336,44 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         throw new InternalException(s"Do not know how to make setter for slot $slot")
     }
     val projectKey =
-      if (singleValue) projectKeyOps
-      else Seq(declare[ListValue](listVar), assign(listVar, cast[ListValue](load(keyName)))) ++ projectKeyOps
-
+      if (singleValue) {
+        projectKeyOps
+      } else {
+        Seq(declare[ListValue](listVar), assign(listVar, cast[ListValue](load[AnyValue](keyName)))) ++ projectKeyOps
+      }
     val getKeyOps = orderedGroupings.map(_._1).map {
       case LongSlot(offset, nullable, CTNode) =>
         val getter = invokeStatic(method[VirtualValues, NodeReference, Long]("node"), getLongAt(offset))
-        if (nullable) ternary(equal(getLongAt(offset), constant(-1L)), noValue, getter)
-        else getter
+        if (nullable) {
+          ternary(equal(getLongAt(offset), constant(-1L)), noValue, getter)
+        } else {
+          getter
+        }
       case LongSlot(offset, nullable, CTRelationship) =>
         val getter = invokeStatic(method[VirtualValues, RelationshipReference, Long]("relationship"), getLongAt(offset))
-        if (nullable) ternary(equal(getLongAt(offset), constant(-1L)), noValue, getter)
-        else getter
+        if (nullable) {
+          ternary(equal(getLongAt(offset), constant(-1L)), noValue, getter)
+        } else {
+          getter
+        }
       case RefSlot(offset, _, _) => getRefAt(offset)
       case slot =>
         throw new InternalException(s"Do not know how to make getter for slot $slot")
     }
 
     val getKey =
-      if (singleValue) getKeyOps.head
-      else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](getKeyOps:_*))
-
+      if (singleValue) {
+        getKeyOps.head
+      } else {
+        invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](getKeyOps: _*))
+      }
     val computeKeyOps = orderedGroupings.map(_._2).map(p => nullCheckIfRequired(p)).toArray
     val computeKey =
-      if (singleValue) computeKeyOps.head
-      else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](computeKeyOps:_*))
-
+      if (singleValue) {
+        computeKeyOps.head
+      } else {
+        invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](computeKeyOps: _*))
+      }
     val orderedGroupingExpressions = orderedGroupings.map(_._2)
     IntermediateGroupingExpression(
       IntermediateExpression(block(projectKey:_*), Seq.empty, Seq.empty, Set.empty, requireNullCheck = false),
@@ -2561,9 +2602,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     //do we need to do nullchecks
     val nullable = expressions.exists(_.nullChecks.nonEmpty)
 
-    //these are the temp variables used
-    val returnValue = namer.nextVariableName()
-    val local = variable[Value](returnValue, constant(null))
+    val returnValue = variable[Value](namer.nextVariableName(), constant(null))
     val seenNull = namer.nextVariableName()
     val error = namer.nextVariableName()
     //this is setting up  a `if (returnValue != breakValue)`
@@ -2575,7 +2614,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         //try
         assign(returnValue, noValueOr(e)(invokeStatic(ASSERT_PREDICATE, e.ir)))
       )(block(//catch
-        assign(error, load(exceptionName)),
+        assign(error, load[RuntimeException](exceptionName)),
         assign(returnValue, constant(null)))
       )
 
@@ -2585,8 +2624,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             //returnValue == breakValue ? false :
             ternary(equal(load(returnValue), breakValue), constant(false),
               //seenNull ? true : (returnValue == NO_VALUE)
-              ternary(load(seenNull), constant(true), equal(load(returnValue), noValue)))))
-      } else Seq(loadValue)
+              ternary(load[Boolean](seenNull), constant(true), equal(load(returnValue), noValue)))))
+      } else {
+        Seq(loadValue)
+      }
     }
 
 
@@ -2618,7 +2659,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     //otherwise check if we have seen a null which implicitly also mean we never seen a FALSE
     //if we seen a null we should return null otherwise we return whatever currently
     //stored in returnValue
-    val actualReturnValue = if (nullable) ternary(load(seenNull), noValue, load(returnValue)) else load(returnValue)
+    val actualReturnValue = if (nullable) ternary(load[Boolean](seenNull), noValue, load(returnValue)) else load(returnValue)
     val ir =
       block(
         //set up all temp variables
@@ -2631,18 +2672,18 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
               assign(returnValue, noValueOr(firstExpression)(invokeStatic(ASSERT_PREDICATE, firstExpression.ir)))
           )(block(
                 //catch
-                assign(error, load(exceptionName)),
+                assign(error, load[RuntimeException](exceptionName)),
                 assign(returnValue, constant(null))))
         ) ++ nullCheckAssign ++ Seq(
                 //generated unrolls tail of expression
                 unroll(expressions.tail),
                 //checks if there was an error and that we never evaluated to breakValue, if so throw
-                condition(and(notEqual(load(error), constant(null)), notEqual(load(returnValue), breakValue)))(
-                fail(load(error))),
+                condition(and(notEqual(load[RuntimeException](error), constant(null)), notEqual(load(returnValue), breakValue)))(
+                fail(load[RuntimeException](error))),
                 actualReturnValue): _*)
     IntermediateExpression(ir,
                            expressions.foldLeft(Seq.empty[Field])((a,b) => a ++ b.fields),
-                           expressions.foldLeft(Seq.empty[LocalVariable])((a,b) => a ++ b.variables) :+ local,
+                           expressions.foldLeft(Seq.empty[LocalVariable])((a,b) => a ++ b.variables) :+ returnValue,
                            Set(equal(load(returnValue), noValue)), requireNullCheck = false)
   }
 
@@ -2668,7 +2709,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case CTAny => getStatic[Neo4jTypes, Neo4jTypes.AnyType]("NTAny")
   }
 
-  private def caseExpression(returnVariable: String,
+  private def caseExpression(returnVariable: LocalVariable,
                              checks: Seq[IntermediateRepresentation],
                              loads: Seq[IntermediateRepresentation],
                              default: IntermediateRepresentation,
@@ -2719,8 +2760,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val varName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], varName, invoke(outputRow,
           method[ReadableRow, AnyValue, String]("getByName"), constant(name))))
-        computeRepresentation(ir = block(lazySet, load(varName)),
-                              nullCheck = Some(block(lazySet, equal(load(varName), noValue))), nullable = true)
+        computeRepresentation(ir = block(lazySet, load[AnyValue](varName)),
+                              nullCheck = Some(block(lazySet, equal(load[AnyValue](varName), noValue))), nullable = true)
     }
   }
 
@@ -2765,14 +2806,14 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         // {
         //    AnyValue currentValue = listIterator.next();
         declare[java.util.Iterator[AnyValue]](iterVariable),
-        assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-        loop(invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
+        assign(iterVariable, invoke(load[ListValue](listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
+        loop(invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
           block(Seq(
             declare[AnyValue](currentValue),
             assign(currentValue,
-                   cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
+                   cast[AnyValue](invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
             // expressionVariables[innerVarOffset] = currentValue;
-            setExpressionVariable(innerVariable, load(currentValue)),
+            setExpressionVariable(innerVariable, load[AnyValue](currentValue)),
             declare[Value](isFiltered),
             // Value isFiltered = [result from inner expression]
             assign(isFiltered, nullCheckIfRequired(coercedInner)),
@@ -2780,14 +2821,14 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             // {
             //    filtered.add(currentValue);
             // }
-            condition(equal(load(isFiltered), trueValue))(
-              invokeSideEffect(load(filteredVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
-                               load(currentValue))
+            condition(equal(load[Value](isFiltered), trueValue))(
+              invokeSideEffect(load[java.util.ArrayList[AnyValue]](filteredVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
+                               load[AnyValue](currentValue))
             )): _*)
         },
         // }
         // return VirtualValues.fromList(extracted);
-        invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue]]("fromList"), load(filteredVars))
+        invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue]]("fromList"), load[java.util.ArrayList[AnyValue]](filteredVars))
       )
       IntermediateExpression(block(ops: _*), collection.fields ++ coercedInner.fields,
                              collection.variables ++ coercedInner.variables,
@@ -2825,8 +2866,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         // ArrayList<AnyValue> extracted = new ArrayList<>();
         declare[ListValue](listVar),
         declareAndAssign(typeRefOf[AnyValue], returnVar, nullCheckIfRequired(collection)),
-        assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), load(returnVar))),
-        condition(notEqual(load(returnVar), noValue)) {
+        assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), load[AnyValue](returnVar))),
+        condition(notEqual(load[AnyValue](returnVar), noValue)) {
           block(
             declare[java.util.ArrayList[AnyValue]](extractedVars),
             assign(extractedVars, newInstance(constructor[java.util.ArrayList[AnyValue]])),
@@ -2835,26 +2876,26 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             // while (iter.hasNext) {
             //   AnyValue currentValue = iter.next();
             declare[java.util.Iterator[AnyValue]](iterVariable),
-            assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-            loop(invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
+            assign(iterVariable, invoke(load[ListValue](listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
+            loop(invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
               block(Seq(
                 declare[AnyValue](currentValue),
                 assign(currentValue,
-                  cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
+                  cast[AnyValue](invoke(load[java.util.Iterator[AnyValue]](iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
                 // expressionVariables[innerVarOffset] = currentValue;
-                setExpressionVariable(innerVariable, load(currentValue)),
+                setExpressionVariable(innerVariable, load[AnyValue](currentValue)),
                 // extracted.add([result from inner expression]);
                 declareAndAssign(typeRefOf[AnyValue], innerVar, nullCheckIfRequired(inner)),
-                assign(payloadVar, add(load(payloadVar), invoke(load(innerVar), method[AnyValue, Long]("estimatedHeapUsage")))),
-                invokeSideEffect(load(extractedVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
-                  load(innerVar))): _*)
+                assign(payloadVar, add(load[Long](payloadVar), invoke(load[AnyValue](innerVar), method[AnyValue, Long]("estimatedHeapUsage")))),
+                invokeSideEffect(load[java.util.ArrayList[AnyValue]](extractedVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
+                  load[AnyValue](innerVar))): _*)
             },
             // }
             // returnVar = VirtualValues.fromList(extracted);
-            assign(returnVar, invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue], Long]("fromList"), load(extractedVars), load(payloadVar)))
+            assign(returnVar, invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue], Long]("fromList"), load[java.util.ArrayList[AnyValue]](extractedVars), load[Long](payloadVar)))
           )
         },
-        load(returnVar)
+        load[AnyValue](returnVar)
       )
       IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
                              collection.variables ++ inner.variables, Set.empty, requireNullCheck = false)
@@ -2890,10 +2931,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           val node = IntermediateExpression(
             block(lazyRel,
                   invokeStatic(method[CypherFunctions, NodeValue, VirtualRelationshipValue, DbAccess, VirtualNodeValue, RelationshipScanCursor]("otherNode"),
-                               cast[RelationshipValue](load(relVar.name)), DB_ACCESS,  cast[NodeValue](nodeOps.last.ir), RELATIONSHIP_CURSOR)),
+                               cast[RelationshipValue](load(relVar)), DB_ACCESS,  cast[NodeValue](nodeOps.last.ir), RELATIONSHIP_CURSOR)),
             compiled.fields, compiled.variables :+ relVar :+ vRELATIONSHIP_CURSOR, compiled.nullChecks ++ nodeOps.last.nullChecks)
           val rel = IntermediateExpression(
-            block(lazyRel, load(relVar.name)),
+            block(lazyRel, load(relVar)),
             compiled.fields, compiled.variables :+ relVar, compiled.nullChecks)
 
           compileSteps(next, nodeOps :+ node, relOps :+ rel)
@@ -2908,10 +2949,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           val node = IntermediateExpression(
             block(lazyRel,
               invokeStatic(method[CypherFunctions, NodeValue, VirtualRelationshipValue, DbAccess, RelationshipScanCursor](methodName),
-                cast[RelationshipValue](load(relVar.name)), DB_ACCESS, RELATIONSHIP_CURSOR)),
+                cast[RelationshipValue](load(relVar)), DB_ACCESS, RELATIONSHIP_CURSOR)),
             compiled.fields, compiled.variables :+ relVar :+ vRELATIONSHIP_CURSOR, compiled.nullChecks)
           val rel = IntermediateExpression(
-            block(lazyRel, load(relVar.name)),
+            block(lazyRel, load(relVar)),
             compiled.fields, compiled.variables :+ relVar, compiled.nullChecks)
 
           compileSteps(next, nodeOps :+ node, relOps :+ rel)
@@ -2933,11 +2974,13 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                                        arrayOf[RelationshipValue](relOps.map(r => cast[RelationshipValue](r.ir)): _*))
                                    )))
 
-      val ops = block(lazySet, load(variableName))
+      val ops = block(lazySet, load[AnyValue](variableName))
       val nullChecks =
-        if (nodeOps.forall(_.nullChecks.isEmpty) && relOps.forall(_.nullChecks.isEmpty)) Set.empty[IntermediateRepresentation]
-        else Set(block(lazySet, equal(load(variableName), noValue)))
-
+        if (nodeOps.forall(_.nullChecks.isEmpty) && relOps.forall(_.nullChecks.isEmpty)) {
+          Set.empty[IntermediateRepresentation]
+        } else {
+          Set(block(lazySet, equal(load[AnyValue](variableName), noValue)))
+        }
       IntermediateExpression(ops,
                              nodeOps.flatMap(_.fields) ++ relOps.flatMap(_.fields),
                              nodeOps.flatMap(_.variables) ++ relOps.flatMap(_.variables),
@@ -2953,11 +2996,14 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       case NodePathStep(node, next) => compileExpression(node, id) match {
         case Some(nodeOps) =>
           val addNode =
-            if (nodeOps.nullChecks.isEmpty) invokeSideEffect(load(builderVar),
-                                                             method[PathValueBuilder, Unit, NodeValue]("addNode"),
-                                                             cast[NodeValue](nodeOps.ir))
-            else invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue]("addNode"),
-                        nullCheckIfRequired(nodeOps))
+            if (nodeOps.nullChecks.isEmpty) {
+              invokeSideEffect(load[PathValueBuilder](builderVar),
+                method[PathValueBuilder, Unit, NodeValue]("addNode"),
+                cast[NodeValue](nodeOps.ir))
+            } else {
+              invokeSideEffect(load[PathValueBuilder](builderVar), method[PathValueBuilder, Unit, AnyValue]("addNode"),
+                nullCheckIfRequired(nodeOps))
+            }
           compileSteps(next, acc :+ nodeOps.copy(ir = addNode))
         case None => None
       }
@@ -2972,14 +3018,14 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             val addNodeAndRelationship =
               block(
                 if (target.nullChecks.isEmpty) {
-                  invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, NodeValue]("addNode"), cast[NodeValue](target.ir))
+                  invokeSideEffect(load[PathValueBuilder](builderVar), method[PathValueBuilder, Unit, NodeValue]("addNode"), cast[NodeValue](target.ir))
                 } else {
-                  invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue]("addNode"), nullCheckIfRequired(target))
+                  invokeSideEffect(load[PathValueBuilder](builderVar), method[PathValueBuilder, Unit, AnyValue]("addNode"), nullCheckIfRequired(target))
                 },
                 if (relOps.nullChecks.isEmpty) {
-                  invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, RelationshipValue]("addRelationship"), cast[RelationshipValue](relOps.ir))
+                  invokeSideEffect(load[PathValueBuilder](builderVar), method[PathValueBuilder, Unit, RelationshipValue]("addRelationship"), cast[RelationshipValue](relOps.ir))
                 } else {
-                  invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue]("addRelationship"),
+                  invokeSideEffect(load[PathValueBuilder](builderVar), method[PathValueBuilder, Unit, AnyValue]("addRelationship"),
                                    nullCheckIfRequired(relOps))
                 }
               )
@@ -2998,11 +3044,14 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           }
 
           val addRel =
-            if (relOps.nullChecks.isEmpty) invokeSideEffect(load(builderVar),
-                                                            method[PathValueBuilder, Unit, RelationshipValue](methodName),
-                                                            cast[RelationshipValue](relOps.ir))
-            else invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue](methodName),
-                        nullCheckIfRequired(relOps))
+            if (relOps.nullChecks.isEmpty) {
+              invokeSideEffect(load[PathValueBuilder](builderVar),
+                method[PathValueBuilder, Unit, RelationshipValue](methodName),
+                cast[RelationshipValue](relOps.ir))
+            } else {
+              invokeSideEffect(load[PathValueBuilder](builderVar), method[PathValueBuilder, Unit, AnyValue](methodName),
+                nullCheckIfRequired(relOps))
+            }
           compileSteps(next, acc :+ relOps.copy(ir = addRel))
         case None => None
       }
@@ -3017,21 +3066,23 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           val addRels = maybeTarget.flatMap(t => compileExpression(t, id)) match {
             case Some(target) =>
               if (relOps.nullChecks.isEmpty && target.nullChecks.isEmpty) {
-                invokeSideEffect(load(builderVar),
+                invokeSideEffect(load[PathValueBuilder](builderVar),
                                  method[PathValueBuilder, Unit, ListValue, NodeValue](methodName),
                                  cast[ListValue](relOps.ir), cast[NodeValue](target.ir))
               } else {
-                invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue, AnyValue](methodName),
+                invokeSideEffect(load[PathValueBuilder](builderVar), method[PathValueBuilder, Unit, AnyValue, AnyValue](methodName),
                                  nullCheckIfRequired(relOps), noValueOr(target)(target.ir))
               }
             case None =>
               if (relOps.nullChecks.isEmpty) {
-                invokeSideEffect(load(builderVar),
-                                 method[PathValueBuilder, Unit, ListValue](methodName),
-                                 cast[ListValue](relOps.ir))
+                invokeSideEffect(load[PathValueBuilder](builderVar),
+                  method[PathValueBuilder, Unit, ListValue](methodName),
+                  cast[ListValue](relOps.ir))
               }
-              else invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue](methodName),
-                                    nullCheckIfRequired(relOps))
+              else {
+                invokeSideEffect(load[PathValueBuilder](builderVar), method[PathValueBuilder, Unit, AnyValue](methodName),
+                  nullCheckIfRequired(relOps))
+              }
           }
           compileSteps(next, acc :+ relOps.copy(ir = addRels))
         case None => None
@@ -3046,14 +3097,16 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           Seq(
             declare[PathValueBuilder](builderVar),
             assign(builderVar, newInstance(constructor[PathValueBuilder, DbAccess, RelationshipScanCursor], DB_ACCESS, RELATIONSHIP_CURSOR)))
-            ++ pathOps.map(_.ir) :+ declareAndAssign(typeRefOf[AnyValue], variableName, invoke(load(builderVar), method[PathValueBuilder, AnyValue]("build"))): _*))
+            ++ pathOps.map(_.ir) :+ declareAndAssign(typeRefOf[AnyValue], variableName, invoke(load[PathValueBuilder](builderVar), method[PathValueBuilder, AnyValue]("build"))): _*))
 
 
-      val ops = block(lazySet, load(variableName))
+      val ops = block(lazySet, load[AnyValue](variableName))
       val nullChecks =
-        if (pathOps.forall(_.nullChecks.isEmpty)) Set.empty[IntermediateRepresentation]
-        else Set(block(lazySet, equal(load(variableName), noValue)))
-
+        if (pathOps.forall(_.nullChecks.isEmpty)) {
+          Set.empty[IntermediateRepresentation]
+        } else {
+          Set(block(lazySet, equal(load[AnyValue](variableName), noValue)))
+        }
       IntermediateExpression(ops,
                              pathOps.flatMap(_.fields),
                              pathOps.flatMap(_.variables) :+ vRELATIONSHIP_CURSOR,
@@ -3084,54 +3137,56 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)
       }
       val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(c, idx)(invocation)))
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      val ops = block(lazySet, load[AnyValue](variableName))
+      val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
       IntermediateExpression(ops, c.fields ++ idx.fields, c.variables ++ idx.variables ++ vCURSORS, Set(nullChecks), requireNullCheck = false)
     }
   }
 
   private def cachedExists(property: ASTCachedProperty) = property match {
     case property@SlottedCachedPropertyWithPropertyToken(_, _, entityOffset, offsetIsForLongSlot, prop, _, entityType, nullable) =>
-      if (prop == StatementConstants.NO_SUCH_PROPERTY_KEY) Some(
-        IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
-      else {
+      if (prop == StatementConstants.NO_SUCH_PROPERTY_KEY) {
+        Some(
+          IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
+      } else {
         val existsVariable = namer.nextVariableName()
         val propertyVariable = namer.nextVariableName()
         val entityId = getEntityId(offsetIsForLongSlot, entityOffset, entityType, nullable)
         val (propertyGet, txStateHasCachedProperty, cursor, cursorVar) = callPropertyExists(entityType)
         def checkPropertyTxState(onNoChanges: IntermediateRepresentation): IntermediateRepresentation = {
           val hasChanges = namer.nextVariableName()
-          if (readOnly) onNoChanges
-          else {
+          if (readOnly) {
+            onNoChanges
+          } else {
             block(
               declareAndAssign(typeRefOf[Optional[java.lang.Boolean]], hasChanges,
-                               invoke(DB_ACCESS, txStateHasCachedProperty, entityId, constant(prop))),
-              ifElse(invoke(load(hasChanges), method[Optional[_], Boolean]("isEmpty")))(onNoChanges)(
+                invoke(DB_ACCESS, txStateHasCachedProperty, entityId, constant(prop))),
+              ifElse(invoke(load[Optional[java.lang.Boolean]](hasChanges), method[Optional[_], Boolean]("isEmpty")))(onNoChanges)(
                 assign(existsVariable,
-                       ternary(unbox(cast[java.lang.Boolean](
-                         invoke(load(hasChanges), method[Optional[_], Object]("get")))), trueValue, falseValue)))
-              )
+                  ternary(unbox(cast[java.lang.Boolean](
+                    invoke(load[Optional[java.lang.Boolean]](hasChanges), method[Optional[_], Object]("get")))), trueValue, falseValue)))
+            )
           }
         }
 
         /**
-          * {{{
-          *   var hasProperty = NO_VALUE
-          *   if (id != -1L) {
-          *     val hasChanges = [check if exists in tx state]
-          *     if (hasChanges.isEmpty) {
-          *       var property = [getCachedProperty]
-          *       if (property == null) {
-          *         property = [get property from store]
-          *         [cacheProperty]
-          *       }
-          *       hasProperty = property == NO_VALUE ? FALSE : TRUE
-          *     } else {
-          *       hasProperty = hasChanges.get ? TRUE: FALSE
-          *     }
-          *   }
-          * }}}
-          */
+         * {{{
+         *   var hasProperty = NO_VALUE
+         *   if (id != -1L) {
+         *     val hasChanges = [check if exists in tx state]
+         *     if (hasChanges.isEmpty) {
+         *       var property = [getCachedProperty]
+         *       if (property == null) {
+         *         property = [get property from store]
+         *         [cacheProperty]
+         *       }
+         *       hasProperty = property == NO_VALUE ? FALSE : TRUE
+         *     } else {
+         *       hasProperty = hasChanges.get ? TRUE: FALSE
+         *     }
+         *   }
+         * }}}
+         */
         val getAndCacheProperty = oneTime(
           block(
             declareAndAssign(typeRefOf[Value], existsVariable, noValue),
@@ -3139,19 +3194,19 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
               checkPropertyTxState(
                 block(
                   declareAndAssign(typeRefOf[Value], propertyVariable,
-                                   getCachedPropertyAt(property,
-                                                       invoke(DB_ACCESS, propertyGet, entityId, constant(prop), cursor,
-                                                              PROPERTY_CURSOR, constant(true)))),
-                  assign(existsVariable, ternary(equal(load(propertyVariable), noValue), falseValue, trueValue))
+                    getCachedPropertyAt(property,
+                      invoke(DB_ACCESS, propertyGet, entityId, constant(prop), cursor,
+                        PROPERTY_CURSOR, constant(true)))),
+                  assign(existsVariable, ternary(equal(load[Value](propertyVariable), noValue), falseValue, trueValue))
                 )
               )
             )
           )
         )
-        val ops = block(getAndCacheProperty, load(existsVariable))
-        val nullChecks = block(getAndCacheProperty, equal(load(existsVariable), noValue))
+        val ops = block(getAndCacheProperty, load[Value](existsVariable))
+        val nullChecks = block(getAndCacheProperty, equal(load[Value](existsVariable), noValue))
         Some(IntermediateExpression(ops, Seq.empty, Seq(cursorVar, vPROPERTY_CURSOR), Set(nullChecks),
-                                    requireNullCheck = false))
+          requireNullCheck = false))
       }
 
     case property@SlottedCachedPropertyWithoutPropertyToken(_, _, entityOffset, offsetIsForLongSlot, prop, _, entityType, nullable) =>
@@ -3162,16 +3217,17 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       val (propertyGet, txStateHasCachedProperty, cursor, cursorVar) = callPropertyExists(entityType)
       def checkPropertyTxState(onNoChanges: IntermediateRepresentation): IntermediateRepresentation = {
         val hasChanges = namer.nextVariableName()
-        if (readOnly) onNoChanges
-        else {
+        if (readOnly) {
+          onNoChanges
+        } else {
           block(
             declareAndAssign(typeRefOf[Optional[java.lang.Boolean]], hasChanges,
-                             invoke(DB_ACCESS, txStateHasCachedProperty, entityId, loadField(f))),
-            ifElse(invoke(load(hasChanges), method[Optional[_], Boolean]("isEmpty")))(onNoChanges)(
+              invoke(DB_ACCESS, txStateHasCachedProperty, entityId, loadField(f))),
+            ifElse(invoke(load[Optional[java.lang.Boolean]](hasChanges), method[Optional[_], Boolean]("isEmpty")))(onNoChanges)(
               assign(existsVariable,
-                     ternary(unbox(cast[java.lang.Boolean](
-                       invoke(load(hasChanges), method[Optional[_], Object]("get")))), trueValue, falseValue)))
-            )
+                ternary(unbox(cast[java.lang.Boolean](
+                  invoke(load[Optional[java.lang.Boolean]](hasChanges), method[Optional[_], Object]("get")))), trueValue, falseValue)))
+          )
         }
       }
 
@@ -3202,7 +3258,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                   declareAndAssign(typeRefOf[Value], propertyVariable,
                                    getCachedPropertyAt(property,
                                                        invoke(DB_ACCESS, propertyGet, entityId, loadField(f), cursor, PROPERTY_CURSOR, constant(true)))),
-                  assign(existsVariable, ternary(equal(load(propertyVariable), noValue), falseValue, trueValue))
+                  assign(existsVariable, ternary(equal(load[Value](propertyVariable), noValue), falseValue, trueValue))
                   )
                 )
               )
@@ -3214,8 +3270,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(prop)))),
         getAndCacheProperty))
 
-      val ops = block(lazySet, load(existsVariable))
-      val nullChecks = block(lazySet, equal(load(existsVariable), noValue))
+      val ops = block(lazySet, load[Value](existsVariable))
+      val nullChecks = block(lazySet, equal(load[Value](existsVariable), noValue))
 
       Some(IntermediateExpression(ops, Seq(f), Seq(cursorVar, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
@@ -3223,20 +3279,21 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
   }
 
   private def getEntityId(offsetIsForLongSlot: Boolean, offset: Int, entityType: EntityType, nullable: Boolean): IntermediateRepresentation = {
-    if (offsetIsForLongSlot) getLongAt(offset)
-    else {
+    if (offsetIsForLongSlot) {
+      getLongAt(offset)
+    } else {
       val entityVar = namer.nextVariableName()
 
       val getId = entityType match {
         case NODE_TYPE => invoke(cast[VirtualNodeValue](getRefAt(offset)),
-                                 method[VirtualNodeValue, Long]("id"))
+          method[VirtualNodeValue, Long]("id"))
         case RELATIONSHIP_TYPE => invoke(cast[VirtualRelationshipValue](getRefAt(offset)),
-                                         method[VirtualRelationshipValue, Long]("id"))
+          method[VirtualRelationshipValue, Long]("id"))
       }
       val nullChecked = if (nullable) ternary(equal(getRefAt(offset), noValue), constant(-1L), getId) else getId
       block(
         oneTime(declareAndAssign(typeRefOf[Long], entityVar, nullChecked)),
-        load(entityVar))
+        load[Long](entityVar))
     }
   }
 

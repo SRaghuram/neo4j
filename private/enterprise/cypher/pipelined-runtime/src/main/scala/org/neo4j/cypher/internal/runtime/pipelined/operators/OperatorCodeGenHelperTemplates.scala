@@ -52,11 +52,13 @@ import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPool
@@ -162,50 +164,50 @@ object OperatorCodeGenHelperTemplates {
 
   // Fields
   val WORK_IDENTITY_STATIC_FIELD_NAME  = "_workIdentity"
-  val DATA_READ: InstanceField = field[Read]("dataRead", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, Read]("dataRead")))
+  val DATA_READ: InstanceField = field[Read]("dataRead", invoke(load(TX_CONSTRUCTOR_PARAMETER), method[KernelTransaction, Read]("dataRead")))
   val DATA_WRITE: InstanceField = field[Write]("dataWrite",
-    invokeStatic(method[OperatorCodeGenHelperTemplates, Write, KernelTransaction]("write"), load(TX_CONSTRUCTOR_PARAMETER.name)))
-  val LOCKS: InstanceField = field[Locks]("locks", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, Locks]("locks")))
-  val TOKEN_WRITE: InstanceField = field[TokenWrite]("tokenWrite", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, TokenWrite]("tokenWrite")))
-  val TOKEN: InstanceField = field[Token]("token", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, Token]("token")))
+    invokeStatic(method[OperatorCodeGenHelperTemplates, Write, KernelTransaction]("write"), load(TX_CONSTRUCTOR_PARAMETER)))
+  val LOCKS: InstanceField = field[Locks]("locks", invoke(load(TX_CONSTRUCTOR_PARAMETER), method[KernelTransaction, Locks]("locks")))
+  val TOKEN_WRITE: InstanceField = field[TokenWrite]("tokenWrite", invoke(load(TX_CONSTRUCTOR_PARAMETER), method[KernelTransaction, TokenWrite]("tokenWrite")))
+  val TOKEN: InstanceField = field[Token]("token", invoke(load(TX_CONSTRUCTOR_PARAMETER), method[KernelTransaction, Token]("token")))
   val INPUT_CURSOR_FIELD_NAME = "inputCursor"
   val INPUT_CURSOR_FIELD: InstanceField =
     field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME,
       invoke(
-        load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name),
+        load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
         method[Morsel, MorselReadCursor, Boolean]("readCursor"), constant(true)
       )
     )
   val MORSEL_DATA_INPUT_CURSOR_FIELD: InstanceField =
     field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME, // Note, must be identical with INPUT_CURSOR_FIELD!
       invoke(
-        load(INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER.name),
+        load(INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER),
         method[MorselData, MorselReadCursor, Boolean]("readCursor"), constant(true)
       )
     )
 
   val INPUT_SINGLE_ACCUMULATOR_CURSOR_FIELD: InstanceField = // This takes just a single accumulator from the accumulators (assumes accumulatorsPerTask == 1)
     field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME, // Note, must be identical with INPUT_CURSOR_FIELD!
-      invoke(load(INPUT_SINGLE_ACCUMULATOR_CONSTRUCTOR_PARAMETER.name),
+      invoke(load(INPUT_SINGLE_ACCUMULATOR_CONSTRUCTOR_PARAMETER),
              method[MorselAccumulator[_], MorselReadCursor, Boolean]("readCursor"), constant(true)
       )
     )
 
   val INPUT_CURSOR: IntermediateRepresentation = loadField(INPUT_CURSOR_FIELD)
   val INPUT_MORSEL_FIELD: InstanceField =
-    field[Morsel]("inputMorsel", load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name))
+    field[Morsel]("inputMorsel", load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER))
   val INPUT_MORSEL_DATA_FIELD: InstanceField =
-    field[MorselData]("morselDataField", load(INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER.name))
+    field[MorselData]("morselDataField", load(INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER))
   val INPUT_ACCUMULATORS_FIELD: InstanceField =
-    field[IndexedSeq[MorselAccumulator[AnyRef]]]("inputAccumulatorsField", load(INPUT_ACCUMULATORS_CONSTRUCTOR_PARAMETER.name))
+    field[IndexedSeq[MorselAccumulator[AnyRef]]]("inputAccumulatorsField", load(INPUT_ACCUMULATORS_CONSTRUCTOR_PARAMETER))
 
   val SHOULD_BREAK: LocalVariable = variable[Boolean]("shouldBreak", constant(false))
   val NO_MEMORY_TRACKER: GetStatic = getStatic[EmptyMemoryTracker, MemoryTracker]("INSTANCE")
 
   // IntermediateRepresentation code
-  val QUERY_PROFILER: IntermediateRepresentation = load("queryProfiler")
-  val QUERY_STATE: IntermediateRepresentation = load("state")
-  val QUERY_RESOURCES: IntermediateRepresentation = load("resources")
+  val QUERY_PROFILER: IntermediateRepresentation = load[QueryProfiler]("queryProfiler")
+  val QUERY_STATE: IntermediateRepresentation = load[QueryState]("state")
+  val QUERY_RESOURCES: IntermediateRepresentation = load[QueryResources]("resources")
 
   val CURSOR_POOL_V: LocalVariable =
     variable[CursorPools]("cursorPools",
@@ -217,16 +219,13 @@ object OperatorCodeGenHelperTemplates {
   val QUERY_STATS_TRACKER_V: LocalVariable = variable[MutableQueryStatistics]("queryStatistics",
     invoke(QUERY_RESOURCES,
       method[QueryResources, MutableQueryStatistics]("queryStatisticsTracker")))
-  val QUERY_STATS_TRACKER: IntermediateRepresentation = load(QUERY_STATS_TRACKER_V.name)
+  val QUERY_STATS_TRACKER: IntermediateRepresentation = load(QUERY_STATS_TRACKER_V)
 
   val INPUT_MORSEL: IntermediateRepresentation =
-    invoke(self(), method[ContinuableOperatorTaskWithMorsel, Morsel]("inputMorsel"))
+    invoke(self[ContinuableOperatorTaskWithMorsel], method[ContinuableOperatorTaskWithMorsel, Morsel]("inputMorsel"))
 
   val OUTPUT_MORSEL: IntermediateRepresentation =
-    load("outputMorsel")
-
-  val EXECUTION_STATE: IntermediateRepresentation =
-    load("executionState")
+    load[Morsel]("outputMorsel")
 
   val SUBSCRIBER: LocalVariable = variable[QuerySubscriber]("subscriber",
     invoke(QUERY_STATE, method[PipelinedQueryState, QuerySubscriber]("subscriber")))
@@ -260,7 +259,7 @@ object OperatorCodeGenHelperTemplates {
 
   val OUTPUT_FULL_CURSOR: IntermediateRepresentation = invoke(OUTPUT_MORSEL, method[Morsel, MorselFullCursor, Boolean]("fullCursor"), constant(true))
   val OUTPUT_CURSOR_VAR: LocalVariable = variable[MorselFullCursor](ExpressionCompilation.ROW_NAME, OUTPUT_FULL_CURSOR)
-  val OUTPUT_CURSOR: IntermediateRepresentation = load(OUTPUT_CURSOR_VAR.name)
+  val OUTPUT_CURSOR: IntermediateRepresentation = load(OUTPUT_CURSOR_VAR)
   val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_CURSOR, method[MorselFullCursor, Boolean]("onValidRow"))
 
   val OUTPUT_TRUNCATE: IntermediateRepresentation = invokeSideEffect(OUTPUT_CURSOR, method[MorselFullCursor, Unit]("truncate"))
@@ -280,10 +279,10 @@ object OperatorCodeGenHelperTemplates {
   private val TRACE_ON_NODE: Method = method[KernelReadTracer, Unit, Long]("onNode")
   private val TRACE_DB_HIT: Method = method[OperatorProfileEvent, Unit]("dbHit")
   private val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Long]("dbHits")
-  val CALL_CAN_CONTINUE: IntermediateRepresentation = invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue"))
+  val CALL_CAN_CONTINUE: IntermediateRepresentation = invoke(self[ContinuableOperatorTask], method[ContinuableOperatorTask, Boolean]("canContinue"))
 
   def getMemoryTracker(operatorId: Int): IntermediateRepresentation =
-    invoke(load("stateFactory"), method[StateFactory, MemoryTracker, Int]("newMemoryTracker"), constant(operatorId))
+    invoke(load[StateFactory]("stateFactory"), method[StateFactory, MemoryTracker, Int]("newMemoryTracker"), constant(operatorId))
 
   def setMemoryTracker(memoryTrackerField: InstanceField, operatorId: Int): IntermediateRepresentation =
     setField(memoryTrackerField, getMemoryTracker(operatorId))
@@ -296,7 +295,7 @@ object OperatorCodeGenHelperTemplates {
                                              )(implicit to: Manifest[STATE]): IntermediateRepresentation = {
     cast[ArgumentStateMap[STATE]](
       invoke(load(
-        ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
+        ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER),
         method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
         constant(argumentStateMapId.x))
     )
@@ -326,7 +325,7 @@ object OperatorCodeGenHelperTemplates {
             method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
             constant(argumentStateMapId.x))),
         method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
-        load(argumentVarName(argumentStateMapId)))
+        load[Long](argumentVarName(argumentStateMapId)))
 
   def removeState(argumentStateMaps: IntermediateRepresentation,
                   argumentStateMapId: ArgumentStateMapId,
@@ -350,8 +349,7 @@ object OperatorCodeGenHelperTemplates {
 
   def getArgumentSlotOffset(argumentStateMapId: ArgumentStateMapId): IntermediateRepresentation =
     invoke(
-      invoke(load(
-        ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
+      invoke(load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER),
         method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
         constant(argumentStateMapId.x)),
       method[ArgumentStateMap[_ <: ArgumentState], Int]("argumentSlotOffset")
@@ -587,9 +585,9 @@ object OperatorCodeGenHelperTemplates {
           declareAndAssign(typeRefOf[Boolean], hasNext, invoke(cursor, method[CURSOR, Boolean]("next"))),
           condition(isNotNull(event(id))) {
             invokeSideEffect(event(id),
-              method[OperatorProfileEvent, Unit, Boolean]("row"), load(hasNext))
+              method[OperatorProfileEvent, Unit, Boolean]("row"), load[Boolean](hasNext))
           },
-          load(hasNext)
+          load[Boolean](hasNext)
         )
       } else {
         invoke(cursor, method[CURSOR, Boolean]("next"))

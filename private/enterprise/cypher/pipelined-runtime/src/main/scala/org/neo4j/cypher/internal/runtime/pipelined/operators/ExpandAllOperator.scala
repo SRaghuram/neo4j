@@ -276,7 +276,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       declareAndAssign(typeRefOf[Boolean], resultBoolean, constant(false)),
       setField(canContinue, constant(false)),
       declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
-      condition(notEqual(load(fromNode), constant(-1L))){
+      condition(notEqual(load[Long](fromNode), constant(-1L))){
         block(
           assign(resultBoolean, constant(true)),
           setUpCursors(fromNode, canBeNull = false),
@@ -284,7 +284,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         )
       },
 
-      load(resultBoolean)
+      load[Boolean](resultBoolean)
     )
   }
 
@@ -412,7 +412,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private def expandWithNewNodeCursor(fromNode: String): IntermediateRepresentation = {
     val expandMethod = findExpansionMethod
     block(allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR, doProfile),
-      singleNode(load(fromNode), loadField(nodeCursorField)),
+      singleNode(load[Long](fromNode), loadField(nodeCursorField)),
       ifElse(cursorNext[NodeCursor](loadField(nodeCursorField)))(
         block(
           allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR, doProfile),

@@ -183,17 +183,16 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
         .withCode(isNullable = true, IRInfo(nodeProperty, Set.empty[Field], Set(vPROPERTY_CURSOR, vNODE_CURSOR)))
 
     case ParameterFromSlot(offset, name, _) =>
-      val parameterVariable = namer.parameterName(name)
-      val local = variable[AnyValue](parameterVariable,
+      val local = variable[AnyValue](namer.parameterName(name),
         arrayLoad(ExpressionCompilation.PARAMS, offset))
 
-      START.withCode(isNullable = true, IRInfo(load(parameterVariable), Set.empty[Field], vCURSORS.toSet + local))
+      START.withCode(isNullable = true, IRInfo(load(local), Set.empty[Field], vCURSORS.toSet + local))
 
     case Property(targetExpression, PropertyKeyName(key)) =>
       val propVarName = namer.nextVariableName("propVar")
       exprToIRInner(targetExpression)
         .assignToAndNullCheck(typeRefOf[AnyValue], propVarName, noValue)
-        .withCode(isNullable = true, getProperty(key, load(propVarName)))
+        .withCode(isNullable = true, getProperty(key, load[AnyValue](propVarName)))
 
     case Add(lhs, rhs) =>
       addSub(lhs, rhs, "add", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), _, _))
@@ -274,7 +273,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
       val exprToPredicate = (expression: Expression, ir: IntermediateRepresentation, isNullable: Boolean, exceptionName: String) => {
         val tryCatchBlock = (tryCatch[RuntimeException](exceptionName)
         (assign(returnValue, coerceToPredicate(ir)))
-        (assign(error, load(exceptionName))))
+        (assign(error, load[RuntimeException](exceptionName))))
 
         if (PredicateHelper.isPredicate(expression)) {
           assign(returnValue, ir)
@@ -292,24 +291,24 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
         declareAndAssign(typeRefOf[RuntimeException], error, Constant(null)),
         declareAndAssign(typeRefOf[Boolean], seenNull, Constant(false)),
         declareAndAssign(typeRefOf[AnyValue], lhsName, lhsIRInfo.code),
-        exprToPredicate(lhs, load(lhsName), lhsCodeLink.isNullable, exceptionName1),
+        exprToPredicate(lhs, load[AnyValue](lhsName), lhsCodeLink.isNullable, exceptionName1),
         // Only evaluate rhs if lhs isn't true value
-        condition(notEqual(load(returnValue), trueValue))(
+        condition(notEqual(load[AnyValue](returnValue), trueValue))(
           block(
             declareAndAssign(typeRefOf[AnyValue], rhsName, rhsIRInfo.code),
-            exprToPredicate(rhs, load(rhsName), rhsCodeLink.isNullable, exceptionName2)
+            exprToPredicate(rhs, load[AnyValue](rhsName), rhsCodeLink.isNullable, exceptionName2)
           )
         ),
         if (!PredicateHelper.isPredicate(lhs) || !PredicateHelper.isPredicate(rhs)) {
-          condition(and(notEqual(load(returnValue), trueValue), notEqual(load(error), Constant(null))))(block(fail(load(error))))
+          condition(and(notEqual(load[AnyValue](returnValue), trueValue), notEqual(load[RuntimeException](error), Constant(null))))(block(fail(load[RuntimeException](error))))
         } else {
           noop()
         },
         ternary(
-          equal(load(returnValue), trueValue),
+          equal(load[AnyValue](returnValue), trueValue),
           trueValue,
           ternary(
-            equal(load(seenNull), Constant(true)),
+            equal(load[Boolean](seenNull), Constant(true)),
             noValue,
             falseValue
           )
@@ -324,7 +323,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
       START
         .withCode(isNullable = true, irInfo)
         .assignTo(typeRefOf[AnyValue], varName)
-        .withCode(isNullable = false, ternary(notEqual(load(varName), noValue), trueValue, falseValue))
+        .withCode(isNullable = false, ternary(notEqual(load[AnyValue](varName), noValue), trueValue, falseValue))
 
     case f: FunctionInvocation =>
       f.function match {
@@ -339,23 +338,23 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
             START
               .withCode(isNullable = true, irAndFields)
               .assignToAndNullCheck(typeRefOf[AnyValue], varName, noValue)
-              .withCode(isNullable = false, hasProperty(propertyKey.name, load(varName)))
+              .withCode(isNullable = false, hasProperty(propertyKey.name, load[AnyValue](varName)))
         }
         case Size =>
           val varName = namer.nextVariableName("sizeInput")
 
           exprToIRInner(f.args.head)
           .assignToAndNullCheck(typeRefOf[AnyValue], varName, noValue)
-          .withCode(isNullable = true, invokeStatic(method[CypherFunctions, IntegralValue, AnyValue]("size"), load(varName)))
+          .withCode(isNullable = true, invokeStatic(method[CypherFunctions, IntegralValue, AnyValue]("size"), load[AnyValue](varName)))
       }
 
     case ListComprehension(ExtractScope(variable, None, extractExpression), listAst) =>
-      val maybeList = load(namer.nextVariableName("maybeList"))
-      val list = load(namer.nextVariableName("list"))
-      val extracted = load(namer.nextVariableName("extracted"))
-      val iter = load(namer.nextVariableName("iter"))
-      val result = load(namer.nextVariableName("result"))
-      val heapUsage = load(namer.nextVariableName("heapUsage"))
+      val maybeList = load[AnyValue](namer.nextVariableName("maybeList"))
+      val list = load[ListValue](namer.nextVariableName("list"))
+      val extracted = load[util.ArrayList[AnyValue]](namer.nextVariableName("extracted"))
+      val iter = load[util.ArrayList[AnyValue]](namer.nextVariableName("iter"))
+      val result = load[AnyValue](namer.nextVariableName("result"))
+      val heapUsage = load[Long](namer.nextVariableName("heapUsage"))
 
       val expressionVariable = variable.asInstanceOf[ExpressionVariable]
       val irInfo = exprToIRInner(extractExpression.getOrElse(expressionVariable)).extract(namer)
@@ -381,9 +380,9 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
         .withCode(isNullable = false, code, irInfo.fields, irInfo.localVariables)
 
     case ReduceExpression(ReduceScope(accumulator, reduce, expression), initAst, listAst) =>
-      val maybeList = load(namer.nextVariableName("maybeList"))
-      val list = load(namer.nextVariableName("list"))
-      val iter = load(namer.nextVariableName("iter"))
+      val maybeList = load[AnyValue](namer.nextVariableName("maybeList"))
+      val list = load[ListValue](namer.nextVariableName("list"))
+      val iter = load[java.util.Iterator[AnyValue]](namer.nextVariableName("iter"))
 
       val initIRInfo = exprToIRInner(initAst).extract(namer)
       val reduceVariable = reduce.asInstanceOf[ExpressionVariable]
@@ -436,14 +435,14 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
       exprToIRInner(rhs)
         .rebaseOn(lhsBase)
         .assignToAndNullCheck(typeRefOf[AnyValue], rhsName, noValue)
-        .withCode(isNullable = false, ir(load(lhsName), load(rhsName)))
+        .withCode(isNullable = false, ir(load[AnyValue](lhsName), load[AnyValue](rhsName)))
     } else { // Evaluate rhs first
       exprToIRInner(rhs)
         .rebaseOn(lhsCode.inner)
         .assignToAndNullCheck(typeRefOf[AnyValue], rhsName, noValue)
         .withCode(isNullable = false, lhsCode.code, lhsCode.fields, lhsCode.variables)
         .assignTo(typeRefOf[AnyValue], lhsName)
-        .withCode(isNullable = false, ir(load(lhsName), load(rhsName)))
+        .withCode(isNullable = false, ir(load[AnyValue](lhsName), load[AnyValue](rhsName)))
     }
 
   }
@@ -455,7 +454,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
 
     exprToIRInner(inputExpression)
       .assignToAndNullCheck(typeRefOf[AnyValue], inputName, noValue)
-      .withCode(isNullable = false, invokeStatic(method[CypherFunctions, DoubleValue, AnyValue](name), load(inputName)))
+      .withCode(isNullable = false, invokeStatic(method[CypherFunctions, DoubleValue, AnyValue](name), load[AnyValue](inputName)))
   }
 
   private def hasProperty(property: String, container: IntermediateRepresentation) =
@@ -475,7 +474,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
 }
 
 object CodeChainExpressionCompiler {
-  val row: Load = Load("row")
+  val row: Load = Load("row", typeRefOf[ReadableRow])
 
   /*
    * convert

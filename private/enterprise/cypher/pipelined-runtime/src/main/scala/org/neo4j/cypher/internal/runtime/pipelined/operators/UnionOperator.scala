@@ -193,7 +193,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
     loop(and(loadField(canContinue), innermost.predicate)) {
       block(
         innermost.resetBelowLimitAndAdvanceToNextArgument,
-        ifElse(load(codeGen.fromLHSName)) {
+        ifElse(load[Boolean](codeGen.fromLHSName)) {
           copySlots(lhsMapping)
         } {
           copySlots(rhsMapping)

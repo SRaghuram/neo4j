@@ -378,9 +378,9 @@ abstract class BaseAggregationMapperOperatorNoGroupingTaskTemplate(val inner: Op
        * }
        */
       declareAndAssign(typeRefOf[Long], currentArg, codeGen.getArgumentAt(argumentSlotOffset)),
-      condition(notEqual(load(currentArg), load(argVar)))(
+      condition(notEqual(load[Long](currentArg), load(argVar)))(
         block(
-          assign(argVar, load(currentArg)),
+          assign(argVar, load[Long](currentArg)),
           genApplyUpdates,
           assign(updatersVar,
             invoke(

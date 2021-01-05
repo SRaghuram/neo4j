@@ -14,7 +14,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.print
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
-import org.neo4j.codegen.api.Load
 import org.neo4j.cypher.internal.expressions.NODE_TYPE
 import org.neo4j.cypher.internal.expressions.PropertyKeyName
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
@@ -82,7 +81,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       // Then
       val local = longSlotLocal(i)
       oec.getAllLocalsForLongSlots shouldEqual (0 to i).map(j => (j, longSlotLocal(j)))
-      getSecondTimeIr should matchIR(Load(local))
+      getSecondTimeIr should matchIR(load[Long](local))
     }
   }
 
@@ -99,7 +98,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       // Then
       val local = refSlotLocal(i)
       oec.getAllLocalsForRefSlots shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more local
-      getSecondTimeIr should matchIR(Load(local))
+      getSecondTimeIr should matchIR(load[AnyValue](local))
     }
   }
 
@@ -170,7 +169,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       val local = refSlotLocal(i)
       oec.getAllLocalsForCachedProperties shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more cached property local
       oec.getAllLocalsForRefSlots shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more local
-      getFirstTimeIr should matchIR(block(noop(),assign(local, getFromStoreIr), cast[Value](load(local))))
+      getFirstTimeIr should matchIR(block(noop(),assign(local, getFromStoreIr), cast[Value](load[AnyValue](local))))
     }
   }
 
@@ -191,16 +190,16 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.beginScope("scope1")
 
     // Then should still see locals in parent scope
-    oec.getLongAt(0) should matchIR(Load(long0))
-    oec.getRefAt(0) should matchIR(Load(ref0))
+    oec.getLongAt(0) should matchIR(load[Long](long0))
+    oec.getRefAt(0) should matchIR(load[AnyValue](ref0))
 
     // When
     oec.getLongAt(1)
     oec.getRefAt(1)
 
     // Then should see locals in scope1
-    oec.getLongAt(1) should matchIR(Load(long1))
-    oec.getRefAt(1) should matchIR(Load(ref1))
+    oec.getLongAt(1) should matchIR(load[Long](long1))
+    oec.getRefAt(1) should matchIR(load[AnyValue](ref1))
 
     // Then getAll... should _only_ return locals in scope1
     oec.getAllLocalsForLongSlots shouldEqual Seq((1, long1))
@@ -234,16 +233,16 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.beginScope("scope1")
 
     // Then should still see locals in parent scope
-    oec.getLongAt(0) should matchIR(Load(long0))
-    oec.getRefAt(0) should matchIR(Load(ref0))
+    oec.getLongAt(0) should matchIR(load[Long](long0))
+    oec.getRefAt(0) should matchIR(load[AnyValue](ref0))
 
     // When
     oec.getLongAt(1)
     oec.getRefAt(1)
 
     // Then should see locals in scope1
-    oec.getLongAt(1) should matchIR(Load(long1))
-    oec.getRefAt(1) should matchIR(Load(ref1))
+    oec.getLongAt(1) should matchIR(load[Long](long1))
+    oec.getRefAt(1) should matchIR(load[AnyValue](ref1))
 
     // Then getAll... should _only_ return locals in scope1
     oec.getAllLocalsForLongSlots shouldEqual Seq((1, long1))
@@ -279,16 +278,16 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.beginScope("scope1")
 
     // Then should still see locals in parent scope
-    oec.getLongAt(0) should matchIR(Load(long0))
-    oec.getRefAt(0) should matchIR(Load(ref0))
+    oec.getLongAt(0) should matchIR(load[Long](long0))
+    oec.getRefAt(0) should matchIR(load[AnyValue](ref0))
 
     // When
     oec.getLongAt(1)
     oec.getRefAt(1)
 
     // Then should see locals in scope1
-    oec.getLongAt(1) should matchIR(Load(long1))
-    oec.getRefAt(1) should matchIR(Load(ref1))
+    oec.getLongAt(1) should matchIR(load[Long](long1))
+    oec.getRefAt(1) should matchIR(load[AnyValue](ref1))
 
     // Then getAll... should _only_ return locals in scope1
     oec.getAllLocalsForLongSlots shouldEqual Seq((1, long1))
@@ -298,18 +297,18 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.beginScope("scope2")
 
     // Then should still see locals in parent scopes
-    oec.getLongAt(0) should matchIR(Load(long0))
-    oec.getRefAt(0) should matchIR(Load(ref0))
-    oec.getLongAt(1) should matchIR(Load(long1))
-    oec.getRefAt(1) should matchIR(Load(ref1))
+    oec.getLongAt(0) should matchIR(load[Long](long0))
+    oec.getRefAt(0) should matchIR(load[AnyValue](ref0))
+    oec.getLongAt(1) should matchIR(load[Long](long1))
+    oec.getRefAt(1) should matchIR(load[AnyValue](ref1))
 
     // When
     oec.getLongAt(2)
     oec.getRefAt(2)
 
     // Then should see locals in scope2
-    oec.getLongAt(2) should matchIR(Load(long2))
-    oec.getRefAt(2) should matchIR(Load(ref2))
+    oec.getLongAt(2) should matchIR(load[Long](long2))
+    oec.getRefAt(2) should matchIR(load[AnyValue](ref2))
 
     // When
     val continuationState2 = oec.endInitializationScope(mergeIntoParentScope = true)
@@ -351,16 +350,16 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.beginScope("scope1")
 
     // Then should still see locals in parent scope
-    oec.getLongAt(0) should matchIR(Load(long0))
-    oec.getRefAt(0) should matchIR(Load(ref0))
+    oec.getLongAt(0) should matchIR(load[Long](long0))
+    oec.getRefAt(0) should matchIR(load[AnyValue](ref0))
 
     // When
     oec.getLongAt(1)
     oec.getRefAt(1)
 
     // Then should see locals in scope1
-    oec.getLongAt(1) should matchIR(Load(long1))
-    oec.getRefAt(1) should matchIR(Load(ref1))
+    oec.getLongAt(1) should matchIR(load[Long](long1))
+    oec.getRefAt(1) should matchIR(load[AnyValue](ref1))
 
     // Then getAll... should _only_ return locals in scope1
     oec.getAllLocalsForLongSlots shouldEqual Seq((1, long1))
@@ -370,18 +369,18 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.beginScope("scope2")
 
     // Then should still see locals in parent scopes
-    oec.getLongAt(0) should matchIR(Load(long0))
-    oec.getRefAt(0) should matchIR(Load(ref0))
-    oec.getLongAt(1) should matchIR(Load(long1))
-    oec.getRefAt(1) should matchIR(Load(ref1))
+    oec.getLongAt(0) should matchIR(load[Long](long0))
+    oec.getRefAt(0) should matchIR(load[AnyValue](ref0))
+    oec.getLongAt(1) should matchIR(load[Long](long1))
+    oec.getRefAt(1) should matchIR(load[AnyValue](ref1))
 
     // When
     oec.getLongAt(2)
     oec.getRefAt(2)
 
     // Then should see locals in scope2
-    oec.getLongAt(2) should matchIR(Load(long2))
-    oec.getRefAt(2) should matchIR(Load(ref2))
+    oec.getLongAt(2) should matchIR(load[Long](long2))
+    oec.getRefAt(2) should matchIR(load[AnyValue](ref2))
 
     // When
     val continuationState2 = oec.endInitializationScope(mergeIntoParentScope = true)
@@ -429,16 +428,16 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.beginScope("scope1")
 
     // Then should still see locals in parent scope
-    oec.getLongAt(0) should matchIR(Load(long0))
-    oec.getRefAt(0) should matchIR(Load(ref0))
+    oec.getLongAt(0) should matchIR(load[Long](long0))
+    oec.getRefAt(0) should matchIR(load[AnyValue](ref0))
 
     // When
     oec.getLongAt(1)
     oec.getRefAt(1)
 
     // Then should see locals in scope1
-    oec.getLongAt(1) should matchIR(Load(long1))
-    oec.getRefAt(1) should matchIR(Load(ref1))
+    oec.getLongAt(1) should matchIR(load[Long](long1))
+    oec.getRefAt(1) should matchIR(load[AnyValue](ref1))
 
     // Then getAll... should _only_ return locals in scope1
     oec.getAllLocalsForLongSlots shouldEqual Seq((1, long1))
@@ -449,18 +448,18 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.beginScope("scope2")
 
     // Then should still see locals in parent scopes
-    oec.getLongAt(0) should matchIR(Load(long0))
-    oec.getRefAt(0) should matchIR(Load(ref0))
-    oec.getLongAt(1) should matchIR(Load(long1))
-    oec.getRefAt(1) should matchIR(Load(ref1))
+    oec.getLongAt(0) should matchIR(load[Long](long0))
+    oec.getRefAt(0) should matchIR(load[AnyValue](ref0))
+    oec.getLongAt(1) should matchIR(load[Long](long1))
+    oec.getRefAt(1) should matchIR(load[AnyValue](ref1))
 
     // When
     oec.getLongAt(2)
     oec.getCachedPropertyAt(cachedProperties(2), getFromStoreIr)
 
     // Then should see locals in scope2
-    oec.getLongAt(2) should matchIR(Load(long2))
-    oec.getRefAt(2) should matchIR(Load(ref2))
+    oec.getLongAt(2) should matchIR(load[Long](long2))
+    oec.getRefAt(2) should matchIR(load[AnyValue](ref2))
 
     // Then getAll... should _only_ return locals in scope2
     oec.getAllLocalsForLongSlots shouldEqual Seq((2, long2))
@@ -559,19 +558,19 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
 
     // Then
     writeIR shouldEqual block(
-      oec.setLongInExecutionContext(1, load(longSlotLocal(1))),
-      oec.setLongInExecutionContext(2, load(longSlotLocal(2))),
-      oec.setLongInExecutionContext(4, load(longSlotLocal(4))),
-      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
-      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
-      oec.setLongInExecutionContext(8, load(longSlotLocal(8))),
-      oec.setRefInExecutionContext(1, load(refSlotLocal(1))),
-      oec.setRefInExecutionContext(2, load(refSlotLocal(2))),
-      oec.setRefInExecutionContext(4, load(refSlotLocal(4))),
-      oec.setRefInExecutionContext(5, load(refSlotLocal(5))),
-      oec.setRefInExecutionContext(7, load(refSlotLocal(7))),
-      oec.setRefInExecutionContext(8, load(refSlotLocal(8))),
-      oec.setRefInExecutionContext(9, load(refSlotLocal(9))),
+      oec.setLongInExecutionContext(1, load[Long](longSlotLocal(1))),
+      oec.setLongInExecutionContext(2, load[Long](longSlotLocal(2))),
+      oec.setLongInExecutionContext(4, load[Long](longSlotLocal(4))),
+      oec.setLongInExecutionContext(5, load[Long](longSlotLocal(5))),
+      oec.setLongInExecutionContext(7, load[Long](longSlotLocal(7))),
+      oec.setLongInExecutionContext(8, load[Long](longSlotLocal(8))),
+      oec.setRefInExecutionContext(1, load[AnyValue](refSlotLocal(1))),
+      oec.setRefInExecutionContext(2, load[AnyValue](refSlotLocal(2))),
+      oec.setRefInExecutionContext(4, load[AnyValue](refSlotLocal(4))),
+      oec.setRefInExecutionContext(5, load[AnyValue](refSlotLocal(5))),
+      oec.setRefInExecutionContext(7, load[AnyValue](refSlotLocal(7))),
+      oec.setRefInExecutionContext(8, load[AnyValue](refSlotLocal(8))),
+      oec.setRefInExecutionContext(9, load[AnyValue](refSlotLocal(9))),
     )
 
     // When
@@ -665,19 +664,19 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // Then
     writeIR shouldEqual block(
       oec.setLongInExecutionContext(0, oec.getLongFromExecutionContext(0, INPUT_CURSOR)),
-      oec.setLongInExecutionContext(1, load(longSlotLocal(1))),
+      oec.setLongInExecutionContext(1, load[Long](longSlotLocal(1))),
       oec.setLongInExecutionContext(2, oec.getLongFromExecutionContext(2, INPUT_CURSOR)),
-      oec.setLongInExecutionContext(3, load(longSlotLocal(3))),
+      oec.setLongInExecutionContext(3, load[Long](longSlotLocal(3))),
       oec.setLongInExecutionContext(4, oec.getLongFromExecutionContext(4, INPUT_CURSOR)),
-      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
-      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
+      oec.setLongInExecutionContext(5, load[Long](longSlotLocal(5))),
+      oec.setLongInExecutionContext(7, load[Long](longSlotLocal(7))),
       oec.setRefInExecutionContext(0, oec.getRefFromExecutionContext(0, INPUT_CURSOR)),
-      oec.setRefInExecutionContext(1, load(refSlotLocal(1))),
+      oec.setRefInExecutionContext(1, load[AnyValue](refSlotLocal(1))),
       oec.setRefInExecutionContext(2, oec.getRefFromExecutionContext(2, INPUT_CURSOR)),
-      oec.setRefInExecutionContext(3, load(refSlotLocal(3))),
+      oec.setRefInExecutionContext(3, load[AnyValue](refSlotLocal(3))),
       oec.setRefInExecutionContext(4, oec.getRefFromExecutionContext(4, INPUT_CURSOR)),
-      oec.setRefInExecutionContext(5, load(refSlotLocal(5))),
-      oec.setRefInExecutionContext(7, load(refSlotLocal(7))),
+      oec.setRefInExecutionContext(5, load[AnyValue](refSlotLocal(5))),
+      oec.setRefInExecutionContext(7, load[AnyValue](refSlotLocal(7))),
     )
   }
 
@@ -701,15 +700,15 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // Then
     writeIR shouldEqual block(
       oec.doCopyFromWithWritableRow(OUTPUT_CURSOR, INPUT_CURSOR, 3, 2),
-      oec.setLongInExecutionContext(3, load(longSlotLocal(3))),
+      oec.setLongInExecutionContext(3, load[Long](longSlotLocal(3))),
       oec.setLongInExecutionContext(4, oec.getLongFromExecutionContext(4, INPUT_CURSOR)),
-      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
-      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
-      oec.setRefInExecutionContext(2, load(refSlotLocal(2))),
-      oec.setRefInExecutionContext(3, load(refSlotLocal(3))),
+      oec.setLongInExecutionContext(5, load[Long](longSlotLocal(5))),
+      oec.setLongInExecutionContext(7, load[Long](longSlotLocal(7))),
+      oec.setRefInExecutionContext(2, load[AnyValue](refSlotLocal(2))),
+      oec.setRefInExecutionContext(3, load[AnyValue](refSlotLocal(3))),
       oec.setRefInExecutionContext(4, oec.getRefFromExecutionContext(4, INPUT_CURSOR)),
-      oec.setRefInExecutionContext(5, load(refSlotLocal(5))),
-      oec.setRefInExecutionContext(7, load(refSlotLocal(7))),
+      oec.setRefInExecutionContext(5, load[AnyValue](refSlotLocal(5))),
+      oec.setRefInExecutionContext(7, load[AnyValue](refSlotLocal(7))),
     )
   }
 
@@ -732,16 +731,16 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // Then
     writeIR shouldEqual block(
       oec.doCopyFromWithWritableRow(OUTPUT_CURSOR, INPUT_CURSOR, 1, 3),
-      oec.setLongInExecutionContext(1, load(longSlotLocal(1))),
+      oec.setLongInExecutionContext(1, load[Long](longSlotLocal(1))),
       oec.setLongInExecutionContext(2, oec.getLongFromExecutionContext(2, INPUT_CURSOR)),
       oec.setLongInExecutionContext(3, oec.getLongFromExecutionContext(3, INPUT_CURSOR)),
       oec.setLongInExecutionContext(4, oec.getLongFromExecutionContext(4, INPUT_CURSOR)),
-      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
-      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
-      oec.setRefInExecutionContext(3, load(refSlotLocal(3))),
+      oec.setLongInExecutionContext(5, load[Long](longSlotLocal(5))),
+      oec.setLongInExecutionContext(7, load[Long](longSlotLocal(7))),
+      oec.setRefInExecutionContext(3, load[AnyValue](refSlotLocal(3))),
       oec.setRefInExecutionContext(4, oec.getRefFromExecutionContext(4, INPUT_CURSOR)),
-      oec.setRefInExecutionContext(6, load(refSlotLocal(6))),
-      oec.setRefInExecutionContext(7, load(refSlotLocal(7))),
+      oec.setRefInExecutionContext(6, load[AnyValue](refSlotLocal(6))),
+      oec.setRefInExecutionContext(7, load[AnyValue](refSlotLocal(7))),
     )
   }
 
@@ -760,8 +759,8 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // Then
     writeIR shouldEqual block(
       oec.doCopyFromWithWritableRow(OUTPUT_CURSOR, INPUT_CURSOR, 5, 5),
-      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
-      oec.setRefInExecutionContext(8, load(refSlotLocal(8))),
+      oec.setLongInExecutionContext(7, load[Long](longSlotLocal(7))),
+      oec.setRefInExecutionContext(8, load[AnyValue](refSlotLocal(8))),
     )
   }
 
@@ -798,9 +797,9 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
 
     // Then
     writeIR shouldEqual block(
-      oec.setLongInExecutionContext(0, load(longSlotLocal(0))),
+      oec.setLongInExecutionContext(0, load[Long](longSlotLocal(0))),
       oec.setLongInExecutionContext(1, oec.getLongFromExecutionContext(1, INPUT_CURSOR)),
-      oec.setRefInExecutionContext(0, load(refSlotLocal(0))),
+      oec.setRefInExecutionContext(0, load[AnyValue](refSlotLocal(0))),
       oec.setRefInExecutionContext(1, oec.getRefFromExecutionContext(1, INPUT_CURSOR)),
     )
   }
@@ -819,10 +818,10 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
 
     // Then
     writeIR shouldEqual block(
-      oec.setLongInExecutionContext(0, load(longSlotLocal(0))),
+      oec.setLongInExecutionContext(0, load[Long](longSlotLocal(0))),
       oec.setLongInExecutionContext(1, oec.getLongFromExecutionContext(1, INPUT_CURSOR)),
       oec.setRefInExecutionContext(0, oec.getRefFromExecutionContext(0, INPUT_CURSOR)),
-      oec.setRefInExecutionContext(1, load(refSlotLocal(1))),
+      oec.setRefInExecutionContext(1, load[AnyValue](refSlotLocal(1))),
     )
   }
 
@@ -847,19 +846,19 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // Then
     writeIR shouldEqual block(
       oec.setLongInExecutionContext(0, oec.getLongFromExecutionContext(0, INPUT_CURSOR)),
-      oec.setLongInExecutionContext(1, load(longSlotLocal(1))),
+      oec.setLongInExecutionContext(1, load[Long](longSlotLocal(1))),
       oec.setLongInExecutionContext(2, oec.getLongFromExecutionContext(2, INPUT_CURSOR)),
-      oec.setLongInExecutionContext(3, load(longSlotLocal(3))),
+      oec.setLongInExecutionContext(3, load[Long](longSlotLocal(3))),
       oec.setLongInExecutionContext(4, oec.getLongFromExecutionContext(4, INPUT_CURSOR)),
-      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
-      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
+      oec.setLongInExecutionContext(5, load[Long](longSlotLocal(5))),
+      oec.setLongInExecutionContext(7, load[Long](longSlotLocal(7))),
       oec.setRefInExecutionContext(0, oec.getRefFromExecutionContext(0, INPUT_CURSOR)),
-      oec.setRefInExecutionContext(1, load(refSlotLocal(1))),
+      oec.setRefInExecutionContext(1, load[AnyValue](refSlotLocal(1))),
       oec.setRefInExecutionContext(2, oec.getRefFromExecutionContext(2, INPUT_CURSOR)),
-      oec.setRefInExecutionContext(3, load(refSlotLocal(3))),
+      oec.setRefInExecutionContext(3, load[AnyValue](refSlotLocal(3))),
       oec.setRefInExecutionContext(4, oec.getRefFromExecutionContext(4, INPUT_CURSOR)),
-      oec.setRefInExecutionContext(5, load(refSlotLocal(5))),
-      oec.setRefInExecutionContext(7, load(refSlotLocal(7))),
+      oec.setRefInExecutionContext(5, load[AnyValue](refSlotLocal(5))),
+      oec.setRefInExecutionContext(7, load[AnyValue](refSlotLocal(7))),
       )
   }
 
@@ -887,13 +886,13 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // Then
     writeIR shouldEqual block(
       oec.doCopyFromWithWritableRow(OUTPUT_CURSOR, INPUT_CURSOR, 4, 3),
-      oec.setLongInExecutionContext(4, load(longSlotLocal(4))),
-      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
-      oec.setLongInExecutionContext(8, load(longSlotLocal(8))),
-      oec.setRefInExecutionContext(3, load(refSlotLocal(3))),
-      oec.setRefInExecutionContext(4, load(refSlotLocal(4))),
+      oec.setLongInExecutionContext(4, load[Long](longSlotLocal(4))),
+      oec.setLongInExecutionContext(5, load[Long](longSlotLocal(5))),
+      oec.setLongInExecutionContext(8, load[Long](longSlotLocal(8))),
+      oec.setRefInExecutionContext(3, load[AnyValue](refSlotLocal(3))),
+      oec.setRefInExecutionContext(4, load[AnyValue](refSlotLocal(4))),
       oec.setRefInExecutionContext(5, oec.getRefFromExecutionContext(5, INPUT_CURSOR)),
-      oec.setRefInExecutionContext(9, load(refSlotLocal(9))),
+      oec.setRefInExecutionContext(9, load[AnyValue](refSlotLocal(9))),
       )
   }
 

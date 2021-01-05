@@ -182,13 +182,13 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
             invokeStatic(
               method[CreateOperator, Long, Array[Int], Write, MutableQueryStatistics]("createNode"),
               loadField(labelFields(offset)), loadField(DATA_WRITE), QUERY_STATS_TRACKER)),
-          codeGen.setLongAt(offset, load(nodeVar)),
+          codeGen.setLongAt(offset, load[Long](nodeVar)),
           properties match {
             case Some(ps) =>
               val p = ps()
               propertyExpressions += p
               invokeStatic(method[SetOperator, Unit, Long, AnyValue, Token, Write, MutableQueryStatistics]("addNodeProperties"),
-                load(nodeVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
+                load[Long](nodeVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
             case _ => noop()
           }
         )
@@ -204,12 +204,12 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
           declareAndAssign(typeRefOf[Long], startNodeVar, getNodeIdFromSlot(startSlot, codeGen)),
           declareAndAssign(typeRefOf[Long], endNodeVar, getNodeIdFromSlot(endSlot, codeGen)),
           declare[Long](relVar),
-          ifElse(or(equal(load(startNodeVar), constant(NO_SUCH_NODE)), equal(load(endNodeVar), constant(NO_SUCH_NODE)))) {
+          ifElse(or(equal(load[Long](startNodeVar), constant(NO_SUCH_NODE)), equal(load[Long](endNodeVar), constant(NO_SUCH_NODE)))) {
             if (lenientCreateRelationship) {
               assign(relVar, constant(NO_SUCH_RELATIONSHIP))
             } else {
               assign(relVar,
-                ternary(equal(load(startNodeVar), constant(NO_SUCH_NODE)),
+                ternary(equal(load[Long](startNodeVar), constant(NO_SUCH_NODE)),
                   invokeStatic(method[CreateOperator, Long, String, String]("failOnMissingNode"), constant(relName), constant(startName)),
                   invokeStatic(method[CreateOperator, Long, String, String]("failOnMissingNode"), constant(relName), constant(endName))
                 )
@@ -220,19 +220,19 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
             assign(relVar,
               invokeStatic(
                 method[CreateOperator, Long, Long, Int, Long, Write, MutableQueryStatistics]("createRelationship"),
-                load(startNodeVar), loadField(relTypeFields(offset)), load(endNodeVar), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
+                load[Long](startNodeVar), loadField(relTypeFields(offset)), load[Long](endNodeVar), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
             ),
               properties match {
                 case Some(ps) =>
                   val p = ps()
                   propertyExpressions += p
                   invokeStatic(method[SetOperator, Unit, Long, AnyValue, Token, Write, MutableQueryStatistics]("addRelationshipProperties"),
-                    load(relVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
+                    load[Long](relVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
                 case None => noop()
               }
             )
           },
-          codeGen.setLongAt(offset, load(relVar))
+          codeGen.setLongAt(offset, load[Long](relVar))
         )
     }
     block(

@@ -450,9 +450,9 @@ abstract class BaseAggregationMapperOperatorTaskTemplate(val inner: OperatorTask
        * }
        */
       declareAndAssign(typeRefOf[Long], currentArg, codeGen.getArgumentAt(argumentSlotOffset)),
-      condition(notEqual(load(currentArg), load(argVar)))(
+      condition(notEqual(load[Long](currentArg), load(argVar)))(
         block(
-          assign(argVar, load(currentArg)),
+          assign(argVar, load[Long](currentArg)),
           genApplyUpdates,
           assign(aggregatedRowMapVar, OperatorCodeGenHelperTemplates.peekState[AggregatedRowMap](loadField(asmField), load(argVar)))
         )),
@@ -468,11 +468,11 @@ abstract class BaseAggregationMapperOperatorTaskTemplate(val inner: OperatorTask
 
       declareAndAssign(typeRefOf[AggregatedRow],
         aggregatedRow,
-        invoke(load(aggregatedRowMapVar), method[AggregatedRowMap, AggregatedRow, AnyValue]("get"), load(groupingValue))),
+        invoke(load(aggregatedRowMapVar), method[AggregatedRowMap, AggregatedRow, AnyValue]("get"), load[AnyValue](groupingValue))),
 
       declareAndAssign(typeRefOf[AggregatedRowUpdaters],
         updaters,
-        invoke(load(aggregatedRow), method[AggregatedRow, AggregatedRowUpdaters, Int]("updaters"), load(workerIdVar))),
+        invoke(load[AggregatedRow](aggregatedRow), method[AggregatedRow, AggregatedRowUpdaters, Int]("updaters"), load(workerIdVar))),
 
       /*
        * updaters.addUpdate(0, aggregationExpression[0]())
@@ -480,7 +480,7 @@ abstract class BaseAggregationMapperOperatorTaskTemplate(val inner: OperatorTask
        * ...
        * updaters.addUpdate(n-1, aggregationExpression[n-1]())
        */
-      addUpdates(load(updaters)),
+      addUpdates(load[AggregatedRowUpdaters](updaters)),
       inner.genOperateWithExpressions
     )
   }

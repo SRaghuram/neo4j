@@ -275,14 +275,14 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       setField(canContinue, constant(false)),
       declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
       declareAndAssign(typeRefOf[Long], toNode, getNodeIdFromSlot(toSlot, codeGen)),
-      condition(and(notEqual(load(fromNode), constant(-1L)), notEqual(load(toNode), constant(-1L)))){
+      condition(and(notEqual(load[Long](fromNode), constant(-1L)), notEqual(load[Long](toNode), constant(-1L)))){
         block(
           setUpCursors(fromNode, toNode),
           assign(resultBoolean, constant(true)),
           setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id, doProfile)),
         )
       },
-      load(resultBoolean)
+      load[Boolean](resultBoolean)
     )
   }
 
@@ -384,9 +384,9 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
         CONNECTING_RELATIONSHIPS,
         loadField(nodeCursorField),
         loadField(traversalCursorField),
-        load(fromNode),
+        load[Long](fromNode),
         loadField(typeField),
-        load(toNode))),
+        load[Long](toNode))),
       invokeSideEffect(loadField(relationshipsField), method[RelationshipTraversalCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
     )
   }

@@ -167,7 +167,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
      */
     block(
       assign(idVariable, invokeStatic(asIdMethod, nullCheckIfRequired(nodeId))),
-      setField(canContinue, isValidNode(load(idVariable.name))),
+      setField(canContinue, isValidNode(load(idVariable))),
       onNode(loadField(executionEventField), load(idVariable)),
       constant(true))
   }
@@ -260,11 +260,11 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
           invokeStatic(asIdMethod,
             invoke(loadField(idCursor),
               method[IteratorCursor, AnyValue]("value")))),
-        onNode(loadField(executionEventField), load(idVariable)),
-        condition(isValidNode(load(idVariable)))(
+        onNode(loadField(executionEventField), load[Long](idVariable)),
+        condition(isValidNode(load[Long](idVariable)))(
           block(
             codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-            codeGen.setLongAt(offset, load(idVariable)),
+            codeGen.setLongAt(offset, load[Long](idVariable)),
             inner.genOperateWithExpressions,
             conditionallyProfileRow(innerCannotContinue, id, doProfile)
           )),

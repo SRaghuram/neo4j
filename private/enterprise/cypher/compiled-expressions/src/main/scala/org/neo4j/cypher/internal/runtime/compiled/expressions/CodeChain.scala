@@ -218,7 +218,7 @@ case class CodeLink(code: Seq[IntermediateRepresentation], isNullable: Boolean, 
     inner.withCode(isNullable, CodeChainExpressionCompiler.unnestAssignBlock(typ, variableName, code), fields, variables)
 
   def assignToAndNullCheck(typ: TypeReference, variableName: String, nullValue: IntermediateRepresentation): CodeChain =
-    assignToAndNullCheck(typ, Load(variableName), nullValue)
+    assignToAndNullCheck(typ, Load(variableName, typ), nullValue)
 
   def assignToAndNullCheck(typ: TypeReference, load: Load, nullValue: IntermediateRepresentation): CodeChain = {
     val assigned = assignTo(typ, load.variable)
@@ -252,7 +252,7 @@ case class NullCheckLink(check: IntermediateRepresentation)(override val inner: 
       block(
         declareAndAssign(typeRefOf[AnyValue], retName, noValue),
         condition(IntermediateRepresentation.not(check))(IntermediateRepresentation.assign(retName, elseCode)),
-        load(retName),
+        load[AnyValue](retName),
       )
     } else {
       ternary(check, noValue, elseCode)

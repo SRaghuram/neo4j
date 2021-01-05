@@ -37,6 +37,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
+import org.neo4j.codegen.api.Load
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.In
@@ -251,7 +252,7 @@ object OperatorExpressionCompiler {
 
       def addField(f: Field, local: String): Unit = {
         fields += f
-        saveOps += setField(f, load(local))
+        saveOps += setField(f, Load(local, f.typ))
         restoreOps += assign(local, loadField(f))
       }
 
@@ -457,17 +458,17 @@ trait OverrideDefaultCompiler {
         val variableName = namer.nextVariableName()
         val setName = namer.nextVariableName()
         val set = variable[InCache](setName, newInstance(constructor[InCache]))
-        registerExitOperation(invoke(load(setName), method[InCache, Unit]("close")))
+        registerExitOperation(invoke(load(set), method[InCache, Unit]("close")))
         val lazySet =
           oneTime(
             declareAndAssign(typeRefOf[Value], variableName,
-              noValueOr(r)(invoke(load(setName),
+              noValueOr(r)(invoke(load(set),
                 method[InCache, Value, AnyValue, ListValue, MemoryTracker]("check"), nullCheckIfRequired(l), asListValue(r.ir), memoryTracker))
             )
           )
 
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        val ops = block(lazySet, load[Value](variableName))
+        val nullChecks = block(lazySet, equal(load[Value](variableName), noValue))
         IntermediateExpression(ops, l.fields ++ r.fields, (l.variables ++ r.variables) :+ set, Set(nullChecks), requireNullCheck = false)
       }
 
@@ -540,7 +541,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     if (local == null) {
       local = locals.addLocalForLongSlot(offset)
     }
-    load(local)
+    load[Long](local)
   }
 
   /**
@@ -551,7 +552,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     if (local == null) {
       local = locals.addLocalForRefSlot(offset)
     }
-    load(local)
+    load[AnyValue](local)
   }
 
   override final def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation = {
@@ -632,13 +633,13 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         didLoadLocalCachedProperty()
         // Even if the local has been seen before in this method it may not be in a code path that have been hit at runtime
         // in this loop iteration. The cached property variable is also reset to null at the end of each inner loop iteration.
-        condition(isNull(load(local)))(
+        condition(isNull(load[AnyValue](local)))(
           initializeIfLocalExists
         )
       }
 
       locals.markModifiedLocalForRefSlot(offset)
-      block(assignLocalVariables, prepareOps, cast[Value](load(local)))
+      block(assignLocalVariables, prepareOps, cast[Value](load[AnyValue](local)))
     }
   }
 
@@ -654,7 +655,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       private def initializeFromContextOrStore: IntermediateRepresentation = {
         block(
           assign(local, getCachedPropertyFromExecutionContext(maybeCachedPropertyOffset.get, INPUT_CURSOR)),
-          condition(isNull(load(local)))(initializeFromStore)
+          condition(isNull(load[AnyValue](local)))(initializeFromStore)
         )
       }
 
@@ -798,7 +799,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
           firstModifiedLongSlot = offset
         }
         if (modified || offset < nLongSlotsToCopyFromInput) {
-          val writeOp = setLongInExecutionContext(offset, load(local))
+          val writeOp = setLongInExecutionContext(offset, load[Long](local))
           writeLongSlotOps += writeOp
         }
       } else if (offset < nLongSlotsToCopyFromInput) {
@@ -815,7 +816,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
           firstModifiedRefSlot = offset
         }
         if (modified || offset < nRefSlotsToCopyFromInput) {
-          val writeOp = setRefInExecutionContext(offset, load(local))
+          val writeOp = setRefInExecutionContext(offset, load[AnyValue](local))
           writeRefSlotOps += writeOp
         }
       } else if (offset < nRefSlotsToCopyFromInput) {
@@ -904,7 +905,7 @@ case class NodeCursorRepresentation(target: IntermediateRepresentation, canBeNul
         condition(isNotNull(target)){
           IntermediateRepresentation.assign(tmpVar, expression)
         },
-        load(tmpVar)
+        Load(tmpVar, IntermediateRepresentation.typeRefOf(manifest))
       )
     } else expression
 

@@ -260,7 +260,7 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
                                                                       val codeGen: OperatorExpressionCompiler)
   extends OperatorTaskTemplate {
   private val argumentMaps: InstanceField = field[ArgumentStateMaps](codeGen.namer.nextVariableName("stateMaps"),
-    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name))
+    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER))
 
   private var countExpression: IntermediateExpression = _
   protected val countLeftVar: LocalVariable = variable[Int](codeGen.namer.nextVariableName("countLeft"), constant(0))
@@ -307,14 +307,14 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
   override def genOperate: IntermediateRepresentation = {
     block(
       beginOperate,
-      condition(not(equal(load(argumentVarName(argumentStateMapId)), load(localArgument)))) {
+      condition(not(equal(load[Long](argumentVarName(argumentStateMapId)), load[Long](localArgument)))) {
         block(
           // the first time we come here 'state' will be null
-          condition(isNotNull(load(state))) {
-            invoke(load(state), method[SerialCountingState, Unit, Int]("update"),
+          condition(isNotNull(load[SerialCountingState](state))) {
+            invoke(load[SerialCountingState](state), method[SerialCountingState, Unit, Int]("update"),
               subtract(load(reservedVar), load(countLeftVar)))
           },
-          assign(localArgument, load(argumentVarName(argumentStateMapId))),
+          assign(localArgument, load[Long](argumentVarName(argumentStateMapId))),
           newState,
         )
       },
@@ -324,8 +324,8 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
 
   override def genOperateExit: IntermediateRepresentation = {
     block(
-      condition(isNotNull(load(state))) {
-        invoke(load(state), method[SerialCountingState, Unit, Int]("update"),
+      condition(isNotNull(load[SerialCountingState](state))) {
+        invoke(load[SerialCountingState](state), method[SerialCountingState, Unit, Int]("update"),
           subtract(load(reservedVar), load(countLeftVar)))
       },
       inner.genOperateExit)
@@ -341,10 +341,10 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
 
   private def newState: IntermediateRepresentation = block(
     assign(state, cast[SerialCountingState](fetchState(loadField(argumentMaps), argumentStateMapId))),
-    condition(invoke(load(state), method[SerialCountingState, Boolean]("isUninitialized")))(
-      invoke(load(state), method[SerialCountingState, Unit, Long]("initialize"), load(expressionVariable))
+    condition(invoke(load[SerialCountingState](state), method[SerialCountingState, Boolean]("isUninitialized")))(
+      invoke(load[SerialCountingState](state), method[SerialCountingState, Unit, Long]("initialize"), load[Long](expressionVariable))
     ),
-    assign(reservedVar, invoke(load(state), method[SerialCountingState, Int, Int]("reserve"), constant(Int.MaxValue))),
+    assign(reservedVar, invoke(load[SerialCountingState](state), method[SerialCountingState, Int, Int]("reserve"), constant(Int.MaxValue))),
     assign(countLeftVar, load(reservedVar))
   )
   }

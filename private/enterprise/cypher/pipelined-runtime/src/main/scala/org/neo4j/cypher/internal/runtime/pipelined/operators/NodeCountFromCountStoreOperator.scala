@@ -207,20 +207,20 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
         assign(countVar, constant(0L))
       }{
         block(
-          assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), loadField(field)))),
+          assign(countVar, multiply(load[Long](countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), loadField(field)))),
           dbHit(loadField(executionEventField)))
       }
     }):_*)
 
     //takes care of the labels we do know at compile time
     val knownLabelOps = block(knownLabels.map(token =>
-      assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(token))))) :+
+      assign(countVar, multiply(load[Long](countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(token))))) :+
       dbHits(loadField(executionEventField), constant(knownLabels.size.toLong)) :_*)
 
     //take care of all wildcard labels
     val wildCardOps = if (wildCards > 0) {
       val wildCardCount = codeGen.namer.nextVariableName()
-      val ops = block((1 to wildCards).map(_ => assign(countVar, multiply(load(countVar), load(wildCardCount)))) :_*)
+      val ops = block((1 to wildCards).map(_ => assign(countVar, multiply(load[Long](countVar), load[Long](wildCardCount)))) :_*)
       block(
         declareAndAssign(typeRefOf[Long], wildCardCount, invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(NameId.WILDCARD))),
         dbHit(loadField(executionEventField)),
@@ -234,7 +234,7 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
       knownLabelOps,
       wildCardOps,
       codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-      codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), load(countVar))),
+      codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), load[Long](countVar))),
       inner.genOperateWithExpressions,
       setField(canContinue, constant(false)),
       conditionallyProfileRow(innerCannotContinue, id, doProfile)

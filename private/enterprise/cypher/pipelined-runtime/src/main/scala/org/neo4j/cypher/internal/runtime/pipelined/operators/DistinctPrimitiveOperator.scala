@@ -158,7 +158,7 @@ abstract class BaseDistinctPrimitiveOperatorTaskTemplate(val inner: OperatorTask
       beginOperate,
       declareAndAssign(typeRefOf[LongArray], groupingKeyAsArrayVar, buildGroupingKey),
       condition(or(innerCanContinue,
-        seen(loadField(distinctStateField), load(groupingKeyAsArrayVar)))) {
+        seen(loadField(distinctStateField), load[LongArray](groupingKeyAsArrayVar)))) {
         block(
           declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
           nullCheckIfRequired(groupingExpression.projectKey),
@@ -187,9 +187,9 @@ abstract class BaseDistinctPrimitiveOperatorTaskTemplate(val inner: OperatorTask
     val statements =
       declareAndAssign(typeRefOf[Array[Long]], "keys", newArray(typeRefOf[Long], primitiveSlots.length)) +:
         primitiveSlots.zipWithIndex.map {
-          case (slot, i) => arraySet(load("keys"), constant(i), codeGen.getLongAt(slot))
+          case (slot, i) => arraySet(load[Array[Long]]("keys"), constant(i), codeGen.getLongAt(slot))
         } :+
-        invokeStatic(method[Values, LongArray, Array[Long]]("longArray"), load("keys"))
+        invokeStatic(method[Values, LongArray, Array[Long]]("longArray"), load[Array[Long]]("keys"))
     block(statements: _*)
   }
 }
@@ -217,19 +217,19 @@ class SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate(inner: OperatorTas
                                                              (val codeGen: OperatorExpressionCompiler)
   extends BaseDistinctPrimitiveOperatorTaskTemplate(inner, id, primitiveSlots, groupings, codeGen) {
   private val argumentMaps: InstanceField = field[ArgumentStateMaps](codeGen.namer.nextVariableName("stateMaps"),
-    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name))
+    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER))
   private val localArgument = codeGen.namer.nextVariableName("argument")
 
   override protected def initializeState: IntermediateRepresentation = constant(null)
   override protected def beginOperate: IntermediateRepresentation =
     block(
       declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
-      condition(not(equal(load(argumentVarName(argumentStateMapId)), load(localArgument)))) {
+      condition(not(equal(load[Long](argumentVarName(argumentStateMapId)), load[Long](localArgument)))) {
         block(
           condition(IntermediateRepresentation.isNotNull(loadField(distinctStateField))){
-            removeState(loadField(argumentMaps), argumentStateMapId, load(localArgument))
+            removeState(loadField(argumentMaps), argumentStateMapId, load[Long](localArgument))
           },
-          assign(localArgument, load(argumentVarName(argumentStateMapId))),
+          assign(localArgument, load[Long](argumentVarName(argumentStateMapId))),
           setField(distinctStateField, cast[DistinctState](OperatorCodeGenHelperTemplates.fetchState(loadField(argumentMaps), argumentStateMapId))),
           invoke(loadField(distinctStateField),
             method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)

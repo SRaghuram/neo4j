@@ -248,7 +248,7 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
           assign(hasInnerLoop, loadField(canContinue))
         )
       ),
-      load(hasInnerLoop))
+      load[Boolean](hasInnerLoop))
   }
 
   override protected def genInnerLoop: IntermediateRepresentation = {

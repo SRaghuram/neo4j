@@ -329,13 +329,13 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
       beginInnerLoop,
       declareAndAssign(typeRefOf[Boolean], hasInnerLoopVar, isPredicatePossible),
       setField(canContinue, constant(false)),
-      condition(load(hasInnerLoopVar))(
+      condition(load[Boolean](hasInnerLoopVar))(
         block(
           allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR, doProfile),
           nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), predicate, order, needsValues),
           setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, doProfile))
         )),
-      load(hasInnerLoopVar)
+      load[Boolean](hasInnerLoopVar)
     )
   }
 
@@ -552,10 +552,10 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
       condition(isNotNull(loadField(nodeCursorsToCloseField))){
         block(
           declareAndAssign(typeRefOf[Int], i, constant(0)),
-          loop(IntermediateRepresentation.lessThan(load(i), arrayLength(loadField(nodeCursorsToCloseField)))) {
+          loop(IntermediateRepresentation.lessThan(load[Int](i), arrayLength(loadField(nodeCursorsToCloseField)))) {
             block(
-              freeCursor[NodeValueIndexCursor](getCursorToFree(arrayLoad(loadField(nodeCursorsToCloseField), load(i))), NodeValueIndexCursorPool),
-              assign(i, add(load(i), constant(1)))
+              freeCursor[NodeValueIndexCursor](getCursorToFree(arrayLoad(loadField(nodeCursorsToCloseField), load[Int](i))), NodeValueIndexCursorPool),
+              assign(i, add(load[Int](i), constant(1)))
             )
           },
           setField(nodeCursorsToCloseField, constant(null))

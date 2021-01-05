@@ -171,7 +171,7 @@ abstract class InputFromBufferOperatorTaskTemplate(override val inner: OperatorT
   override protected def genOperateHead: IntermediateRepresentation = {
     block(
       genAdvanceOnCancelledRow,
-      loop(and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
+      loop(and(invoke(self[ContinuableOperatorTask], method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
         block(
           innermost.resetBelowLimitAndAdvanceToNextArgument,
           codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),

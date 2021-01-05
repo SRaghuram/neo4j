@@ -90,7 +90,7 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
   override protected def genOperateHead: IntermediateRepresentation = {
     block(
       genAdvanceOnCancelledRow,
-      loop(and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
+      loop(and(invoke(self[ContinuableOperatorTask], method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
         block(
           innermost.resetBelowLimitAndAdvanceToNextArgument,
           codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),

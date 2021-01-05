@@ -328,15 +328,15 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
             arraySet(EXPRESSION_VARIABLES, tempNodeOffset,
               invoke(DB_ACCESS,
                 method[DbAccess, NodeValue, Long]("nodeById"),
-                load(fromNode))),
+                load[Long](fromNode))),
             equal(trueValue, nullCheckIfRequired(pred)))
         }
-      val predicateOnFromNode = fromNodePredicate.foldLeft(notEqual(load(fromNode), constant(-1L))) {
+      val predicateOnFromNode = fromNodePredicate.foldLeft(notEqual(load[Long](fromNode), constant(-1L))) {
         case (acc, current) => and(acc, current)
       }
       val predicate =
         if (shouldExpandAll) predicateOnFromNode
-        else and(predicateOnFromNode, notEqual(load(toNode), constant(-1L)))
+        else and(predicateOnFromNode, notEqual(load[Long](toNode), constant(-1L)))
       predicate
     }
 
@@ -349,8 +349,8 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         block(
           loadTypes,
           setField(varExpandCursorField, newInstance(createInnerClass(dir),
-            load(fromNode),
-            load(toNode),
+            load[Long](fromNode),
+            load[Long](toNode),
             ALLOCATE_NODE_CURSOR,
             constant(projectBackwards),
             loadField(typeField),
@@ -371,7 +371,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         )
       },
 
-      load(resultBoolean)
+      load[Boolean](resultBoolean)
     )
   }
 
@@ -466,7 +466,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
       block(
         oneTime(arraySet(EXPRESSION_VARIABLES, tempNodeOffset, invoke(DB_ACCESS,
           method[DbAccess, NodeValue, Long]("nodeById"),
-          invoke(load("selectionCursor"),
+          invoke(load[RelationshipTraversalCursor]("selectionCursor"),
             method[RelationshipTraversalCursor, Long](
               "otherNodeReference"))))),
         equal(trueValue, nullCheckIfRequired(pred)))
@@ -479,7 +479,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         oneTime(arraySet(EXPRESSION_VARIABLES, tempRelOffset,
           invokeStatic(
             method[VarExpandCursor, RelationshipValue, DbAccess, RelationshipTraversalCursor]("relationshipFromCursor"),
-            DB_ACCESS, load("selectionCursor")))),
+            DB_ACCESS, load[RelationshipTraversalCursor]("selectionCursor")))),
         equal(trueValue, nullCheckIfRequired(pred)))
     }
   }
@@ -499,9 +499,9 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
       override protected def getLongAt(offset: Int): IntermediateRepresentation =
         if (fromSlot.isLongSlot && offset == fromSlot.offset) {
-          invoke(self(), method[VarExpandCursor, Long]("fromNode"))
+          invoke(self[VarExpandCursor], method[VarExpandCursor, Long]("fromNode"))
         } else if (toSlot.isLongSlot && offset == toSlot.offset) {
-          invoke(self(), method[VarExpandCursor, Long]("targetToNode"))
+          invoke(self[VarExpandCursor], method[VarExpandCursor, Long]("targetToNode"))
         } else {
           super.getLongAt(offset)
         }
@@ -511,21 +511,21 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
           block(
             oneTime(declareAndAssign(typeRefOf[AnyValue], tmp,
               invokeStatic(method[CompiledHelpers, AnyValue, DbAccess, Long]("nodeOrNoValue"),
-                DB_ACCESS, invoke(self(), method[VarExpandCursor, Long]("fromNode"))))),
-            load(tmp))
+                DB_ACCESS, invoke(self[VarExpandCursor], method[VarExpandCursor, Long]("fromNode"))))),
+            load[AnyValue](tmp))
         } else if (!toSlot.isLongSlot && offset == toSlot.offset) {
           block(
             oneTime(declareAndAssign(typeRefOf[AnyValue], tmp,
               invokeStatic(method[CompiledHelpers, AnyValue, DbAccess, Long]("nodeOrNoValue"),
-                DB_ACCESS, invoke(self(), method[VarExpandCursor, Long]("targetToNode"))))),
-            load(tmp))
+                DB_ACCESS, invoke(self[VarExpandCursor], method[VarExpandCursor, Long]("targetToNode"))))),
+            load[AnyValue](tmp))
         } else {
           super.getRefAt(offset)
         }
       }
 
       override protected def registerMemoryTracker(id: Id): IntermediateRepresentation =
-        invoke(self(), method[VarExpandCursor, MemoryTracker]("memoryTracker"))
+        invoke(self[VarExpandCursor], method[VarExpandCursor, MemoryTracker]("memoryTracker"))
       override protected def registerExitOperation(ir: IntermediateRepresentation): Unit = {}
     }
 

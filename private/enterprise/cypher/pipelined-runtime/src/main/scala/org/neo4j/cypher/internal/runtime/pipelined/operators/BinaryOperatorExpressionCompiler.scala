@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
+import org.neo4j.values.AnyValue
 
 /**
  * This is a specialized OperatorExpressionCompiler used for the case when we have
@@ -53,7 +54,7 @@ class BinaryOperatorExpressionCompiler(slots: SlotConfiguration,
       // Assign `maybeCachedPropertyOffsetInInput` depending on `fromLHSName`
       override def assignLocalVariables: IntermediateRepresentation = block(
         declare[Int](maybeOffsetInInputName),
-        ifElse(load(fromLHSName)) {
+        ifElse(load[Boolean](fromLHSName)) {
           assign(maybeOffsetInInputName, constant(maybeCachedPropertyOffsetInLHS))
         } {
           assign(maybeOffsetInInputName, constant(maybeCachedPropertyOffsetInRHS))
@@ -66,10 +67,10 @@ class BinaryOperatorExpressionCompiler(slots: SlotConfiguration,
        */
       private def initializeFromContextOrStore: IntermediateRepresentation = {
         block(
-          condition(notEqual(load(maybeOffsetInInputName), constant(-1))) {
-            assign(local, getCachedPropertyFromExecutionContextWithDynamicOffset(load(maybeOffsetInInputName), INPUT_CURSOR))
+          condition(notEqual(load[Int](maybeOffsetInInputName), constant(-1))) {
+            assign(local, getCachedPropertyFromExecutionContextWithDynamicOffset(load[Int](maybeOffsetInInputName), INPUT_CURSOR))
           },
-          condition(isNull(load(local)))(initializeFromStore)
+          condition(isNull(load[AnyValue](local)))(initializeFromStore)
         )
       }
 

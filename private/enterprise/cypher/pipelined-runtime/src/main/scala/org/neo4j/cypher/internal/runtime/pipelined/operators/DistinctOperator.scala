@@ -264,7 +264,7 @@ abstract class BaseDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     block(
       beginOperate,
       declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
-      condition(or(innerCanContinue, seen(loadField(distinctStateField), load(keyVar)))) {
+      condition(or(innerCanContinue, seen(loadField(distinctStateField), load[AnyValue](keyVar)))) {
         block(
           nullCheckIfRequired(groupingExpression.projectKey),
           inner.genOperateWithExpressions,
@@ -309,7 +309,7 @@ class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: Operato
                                                     (codeGen: OperatorExpressionCompiler)
   extends BaseDistinctOperatorTaskTemplate(inner, id, groupings, codeGen) {
   private val argumentMaps: InstanceField = field[ArgumentStateMaps](codeGen.namer.nextVariableName("stateMaps"),
-    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name))
+    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER))
   private val localArgument = codeGen.namer.nextVariableName("argument")
 
   override def genOperateEnter: IntermediateRepresentation = {
@@ -322,12 +322,12 @@ class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: Operato
   override protected def beginOperate: IntermediateRepresentation =
     block(
       declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
-      condition(not(equal(load(argumentVarName(argumentStateMapId)), load(localArgument)))) {
+      condition(not(equal(load[Long](argumentVarName(argumentStateMapId)), load[Long](localArgument)))) {
         block(
           condition(IntermediateRepresentation.isNotNull(loadField(distinctStateField))){
-            removeState(loadField(argumentMaps), argumentStateMapId, load(localArgument))
+            removeState(loadField(argumentMaps), argumentStateMapId, load[Long](localArgument))
           },
-          assign(localArgument, load(argumentVarName(argumentStateMapId))),
+          assign(localArgument, load[Long](argumentVarName(argumentStateMapId))),
           setField(distinctStateField, cast[DistinctState](fetchState(loadField(argumentMaps), argumentStateMapId))),
           invoke(loadField(distinctStateField),
             method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)

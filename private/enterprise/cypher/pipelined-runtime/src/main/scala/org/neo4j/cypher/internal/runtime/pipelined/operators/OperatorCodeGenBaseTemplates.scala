@@ -213,9 +213,9 @@ object CompiledStreamingOperatorWithMorselTemplate extends CompiledStreamingOper
           TypeReference.typeReference(classOf[KernelTransaction]),
           TypeReference.typeReference(classOf[Morsel]),
           TypeReference.typeReference(classOf[ArgumentStateMaps]))),
-        load("tx"),
-        load("inputMorsel"),
-        load("argumentStateMaps")))
+        load[KernelTransaction]("tx"),
+        load[Morsel]("inputMorsel"),
+        load[ArgumentStateMaps]("argumentStateMaps")))
   }
 
   override protected def inputOperatorType: TypeReference = typeRefOf[CompiledStreamingOperatorWithMorsel]
@@ -238,9 +238,9 @@ object CompiledStreamingOperatorWithMorselDataTemplate extends CompiledStreaming
           TypeReference.typeReference(classOf[KernelTransaction]),
           TypeReference.typeReference(classOf[MorselData]),
           TypeReference.typeReference(classOf[ArgumentStateMaps]))),
-        load("tx"),
-        load("morselData"),
-        load("argumentStateMaps")))
+        load[KernelTransaction]("tx"),
+        load[MorselData]("morselData"),
+        load[ArgumentStateMaps]("argumentStateMaps")))
   }
 
   override protected def inputOperatorType: TypeReference = typeRefOf[CompiledStreamingOperatorWithMorselData]
@@ -266,10 +266,10 @@ case class CompiledStreamingOperatorWithAccumulatorsTemplate(accumulatorsPerTask
           TypeReference.typeReference(classOf[IndexedSeq[MorselAccumulator[AnyRef]]]),
           TypeReference.typeReference(classOf[ArgumentStateMaps]),
           TypeReference.typeReference(classOf[MorselAccumulator[AnyRef]]))),
-        load("tx"),
-        load("inputAccumulators"),
-        load("argumentStateMaps"),
-        load("singleInputAccumulator")))
+        load[KernelTransaction]("tx"),
+        load[IndexedSeq[MorselAccumulator[AnyRef]]]("inputAccumulators"),
+        load[ArgumentStateMaps]("argumentStateMaps"),
+        load[ArgumentStateMaps]("singleInputAccumulator")))
   }
 
   override protected def inputOperatorType: TypeReference = typeRefOf[CompiledStreamingOperatorWithAccumulators]
@@ -316,7 +316,7 @@ trait CompiledStreamingOperatorTemplate[T <: Operator] {
          *   argumentStateCreator.createStateMap(mapId, FACTORY_i, ordered)
          * }}}
          */
-        invokeSideEffect(load("argumentStateCreator"),
+        invokeSideEffect(load[ArgumentStateMapCreator]("argumentStateCreator"),
           method[ArgumentStateMapCreator,
             ArgumentStateMap[ArgumentState],
             Int,
@@ -348,7 +348,7 @@ trait CompiledStreamingOperatorTemplate[T <: Operator] {
             param[StateFactory]("stateFactory"),
             param[PipelinedQueryState]("state"),
             param[QueryResources]("resources")),
-          body = block(createState, self()))
+          body = block(createState, self[OperatorState]))
       ) ++ genMoreMethodDeclarations,
       // NOTE: This has to be called after genOperate!
       genFields = () => argumentStateFields :+ workIdentityField)
@@ -362,7 +362,7 @@ trait CompiledStreamingOperatorTemplate[T <: Operator] {
         invoke(
           getStatic[ArgumentStateBufferFactoryFactory](staticFieldName(ARGUMENT_STATE_FACTORY_FACTORY_FIELD_PREFIX, factoryFactory)),
           method[ArgumentStateBufferFactoryFactory, ArgumentStateFactory[ArgumentStateBuffer], StateFactory, Int]("createFactory"),
-          load("stateFactory"),
+          load[StateFactory]("stateFactory"),
           constant(operatorId.x)
         )
     }
@@ -1083,11 +1083,11 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   def resetBelowLimitAndAdvanceToNextArgument: IntermediateRepresentation = {
     val ops = limits.map {(argumentStateMapId) =>
         block(
-          condition(not(load(belowLimitVarName(argumentStateMapId)))) {
+          condition(not(load[Boolean](belowLimitVarName(argumentStateMapId)))) {
             block(
               invokeStatic(method[OperatorTaskTemplate, Unit, MorselReadCursor, Long, Int]("flushToNextArgument"),
                 INPUT_CURSOR,
-                load(argumentVarName(argumentStateMapId)),
+                load[Long](argumentVarName(argumentStateMapId)),
                 loadField(field[Int](argumentSlotOffsetFieldName(argumentStateMapId)))),
               assign(belowLimitVarName(argumentStateMapId), constant(true)))
           })
@@ -1102,7 +1102,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
       setField(field, next)
     }
     else {
-      val condition = limits.map(argumentStateMapId => load(belowLimitVarName(argumentStateMapId))).reduceLeft(and)
+      val condition = limits.map(argumentStateMapId => load[Boolean](belowLimitVarName(argumentStateMapId))).reduceLeft(and)
       ifElse(condition)(setField(field, next))(setField(field, constant(false)))
     }
   }

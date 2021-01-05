@@ -442,20 +442,20 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
         if (!startInScope && !endInScope) identity
         else if (!endInScope) {
           //start is in scope, end is not
-          condition(equal(codeGen.getLongAt(startOffset), load(startVar)))
+          condition(equal(codeGen.getLongAt(startOffset), load[Long](startVar)))
         } else if (!startInScope) {
           //end is in scope, start is not
-          condition(equal(codeGen.getLongAt(endOffset), load(endVar)))
+          condition(equal(codeGen.getLongAt(endOffset), load[Long](endVar)))
         } else {
           //both are in scope,
           condition(
             and(
-              equal(codeGen.getLongAt(startOffset), load(startVar)),
-              equal(codeGen.getLongAt(endOffset), load(endVar))
+              equal(codeGen.getLongAt(startOffset), load[Long](startVar)),
+              equal(codeGen.getLongAt(endOffset), load[Long](endVar))
             )
           )
         }
-      gen(write(load(startVar), load(endVar)))
+      gen(write(load[Long](startVar), load[Long](endVar)))
     } else { //undirected
       val newStart = codeGen.namer.nextVariableName()
       val newEnd = codeGen.namer.nextVariableName()
@@ -463,55 +463,55 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
         if (!startInScope && !endInScope) throw new IllegalStateException()
         else if (!endInScope) {
           //start is in scope, end is not
-          ifElse(equal(codeGen.getLongAt(startOffset), load(startVar))) {
+          ifElse(equal(codeGen.getLongAt(startOffset), load[Long](startVar))) {
             block(
-              assign(newStart, load(startVar)),
-              assign(newEnd, load(endVar))
+              assign(newStart, load[Long](startVar)),
+              assign(newEnd, load[Long](endVar))
             )
           } { //else
-            condition(equal(codeGen.getLongAt(startOffset), load(endVar))) {
+            condition(equal(codeGen.getLongAt(startOffset), load[Long](endVar))) {
               block(
-                assign(newStart, load(endVar)),
-                assign(newEnd, load(startVar))
+                assign(newStart, load[Long](endVar)),
+                assign(newEnd, load[Long](startVar))
               )
             }
           }
         } else if (!startInScope) {
           //end is in scope, start is not
-          ifElse(equal(codeGen.getLongAt(endOffset), load(endVar))) {
+          ifElse(equal(codeGen.getLongAt(endOffset), load[Long](endVar))) {
             block(
-              assign(newStart, load(startVar)),
-              assign(newEnd, load(endVar))
+              assign(newStart, load[Long](startVar)),
+              assign(newEnd, load[Long](endVar))
             )
           } { //else
-            condition(equal(codeGen.getLongAt(endOffset), load(startVar))) {
+            condition(equal(codeGen.getLongAt(endOffset), load[Long](startVar))) {
               block(
-                assign(newStart, load(endVar)),
-                assign(newEnd, load(startVar))
+                assign(newStart, load[Long](endVar)),
+                assign(newEnd, load[Long](startVar))
               )
             }
           }
         } else {
           ifElse(
             and(
-              equal(codeGen.getLongAt(startOffset), load(startVar)),
-              equal(codeGen.getLongAt(endOffset), load(endVar))
+              equal(codeGen.getLongAt(startOffset), load[Long](startVar)),
+              equal(codeGen.getLongAt(endOffset), load[Long](endVar))
             )
           ) {
             block(
-              assign(newStart, load(startVar)),
-              assign(newEnd, load(endVar))
+              assign(newStart, load[Long](startVar)),
+              assign(newEnd, load[Long](endVar))
             )
           } { //else
             condition(
               and(
-                equal(codeGen.getLongAt(startOffset), load(endVar)),
-                equal(codeGen.getLongAt(endOffset), load(startVar))
+                equal(codeGen.getLongAt(startOffset), load[Long](endVar)),
+                equal(codeGen.getLongAt(endOffset), load[Long](startVar))
               )
             ) {
               block(
-                assign(newStart, load(endVar)),
-                assign(newEnd, load(startVar))
+                assign(newStart, load[Long](endVar)),
+                assign(newEnd, load[Long](startVar))
               )
             }
           }
@@ -521,7 +521,7 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
         declareAndAssign(typeRefOf[Long], newStart, constant(-1L)),
         declareAndAssign(typeRefOf[Long], newEnd, constant(-1L)),
         init,
-        condition(notEqual(load(newStart), constant(-1L)))(write(load(newStart), load(newEnd)))
+        condition(notEqual(load[Long](newStart), constant(-1L)))(write(load[Long](newStart), load[Long](newEnd)))
       )
     }
   }
@@ -563,9 +563,9 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
         //do a read.singleRelationship(id, cursor) and read start and end from the cursor
         block(
           declareAndAssign(typeRefOf[Long], relIdVar, getRelationshipIdFromSlot(relSlot, codeGen)),
-          condition(notEqual(load(relIdVar), constant(-1L))) {
+          condition(notEqual(load[Long](relIdVar), constant(-1L))) {
             block(
-              singleRelationship(load(relIdVar), RELATIONSHIP_CURSOR),
+              singleRelationship(load[Long](relIdVar), RELATIONSHIP_CURSOR),
               condition(cursorNext[RelationshipScanCursor](RELATIONSHIP_CURSOR)) {
                 onValidType(invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Int]("type")), typesField, types.isEmpty) {
                   block(
@@ -650,12 +650,12 @@ class VarLengthProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplat
       declareAndAssign(typeRefOf[Array[Long]], startEnd,
         invokeStatic(
           method[VarLengthProjectEndpointsTask, Array[Long], ListValue, QueryContext, Array[Int]]("varLengthFindStartAndEnd"),
-          load(relIdVar), ExpressionCompilation.DB_ACCESS, if (types.isEmpty) constant(null) else loadField(typesField))
+          load[Long](relIdVar), ExpressionCompilation.DB_ACCESS, if (types.isEmpty) constant(null) else loadField(typesField))
         ),
-      condition(IntermediateRepresentation.isNotNull(load(startEnd))) {
+      condition(IntermediateRepresentation.isNotNull(load[Array[Long]](startEnd))) {
         block(
-          declareAndAssign(typeRefOf[Long], startVar, arrayLoad(load(startEnd), 0)),
-          declareAndAssign(typeRefOf[Long], endVar, arrayLoad(load(startEnd), 1)),
+          declareAndAssign(typeRefOf[Long], startVar, arrayLoad(load[Array[Long]](startEnd), 0)),
+          declareAndAssign(typeRefOf[Long], endVar, arrayLoad(load[Array[Long]](startEnd), 1)),
           writeOps(startVar, endVar)
         )
       }
@@ -771,9 +771,9 @@ class UndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplate,
         block(
           declareAndAssign(typeRefOf[Long], relIdVar, getRelationshipIdFromSlot(relSlot, codeGen)),
           setField(canContinue, constant(false)),
-          condition(notEqual(load(relIdVar), constant(-1L))) {
+          condition(notEqual(load[Long](relIdVar), constant(-1L))) {
             block(
-              singleRelationship(load(relIdVar), RELATIONSHIP_CURSOR),
+              singleRelationship(load[Long](relIdVar), RELATIONSHIP_CURSOR),
               condition(cursorNext[RelationshipScanCursor](RELATIONSHIP_CURSOR)) {
                 onValidType(invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Int]("type")), typesField, types.isEmpty) {
                   block(
@@ -816,12 +816,12 @@ class VarLengthUndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplat
       declareAndAssign(typeRefOf[Array[Long]], startEnd,
         invokeStatic(
           method[VarLengthProjectEndpointsTask, Array[Long], ListValue, QueryContext, Array[Int]]("varLengthFindStartAndEnd"),
-          load(relIds), ExpressionCompilation.DB_ACCESS, if (types.isEmpty) constant(null) else loadField(typesField))
+          load[ListValue](relIds), ExpressionCompilation.DB_ACCESS, if (types.isEmpty) constant(null) else loadField(typesField))
       ),
-      condition(IntermediateRepresentation.isNotNull(load(startEnd))) {
+      condition(IntermediateRepresentation.isNotNull(load[Array[Long]](startEnd))) {
         block(
-          setField(startField, arrayLoad(load(startEnd), 0)),
-          setField(endField, arrayLoad(load(startEnd), 1)),
+          setField(startField, arrayLoad(load[Array[Long]](startEnd), 0)),
+          setField(endField, arrayLoad(load[Array[Long]](startEnd), 1)),
           setField(canContinue, constant(true))
         )
       },

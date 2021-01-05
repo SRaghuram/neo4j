@@ -212,7 +212,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
       setField(hasWritten, constant(false)),
-      ifElse(notEqual(load(fromNode), constant(-1L))) {
+      ifElse(notEqual(load[Long](fromNode), constant(-1L))) {
         block(
           setUpCursors(fromNode, canBeNull = true),
           setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField)))
@@ -272,11 +272,11 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
               writeRow(getRelationship, getOtherNode),
               doIfPredicate(assign(shouldWriteRow, predicate.map(p => equal(nullCheckIfRequired(p), trueValue)).getOrElse(constant(true))))
             )),
-          doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
+          doIfPredicateOrElse(condition(load[Boolean](shouldWriteRow))(innerBlock))(innerBlock),
           doIfPredicateOrElse(
             //NOTE: it is important here that if the predicate failed, we always need to advance the cursor
             //      if not execution might hang if innerCanContinue is true.
-            ifElse(not(load(shouldWriteRow))){
+            ifElse(not(load[Boolean](shouldWriteRow))){
               setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField)))
             } {
               doIfInnerCantContinue(
