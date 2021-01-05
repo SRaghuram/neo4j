@@ -26,9 +26,10 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.counts.CountsBuilder.EMPTY;
-import static org.neo4j.internal.counts.CountsKey.nodeKey;
-import static org.neo4j.internal.counts.CountsKey.relationshipKey;
 import static org.neo4j.internal.counts.GBPTreeCountsStore.NO_MONITOR;
+import static org.neo4j.internal.counts.GBPTreeCountsStore.keyToString;
+import static org.neo4j.internal.counts.GBPTreeCountsStore.nodeKey;
+import static org.neo4j.internal.counts.GBPTreeCountsStore.relationshipKey;
 import static org.neo4j.io.pagecache.IOLimiter.UNLIMITED;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
@@ -72,9 +73,9 @@ class DumpCountsStoreTest
 
         // then
         String output = out.toString();
-        assertThat( output ).contains( nodeKey( 0 ) + " = 4" );
-        assertThat( output ).contains( nodeKey( 1 ) + " = 5" );
-        assertThat( output ).contains( nodeKey( -1 ) + " = 9" );
-        assertThat( output ).contains( relationshipKey( 0, 4, 1 ) + " = 67" );
+        assertThat( output ).contains( keyToString( nodeKey( 0 ) ) + " = 4" );
+        assertThat( output ).contains( keyToString( nodeKey( 1 ) ) + " = 5" );
+        assertThat( output ).contains( keyToString( nodeKey( -1 ) ) + " = 9" );
+        assertThat( output ).contains( keyToString( relationshipKey( 0, 4, 1 ) ) + " = 67" );
     }
 }
