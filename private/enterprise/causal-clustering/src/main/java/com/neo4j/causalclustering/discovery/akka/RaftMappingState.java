@@ -87,7 +87,15 @@ public class RaftMappingState
     RaftMemberId resolveRaftMemberForServer( DatabaseId databaseId, ServerId serverId )
     {
         var raftByDatabaseId = raftMappingsByServer.get( serverId );
+        if ( raftByDatabaseId == null )
+        {
+            log.warn( "Missing raft mappings for " + serverId );
+        }
         var raftMemberId = raftByDatabaseId == null ? null : raftByDatabaseId.get( databaseId );
+        if ( raftByDatabaseId != null && raftMemberId == null )
+        {
+            log.warn( format( "Missing RaftMemberId for %s and %s", serverId, databaseId ) );
+        }
         return raftMemberId == null ? fallbackRaftMemberForServer( serverId.uuid() ) : raftMemberId;
     }
 

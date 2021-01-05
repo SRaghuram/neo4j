@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -169,14 +170,37 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         var changedDatabaseIds = raftMappingState.update( mapping );
         changedDatabaseIds
                 .stream()
-                .map( coreTopologiesByDatabase::get )
+                .map( this::getCoreTopologyOrWarn )
                 .filter( Objects::nonNull )
                 .forEach( this::notifyRaftListener );
     }
 
+    private DatabaseCoreTopology getCoreTopologyOrWarn( DatabaseId databaseId )
+    {
+        final DatabaseCoreTopology coreTopology = coreTopologiesByDatabase.get( databaseId );
+        if ( coreTopology == null )
+        {
+            log.warn( "Could not get DatabaseCoreTopology for " + databaseId );
+        }
+        return coreTopology;
+    }
+
     private void notifyRaftListener( DatabaseCoreTopology coreDatabaseTopology )
     {
-        raftListener.accept( coreDatabaseTopology.databaseId(), coreDatabaseTopology.resolve( this::resolveRaftMemberForServer ) );
+        raftListener.accept( coreDatabaseTopology.databaseId(), coreDatabaseTopology.resolve( resolveRaftMemberIdOrWarn() ) );
+    }
+
+    private BiFunction<DatabaseId,ServerId,RaftMemberId> resolveRaftMemberIdOrWarn()
+    {
+        return ( databaseId, serverId ) ->
+        {
+            RaftMemberId memberId = raftMappingState.resolveRaftMemberForServer( databaseId, serverId );
+            if ( memberId == null )
+            {
+                log.warn( "Could not resolve RaftMemberId for: %s %s", databaseId, serverId );
+            }
+            return memberId;
+        };
     }
 
     private static String printLeaderInfoMap( Map<DatabaseId,LeaderInfo> leaderInfoMap, Map<DatabaseId,LeaderInfo> oldDbLeaderMap )
