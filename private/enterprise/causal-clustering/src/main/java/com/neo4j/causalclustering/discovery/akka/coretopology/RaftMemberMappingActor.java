@@ -61,14 +61,14 @@ public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<Datab
     {
         var raftMemberId = myIdentity.raftMemberId( message.namedDatabaseId() );
         var mapping = new DatabaseServer( message.namedDatabaseId().databaseId(), myIdentity.serverId() );
-        log().debug( "add mapping {}", mapping );
+        log().info( "add mapping {}", mapping );
         modifyReplicatedData( key, map -> map.put( cluster, mapping, raftMemberId ) );
     }
 
     private void handleDatabaseStoppedMessage( DatabaseStoppedMessage message )
     {
         var mapping = new DatabaseServer( message.namedDatabaseId().databaseId(), myIdentity.serverId() );
-        log().debug( "remove mapping {}", mapping );
+        log().info( "remove mapping {}", mapping );
         modifyReplicatedData( key, map -> map.remove( cluster, mapping ) );
     }
 
@@ -80,7 +80,7 @@ public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<Datab
                                           .map( databaseId -> new DatabaseServer( databaseId, serverId ) )
                                           .reduce( LWWMap.create(), this::addMapping, LWWMap::merge );
 
-        log().debug( "add initial mappings {}", localMappings );
+        log().info( "add initial mappings {}", localMappings );
         modifyReplicatedData( key, map -> map.merge( localMappings ) );
     }
 
@@ -94,14 +94,14 @@ public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<Datab
     {
         data.getEntries().keySet().stream()
                 .filter( ds -> ds.serverId().equals( message.serverId ) )
-                .peek( mapping -> log().debug( "remove mapping {}", mapping ) )
+                .peek( mapping -> log().info( "remove mapping {}", mapping ) )
                 .forEach( ds -> modifyReplicatedData( key, map -> map.remove( cluster, ds ) ));
     }
 
     @Override
     protected void handleIncomingData( LWWMap<DatabaseServer,RaftMemberId> newData )
     {
-        log().debug( "incoming mappings {}", newData );
+        log().info( "incoming mappings {}", newData );
         data = newData;
         topologyActor.tell( new RaftMemberMappingMessage( data ), getSelf() );
     }

@@ -95,7 +95,7 @@ public class RaftMappingState
     {
         raftMappingsByServer.entrySet().removeIf( entry -> !entry.getKey().equals( localServerId ) );
         serverByRaftMember.entrySet().removeIf( entry -> !entry.getValue().equals( localServerId ) );
-        log.debug( "All remote mappings removed (local=%s) mappings remaining: ", localServerId, serverByRaftMember.size() );
+        log.info( "All remote mappings removed (local=%s) mappings remaining: %d", localServerId, serverByRaftMember.size() );
     }
 
     private ServerId fallbackServerForRaftMember( UUID uuid )
@@ -132,12 +132,12 @@ public class RaftMappingState
     {
         if ( addedOrChangedEntries.isEmpty() )
         {
-            log.debug( "Raft Mapping changed for server %s total number of mappings now is %d, nothing added%s", serverId, mappingCounter,
+            log.info( "Raft Mapping changed for server %s total number of mappings now is %d, nothing added%s", serverId, mappingCounter,
                     removedEntries.isEmpty() ? ", nothing removed" : format( "%n   removed mappings %s", removedEntries ) );
         }
         else
         {
-            log.debug( "Raft Mapping changed for server %s total number of mappings now is %d%s%n     added mappings %s", serverId, mappingCounter,
+            log.info( "Raft Mapping changed for server %s total number of mappings now is %d%s%n     added mappings %s", serverId, mappingCounter,
                        removedEntries.isEmpty() ? ", nothing removed" : format( "%n   removed mappings %s", removedEntries ), addedOrChangedEntries );
         }
     }

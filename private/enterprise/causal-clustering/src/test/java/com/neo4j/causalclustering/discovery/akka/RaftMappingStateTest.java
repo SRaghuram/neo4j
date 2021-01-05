@@ -25,6 +25,7 @@ import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
 class RaftMappingStateTest
@@ -61,7 +62,7 @@ class RaftMappingStateTest
         assertEquals( coreId1, state.resolveServerForRaftMember( memberId1 ) );
         assertNull( state.resolveRaftMemberForServer( databaseId2, coreId1 ) );
 
-        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( DEBUG ).containsMessages(
+        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
                 format( "Raft Mapping changed for server %s total number of mappings now is %d, nothing removed%n     added mappings %s",
                         coreId1, 1, Map.of( databaseId1, memberId1 ) ) );
 
@@ -83,7 +84,7 @@ class RaftMappingStateTest
         assertEquals( new RaftMemberId( coreId2.uuid() ), state.resolveRaftMemberForServer( databaseId1, coreId2 ) );
         assertEquals( new RaftMemberId( coreId2.uuid() ), state.resolveRaftMemberForServer( databaseId2, coreId2 ) );
 
-        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( DEBUG ).containsMessages(
+        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
                 format( "Raft Mapping changed for server %s total number of mappings now is %d, nothing removed%n     added mappings %s",
                         coreId1, 2, Map.of( databaseId2, memberId2 ) ) );
     }
@@ -110,7 +111,7 @@ class RaftMappingStateTest
         // fallback working
         assertEquals( new ServerId( memberId2.uuid() ), state.resolveServerForRaftMember( memberId2 ) );
 
-        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( DEBUG ).containsMessages(
+        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
                 format( "Raft Mapping changed for server %s total number of mappings now is %d, nothing added%n   removed mappings %s",
                         coreId1, 1, Set.of( databaseId2 ) ) );
 
@@ -126,7 +127,7 @@ class RaftMappingStateTest
         assertEquals( new ServerId( memberId1.uuid() ), state.resolveServerForRaftMember( memberId1 ) );
         assertEquals( new ServerId( memberId2.uuid() ), state.resolveServerForRaftMember( memberId2 ) );
 
-        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( DEBUG ).containsMessages(
+        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
                 format( "Raft Mapping changed for server %s total number of mappings now is %d, nothing added%n   removed mappings %s",
                         coreId1, 0, Set.of( databaseId1 ) ) );
     }
@@ -207,7 +208,7 @@ class RaftMappingStateTest
         assertEquals( memberId3, state.resolveRaftMemberForServer( databaseId3, coreId1 ) );
         assertEquals( coreId1, state.resolveServerForRaftMember( memberId3 ) );
 
-        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( DEBUG ).containsMessages(
+        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
                 format( "Raft Mapping changed for server %s total number of mappings now is %d%n   removed mappings %s" +
                         "%n     added mappings %s", coreId1, 2, Set.of( databaseId1 ), Map.of( databaseId3, memberId3 ) ) );
     }

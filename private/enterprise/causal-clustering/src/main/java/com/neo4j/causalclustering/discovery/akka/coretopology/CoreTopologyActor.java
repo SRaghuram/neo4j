@@ -277,7 +277,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 
     private void sendRaftMappings( ReplicatedRaftMapping mapping )
     {
-        log().debug( "Forwarding raft mapping info {}", mapping );
+        log().info( "Forwarding raft mapping info {}", mapping );
         raftMappingSink.offer( mapping );
         readReplicaTopologyActor.tell( mapping, getSelf() );
     }
