@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
@@ -89,7 +88,7 @@ class ReadReplicaDatabaseFactory
         DatabaseLogProvider userLogProvider = databaseLogService.getUserLogProvider();
 
         LifeSupport clusterComponents = new LifeSupport();
-        Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_CLIENT );
+        Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_PROCESS );
         CommandIndexTracker commandIndexTracker = databaseContext.dependencies().satisfyDependency( new CommandIndexTracker() );
         initialiseStatusDescriptionEndpoint( commandIndexTracker, clusterComponents, databaseContext.dependencies() );
 
@@ -101,9 +100,11 @@ class ReadReplicaDatabaseFactory
 
         Panicker panicker = panicService.panicker();
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
-        CatchupProcessManager catchupProcess = new CatchupProcessManager( catchupExecutor, catchupComponentsRepository, databaseContext, panicker,
-                topologyService, catchupClientFactory, upstreamDatabaseStrategySelector, timerService, commandIndexTracker, internalLogProvider,
-                config, databaseEventDispatch, pageCacheTracer );
+        CatchupProcessFactory catchupProcessFactory = new CatchupProcessFactory( catchupExecutor, panicker, catchupComponentsRepository, topologyService,
+                catchupClientFactory, upstreamDatabaseStrategySelector, commandIndexTracker, internalLogProvider, config, databaseEventDispatch,
+                pageCacheTracer );
+        CatchupProcessManager catchupProcess = new CatchupProcessManager( databaseContext, panicker, timerService, internalLogProvider, config,
+                catchupProcessFactory );
         databaseContext.dependencies().satisfyDependency( catchupProcess );
 
         var raftIdStorage = clusterStateFactory.createRaftGroupIdStorage( databaseContext.databaseId().name(), internalLogProvider );

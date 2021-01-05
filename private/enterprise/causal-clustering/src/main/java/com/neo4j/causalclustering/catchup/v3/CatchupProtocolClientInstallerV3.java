@@ -99,7 +99,8 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
         ClientNettyPipelineBuilder builder = pipelineBuilder.client( channel, log )
                 .modify( modifiers )
                 .addFraming();
-        encoders( builder ).add( "in_res_type", new ClientMessageTypeHandler( protocol, logProvider ) )
+        encoders( builder )
+                .add( "in_res_type", new ClientMessageTypeHandler( protocol, logProvider ) )
                 .add( "dec_dispatch", decoderDispatcher );
 
         handlers( builder, protocol ).install();

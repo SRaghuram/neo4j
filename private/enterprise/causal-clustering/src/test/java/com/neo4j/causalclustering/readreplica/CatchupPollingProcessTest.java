@@ -17,7 +17,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
-import com.neo4j.causalclustering.error_handling.DbmsPanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;

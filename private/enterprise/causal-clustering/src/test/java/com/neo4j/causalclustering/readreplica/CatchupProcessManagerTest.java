@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
@@ -13,44 +12,55 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.consensus.schedule.CountingTimerService;
 import com.neo4j.causalclustering.core.consensus.schedule.Timer;
-import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
-import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicReason;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
-import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
+import com.neo4j.causalclustering.readreplica.CatchupProcessFactory.CatchupProcessComponents;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
-import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.CallingThreadExecutor;
+import org.neo4j.kernel.impl.scheduler.CentralJobScheduler;
+import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.FakeClockJobScheduler;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
+import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
+@ExtendWith( LifeExtension.class )
+@TestInstance( PER_METHOD )
 class CatchupProcessManagerTest
 {
-    private final CatchupClientFactory catchUpClient = mock( CatchupClientFactory.class );
-    private final UpstreamDatabaseStrategySelector strategyPipeline = mock( UpstreamDatabaseStrategySelector.class );
-    private final TopologyService topologyService = mock( TopologyService.class );
+    @Inject
+    private LifeSupport life;
+
     private final CatchupComponentsRepository catchupComponents = mock( CatchupComponentsRepository.class );
     private final Panicker panicker = mock( Panicker.class );
 
@@ -59,9 +69,7 @@ class CatchupProcessManagerTest
     private final NamedDatabaseId namedDatabaseId = databaseIdRepository.getRaw( "db1" );
     private final ReadReplicaDatabaseContext databaseContext = mock( ReadReplicaDatabaseContext.class );
     private final FakeClockJobScheduler scheduler = new FakeClockJobScheduler();
-    private final CountingTimerService timerService = new CountingTimerService( scheduler, NullLogProvider.getInstance() );
-
-    private CatchupProcessManager catchupProcessManager;
+    private final CountingTimerService timerService = new CountingTimerService( scheduler, nullLogProvider() );
 
     @BeforeEach
     void before()
@@ -71,12 +79,27 @@ class CatchupProcessManagerTest
         CatchupComponents components = new CatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) );
 
         //Wire these mocked components to the ServerModule mock
-        when( catchupComponents.componentsFor( any( NamedDatabaseId.class ) ) ).thenReturn( Optional.of( components ) );
+        when( catchupComponents.componentsFor( any() ) ).thenReturn( Optional.of( components ) );
+        when( databaseContext.kernelDatabase() ).thenReturn( mock( Database.class ) );
+        when( databaseContext.monitors() ).thenReturn( mock( Monitors.class ) );
+    }
 
-        //Construct the manager under test
-        catchupProcessManager = spy( new CatchupProcessManager( new CallingThreadExecutor(), catchupComponents, databaseContext,
-                panicker, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
-                NullLogProvider.getInstance(), Config.defaults(), mock( ReplicatedDatabaseEventDispatch.class ), PageCacheTracer.NULL ) );
+    private CatchupProcessManager createProcessManager( CatchupPollingProcess catchupProcess )
+    {
+        var catchupProcessFactory = mock( CatchupProcessFactory.class );
+        var catchupProcessComponents = new CatchupProcessComponents( catchupProcess, mock( BatchingTxApplier.class ) );
+        when( catchupProcessFactory.create( any() ) ).thenReturn( catchupProcessComponents );
+        var catchupProcessManager = new CatchupProcessManager(
+                databaseContext, panicker, timerService, nullLogProvider(), Config.defaults(), catchupProcessFactory );
+        life.add( catchupProcessManager );
+        return spy( catchupProcessManager );
+    }
+
+    private void createProcessManager( CatchupProcessFactory catchupProcessFactory, TimerService timerService )
+    {
+        var catchupProcessManager = new CatchupProcessManager(
+                databaseContext, panicker, timerService, nullLogProvider(), Config.defaults(), catchupProcessFactory );
+        life.add( catchupProcessManager );
     }
 
     private ClusteredDatabaseContext getMockDatabase( NamedDatabaseId namedDatabaseId )
@@ -92,8 +115,7 @@ class CatchupProcessManagerTest
     {
         // given
         CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
-        catchupProcessManager.setCatchupProcess( catchupProcess );
-        catchupProcessManager.initTimer();
+        createProcessManager( catchupProcess );
 
         // when
         timerService.invoke( TX_PULLER_TIMER );
@@ -107,9 +129,8 @@ class CatchupProcessManagerTest
     {
         // given
         CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
+        CatchupProcessManager catchupProcessManager = createProcessManager( catchupProcess );
 
-        catchupProcessManager.initTimer();
-        catchupProcessManager.setCatchupProcess( catchupProcess );
         catchupProcessManager.panicDatabase( DatabasePanicReason.Test, new RuntimeException( "Don't panic Mr. Mainwaring!" ) );
 
         Timer timer = spy( single( timerService.getTimers( TX_PULLER_TIMER ) ) );
@@ -125,9 +146,9 @@ class CatchupProcessManagerTest
     void pauseCatchupProcessShouldBeIdempotent()
     {
         //given
-        CatchupPollingProcess catchupPollingProcess = mock( CatchupPollingProcess.class );
-        when( catchupPollingProcess.isStoryCopy() ).thenReturn( false );
-        catchupProcessManager.setCatchupProcess( catchupPollingProcess );
+        CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
+        when( catchupProcess.isStoryCopy() ).thenReturn( false );
+        CatchupProcessManager catchupProcessManager = createProcessManager( catchupProcess );
 
         //when
         assertTrue( catchupProcessManager.pauseCatchupProcess() );
@@ -138,9 +159,9 @@ class CatchupProcessManagerTest
     void resumeCatchupProcessShouldBeIdempotent()
     {
         //given
-        CatchupPollingProcess catchupPollingProcess = mock( CatchupPollingProcess.class );
-        when( catchupPollingProcess.isStoryCopy() ).thenReturn( false );
-        catchupProcessManager.setCatchupProcess( catchupPollingProcess );
+        CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
+        when( catchupProcess.isStoryCopy() ).thenReturn( false );
+        CatchupProcessManager catchupProcessManager = createProcessManager( catchupProcess );
 
         //when
         assertTrue( catchupProcessManager.pauseCatchupProcess() );
@@ -152,11 +173,42 @@ class CatchupProcessManagerTest
     void shouldFailToStopCatchupPollingIfCatchupPollingHasStoryCopyState()
     {
         //given
-        CatchupPollingProcess catchupPollingProcess = mock( CatchupPollingProcess.class );
-        when( catchupPollingProcess.isStoryCopy() ).thenReturn( true );
-        catchupProcessManager.setCatchupProcess( catchupPollingProcess );
+        CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
+        when( catchupProcess.isStoryCopy() ).thenReturn( true );
+        CatchupProcessManager catchupProcessManager = createProcessManager( catchupProcess );
 
         //when
-        assertThrows( IllegalStateException.class, () -> catchupProcessManager.pauseCatchupProcess() );
+        assertThrows( IllegalStateException.class, catchupProcessManager::pauseCatchupProcess );
+    }
+
+    @Test
+    void shouldAbortOnStopWhilstPulling() throws Exception
+    {
+        var catchupProcess = mock( CatchupPollingProcess.class );
+        CompletableFuture<Void> cf = new CompletableFuture<>();
+        Semaphore onTick = new Semaphore( 0 );
+        doAnswer( ignored ->
+        {
+            onTick.release();
+            return cf;
+        } ).when( catchupProcess ).tick();
+        doAnswer( ignored -> cf.complete( null ) ).when( catchupProcess ).stop();
+
+        var catchupProcessFactory = mock( CatchupProcessFactory.class );
+        when( catchupProcessFactory.create( any() ) ).thenReturn( new CatchupProcessComponents( catchupProcess, mock( BatchingTxApplier.class ) ) );
+
+        var scheduler = new CentralJobScheduler( Clocks.nanoClock() )
+        {
+        };
+        life.add( scheduler );
+
+        var timerService = new TimerService( scheduler, nullLogProvider() );
+        createProcessManager( catchupProcessFactory, timerService );
+
+        // when: onTimeout() should block on the CompletableFuture above
+        onTick.acquire();
+
+        // then: on shutdown() we should not be blocked, because our custom CatchupProcess completes the CompletableFuture
+        life.shutdown();
     }
 }

@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupErrorResponse;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
+import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
@@ -227,6 +228,10 @@ public class CatchupPollingProcess extends LifecycleAdapter
             public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxPullResponse response )
             {
                 handleTransaction( response.tx() );
+                if ( state == CANCELLED )
+                {
+                    signal.complete( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, -1 ) );
+                }
             }
 
             @Override
