@@ -48,22 +48,22 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
                                                 Integer.BYTES /* first loop */ +
                                                 Integer.BYTES /* owning node */;
 
-    // For the Dynamic format
-    public static final int D_HAS_OUTGOING_BIT = 0b0000_1000;
-    public static final int D_HAS_INCOMING_BIT = 0b0001_0000;
-    public static final int D_HAS_LOOP_BIT = 0b0010_0000;
-    public static final int D_HAS_NEXT_BIT = 0b0100_0000;
+    // For the variable-length encoding
+    public static final int V_HAS_OUTGOING_BIT = 0b0000_1000;
+    public static final int V_HAS_INCOMING_BIT = 0b0001_0000;
+    public static final int V_HAS_LOOP_BIT = 0b0010_0000;
+    public static final int V_HAS_NEXT_BIT = 0b0100_0000;
     // Ideally we would have wanted to have three bits here, one for each direction, like for the other versions of this format.
     // But there's only one available if we want the format to be backwards compatible. So instead this bit is set if any of
     // the directions have external degrees and if so the stored owning node will be shifted upwards and the three bits stored in its lsb.
-    public static final int D_HAS_ANY_EXTERNAL_DEGREES_BIT = 0b1000_0000;
-    public static final int D_HAS_DIR_EXTERNAL_DEGREES_MASK = 0b1;
-    public static final int D_HAS_OUT_EXTERNAL_DEGREES_SHIFT = 0;
-    public static final int D_HAS_IN_EXTERNAL_DEGREES_SHIFT = 1;
-    public static final int D_HAS_LOOP_EXTERNAL_DEGREES_SHIFT = 2;
-    public static final int D_OWNING_NODE_EXTERNAL_DEGREES_SHIFT = 3;
+    private static final int V_HAS_ANY_EXTERNAL_DEGREES_BIT = 0b1000_0000;
+    private static final int V_HAS_DIR_EXTERNAL_DEGREES_MASK = 0b1;
+    private static final int V_HAS_OUT_EXTERNAL_DEGREES_SHIFT = 0;
+    private static final int V_HAS_IN_EXTERNAL_DEGREES_SHIFT = 1;
+    private static final int V_HAS_LOOP_EXTERNAL_DEGREES_SHIFT = 2;
+    private static final int V_OWNING_NODE_EXTERNAL_DEGREES_SHIFT = 3;
 
-    // For the Fixed reference format
+    // For the fixed reference encoding
     private static final int F_NEXT_RECORD_BIT = 0b0000_0001;
     private static final int F_FIRST_OUT_BIT = 0b0000_0010;
     private static final int F_FIRST_IN_BIT = 0b0000_0100;
@@ -105,21 +105,21 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
         else
         {
             int type = getType( cursor );
-            long firstOut = decodeCompressedReference( cursor, headerByte, D_HAS_OUTGOING_BIT, NULL );
-            long firstIn = decodeCompressedReference( cursor, headerByte, D_HAS_INCOMING_BIT, NULL );
-            long firstLoop = decodeCompressedReference( cursor, headerByte, D_HAS_LOOP_BIT, NULL );
+            long firstOut = decodeCompressedReference( cursor, headerByte, V_HAS_OUTGOING_BIT, NULL );
+            long firstIn = decodeCompressedReference( cursor, headerByte, V_HAS_INCOMING_BIT, NULL );
+            long firstLoop = decodeCompressedReference( cursor, headerByte, V_HAS_LOOP_BIT, NULL );
             long owningNode = decodeCompressedReference( cursor );
-            long next = decodeCompressedReference( cursor, headerByte, D_HAS_NEXT_BIT, NULL );
+            long next = decodeCompressedReference( cursor, headerByte, V_HAS_NEXT_BIT, NULL );
             boolean hasExternalDegreesOut = false;
             boolean hasExternalDegreesIn = false;
             boolean hasExternalDegreesLoop = false;
-            boolean hasAnyExternalDegrees = (headerByte & D_HAS_ANY_EXTERNAL_DEGREES_BIT) != 0;
+            boolean hasAnyExternalDegrees = (headerByte & V_HAS_ANY_EXTERNAL_DEGREES_BIT) != 0;
             if ( hasAnyExternalDegrees )
             {
-                hasExternalDegreesOut = ((owningNode >> D_HAS_OUT_EXTERNAL_DEGREES_SHIFT) & D_HAS_DIR_EXTERNAL_DEGREES_MASK) != 0;
-                hasExternalDegreesIn = ((owningNode >> D_HAS_IN_EXTERNAL_DEGREES_SHIFT) & D_HAS_DIR_EXTERNAL_DEGREES_MASK) != 0;
-                hasExternalDegreesLoop = ((owningNode >> D_HAS_LOOP_EXTERNAL_DEGREES_SHIFT) & D_HAS_DIR_EXTERNAL_DEGREES_MASK) != 0;
-                owningNode >>= D_OWNING_NODE_EXTERNAL_DEGREES_SHIFT;
+                hasExternalDegreesOut = ((owningNode >> V_HAS_OUT_EXTERNAL_DEGREES_SHIFT) & V_HAS_DIR_EXTERNAL_DEGREES_MASK) != 0;
+                hasExternalDegreesIn = ((owningNode >> V_HAS_IN_EXTERNAL_DEGREES_SHIFT) & V_HAS_DIR_EXTERNAL_DEGREES_MASK) != 0;
+                hasExternalDegreesLoop = ((owningNode >> V_HAS_LOOP_EXTERNAL_DEGREES_SHIFT) & V_HAS_DIR_EXTERNAL_DEGREES_MASK) != 0;
+                owningNode >>= V_OWNING_NODE_EXTERNAL_DEGREES_SHIFT;
             }
             record.initialize( inUse, type, firstOut, firstIn, firstLoop, owningNode, next );
             record.setHasExternalDegreesOut( hasExternalDegreesOut );
@@ -132,11 +132,11 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
     protected byte headerBits( RelationshipGroupRecord record )
     {
         byte header = 0;
-        header = set( header, D_HAS_OUTGOING_BIT, record.getFirstOut(), NULL );
-        header = set( header, D_HAS_INCOMING_BIT, record.getFirstIn(), NULL );
-        header = set( header, D_HAS_LOOP_BIT, record.getFirstLoop(), NULL );
-        header = set( header, D_HAS_NEXT_BIT, record.getNext(), NULL );
-        header = set( header, D_HAS_ANY_EXTERNAL_DEGREES_BIT, hasAnyExternalDegrees( record ) );
+        header = set( header, V_HAS_OUTGOING_BIT, record.getFirstOut(), NULL );
+        header = set( header, V_HAS_INCOMING_BIT, record.getFirstIn(), NULL );
+        header = set( header, V_HAS_LOOP_BIT, record.getFirstLoop(), NULL );
+        header = set( header, V_HAS_NEXT_BIT, record.getNext(), NULL );
+        header = set( header, V_HAS_ANY_EXTERNAL_DEGREES_BIT, hasAnyExternalDegrees( record ) );
         return header;
     }
 
@@ -157,10 +157,10 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
         long owningNode = record.getOwningNode();
         if ( hasAnyExternalDegrees( record ) )
         {
-            owningNode <<= D_OWNING_NODE_EXTERNAL_DEGREES_SHIFT;
-            owningNode |= record.hasExternalDegreesOut() ? (1 << D_HAS_OUT_EXTERNAL_DEGREES_SHIFT) : 0;
-            owningNode |= record.hasExternalDegreesIn() ? (1 << D_HAS_IN_EXTERNAL_DEGREES_SHIFT) : 0;
-            owningNode |= record.hasExternalDegreesLoop() ? (1 << D_HAS_LOOP_EXTERNAL_DEGREES_SHIFT) : 0;
+            owningNode <<= V_OWNING_NODE_EXTERNAL_DEGREES_SHIFT;
+            owningNode |= record.hasExternalDegreesOut() ? (1 << V_HAS_OUT_EXTERNAL_DEGREES_SHIFT) : 0;
+            owningNode |= record.hasExternalDegreesIn() ? (1 << V_HAS_IN_EXTERNAL_DEGREES_SHIFT) : 0;
+            owningNode |= record.hasExternalDegreesLoop() ? (1 << V_HAS_LOOP_EXTERNAL_DEGREES_SHIFT) : 0;
         }
         return owningNode;
     }
