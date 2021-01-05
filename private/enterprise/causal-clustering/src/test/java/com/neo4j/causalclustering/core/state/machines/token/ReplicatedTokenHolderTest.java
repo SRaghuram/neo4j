@@ -161,27 +161,25 @@ class ReplicatedTokenHolderTest
     {
         StorageEngine storageEngine = mock( StorageEngine.class );
         doAnswer( invocation ->
-                  {
-                      Collection<StorageCommand> target = invocation.getArgument( 0 );
-                      ReadableTransactionState txState = invocation.getArgument( 1 );
-                      txState.accept( new TxStateVisitor.Adapter()
-                      {
-                          @Override
-                          public void visitCreatedLabelToken( long id, String name, boolean internal )
-                          {
-                              LabelTokenRecord before = new LabelTokenRecord( id );
-                              LabelTokenRecord after = before.copy();
-                              after.setInUse( true );
-                              after.setInternal( internal );
-                              target.add( new Command.LabelTokenCommand( before, after ) );
-                          }
-                      } );
-                      return null;
-                  } ).when( storageEngine ).createCommands( anyCollection(), any( ReadableTransactionState.class ),
-                                                            any( StorageReader.class ), any( CommandCreationContext.class ),
-                                                            any( ResourceLocker.class ), any( LockTracer.class ), anyLong(), any( TxStateVisitor.Decorator.class ),
-                                                            any( PageCursorTracer.class ),
-                any( MemoryTracker.class ) );
+        {
+            Collection<StorageCommand> target = invocation.getArgument( 0 );
+            ReadableTransactionState txState = invocation.getArgument( 1 );
+            txState.accept( new TxStateVisitor.Adapter()
+            {
+                @Override
+                public void visitCreatedLabelToken( long id, String name, boolean internal )
+                {
+                    LabelTokenRecord before = new LabelTokenRecord( id );
+                    LabelTokenRecord after = before.copy();
+                    after.setInUse( true );
+                    after.setInternal( internal );
+                    target.add( new Command.LabelTokenCommand( before, after ) );
+                }
+            } );
+            return null;
+        } ).when( storageEngine ).createCommands( anyCollection(), any( ReadableTransactionState.class ), any( StorageReader.class ),
+                any( CommandCreationContext.class ), any( ResourceLocker.class ), any( LockTracer.class ), anyLong(), any( TxStateVisitor.Decorator.class ),
+                any( PageCursorTracer.class ), any( MemoryTracker.class ) );
 
         StorageReader readLayer = mock( StorageReader.class );
         when( storageEngine.newReader() ).thenReturn( readLayer );
