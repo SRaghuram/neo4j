@@ -89,7 +89,7 @@ public class QueryStringTest
     public void shouldFormatRawValueWithExecutionMode()
     {
         QueryString qs = StaticQueryString.atDefaults( rawQueryString )
-                                          .copyWith( ExecutionMode.PROFILE );
+                                          .copyWith( ExecutionMode.CARDINALITY );
         assertEquals( "CYPHER PROFILE " + rawQueryString, qs.value() );
     }
 
@@ -99,7 +99,7 @@ public class QueryStringTest
         QueryString qs = StaticQueryString.atDefaults( rawQueryString )
                                           .copyWith( Planner.COST )
                                           .copyWith( Runtime.SLOTTED )
-                                          .copyWith( ExecutionMode.PROFILE );
+                                          .copyWith( ExecutionMode.CARDINALITY );
         assertThat( qs.value(), anyOf( equalTo( "CYPHER runtime=slotted planner=cost PROFILE " + rawQueryString ),
                                        equalTo( "CYPHER planner=cost runtime=slotted PROFILE " + rawQueryString ) ) );
     }

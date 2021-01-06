@@ -27,8 +27,7 @@ class QueryTest
             true,
             false,
             Parameters.empty(),
-            Deployment.embedded()
-    );
+            Deployment.embedded() );
 
     @Test
     void copyWithPlannerShouldChangePlanner()

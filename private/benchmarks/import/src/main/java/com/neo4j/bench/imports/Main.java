@@ -19,7 +19,6 @@ import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.ParameterVerifier;
-import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroup;
@@ -30,6 +29,7 @@ import com.neo4j.bench.model.model.Environment;
 import com.neo4j.bench.model.model.Instance;
 import com.neo4j.bench.model.model.Java;
 import com.neo4j.bench.model.model.Metrics;
+import com.neo4j.bench.model.model.Metrics.MetricsUnit;
 import com.neo4j.bench.model.model.Neo4j;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.model.TestRun;
@@ -58,7 +58,6 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.test.proc.ProcessUtil;
 
 import static com.neo4j.bench.model.model.Repository.IMPORT_BENCH;
-import static com.neo4j.bench.model.model.Repository.NEO4J;
 import static java.util.stream.Collectors.joining;
 
 @Command( name = "import-benchmarks", description = "benchmarks for import performance" )
@@ -69,8 +68,6 @@ public class Main
     private static final String[] sizes = {"100m", "1bn", "10bn", "100bn"};
     private static final String forceBlockBasedSize = "100bn";
     private static final String IMPORT_OWNER = "neo-technology";
-    private static final String NEO4J_ENTERPRISE = "Enterprise";
-    private static final String NEO4J_COMMUNITY = "Community";
     private static final String ARG_NEO4J_BRANCH = "--neo4j_branch";
     private static final String ARG_BRANCH_OWNER = "--branch_owner";
     private static final String ARG_REPORT_RESULT = "--report_result";
@@ -291,7 +288,7 @@ public class Main
         if ( exitCode == 0 )
         {
             long time = System.currentTimeMillis() - startTime;
-            Metrics runMetrics = new Metrics( TimeUnit.MILLISECONDS, time, time, time, 1, time, time, time, time, time, time, time );
+            Metrics runMetrics = new Metrics( MetricsUnit.latency( TimeUnit.MILLISECONDS ), time, time, time, 1, time, time, time, time, time, time, time );
 
             metrics.add( group, benchmark, runMetrics, null /*no auxiliary metrics*/, neo4jConfig );
         }

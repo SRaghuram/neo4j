@@ -78,7 +78,7 @@ public class ProfilerRecordingDescriptor
             throw new RuntimeException( "Invalid recording type: " + aRecordingType + "\n" +
                                         "Valid types: " + recordingTypes() );
         }
-        return new RecordingDescriptor( benchmarkName, runPhase, aRecordingType, additionalParams, secondaryBenchmarks );
+        return new RecordingDescriptor( benchmarkName, runPhase, aRecordingType, additionalParams, secondaryBenchmarks, false );
     }
 
     private List<RecordingType> recordingTypes()

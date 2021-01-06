@@ -16,7 +16,6 @@ import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.model.model.Annotation;
-import com.neo4j.bench.model.model.AuxiliaryMetrics;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroup;
@@ -133,7 +132,7 @@ public class SubmitTestRunsAndPlansIT
     }
 
     @Test
-    void shouldRespectErrorReportingPolicy() throws Exception
+    void shouldRespectErrorReportingPolicy()
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
@@ -654,7 +653,7 @@ public class SubmitTestRunsAndPlansIT
             Benchmark... benchmarks )
     {
         Metrics metrics = getMetrics();
-        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
+        Metrics auxiliaryMetrics = getAuxiliaryMetrics();
         Neo4jConfig neo4jConfig = Neo4jConfig.empty();
         BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
         Stream.of( benchmarks ).forEach( benchmark -> benchmarkGroupBenchmarkMetrics.add(
@@ -684,7 +683,7 @@ public class SubmitTestRunsAndPlansIT
             Benchmark... benchmarks )
     {
         Metrics metrics = getMetrics();
-        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
+        Metrics auxiliaryMetrics = getAuxiliaryMetrics();
         Neo4jConfig neo4jConfig = Neo4jConfig.empty();
         BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
         Stream.of( benchmarks ).forEach( benchmark -> benchmarkGroupBenchmarkMetrics.add(
@@ -724,28 +723,21 @@ public class SubmitTestRunsAndPlansIT
 
     public static Plan plan( String description )
     {
-        PlanOperator leftLeaf1 = new PlanOperator( 0, "left-leaf", 1, 2.0, 3 );
-        leftLeaf1.addArgument( "a", "b" );
-        PlanOperator leftLeaf2 = new PlanOperator( 1, "left-leaf", 1, 2.0, 3 );
-        leftLeaf1.addArgument( "a", "b" );
+        PlanOperator leftLeaf1 = new PlanOperator( 0, "left-leaf", 1L, 2L, 3L );
+        PlanOperator leftLeaf2 = new PlanOperator( 1, "left-leaf", 1L, 2L, 3L );
 
-        PlanOperator rightLeaf1 = new PlanOperator( 2, "right-leaf-1", 2, 3.0, 4 );
-        rightLeaf1.addArgument( "a", "7" );
-        rightLeaf1.addArgument( "b", "42" );
-        PlanOperator rightLeaf2 = new PlanOperator( 3, "right-leaf-2", 3, 4.0, 5 );
-        rightLeaf2.addArgument( "c", "pies" );
+        PlanOperator rightLeaf1 = new PlanOperator( 2, "right-leaf-1", 2L, 3L, 4L );
+        PlanOperator rightLeaf2 = new PlanOperator( 3, "right-leaf-2", 3L, 4L, 5L );
 
-        PlanOperator left = new PlanOperator( 4, "left", 1, 1.0, 1 );
+        PlanOperator left = new PlanOperator( 4, "left", 1L, 1L, 1L );
         left.addChild( leftLeaf1 );
         left.addChild( leftLeaf2 );
 
-        PlanOperator right = new PlanOperator( 5, "right", 1, 1.0, 1 );
-        right.addArgument( "cakes", "not as good as pies" );
+        PlanOperator right = new PlanOperator( 5, "right", 1L, 1L, 1L );
         right.addChild( rightLeaf1 );
         right.addChild( rightLeaf2 );
 
-        PlanOperator root = new PlanOperator( 6, "root", 0, 0.0, 0 );
-        root.addArgument( "knock_knock", "who is there?" );
+        PlanOperator root = new PlanOperator( 6, "root", 0L, 0L, 0L );
         root.addChild( left );
         root.addChild( right );
 
@@ -763,11 +755,11 @@ public class SubmitTestRunsAndPlansIT
 
     private Metrics getMetrics()
     {
-        return new Metrics( MILLISECONDS, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 );
+        return new Metrics( Metrics.MetricsUnit.latency( MILLISECONDS ), 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 );
     }
 
-    private AuxiliaryMetrics getAuxiliaryMetrics()
+    private Metrics getAuxiliaryMetrics()
     {
-        return new AuxiliaryMetrics( "rows", 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
+        return new Metrics( Metrics.MetricsUnit.rows(), 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
     }
 }

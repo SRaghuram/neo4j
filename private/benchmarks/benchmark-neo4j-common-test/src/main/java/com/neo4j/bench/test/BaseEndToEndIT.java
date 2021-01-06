@@ -16,6 +16,9 @@ import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.profiling.ProfilerRecordings;
+import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import io.findify.s3mock.S3Mock;
 import org.apache.commons.io.FileUtils;
@@ -39,8 +42,8 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -68,6 +71,7 @@ import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.io.FileMatchers.anExistingFile;
@@ -209,6 +213,9 @@ public abstract class BaseEndToEndIT
      * @param toolJar path to tool toolJar
      * @param profilers list of profilers to run with
      * @param processArgs tool process arguments
+     * @param recordingsAssertion additional assertions to perform on profiler recordings
+     * @param recordingDirsCount number of recording directories
+     * @param expectedRecording profiler recordings that should be uploaded to S3 and written to results store
      */
     public void runReportBenchmarks( Resources resources,
                                      String scriptName,
@@ -216,7 +223,8 @@ public abstract class BaseEndToEndIT
                                      List<ProfilerType> profilers,
                                      List<String> processArgs,
                                      AssertOnRecordings recordingsAssertion,
-                                     int recordingDirsCount ) throws Exception
+                                     int recordingDirsCount,
+                                     ExpectedRecordings expectedRecording ) throws Exception
     {
         // we can be running in forked process (if run from Maven) look for base dir
         Path baseDir = findBaseDir( scriptName );
@@ -250,7 +258,6 @@ public abstract class BaseEndToEndIT
         ExecutorService tailerExecutor = Executors.newSingleThreadExecutor();
         try
         {
-
             Process process = new ProcessBuilder( processArgs )
                     .directory( baseDir.toFile() )
                     .redirectErrorStream( true )
@@ -263,7 +270,7 @@ public abstract class BaseEndToEndIT
                           scriptName + " finished with non-zero code\n" + FileUtils.readFileToString( outputLog, Charset.defaultCharset() ) );
             assertStoreSchema( boltUri );
             assertRecordingFilesExist( s3Path, profilers, resources, recordingsAssertion, recordingDirsCount );
-            assertProfilingNodesAreSameAsS3( boltUri, s3Path );
+            assertProfilingNodesAreSameAsS3( boltUri, s3Path, expectedRecording.expectedRecordingKeys() );
         }
         finally
         {
@@ -299,11 +306,12 @@ public abstract class BaseEndToEndIT
     }
 
     private static void assertProfilingNodesAreSameAsS3( URI neo4jBoltUri,
-                                                         Path s3Path )
+                                                         Path s3Path,
+                                                         List<String> expectedRecordingKeys )
     {
         try ( StoreClient storeClient = StoreClient.connect( neo4jBoltUri, "", "" ) )
         {
-            storeClient.execute( new VerifyProfileNodes( s3Path ) );
+            storeClient.execute( new VerifyProfileNodes( s3Path, expectedRecordingKeys ) );
         }
     }
 
@@ -330,8 +338,7 @@ public abstract class BaseEndToEndIT
                                             List<ProfilerType> profilers,
                                             Resources resources,
                                             AssertOnRecordings recordingsAssertion,
-                                            int recordingDirsCount )
-            throws Exception
+                                            int recordingDirsCount ) throws Exception
     {
         Path recordingsBasePath = s3Path.resolve( "benchmarking.neo4j.com/recordings" );
         try ( Stream<Path> files = Files.list( recordingsBasePath ) )
@@ -378,47 +385,89 @@ public abstract class BaseEndToEndIT
     private static class VerifyProfileNodes implements Query<Void>
     {
         private final Path recordingsBasePath;
+        private final List<String> expectedRecordingKeys;
 
-        VerifyProfileNodes( Path recordingsBasePath )
+        VerifyProfileNodes( Path recordingsBasePath, List<String> expectedRecordingKeys )
         {
             this.recordingsBasePath = recordingsBasePath;
+            this.expectedRecordingKeys = expectedRecordingKeys;
         }
 
         @Override
         public Void execute( Driver driver )
         {
             String query = "MATCH (p:Profiles) RETURN p{.*} as profiles";
-
-            Path recordingsPath = recordingsBasePath.resolve( "benchmarking.neo4j.com/recordings" );
-            List<String> fileList = new ArrayList<>( Arrays.asList( recordingsPath.toFile().list() ) );
-            for ( File file : recordingsPath.toFile().listFiles() )
-            {
-                if ( file.isDirectory() )
-                {
-                    fileList.addAll( Arrays.asList( file.list() ) );
-                }
-            }
-
+            LOG.debug( query );
             try ( Session session = driver.session( SessionConfig.builder().withDefaultAccessMode( READ ).build() ) )
             {
                 List<Record> results = session.run( query ).list();
                 for ( Record record : results )
                 {
                     Map<String,String> profiles = record.get( "profiles" ).asMap( Value::asString );
-                    for ( String storePath : profiles.values() )
-                    {
-                        Path s3ProfilerRecordingPath = recordingsBasePath.resolve( storePath );
-                        assertTrue( Files.exists( s3ProfilerRecordingPath ), () -> format( "Expected to find '%s'", s3ProfilerRecordingPath.toString() ) );
-                    }
+                    assertResultsStoreEntriesExistInS3( profiles );
+                    assertAllExpectedRecordingsExistInResultsStore( profiles );
                 }
             }
             return null;
+        }
+
+        private void assertResultsStoreEntriesExistInS3( Map<String,String> profiles )
+        {
+            for ( String storePath : profiles.values() )
+            {
+                Path s3ProfilerRecordingPath = recordingsBasePath.resolve( storePath );
+                assertTrue( Files.exists( s3ProfilerRecordingPath ), () -> format( "Expected to find '%s'", s3ProfilerRecordingPath.toString() ) );
+            }
+        }
+
+        private void assertAllExpectedRecordingsExistInResultsStore( Map<String,String> profiles )
+        {
+            String[] actualRecordingKeys = profiles.keySet().toArray( new String[0] );
+            assertThat( format( ":Profiles node should have properties %s but had %s", expectedRecordingKeys, profiles.keySet() ),
+                        expectedRecordingKeys,
+                        containsInAnyOrder( actualRecordingKeys ) );
         }
 
         @Override
         public Optional<String> nonFatalError()
         {
             return Optional.empty();
+        }
+    }
+
+    public static class ExpectedRecordings
+    {
+        public static ExpectedRecordings from( Collection<ProfilerType> profilers )
+        {
+            return from( profilers, Parameters.NONE );
+        }
+
+        public static ExpectedRecordings from( Collection<ProfilerType> profilers, Parameters... parameters )
+        {
+            List<RecordingType> recordingTypes = profilers.stream().flatMap( p -> p.allRecordingTypes().stream() ).collect( toList() );
+            List<String> expectedRecordingKeys = recordingTypes.stream()
+                                                               .flatMap( r -> Arrays.stream( parameters )
+                                                                                    .map( p -> ProfilerRecordings.profilesPropertyKeyFor( r, p ) ) )
+                                                               .collect( toList() );
+            return new ExpectedRecordings( expectedRecordingKeys );
+        }
+
+        private final List<String> expectedRecordingTypes;
+
+        private ExpectedRecordings( List<String> expectedRecordingTypes )
+        {
+            this.expectedRecordingTypes = expectedRecordingTypes;
+        }
+
+        public ExpectedRecordings with( RecordingType recordingType, Parameters parameters )
+        {
+            expectedRecordingTypes.add( ProfilerRecordings.profilesPropertyKeyFor( recordingType, parameters ) );
+            return this;
+        }
+
+        private List<String> expectedRecordingKeys()
+        {
+            return expectedRecordingTypes;
         }
     }
 }

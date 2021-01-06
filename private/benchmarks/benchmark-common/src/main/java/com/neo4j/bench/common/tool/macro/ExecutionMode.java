@@ -9,5 +9,5 @@ public enum ExecutionMode
 {
     EXECUTE,
     PLAN,
-    PROFILE
+    CARDINALITY
 }

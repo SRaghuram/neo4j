@@ -11,34 +11,43 @@ import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.StoreTestUtil;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.PlannerDescription;
+import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.PlanOperator;
 import com.neo4j.bench.model.options.Edition;
+import com.neo4j.common.util.TestSupport;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.ProcessBuilder.Redirect;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription;
+import org.neo4j.driver.Transaction;
+import org.neo4j.driver.summary.Plan;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -54,43 +63,75 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PlannerDescriptionIT
 {
     private static final Logger LOG = LoggerFactory.getLogger( PlannerDescriptionIT.class );
+    private static final String QUERY = "PROFILE MATCH (a:A), (b:B) WHERE a.x = b.x AND b.y='foo' AND (a)--(b) RETURN count(a)";
+    private static final String EXPECTED_ASCII_PLAN = "+--------------------+----------------+------+\n" +
+                                                      "| Operator           | Estimated Rows | Rows |\n" +
+                                                      "+--------------------+----------------+------+\n" +
+                                                      "| +ProduceResults    |              0 |    1 |\n" +
+                                                      "| |                  +----------------+------+\n" +
+                                                      "| +EagerAggregation  |              0 |    1 |\n" +
+                                                      "| |                  +----------------+------+\n" +
+                                                      "| +Apply             |              0 |    0 |\n" +
+                                                      "| |\\                 +----------------+------+\n" +
+                                                      "| | +Limit           |              0 |    0 |\n" +
+                                                      "| | |                +----------------+------+\n" +
+                                                      "| | +Expand(Into)    |              0 |    0 |\n" +
+                                                      "| | |                +----------------+------+\n" +
+                                                      "| | +EmptyRow        |              1 |    0 |\n" +
+                                                      "| |                  +----------------+------+\n" +
+                                                      "| +ValueHashJoin     |              0 |    0 |\n" +
+                                                      "| |\\                 +----------------+------+\n" +
+                                                      "| | +NodeByLabelScan |             10 |    0 |\n" +
+                                                      "| |                  +----------------+------+\n" +
+                                                      "| +Filter            |              0 |    0 |\n" +
+                                                      "| |                  +----------------+------+\n" +
+                                                      "| +NodeByLabelScan   |             10 |    0 |\n" +
+                                                      "+--------------------+----------------+------+\n";
 
     @Inject
     private TestDirectory temporaryFolder;
 
-    @Test
-    void shouldExtractPlans() throws IOException
+    private static Path getNeo4jDir()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
+        return Paths.get( System.getenv( "NEO4J_DIR" ) );
+    }
+
+    private static Jvm getJvm()
+    {
+        return Jvm.defaultJvmOrFail();
+    }
+
+    @Test
+    public void shouldExtractPlansViaEmbedded() throws IOException
+    {
+        String randId = UUID.randomUUID().toString();
+        Path neo4jConfigFile = Files.createTempFile( temporaryFolder.absolutePath(), format( "neo4j-%s", randId ), ".conf" );
+        Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
+        try ( Resources resources = new Resources( temporaryFolder.directory( format( "resources-%s", randId ) ) ) )
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
                 LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
-                Path neo4jConfigFile = Files.createTempFile( temporaryFolder.absolutePath(), "neo4j", ".conf" );
-                Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
                 try ( Store store = StoreTestUtil.createTemporaryEmptyStoreFor( workload,
-                                                                                Files.createTempDirectory( temporaryFolder.absolutePath(),
-                                                                                                     "store" ), /* store */
-                                                                                neo4jConfigFile ) )
+                                                                                temporaryFolder.directory( format( "store-%s-%s", workload.name(), randId ) ),
+                                                                                neo4jConfigFile );
+                      EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
                 {
-                    try ( EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
+                    for ( Query query : workload.queries() )
                     {
-                        for ( Query query : workload.queries() )
+                        try ( org.neo4j.graphdb.Transaction tx = database.inner().beginTx() )
                         {
-                            try ( Transaction tx = database.inner().beginTx() )
-                            {
-                                Result result = tx.execute( query.copyWith( ExecutionMode.PLAN ).queryString().value() );
-                                result.accept( row -> true );
-                                ExecutionPlanDescription rootPlanDescription = result.getExecutionPlanDescription();
-                                PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootPlanDescription );
-                                assertPlansEqual( rootPlanOperator, rootPlanDescription );
-                            }
-                            catch ( Throwable e )
-                            {
-                                throw new RuntimeException( format( "Plans comparison failed!\n" +
-                                                                    "Workload: %s\n" +
-                                                                    "Query:    %s", workload.name(), query.name() ), e );
-                            }
+                            Result result = tx.execute( query.copyWith( ExecutionMode.PLAN ).queryString().value() );
+                            result.accept( row -> true );
+                            ExecutionPlanDescription rootPlanDescription = result.getExecutionPlanDescription();
+                            PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootPlanDescription );
+                            assertPlansEqual( rootPlanOperator, rootPlanDescription, new EmbeddedPlanDescriptionAccessors() );
+                        }
+                        catch ( Throwable e )
+                        {
+                            throw new RuntimeException( format( "Plans comparison failed!\n" +
+                                                                "Workload: %s\n" +
+                                                                "Query:    %s", workload.name(), query.name() ), e );
                         }
                     }
                 }
@@ -98,17 +139,112 @@ class PlannerDescriptionIT
         }
     }
 
+    @Test
+    public void shouldExtractPlansViaDriver() throws IOException, TimeoutException
+    {
+        Path neo4jDir = getNeo4jDir();
+        Jvm jvm = getJvm();
+        String randId = UUID.randomUUID().toString();
+        Path baseNeo4jConfigFile = temporaryFolder.file( format( "neo4j-%s.conf", randId ) );
+        Neo4jConfigBuilder.withDefaults()
+                          .withSetting( BoltConnector.enabled, Boolean.TRUE.toString() )
+                          .withSetting( HttpConnector.enabled, Boolean.TRUE.toString() )
+                          .writeToFile( baseNeo4jConfigFile );
+
+        try ( Resources resources = new Resources( temporaryFolder.directory( format( "resources-%s", randId ) ) ) )
+        {
+            for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
+            {
+                LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
+                Redirect outputRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-out-%s-%s.log", workload.name(), randId ) ).toFile() );
+                Redirect errorRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-error-%s-%s.log", workload.name(), randId ) ).toFile() );
+                Path logsDir = Files.createDirectories( temporaryFolder.directory( format( "logs-%s-%s", workload.name(), randId ) ) );
+                Path neo4jConfigFile = temporaryFolder.file( format( "neo4j-%s-%s.conf", workload.name(), randId ) );
+                Files.copy( baseNeo4jConfigFile, neo4jConfigFile );
+                try ( Store store = StoreTestUtil.createEmptyStoreFor( workload,
+                                                                       temporaryFolder.directory( format( "store-%s-%s", workload.name(), randId ) ),
+                                                                       neo4jConfigFile );
+                      ServerDatabase database = ServerDatabase.startServer( jvm, neo4jDir, store, neo4jConfigFile, outputRedirect, errorRedirect, logsDir ) )
+                {
+                    for ( Query query : workload.queries() )
+                    {
+                        try ( Transaction tx = database.session().beginTransaction() )
+                        {
+                            org.neo4j.driver.Result result = tx.run( query.copyWith( ExecutionMode.PLAN ).queryString().value() );
+                            Plan rootDriverPlan = result.consume().plan();
+                            PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootDriverPlan );
+                            assertPlansEqual( rootPlanOperator, rootDriverPlan, new DriverPlanAccessors() );
+                        }
+                        catch ( Throwable e )
+                        {
+                            throw new RuntimeException( format( "Plans comparison failed!\n" +
+                                                                "Workload: %s\n" +
+                                                                "Query:    %s", workload.name(), query.name() ), e );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void shouldRenderAsciiPlanFromEmbedded()
+    {
+        String randId = UUID.randomUUID().toString();
+        Path neo4jConfigFile = temporaryFolder.file( format( "neo4j-%s.conf", randId ) );
+        Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
+        try ( Store store = TestSupport.createTemporaryEmptyStore( temporaryFolder.directory( format( "store-%s", randId ) ), neo4jConfigFile );
+              EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile );
+              org.neo4j.graphdb.Transaction tx = database.inner().beginTx() )
+        {
+            Result result = tx.execute( QUERY );
+            result.accept( row -> true );
+            ExecutionPlanDescription rootPlanDescription = result.getExecutionPlanDescription();
+            PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootPlanDescription );
+            String asciiPlan = PlannerDescription.toAsciiPlan( rootPlanOperator );
+            assertThat( asciiPlan, equalTo( EXPECTED_ASCII_PLAN ) );
+        }
+    }
+
+    @Test
+    public void shouldRenderAsciiPlanFromDriver() throws Exception
+    {
+        Path neo4jDir = getNeo4jDir();
+        Jvm jvm = getJvm();
+        String randId = UUID.randomUUID().toString();
+        Path neo4jConfigFile = temporaryFolder.file( format( "neo4j-%s.conf", randId ) );
+        Neo4jConfigBuilder.withDefaults()
+                          .withSetting( BoltConnector.enabled, Boolean.TRUE.toString() )
+                          .withSetting( HttpConnector.enabled, Boolean.TRUE.toString() )
+                          .writeToFile( neo4jConfigFile );
+
+        Redirect outputRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-out-%s.log", randId ) ).toFile() );
+        Redirect errorRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-error-%s.log", randId ) ).toFile() );
+        Path logsDir = Files.createDirectories( temporaryFolder.directory( format( "logs-%s", randId ) ) );
+
+        try ( Store store = TestSupport.createTemporaryEmptyStore( temporaryFolder.directory( format( "store-%s", randId ) ), neo4jConfigFile );
+              ServerDatabase database = ServerDatabase.startServer( jvm, neo4jDir, store, neo4jConfigFile, outputRedirect, errorRedirect, logsDir );
+              Transaction tx = database.session().beginTransaction() )
+        {
+            org.neo4j.driver.Result result = tx.run( QUERY );
+            Plan rootDriverPlan = result.consume().plan();
+            PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootDriverPlan );
+            String asciiPlan = PlannerDescription.toAsciiPlan( rootPlanOperator );
+            assertThat( asciiPlan, equalTo( EXPECTED_ASCII_PLAN ) );
+        }
+    }
+
     private static final String ERROR_IN_TEST_CODE = "Error is probably in test code that traverses logical plan";
 
-    private static void assertPlansEqual( PlanOperator rootPlanOperator, ExecutionPlanDescription planDescriptionRoot )
+    private static <PLAN> void assertPlansEqual( PlanOperator rootPlanOperator, PLAN planDescriptionRoot, PlanAccessors<PLAN> planAccessors )
     {
         Stack<PlanOperator> planOperators = new Stack<>();
-        Stack<ExecutionPlanDescription> planDescriptions = new Stack<>();
+        Stack<PLAN> planDescriptions = new Stack<>();
 
         Map<PlanOperator,PlanOperator> parentMap = new HashMap<>();
         Map<PlanOperator,Set<PlanOperator>> childrenMap = new HashMap<>();
 
-        int expectedPlanCount = operatorPlanCountFor( planDescriptionRoot, rootPlanOperator );
+        int expectedPlanCount = operatorPlanCountFor( planDescriptionRoot, rootPlanOperator, planAccessors );
         int actualVisitedPlans = 0;
 
         planOperators.push( rootPlanOperator );
@@ -120,15 +256,12 @@ class PlannerDescriptionIT
             assertFalse( planDescriptions.isEmpty(), ERROR_IN_TEST_CODE );
 
             PlanOperator planOperator = planOperators.pop();
-            ExecutionPlanDescription planDescription = planDescriptions.pop();
+            PLAN planDescription = planDescriptions.pop();
 
-            // sort children to ensure both plan representations are traversed in the same (deterministic) order
             List<PlanOperator> planOperatorChildren = planOperator.children();
-            planOperatorChildren.sort( Comparator.comparing( PlanOperator::id ) );
-            List<ExecutionPlanDescription> planDescriptionChildren = Lists.newArrayList( planDescription.getChildren() );
-            planDescriptionChildren.sort( Comparator.comparing( PlannerDescription::idFor ) );
+            List<PLAN> planDescriptionChildren = planAccessors.getChildren( planDescription );
 
-            String planDescriptionName = fullNameFor( planDescription );
+            String planDescriptionName = planAccessors.getFullName( planDescription );
             String planOperatorName = fullNameFor( planOperator );
 
             // not yet a leaf operator, continue traversing down the plan
@@ -145,8 +278,7 @@ class PlannerDescriptionIT
                                               } );
                 planDescriptionChildren.forEach( planDescriptions::push );
             }
-            // not yet a leaf operator, continue traversing down the plan
-            // traversing up. last time operator will be seen. compare operator and and continue popping the stack
+            // traversing up. last time operator will be seen. compare operator and continue popping the stack
             else if ( parentMap.containsKey( planOperator ) && /*is not root*/
                       !childrenMap.get( parentMap.get( planOperator ) ).isEmpty() /*has not yet been visited on traversal UP tree*/ )
             {
@@ -169,24 +301,9 @@ class PlannerDescriptionIT
         assertThat( ERROR_IN_TEST_CODE, actualVisitedPlans, equalTo( expectedPlanCount ) );
     }
 
-    private static String fullNameFor( ExecutionPlanDescription planDescription )
-    {
-        List<String> children = planDescription.getChildren().stream().map( PlannerDescriptionIT::nameFor ).sorted().collect( toList() );
-        return nameFor( planDescription ) + children;
-    }
-
-    private static String nameFor( ExecutionPlanDescription planDescription )
-    {
-        ArrayList<String> identifiers = Lists.newArrayList( planDescription.getIdentifiers() );
-        Collections.sort( identifiers );
-        return planDescription instanceof InternalPlanDescription
-               ? planDescription.getName() + "[" + PlannerDescription.idFor( planDescription ) + "]" + identifiers
-               : planDescription.getName() + identifiers;
-    }
-
     private static String fullNameFor( PlanOperator planOperator )
     {
-        List<String> children = planOperator.children().stream().map( PlannerDescriptionIT::nameFor ).sorted().collect( toList() );
+        List<String> children = planOperator.children().stream().map( PlannerDescriptionIT::nameFor ).collect( toList() );
         return nameFor( planOperator ) + children;
     }
 
@@ -197,16 +314,16 @@ class PlannerDescriptionIT
         return planOperator.operatorType() + "[" + planOperator.id() + "]" + identifiers;
     }
 
-    private static int operatorPlanCountFor( ExecutionPlanDescription rootPlanDescription, PlanOperator rootPlanOperator )
+    private static <PLAN> int operatorPlanCountFor( PLAN rootPlanDescription, PlanOperator rootPlanOperator, PlanAccessors<PLAN> planAccessors )
     {
-        Stack<ExecutionPlanDescription> planDescriptions = new Stack<>();
+        Stack<PLAN> planDescriptions = new Stack<>();
         int descriptionCount = 0;
         planDescriptions.push( rootPlanDescription );
         while ( !planDescriptions.isEmpty() )
         {
             descriptionCount++;
-            ExecutionPlanDescription plan = planDescriptions.pop();
-            plan.getChildren().forEach( planDescriptions::push );
+            PLAN plan = planDescriptions.pop();
+            planAccessors.getChildren( plan ).forEach( planDescriptions::push );
         }
 
         Stack<PlanOperator> planOperators = new Stack<>();
@@ -222,5 +339,72 @@ class PlannerDescriptionIT
         assertThat( "Plan representations should be of equal size", descriptionCount, equalTo( operatorCount ) );
 
         return operatorCount;
+    }
+
+    private interface PlanAccessors<PLAN>
+    {
+        int getId( PLAN plan );
+
+        String getFullName( PLAN plan );
+
+        List<PLAN> getChildren( PLAN plan );
+    }
+
+    private static class EmbeddedPlanDescriptionAccessors implements PlanAccessors<ExecutionPlanDescription>
+    {
+        @Override
+        public int getId( ExecutionPlanDescription plan )
+        {
+            return ((InternalPlanDescription) plan).id();
+        }
+
+        @Override
+        public String getFullName( ExecutionPlanDescription plan )
+        {
+            List<String> children = plan.getChildren().stream().map( this::getDescriptiveNameFor ).collect( toList() );
+            return getDescriptiveNameFor( plan ) + children;
+        }
+
+        private String getDescriptiveNameFor( ExecutionPlanDescription plan )
+        {
+            List<String> identifiers = Lists.newArrayList( plan.getIdentifiers() );
+            Collections.sort( identifiers );
+            return plan.getName() + "[" + getId( plan ) + "]" + identifiers;
+        }
+
+        @Override
+        public List<ExecutionPlanDescription> getChildren( ExecutionPlanDescription plan )
+        {
+            return plan.getChildren();
+        }
+    }
+
+    private static class DriverPlanAccessors implements PlanAccessors<Plan>
+    {
+        @Override
+        public int getId( Plan plan )
+        {
+            return System.identityHashCode( plan );
+        }
+
+        @Override
+        public String getFullName( Plan plan )
+        {
+            List<String> children = plan.children().stream().map( this::getDescriptiveNameFor ).collect( toList() );
+            return getDescriptiveNameFor( plan ) + children;
+        }
+
+        private String getDescriptiveNameFor( Plan plan )
+        {
+            List<String> identifiers = Lists.newArrayList( plan.identifiers() );
+            Collections.sort( identifiers );
+            return plan.operatorType() + "[" + getId( plan ) + "]" + identifiers;
+        }
+
+        @Override
+        public List<Plan> getChildren( Plan plan )
+        {
+            return (List<Plan>) plan.children();
+        }
     }
 }

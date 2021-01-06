@@ -58,19 +58,27 @@ public class RecordingDescriptor
     private final RecordingType recordingType;
     private final Parameters additionalParams;
     private final Set<FullBenchmarkName> secondaryBenchmarks;
+    private final boolean isDuplicatesAllowed;
 
     @JsonCreator
     public RecordingDescriptor( @JsonProperty( "benchmarkName" ) FullBenchmarkName benchmarkName,
                                 @JsonProperty( "runPhase" ) RunPhase runPhase,
                                 @JsonProperty( "recordingType" ) RecordingType recordingType,
                                 @JsonProperty( "additionalParams" ) Parameters additionalParams,
-                                @JsonProperty( "secondaryBenchmarks" ) Set<FullBenchmarkName> secondaryBenchmarks )
+                                @JsonProperty( "secondaryBenchmarks" ) Set<FullBenchmarkName> secondaryBenchmarks,
+                                @JsonProperty( "isDuplicatesAllowed" ) boolean isDuplicatesAllowed )
     {
         this.benchmarkName = benchmarkName;
         this.runPhase = runPhase;
         this.recordingType = recordingType;
         this.additionalParams = additionalParams;
         this.secondaryBenchmarks = secondaryBenchmarks;
+        this.isDuplicatesAllowed = isDuplicatesAllowed;
+    }
+
+    public boolean isDuplicatesAllowed()
+    {
+        return isDuplicatesAllowed;
     }
 
     public FullBenchmarkName benchmarkName()
@@ -145,7 +153,7 @@ public class RecordingDescriptor
 
     private RecordingDescriptor copySecondaryRecordingDescriptor( FullBenchmarkName secondaryBenchmark )
     {
-        return new RecordingDescriptor( secondaryBenchmark, runPhase, recordingType, additionalParams, Collections.emptySet() );
+        return new RecordingDescriptor( secondaryBenchmark, runPhase, recordingType, additionalParams, Collections.emptySet(), false );
     }
 
     @Override

@@ -12,7 +12,6 @@ import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.common.profiling.RecordingDescriptor;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.model.model.Annotation;
-import com.neo4j.bench.model.model.AuxiliaryMetrics;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroup;
@@ -83,7 +82,7 @@ public class SerializationTest
 
         Neo4jConfig neo4jConfig = new Neo4jConfig( params );
         Metrics metrics = getMetrics();
-        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
+        Metrics auxiliaryMetrics = getAuxiliaryMetrics();
         Environment environment = new Environment( new HashMap<>(
                 ImmutableMap.of( new Instance( "host",
                                                Instance.Kind.AWS,
@@ -214,7 +213,7 @@ public class SerializationTest
         FullBenchmarkName fullBenchmarkName = FullBenchmarkName.from( group, benchmark );
         Set<FullBenchmarkName> secondaryBenchmarks = Collections.singleton( FullBenchmarkName.from( group, secondary ) );
         RecordingDescriptor recordingDescriptor =
-                new RecordingDescriptor( fullBenchmarkName, RunPhase.MEASUREMENT, RecordingType.JFR, Parameters.CLIENT, secondaryBenchmarks );
+                new RecordingDescriptor( fullBenchmarkName, RunPhase.MEASUREMENT, RecordingType.JFR, Parameters.CLIENT, secondaryBenchmarks, false );
 
         shouldSerializeAndDeserialize( recordingDescriptor );
     }
@@ -294,7 +293,7 @@ public class SerializationTest
         params.put( "key", "value" );
         Benchmark benchmark = benchmarkFor( "desc", "name", LATENCY, params );
         Metrics metrics = getMetrics();
-        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
+        Metrics auxiliaryMetrics = getAuxiliaryMetrics();
         Neo4jConfig neo4jConfig = new Neo4jConfig( params );
         BenchmarkGroupBenchmarkMetrics before = new BenchmarkGroupBenchmarkMetrics();
         before.add( benchmarkGroup, benchmark, metrics, auxiliaryMetrics, neo4jConfig );
@@ -307,7 +306,7 @@ public class SerializationTest
     {
         // given
         Metrics metrics = getMetrics();
-        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
+        Metrics auxiliaryMetrics = getAuxiliaryMetrics();
         Map<String,String> params = new HashMap<>();
         params.put( "key", "value" );
         Neo4jConfig neo4jConfig = new Neo4jConfig( params );
@@ -326,7 +325,7 @@ public class SerializationTest
         Map<String,String> params = new HashMap<>();
         params.put( "key", "value" );
         Metrics metrics = getMetrics();
-        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
+        Metrics auxiliaryMetrics = getAuxiliaryMetrics();
         BenchmarkMetrics before = new BenchmarkMetrics(
                 "name",
                 "this is simple",
@@ -394,11 +393,10 @@ public class SerializationTest
     void shouldSerializePlanOperator()
     {
         // given
-        Map<String,String> arguments = new HashMap<>();
-        arguments.put( "key", "value" );
-        PlanOperator before = new PlanOperator( 0, "operator type1", 1, 2, 3, arguments,
+        PlanOperator before = new PlanOperator( 0, "operator type1", 1L, 2L, 3L,
                                                 emptyList(),
-                                                Lists.newArrayList( new PlanOperator( 1, "operator type2", 4, 5, 6, arguments, emptyList(), emptyList() ) ) );
+                                                Lists.newArrayList(
+                                                        new PlanOperator( 1, "operator type2", 4L, 5L, 6L, emptyList(), emptyList() ) ) );
         // then
         shouldSerializeAndDeserialize( before );
     }
@@ -484,28 +482,21 @@ public class SerializationTest
 
     private static Plan testPlan()
     {
-        PlanOperator leftLeaf1 = new PlanOperator( 0, "left-leaf", 1, 2.0, 3 );
-        leftLeaf1.addArgument( "a", "b" );
-        PlanOperator leftLeaf2 = new PlanOperator( 1, "left-leaf", 1, 2.0, 3 );
-        leftLeaf1.addArgument( "a", "b" );
+        PlanOperator leftLeaf1 = new PlanOperator( 0, "left-leaf", 1L, 2L, 3L );
+        PlanOperator leftLeaf2 = new PlanOperator( 1, "left-leaf", 1L, 2L, 3L );
 
-        PlanOperator rightLeaf1 = new PlanOperator( 2, "right-leaf-1", 2, 3.0, 4 );
-        rightLeaf1.addArgument( "a", "7" );
-        rightLeaf1.addArgument( "b", "42" );
-        PlanOperator rightLeaf2 = new PlanOperator( 3, "right-leaf-2", 3, 4.0, 5 );
-        rightLeaf2.addArgument( "c", "pies" );
+        PlanOperator rightLeaf1 = new PlanOperator( 2, "right-leaf-1", 2L, 3L, 4L );
+        PlanOperator rightLeaf2 = new PlanOperator( 3, "right-leaf-2", 3L, 4L, 5L );
 
-        PlanOperator left = new PlanOperator( 4, "left", 1, 1.0, 1 );
+        PlanOperator left = new PlanOperator( 4, "left", 1L, 1L, 1L );
         left.addChild( leftLeaf1 );
         left.addChild( leftLeaf2 );
 
-        PlanOperator right = new PlanOperator( 5, "right", 1, 1.0, 1 );
-        right.addArgument( "cakes", "not as good as pies" );
+        PlanOperator right = new PlanOperator( 5, "right", 1L, 1L, 1L );
         right.addChild( rightLeaf1 );
         right.addChild( rightLeaf2 );
 
-        PlanOperator root = new PlanOperator( 6, "root", 0, 0.0, 0 );
-        root.addArgument( "knock_knock", "who is there?" );
+        PlanOperator root = new PlanOperator( 6, "root", 0L, 0L, 0L );
         root.addChild( left );
         root.addChild( right );
 
@@ -523,11 +514,11 @@ public class SerializationTest
 
     private Metrics getMetrics()
     {
-        return new Metrics( SECONDS, 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
+        return new Metrics( Metrics.MetricsUnit.latency( SECONDS ), 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
     }
 
-    private AuxiliaryMetrics getAuxiliaryMetrics()
+    private Metrics getAuxiliaryMetrics()
     {
-        return new AuxiliaryMetrics( "rows", 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
+        return new Metrics( Metrics.MetricsUnit.rows(), 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
     }
 }

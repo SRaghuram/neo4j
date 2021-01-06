@@ -48,7 +48,8 @@ class EndToEndIT extends BaseEndToEndIT
                                               Jvm.defaultJvmOrFail(),
                                               getResultStoreCredentials() ),
                                  this::assertOnRecordings,
-                                 1 );
+                                 1,
+                                 ExpectedRecordings.from( profilers ) );
         }
     }
 

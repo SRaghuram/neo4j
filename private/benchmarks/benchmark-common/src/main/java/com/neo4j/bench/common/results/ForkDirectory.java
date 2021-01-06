@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -42,7 +43,6 @@ public class ForkDirectory
 {
     private static final String PLAN_JSON = "plan.json";
     private final Path dir;
-    private final ForkDescription forkDescription;
 
     static ForkDirectory findOrFailAt( Path parentDir, String name )
     {
@@ -89,12 +89,11 @@ public class ForkDirectory
     private ForkDirectory( Path dir )
     {
         this.dir = dir;
-        this.forkDescription = ForkDescription.load( dir );
     }
 
     public String name()
     {
-        return forkDescription.name();
+        return ForkDescription.load( dir ).name();
     }
 
     public String toAbsolutePath()
@@ -104,7 +103,7 @@ public class ForkDirectory
 
     public Map<RecordingDescriptor,Path> copyProfilerRecordings( Path targetDir, Predicate<RecordingDescriptor> doCopyPredicate )
     {
-        Map<RecordingDescriptor,Path> recordings = forkDescription.recordings;
+        Map<RecordingDescriptor,Path> recordings = ForkDescription.load( dir ).recordings;
         Map<Path,RecordingDescriptor> validRecordings = recordings.keySet().stream()
                                                                   .filter( descriptor -> descriptor.runPhase().equals( RunPhase.MEASUREMENT ) )
                                                                   .collect( toMap( recordings::get, identity() ) );
@@ -153,7 +152,15 @@ public class ForkDirectory
         Path target = toPath.resolve( relativeTarget );
         try
         {
-            Files.copy( source, target );
+            if ( recordingDescriptor.isDuplicatesAllowed() )
+            {
+                // Some recording types are produced by every fork, there will be duplicates (in different forks) with the same name
+                 Files.copy( source, target, StandardCopyOption.REPLACE_EXISTING );
+            }
+            else
+            {
+                Files.copy( source, target );
+            }
             return relativeTarget;
         }
         catch ( IOException e )
@@ -210,6 +217,7 @@ public class ForkDirectory
     public Path registerPathFor( RecordingDescriptor recordingDescriptor )
     {
         Path path = pathFor( recordingDescriptor.sanitizedFilename() );
+        ForkDescription forkDescription = ForkDescription.load( dir );
         forkDescription.registerRecording( recordingDescriptor, path );
         forkDescription.save();
         return path;
@@ -218,7 +226,7 @@ public class ForkDirectory
     public Path findRegisteredPathFor( RecordingDescriptor recordingDescriptor )
     {
         Path path = pathFor( recordingDescriptor.sanitizedFilename() );
-        if ( !forkDescription.recordings.containsKey( recordingDescriptor ) )
+        if ( !ForkDescription.load( dir ).recordings.containsKey( recordingDescriptor ) )
         {
             throw new IllegalStateException( "Fork directory does not have a registered recording for: " + recordingDescriptor );
         }
@@ -251,7 +259,7 @@ public class ForkDirectory
 
     public Map<RecordingDescriptor,Path> recordings()
     {
-        return forkDescription.recordings;
+        return ForkDescription.load( dir ).recordings;
     }
 
     boolean isMeasurementFork()
@@ -261,9 +269,11 @@ public class ForkDirectory
 
     private boolean isProfiledFork()
     {
+        ForkDescription forkDescription = ForkDescription.load( dir );
         return forkDescription.recordings.keySet().stream()
                                          .anyMatch( recordingDescriptor -> !recordingDescriptor.recordingType().equals( RecordingType.NONE ) &&
-                                                                           !recordingDescriptor.recordingType().equals( RecordingType.HEAP_DUMP ) );
+                                                                           !recordingDescriptor.recordingType().equals( RecordingType.HEAP_DUMP ) &&
+                                                                           !recordingDescriptor.recordingType().equals( RecordingType.ASCII_PLAN ) );
     }
 
     private static Path create( Path dir, String filename )

@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.common.util;
 
-import com.neo4j.bench.model.model.AuxiliaryMetrics;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
@@ -24,6 +23,14 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
+import static com.neo4j.bench.model.model.Metrics.MAX;
+import static com.neo4j.bench.model.model.Metrics.MEAN;
+import static com.neo4j.bench.model.model.Metrics.MIN;
+import static com.neo4j.bench.model.model.Metrics.MetricsUnit;
+import static com.neo4j.bench.model.model.Metrics.PERCENTILE_50;
+import static com.neo4j.bench.model.model.Metrics.PERCENTILE_90;
+import static com.neo4j.bench.model.model.Metrics.SAMPLE_SIZE;
+import static com.neo4j.bench.model.model.Metrics.UNIT;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
@@ -94,6 +101,61 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
     private static final DecimalFormat INT_FORMAT = new DecimalFormat( "###,###,###,##0" );
     private static final DecimalFormat FLT_FORMAT = new DecimalFormat( "###,###,###,##0.00" );
     private static final String ERROR = "---";
+
+    private interface MetricsValueFormatter
+    {
+        String formatValue( Double value, DecimalFormat decimalFormat );
+
+        String unitString();
+    }
+
+    private static class BasicFormatter implements MetricsValueFormatter
+    {
+        private final MetricsUnit unit;
+
+        private BasicFormatter( MetricsUnit unit )
+        {
+            this.unit = unit;
+        }
+
+        @Override
+        public String formatValue( Double value, DecimalFormat decimalFormat )
+        {
+            return decimalFormat.format( value );
+        }
+
+        @Override
+        public String unitString()
+        {
+            return unit.value();
+        }
+    }
+
+    private static class TimeUnitFormatter implements MetricsValueFormatter
+    {
+        private final TimeUnit unit;
+        private final TimeUnit saneUnit;
+        private final Benchmark.Mode mode;
+
+        private TimeUnitFormatter( TimeUnit unit, TimeUnit saneUnit, Benchmark.Mode mode )
+        {
+            this.unit = unit;
+            this.saneUnit = saneUnit;
+            this.mode = mode;
+        }
+
+        @Override
+        public String formatValue( Double value, DecimalFormat decimalFormat )
+        {
+            return decimalFormat.format( Units.convertValueTo( value, unit, saneUnit, mode ) );
+        }
+
+        @Override
+        public String unitString()
+        {
+            return Units.toAbbreviation( saneUnit, mode );
+        }
+    }
 
     private static class Row
     {
@@ -185,20 +247,18 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
         abstract String[] headers();
 
         /**
-         * Will not be called until all rows have been converted to arrays, i.e., after format has been set.
-         * Will be called once per data row.
+         * Will not be called until all rows have been converted to arrays, i.e., after format has been set. Will be called once per data row.
          *
          * @return data row
          */
         abstract String[] createDataRow( BenchmarkGroup group,
                                          Benchmark benchmark,
                                          Metrics metrics,
-                                         TimeUnit originalUnit,
-                                         TimeUnit saneUnit );
+                                         MetricsValueFormatter metricsFormatter );
 
         abstract String[] createAuxiliaryDataRow( BenchmarkGroup group,
                                                   Benchmark benchmark,
-                                                  AuxiliaryMetrics auxiliaryMetrics );
+                                                  Metrics auxiliaryMetrics );
 
         String[] registerErrorRow( String group, String benchmark )
         {
@@ -214,17 +274,30 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
 
         String[] registerDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics )
         {
-            TimeUnit unit = UnitConverter.toTimeUnit( (String) metrics.toMap().get( Metrics.UNIT ) );
-
-            // compute unit at which mean is in range [1,1000]
-            double mean = (double) metrics.toMap().get( Metrics.MEAN );
-            TimeUnit saneUnit = Units.findSaneUnit( mean, unit, benchmark.mode(), 1, 1000 );
-
-            String[] row = createDataRow( group, benchmark, metrics, unit, saneUnit );
+            MetricsValueFormatter metricsFormatter = getMetricsFormatterFor( benchmark, metrics );
+            String[] row = createDataRow( group, benchmark, metrics, metricsFormatter );
             return updateWidths( row );
         }
 
-        String[] registerAuxiliaryDataRow( BenchmarkGroup group, Benchmark benchmark, AuxiliaryMetrics auxiliaryMetrics )
+        private MetricsValueFormatter getMetricsFormatterFor( Benchmark benchmark, Metrics metrics )
+        {
+            MetricsUnit metricsUnit = MetricsUnit.parse( (String) metrics.toMap().get( UNIT ) );
+            if ( MetricsUnit.isLatency( metricsUnit ) )
+            {
+                TimeUnit unit = UnitConverter.toTimeUnit( metricsUnit.value() );
+
+                // compute unit at which mean is in range [1,1000]
+                double mean = (double) metrics.toMap().get( MEAN );
+                TimeUnit saneUnit = Units.findSaneUnit( mean, unit, benchmark.mode(), 1, 1000 );
+                return new TimeUnitFormatter( unit, saneUnit, benchmark.mode() );
+            }
+            else
+            {
+                return new BasicFormatter( metricsUnit );
+            }
+        }
+
+        String[] registerAuxiliaryDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics auxiliaryMetrics )
         {
             String[] row = createAuxiliaryDataRow( group, benchmark, auxiliaryMetrics );
             return updateWidths( row );
@@ -289,30 +362,29 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
         public String[] createDataRow( BenchmarkGroup group,
                                        Benchmark benchmark,
                                        Metrics metrics,
-                                       TimeUnit unit,
-                                       TimeUnit saneUnit )
+                                       MetricsValueFormatter metricsFormatter )
         {
             Map<String,Object> metricsMap = metrics.toMap();
             return new String[]{
                     group.name(),
                     benchmark.name(),
-                    INT_FORMAT.format( metricsMap.get( Metrics.SAMPLE_SIZE ) ),
-                    FLT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.MEAN ), unit, saneUnit, benchmark.mode() ) ),
-                    Units.toAbbreviation( saneUnit, benchmark.mode() )};
+                    INT_FORMAT.format( metricsMap.get( SAMPLE_SIZE ) ),
+                    metricsFormatter.formatValue( (Double) metricsMap.get( MEAN ), FLT_FORMAT ),
+                    metricsFormatter.unitString()};
         }
 
         @Override
         String[] createAuxiliaryDataRow( BenchmarkGroup group,
                                          Benchmark benchmark,
-                                         AuxiliaryMetrics auxiliaryMetrics )
+                                         Metrics auxiliaryMetrics )
         {
             Map<String,Object> auxiliaryMetricsMap = auxiliaryMetrics.toMap();
             return new String[]{
                     "" /* benchmark group column, do not print it again for auxiliary metrics rows */,
                     "" /* benchmark column, do not print it again for auxiliary metrics rows */,
                     "" /* count column, do not print it again for auxiliary metrics rows */,
-                    FLT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.MEAN ) ),
-                    (String) auxiliaryMetricsMap.get( AuxiliaryMetrics.UNIT )};
+                    FLT_FORMAT.format( auxiliaryMetricsMap.get( MEAN ) ),
+                    (String) auxiliaryMetricsMap.get( UNIT )};
         }
     }
 
@@ -328,38 +400,37 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
         String[] createDataRow( BenchmarkGroup group,
                                 Benchmark benchmark,
                                 Metrics metrics,
-                                TimeUnit unit,
-                                TimeUnit saneUnit )
+                                MetricsValueFormatter metricsFormatter )
         {
             Map<String,Object> metricsMap = metrics.toMap();
             return new String[]{
                     group.name(),
                     benchmark.name(),
-                    INT_FORMAT.format( metricsMap.get( Metrics.SAMPLE_SIZE ) ),
-                    FLT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.MEAN ), unit, saneUnit, benchmark.mode() ) ),
-                    INT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.MIN ), unit, saneUnit, benchmark.mode() ) ),
-                    INT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.PERCENTILE_50 ), unit, saneUnit, benchmark.mode() ) ),
-                    INT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.PERCENTILE_90 ), unit, saneUnit, benchmark.mode() ) ),
-                    INT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.MAX ), unit, saneUnit, benchmark.mode() ) ),
-                    Units.toAbbreviation( saneUnit, benchmark.mode() )};
+                    INT_FORMAT.format( metricsMap.get( SAMPLE_SIZE ) ),
+                    metricsFormatter.formatValue( (Double) metricsMap.get( MEAN ), FLT_FORMAT ),
+                    metricsFormatter.formatValue( (Double) metricsMap.get( MIN ), INT_FORMAT ),
+                    metricsFormatter.formatValue( (Double) metricsMap.get( PERCENTILE_50 ), INT_FORMAT ),
+                    metricsFormatter.formatValue( (Double) metricsMap.get( PERCENTILE_90 ), INT_FORMAT ),
+                    metricsFormatter.formatValue( (Double) metricsMap.get( MAX ), INT_FORMAT ),
+                    metricsFormatter.unitString()};
         }
 
         @Override
         String[] createAuxiliaryDataRow( BenchmarkGroup group,
                                          Benchmark benchmark,
-                                         AuxiliaryMetrics auxiliaryMetrics )
+                                         Metrics auxiliaryMetrics )
         {
             Map<String,Object> auxiliaryMetricsMap = auxiliaryMetrics.toMap();
             return new String[]{
                     "" /* benchmark group column, do not print it again for auxiliary metrics rows */,
                     "" /* benchmark column, do not print it again for auxiliary metrics rows */,
                     "" /* count column, do not print it again for auxiliary metrics rows */,
-                    FLT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.MEAN ) ),
-                    INT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.MIN ) ),
-                    INT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.PERCENTILE_50 ) ),
-                    INT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.PERCENTILE_90 ) ),
-                    INT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.MAX ) ),
-                    (String) auxiliaryMetricsMap.get( AuxiliaryMetrics.UNIT )};
+                    FLT_FORMAT.format( auxiliaryMetricsMap.get( MEAN ) ),
+                    INT_FORMAT.format( auxiliaryMetricsMap.get( MIN ) ),
+                    INT_FORMAT.format( auxiliaryMetricsMap.get( PERCENTILE_50 ) ),
+                    INT_FORMAT.format( auxiliaryMetricsMap.get( PERCENTILE_90 ) ),
+                    INT_FORMAT.format( auxiliaryMetricsMap.get( MAX ) ),
+                    (String) auxiliaryMetricsMap.get( UNIT )};
         }
     }
 

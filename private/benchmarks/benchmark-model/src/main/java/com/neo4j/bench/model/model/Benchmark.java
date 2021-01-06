@@ -46,7 +46,8 @@ public class Benchmark
     {
         THROUGHPUT,
         LATENCY,
-        SINGLE_SHOT
+        SINGLE_SHOT,
+        ACCURACY
     }
 
     public static final String NAME = "name";

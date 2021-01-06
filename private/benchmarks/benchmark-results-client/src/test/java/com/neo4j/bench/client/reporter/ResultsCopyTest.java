@@ -7,6 +7,7 @@ package com.neo4j.bench.client.reporter;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
@@ -15,6 +16,7 @@ import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
@@ -25,6 +27,7 @@ import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.profiling.RecordingType;
 import org.junit.jupiter.api.Test;
 
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -52,12 +55,67 @@ public class ResultsCopyTest
     private static final Benchmark CHILD_2 = Benchmark.benchmarkFor( "test bench 1", "bench 1:child 2", Benchmark.Mode.LATENCY, new HashMap<>() );
     private static final String FORK_1 = "fork 1";
     private static final String FORK_2 = "fork 2";
-    private static final Metrics METRICS = new Metrics( SECONDS, 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
+    private static final Metrics METRICS = new Metrics( Metrics.MetricsUnit.latency( SECONDS ), 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
     private static final ParameterizedProfiler PROFILER_JFR = ParameterizedProfiler.defaultProfiler( ProfilerType.JFR );
     private static final ParameterizedProfiler PROFILER_ASYNC = ParameterizedProfiler.defaultProfiler( ProfilerType.ASYNC );
 
     @Inject
     private TestDirectory temporaryFolder;
+
+    @Test
+    public void shouldCopyDuplicateRecordingsWhenDuplicatesAllowed() throws Exception
+    {
+        RecordingDescriptor recordingDescriptor = new RecordingDescriptor( FullBenchmarkName.from( GROUP, BENCH ),
+                                                                           RunPhase.MEASUREMENT,
+                                                                           RecordingType.JFR,
+                                                                           Parameters.NONE,
+                                                                           Collections.emptySet(),
+                                                                           true /*duplicates allowed*/ );
+
+        testDuplicateRecordings( recordingDescriptor );
+    }
+
+    @Test
+    public void shouldFailOnDuplicateRecordingsWhenDuplicatesDisallowed() throws Exception
+    {
+        RecordingDescriptor recordingDescriptor = new RecordingDescriptor( FullBenchmarkName.from( GROUP, BENCH ),
+                                                                           RunPhase.MEASUREMENT,
+                                                                           RecordingType.JFR,
+                                                                           Parameters.NONE,
+                                                                           Collections.emptySet(),
+                                                                           false /*duplicates disallowed*/ );
+
+        testDuplicateRecordings( recordingDescriptor );
+    }
+
+    private void testDuplicateRecordings( RecordingDescriptor recordingDescriptor ) throws Exception
+    {
+        Path parentDir = temporaryFolder.directory( "parent" );
+        BenchmarkDirectory benchmarkDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP ).findOrCreate( BENCH );
+        ForkDirectory forkDir1 = benchmarkDir.create( "f1" );
+        ForkDirectory forkDir2 = benchmarkDir.create( "f2" );
+
+        registerProfiler( forkDir1, recordingDescriptor );
+        registerProfiler( forkDir2, recordingDescriptor );
+
+        BenchmarkGroupBenchmarkMetrics metrics = new BenchmarkGroupBenchmarkMetrics();
+        metrics.add( GROUP, BENCH, METRICS, null, new Neo4jConfig() );
+        Path targetDir = temporaryFolder.directory( "target" );
+
+        if ( recordingDescriptor.isDuplicatesAllowed() )
+        {
+            ResultsCopy.extractProfilerRecordings( metrics, targetDir, new URI( "/" ), parentDir );
+
+            Map<String,String> expectedRecordings = ImmutableMap.of( recordingDescriptor.recordingType().propertyKey(), "/" + recordingDescriptor.filename() );
+            assertThat( metrics.getMetricsFor( new BenchmarkGroupBenchmark( GROUP, BENCH ) ).profilerRecordings().toMap(), equalTo( expectedRecordings ) );
+            assertTrue( Files.exists( targetDir.resolve( recordingDescriptor.filename() ) ), "File was not copied" );
+        }
+        else
+        {
+            BenchmarkUtil.assertException( UncheckedIOException.class,
+                                           () -> ResultsCopy.extractProfilerRecordings( metrics, targetDir, new URI( "/" ), parentDir ) );
+        }
+    }
 
     @Test
     public void shouldAddProfilersToBenchmark() throws Exception
@@ -126,8 +184,13 @@ public class ResultsCopyTest
         ProfilerRecordingDescriptor profilerDescriptor =
                 ProfilerRecordingDescriptor.create( GROUP, BENCH, RunPhase.MEASUREMENT, profiler, Parameters.NONE, secondary );
         RecordingDescriptor recordingDescriptor = profilerDescriptor.recordingDescriptorFor( profiler.profilerType().recordingType() );
-        forkDir.findOrCreate( recordingDescriptor.sanitizedFilename() );
-        forkDir.registerPathFor( recordingDescriptor );
+        registerProfiler( forkDir, recordingDescriptor );
         return recordingDescriptor;
+    }
+
+    private void registerProfiler( ForkDirectory forkDir, RecordingDescriptor recordingDescriptor )
+    {
+        Path recordingFile = forkDir.registerPathFor( recordingDescriptor );
+        assertThat( recordingFile, equalTo( forkDir.create( recordingFile.getFileName().toString() ) ) );
     }
 }

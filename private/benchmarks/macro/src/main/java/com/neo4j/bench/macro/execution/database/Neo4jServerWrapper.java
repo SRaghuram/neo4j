@@ -138,7 +138,7 @@ class Neo4jServerWrapper
         Path destinationNeo4jConfigFile = neo4jDir.resolve( NEO4J_CONF_PATH );
         try
         {
-            Files.move( sourceNeo4jConfigFile, destinationNeo4jConfigFile, StandardCopyOption.REPLACE_EXISTING );
+            Files.copy( sourceNeo4jConfigFile, destinationNeo4jConfigFile, StandardCopyOption.REPLACE_EXISTING );
         }
         catch ( IOException e )
         {

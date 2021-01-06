@@ -23,6 +23,7 @@ import com.neo4j.bench.macro.Main;
 import com.neo4j.bench.macro.cli.ExportPlanCommand;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
+import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.options.Edition;
@@ -132,7 +133,10 @@ public class ForkRunner
                                  BenchmarkGroupBenchmarkMetricsPrinter metricsPrinter,
                                  RunnableFork fork )
     {
-        Results results = fork.run().convertUnit( unit );
+        Results rawResults = fork.run();
+        Results results = (query.benchmark().mode().equals( Benchmark.Mode.ACCURACY ))
+                          ? rawResults
+                          : rawResults.convertTimeUnit( unit );
         BenchmarkGroupBenchmarkMetrics justForPrinting = new BenchmarkGroupBenchmarkMetrics();
         justForPrinting.add( query.benchmarkGroup(), query.benchmark(), results.metrics(), results.rowMetrics(), NO_NEO4J_CONFIG );
         LOG.debug( metricsPrinter.toPrettyString( justForPrinting ) );

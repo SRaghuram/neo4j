@@ -72,13 +72,18 @@ public class ProfilerRecordings
             {
                 String filename = filenameList.get( i );
                 Parameters parameters = parametersList.get( i );
-                String propertyKey = parameters.isEmpty()
-                                     ? recordingType.propertyKey()
-                                     : recordingType.propertyKey() + "_" + parameters.toString();
+                String propertyKey = profilesPropertyKeyFor( recordingType, parameters );
                 map.put( propertyKey, filename );
             }
         }
         return map;
+    }
+
+    public static String profilesPropertyKeyFor( RecordingType recordingType, Parameters parameters )
+    {
+        return parameters.isEmpty()
+               ? recordingType.propertyKey()
+               : recordingType.propertyKey() + "_" + parameters.toString();
     }
 
     private static void assertNoDuplicatePaths( Map<String,String> map )

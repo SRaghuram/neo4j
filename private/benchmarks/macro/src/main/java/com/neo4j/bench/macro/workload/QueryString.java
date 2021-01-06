@@ -47,7 +47,7 @@ public abstract class QueryString
             return withRuntime( withPlanner( baseQueryString, planner ), runtime );
         case PLAN:
             return withRuntime( withPlanner( withExplain( baseQueryString ), planner ), runtime );
-        case PROFILE:
+        case CARDINALITY:
             return withRuntime( withPlanner( withProfile( baseQueryString ), planner ), runtime );
         default:
             throw new RuntimeException( "Unsupported execution mode: " + executionMode );

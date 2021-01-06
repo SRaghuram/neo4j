@@ -13,6 +13,7 @@ import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.CountingResultVisitor;
 import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.bench.model.model.PlanOperator;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import org.slf4j.Logger;
@@ -49,7 +50,8 @@ public class EmbeddedDatabase implements Database
     private final Store store;
     private final DatabaseManagementService managementService;
     private final GraphDatabaseService db;
-    private final CountingResultVisitor resultVisitor;
+    private final RowsScoreFun rowCountScore;
+    private final PlanScoreFun cardinalityScore;
 
     public static void recreateSchema( Store store, Edition edition, Path neo4jConfigFile, Schema schema )
     {
@@ -146,7 +148,8 @@ public class EmbeddedDatabase implements Database
         this.store = store;
         this.managementService = managementService;
         this.db = managementService.database( store.databaseName().name() );
-        this.resultVisitor = new CountingResultVisitor();
+        this.rowCountScore = new RowsScoreFun();
+        this.cardinalityScore = new PlanScoreFun();
     }
 
     private boolean isRunning()
@@ -194,18 +197,26 @@ public class EmbeddedDatabase implements Database
     }
 
     @Override
-    public int execute( String query, Map<String,Object> parameters, boolean executeInTx, boolean shouldRollback )
+    public PlanOperator executeAndGetPlan( String query, Map<String,Object> parameters, boolean executeInTx, boolean shouldRollback )
     {
         return executeInTx
-               ? executeInTx( query, parameters, shouldRollback )
-               : execute( db, query, parameters );
+               ? executeInTx( query, parameters, shouldRollback, cardinalityScore )
+               : execute( query, parameters, cardinalityScore );
     }
 
-    private int executeInTx( String query, Map<String,Object> parameters, boolean shouldRollback )
+    @Override
+    public int executeAndGetRows( String query, Map<String,Object> parameters, boolean executeInTx, boolean shouldRollback )
+    {
+        return executeInTx
+               ? executeInTx( query, parameters, shouldRollback, rowCountScore )
+               : execute( query, parameters, rowCountScore );
+    }
+
+    private <T> T executeInTx( String query, Map<String,Object> parameters, boolean shouldRollback, ScoreFun<T> scoreFun )
     {
         try ( Transaction tx = db.beginTx() )
         {
-            int rowCount = execute( tx, query, parameters );
+            T score = execute( tx, query, parameters, scoreFun );
             if ( shouldRollback )
             {
                 tx.rollback();
@@ -214,28 +225,23 @@ public class EmbeddedDatabase implements Database
             {
                 tx.commit();
             }
-            return rowCount;
+            return score;
         }
     }
 
-    private int execute( Transaction transaction, String query, Map<String,Object> parameters )
+    private <T> T execute( Transaction transaction, String query, Map<String,Object> parameters, ScoreFun<T> scoreFun )
     {
-        resultVisitor.reset();
-        try ( Result result = transaction.execute( query, parameters ) )
-        {
-            result.accept( resultVisitor );
-        }
-        return resultVisitor.count();
+        return scoreFun.compute( transaction, query, parameters );
     }
 
-    private int execute( GraphDatabaseService db, String query, Map<String,Object> parameters )
+    private <T> T execute( String query, Map<String,Object> parameters, ScoreFun<T> scoreFun )
     {
-        resultVisitor.reset();
-        return db.executeTransactionally( query, parameters, result ->
-        {
-            result.accept( resultVisitor );
-            return resultVisitor.count();
-        } );
+        return scoreFun.compute( db, query, parameters );
+    }
+
+    public GraphDatabaseService db()
+    {
+        return db;
     }
 
     public Schema getSchema()
@@ -373,6 +379,64 @@ public class EmbeddedDatabase implements Database
                                     "If [b], the next process may fail, due to not being able to acquire store lock." +
                                     "----------------------------------------------------------------------------------------------------------------\n";
             System.err.println( warningMessage );
+        }
+    }
+
+    private interface ScoreFun<SCORE>
+    {
+        SCORE compute( Transaction tx, String query, Map<String,Object> parameters );
+
+        SCORE compute( GraphDatabaseService db, String query, Map<String,Object> parameters );
+    }
+
+    private static class RowsScoreFun implements ScoreFun<Integer>
+    {
+        private final CountingResultVisitor visitor;
+
+        private RowsScoreFun()
+        {
+            this.visitor = new CountingResultVisitor();
+        }
+
+        public Integer compute( Transaction tx, String query, Map<String,Object> parameters )
+        {
+            visitor.reset();
+            try ( Result result = tx.execute( query, parameters ) )
+            {
+                result.accept( visitor );
+            }
+            return visitor.count();
+        }
+
+        public Integer compute( GraphDatabaseService db, String query, Map<String,Object> parameters )
+        {
+            visitor.reset();
+            return db.executeTransactionally( query, parameters, result ->
+            {
+                result.accept( visitor );
+                return visitor.count();
+            } );
+        }
+    }
+
+    private static class PlanScoreFun implements ScoreFun<PlanOperator>
+    {
+        public PlanOperator compute( Transaction tx, String query, Map<String,Object> parameters )
+        {
+            try ( Result result = tx.execute( query, parameters ) )
+            {
+                result.accept( row -> true );
+                return PlannerDescription.toPlanOperator( result.getExecutionPlanDescription() );
+            }
+        }
+
+        public PlanOperator compute( GraphDatabaseService db, String query, Map<String,Object> parameters )
+        {
+            return db.executeTransactionally( query, parameters, result ->
+            {
+                result.accept( row -> true );
+                return PlannerDescription.toPlanOperator( result.getExecutionPlanDescription() );
+            } );
         }
     }
 }

@@ -38,6 +38,8 @@ public abstract class QueryRunner
             return new CypherExecutingRunner( databaseCreator );
         case PLAN:
             return new CypherPlanningRunner( databaseCreator );
+        case CARDINALITY:
+            return new CypherCardinalityRunner( databaseCreator );
         default:
             throw new RuntimeException( "Unsupported execution mode: " + executionMode );
         }

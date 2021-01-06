@@ -6,7 +6,7 @@
 package com.neo4j.bench.model.model;
 
 import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.bench.model.model.Parameters.CLIENT;
 import static com.neo4j.bench.model.model.Parameters.NONE;
@@ -15,8 +15,8 @@ import static com.neo4j.bench.model.model.Parameters.fromMap;
 import static com.neo4j.bench.model.model.Parameters.parse;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
 
 public class ParametersTest
 {

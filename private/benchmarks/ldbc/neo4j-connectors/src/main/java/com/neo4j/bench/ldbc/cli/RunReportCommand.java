@@ -32,7 +32,6 @@ import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.ParameterVerifier;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
-import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.ProcessFailureException;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.InternalProfiler;
@@ -57,16 +56,17 @@ import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunnerException;
+import com.neo4j.bench.model.model.BranchAndVersion;
+import com.neo4j.bench.model.model.Metrics;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.BenchmarkTool;
-import com.neo4j.bench.model.model.BranchAndVersion;
 import com.neo4j.bench.model.model.Environment;
 import com.neo4j.bench.model.model.Instance;
 import com.neo4j.bench.model.model.Java;
-import com.neo4j.bench.model.model.Metrics;
+import com.neo4j.bench.model.model.Metrics.MetricsUnit;
 import com.neo4j.bench.model.model.Neo4j;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.model.Parameters;
@@ -864,7 +864,7 @@ public class RunReportCommand implements Runnable
         BenchmarkGroupBenchmarkMetrics workloadMetrics = new BenchmarkGroupBenchmarkMetrics();
 
         Metrics summaryMetrics = new Metrics(
-                TimeUnit.SECONDS,
+                MetricsUnit.latency( TimeUnit.SECONDS ),
                 workloadResults.throughput(),
                 workloadResults.throughput(),
                 workloadResults.throughput(),
@@ -886,7 +886,7 @@ public class RunReportCommand implements Runnable
                                                           benchmarkParams );
             ContinuousMetricSnapshot operationMetrics = operation.runTimeMetric();
             Metrics metrics = new Metrics(
-                    operationMetrics.unit(),
+                    MetricsUnit.latency( operationMetrics.unit() ),
                     operationMetrics.min(),
                     operationMetrics.max(),
                     operationMetrics.mean(),

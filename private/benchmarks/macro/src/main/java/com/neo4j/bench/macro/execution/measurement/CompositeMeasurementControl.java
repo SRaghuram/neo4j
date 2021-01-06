@@ -25,9 +25,9 @@ abstract class CompositeMeasurementControl implements MeasurementControl
     }
 
     @Override
-    public void register( long latency )
+    public void register( double measurement )
     {
-        measurementControls.forEach( measurementControl -> measurementControl.register( latency ) );
+        measurementControls.forEach( measurementControl -> measurementControl.register( measurement ) );
     }
 
     @Override

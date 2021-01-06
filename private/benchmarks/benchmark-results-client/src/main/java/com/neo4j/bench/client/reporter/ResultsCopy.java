@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.appendIfMissing;
 import static org.apache.commons.lang3.StringUtils.removeStart;
 
@@ -90,12 +91,30 @@ public class ResultsCopy
                                                                       Path tempProfilerRecordingsDir,
                                                                       Set<FullBenchmarkName> successfulBenchmarks )
     {
-        return benchmarksDirectory
+        Map<RecordingDescriptor,Path> recordingsMap = new HashMap<>();
+
+        benchmarksDirectory
                 .forks()
                 .stream()
                 .map( forkDirectory -> copyValidRecordings( forkDirectory, tempProfilerRecordingsDir, successfulBenchmarks ) )
                 .flatMap( map -> map.entrySet().stream() )
-                .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
+                .forEach( entry ->
+                          {
+                              RecordingDescriptor recordingDescriptor = entry.getKey();
+                              Path recordingFile = entry.getValue();
+                              if ( !recordingsMap.containsKey( recordingDescriptor ) || recordingDescriptor.isDuplicatesAllowed() )
+                              {
+                                  recordingsMap.put( recordingDescriptor, recordingFile );
+                              }
+                              else
+                              {
+                                  throw new IllegalStateException( format( "Duplicate recording descriptor found%n" +
+                                                                           "Recording Descriptor: %s%n" +
+                                                                           "Recording File:        %s",
+                                                                           recordingDescriptor, recordingFile ) );
+                              }
+                          } );
+        return recordingsMap;
     }
 
     private static Map<RecordingDescriptor,Path> copyValidRecordings( ForkDirectory forkDirectory,

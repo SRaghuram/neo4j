@@ -83,13 +83,14 @@ public class BenchmarkGroupBenchmarkMetrics
         }
     }
 
-    public void add( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, AuxiliaryMetrics maybeAuxiliaryMetrics, Neo4jConfig neo4jConfig )
+    public void add( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, Metrics maybeAuxiliaryMetrics, Neo4jConfig neo4jConfig )
     {
         requireNonNull( group );
         requireNonNull( benchmark );
         requireNonNull( metrics );
         // auxiliary metrics may be null
         requireNonNull( neo4jConfig );
+        assertSaneModeAndUnit( benchmark, metrics );
 
         BenchmarkMetrics benchmarkMetrics = inner.computeIfAbsent( group, key -> new BenchmarkMetrics() );
         if ( benchmarkMetrics.containsBenchmark( benchmark ) )
@@ -100,6 +101,14 @@ public class BenchmarkGroupBenchmarkMetrics
                                                      metrics ) );
         }
         benchmarkMetrics.put( benchmark, new AnnotatedMetrics( metrics, maybeAuxiliaryMetrics, neo4jConfig ) );
+    }
+
+    private static void assertSaneModeAndUnit( Benchmark benchmark, Metrics metrics )
+    {
+        if ( !metrics.unit().isCompatibleMode( benchmark.mode() ) )
+        {
+            throw new IllegalStateException( format( "Metrics unit '%s' is not compatible with Benchmark mode '%s'", metrics.unit(), benchmark.mode() ) );
+        }
     }
 
     public List<BenchmarkGroupBenchmark> benchmarkGroupBenchmarks()
@@ -182,16 +191,16 @@ public class BenchmarkGroupBenchmarkMetrics
     public static class AnnotatedMetrics
     {
         private final Metrics metrics;
-        private final AuxiliaryMetrics auxiliaryMetrics;
+        private final Metrics auxiliaryMetrics;
         private final Neo4jConfig neo4jConfig;
         private ProfilerRecordings profilerRecordings;
 
         public AnnotatedMetrics()
         {
-            this( new Metrics(), new AuxiliaryMetrics(), Neo4jConfig.empty() );
+            this( new Metrics(), new Metrics(), Neo4jConfig.empty() );
         }
 
-        public AnnotatedMetrics( Metrics metrics, AuxiliaryMetrics auxiliaryMetrics, Neo4jConfig neo4jConfig )
+        public AnnotatedMetrics( Metrics metrics, Metrics auxiliaryMetrics, Neo4jConfig neo4jConfig )
         {
             this.metrics = metrics;
             this.auxiliaryMetrics = auxiliaryMetrics;
@@ -205,9 +214,9 @@ public class BenchmarkGroupBenchmarkMetrics
         }
 
         /**
-         * @return {@link AuxiliaryMetrics} instance, or null if none exists
+         * @return {@link Metrics} instance, or null if none exists
          */
-        public AuxiliaryMetrics maybeAuxiliaryMetrics()
+        public Metrics maybeAuxiliaryMetrics()
         {
             return auxiliaryMetrics;
         }
@@ -250,7 +259,7 @@ public class BenchmarkGroupBenchmarkMetrics
     {
         private final Benchmark benchmark;
         private final Metrics metrics;
-        private final AuxiliaryMetrics auxiliaryMetrics;
+        private final Metrics auxiliaryMetrics;
         private final BenchmarkGroup benchmarkGroup;
         private final Neo4jConfig neo4jConfig;
         private final ProfilerRecordings profilerRecordings;
@@ -259,7 +268,7 @@ public class BenchmarkGroupBenchmarkMetrics
                 BenchmarkGroup benchmarkGroup,
                 Benchmark benchmark,
                 Metrics metrics,
-                AuxiliaryMetrics auxiliaryMetrics,
+                Metrics auxiliaryMetrics,
                 Neo4jConfig neo4jConfig,
                 ProfilerRecordings profilerRecordings )
         {

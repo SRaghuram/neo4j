@@ -28,7 +28,6 @@ import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.test.BaseEndToEndIT;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -80,7 +79,8 @@ public class EndToEndIT extends BaseEndToEndIT
                                  processArgs( resources,
                                               profilers ),
                                  this::assertOnRecordings,
-                                 1 );
+                                 1,
+                                 ExpectedRecordings.from( profilers ) );
         }
     }
 

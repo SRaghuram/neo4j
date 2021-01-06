@@ -49,17 +49,7 @@ public class Query
                                                                    PARAMETERS,
                                                                    COMMENT );
 
-    private final String group;
-    private final String name;
-    private final String description;
-    private final Optional<QueryString> warmupQueryString;
-    private final QueryString queryString;
-    private final boolean isSingleShot;
-    private final boolean isMutating;
-    private final Parameters parameters;
-    private final DeploymentMode mode;
-
-    public static Query from( Map<String,Object> configEntry, String group, Path workloadDir, DeploymentMode mode )
+    public static Query from( Map<String,Object> configEntry, String group, Path workloadDir, DeploymentMode deployment )
     {
         try
         {
@@ -85,7 +75,7 @@ public class Query
                     (boolean) configEntry.getOrDefault( IS_SINGLE_SHOT, DEFAULT_IS_SINGLE_SHOT ),
                     (boolean) configEntry.getOrDefault( IS_MUTATING, DEFAULT_IS_MUTATING ),
                     parameters,
-                    mode );
+                    deployment );
         }
         catch ( WorkloadConfigException we )
         {
@@ -136,6 +126,17 @@ public class Query
         }
     }
 
+    private final String group;
+    private final String name;
+    private final String description;
+    private final Optional<QueryString> warmupQueryString;
+    private final QueryString queryString;
+    private final boolean isSingleShot;
+    private final boolean isMutating;
+    private final Parameters parameters;
+    private final DeploymentMode deployment;
+    private final Benchmark benchmark;
+
     public Query( String group,
                   String name,
                   String description,
@@ -144,7 +145,7 @@ public class Query
                   boolean isSingleShot,
                   boolean isMutating,
                   Parameters parameters,
-                  DeploymentMode mode )
+                  DeploymentMode deployment )
     {
         this.group = group;
         this.name = name;
@@ -154,7 +155,33 @@ public class Query
         this.parameters = parameters;
         this.isSingleShot = isSingleShot;
         this.isMutating = isMutating;
-        this.mode = mode;
+        this.deployment = deployment;
+        this.benchmark = makeBenchmark();
+    }
+
+    private Benchmark makeBenchmark()
+    {
+        String simpleName = sanitize( name );
+        Map<String,String> params = new HashMap<>();
+        params.put( "planner", queryString.planner().name() );
+        params.put( "runtime", queryString.runtime().name() );
+        params.put( "execution_mode", queryString.executionMode().name() );
+        params.put( "deployment", deployment.name() );
+        return Benchmark.benchmarkFor( description, simpleName, mode(), params, queryString.stableValue() );
+    }
+
+    private Benchmark.Mode mode()
+    {
+        switch ( queryString.executionMode() )
+        {
+        case EXECUTE:
+        case PLAN:
+            return Benchmark.Mode.LATENCY;
+        case CARDINALITY:
+            return Benchmark.Mode.ACCURACY;
+        default:
+            throw new UnsupportedOperationException( format( "Execution mode not supported: '%s'", queryString.executionMode() ) );
+        }
     }
 
     public BenchmarkGroup benchmarkGroup()
@@ -164,13 +191,7 @@ public class Query
 
     public Benchmark benchmark()
     {
-        String simpleName = sanitize( name );
-        Map<String,String> params = new HashMap<>();
-        params.put( "planner", queryString.planner().name() );
-        params.put( "runtime", queryString.runtime().name() );
-        params.put( "execution_mode", queryString.executionMode().name() );
-        params.put( "deployment", mode.name() );
-        return Benchmark.benchmarkFor( description, simpleName, Benchmark.Mode.LATENCY, params, queryString.stableValue() );
+        return benchmark;
     }
 
     public String name()
@@ -213,7 +234,7 @@ public class Query
                           isSingleShot,
                           isMutating,
                           parameters,
-                          mode );
+                          deployment );
     }
 
     public Query copyWith( Runtime newRuntime )
@@ -226,7 +247,7 @@ public class Query
                           isSingleShot,
                           isMutating,
                           parameters,
-                          mode );
+                          deployment );
     }
 
     public Query copyWith( ExecutionMode newExecutionMode )
@@ -239,7 +260,7 @@ public class Query
                           isSingleShot,
                           isMutating,
                           parameters,
-                          mode );
+                          deployment );
     }
 
     public Parameters parameters()
@@ -271,6 +292,7 @@ public class Query
                "\thas warmup      : " + warmupQueryString.isPresent() + "\n" +
                "\tis mutating     : " + isMutating + "\n" +
                "\tparameters      : " + parameters + "\n" +
-               "\tdeployment      : " + mode;
+               "\tdeployment      : " + deployment + "\n" +
+               "\tmode            : " + mode();
     }
 }

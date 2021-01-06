@@ -18,6 +18,7 @@ public enum RecordingType
     GC_LOG( "gc_log", ".gc" ),
     GC_SUMMARY( "gc_summary", ".gc.json" ),
     GC_CSV( "gc_csv", ".gc.csv" ),
+    ASCII_PLAN( "aggregate_plan", ".ascii.plan.txt" ),
     // tracing
     TRACE_STRACE( "strace", ".strace.log" ),
     TRACE_MPSTAT( "mpstat", ".mpstat.log" ),

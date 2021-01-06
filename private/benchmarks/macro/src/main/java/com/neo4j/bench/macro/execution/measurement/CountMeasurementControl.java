@@ -20,7 +20,7 @@ public class CountMeasurementControl implements MeasurementControl
     }
 
     @Override
-    public void register( long latency )
+    public void register( double measurement )
     {
         count++;
     }

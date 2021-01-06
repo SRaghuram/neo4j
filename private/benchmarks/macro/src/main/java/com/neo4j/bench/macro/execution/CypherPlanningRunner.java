@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -13,6 +12,7 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
 import com.neo4j.bench.macro.workload.Query;
+import com.neo4j.bench.model.model.Parameters;
 
 import java.util.List;
 import java.util.Map;
@@ -42,19 +42,20 @@ public class CypherPlanningRunner extends QueryRunner
         {
             try ( Database database = databaseCreator.apply( forkDirectory ) )
             {
-                Runner.run( jvm,
-                            database,
-                            pidParameters,
-                            pidProfilers,
-                            query.copyWith( PLAN ).queryString(),
-                            query.copyWith( PLAN ).queryString(),
-                            query.benchmarkGroup(),
-                            query.benchmark(),
-                            query.parameters().create(),
-                            forkDirectory,
-                            warmupControl,
-                            measurementControl,
-                            false );
+                new Runner().run( jvm,
+                                  database,
+                                  pidParameters,
+                                  pidProfilers,
+                                  query.copyWith( PLAN ).queryString(),
+                                  query.copyWith( PLAN ).queryString(),
+                                  query.benchmarkGroup(),
+                                  query.benchmark(),
+                                  query.parameters().create(),
+                                  forkDirectory,
+                                  warmupControl,
+                                  measurementControl,
+                                  false,
+                                  MeasuringExecutor.toMeasureLatency() );
             }
         }
         catch ( Exception e )

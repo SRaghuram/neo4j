@@ -17,7 +17,7 @@ public class BenchmarkMetrics
 {
     private final Benchmark benchmark;
     private final Metrics metrics;
-    private final AuxiliaryMetrics maybeAuxiliaryMetrics;
+    private final Metrics maybeAuxiliaryMetrics;
 
     public static BenchmarkMetrics extractBenchmarkMetrics( Map<String,Object> benchmarkMap,
                                                             Map<String,Object> metricsMap,
@@ -39,7 +39,7 @@ public class BenchmarkMetrics
      */
     public BenchmarkMetrics()
     {
-        this( "1", "", Benchmark.Mode.LATENCY, emptyMap(), new Metrics().toMap(), new AuxiliaryMetrics().toMap() );
+        this( "1", "", Benchmark.Mode.LATENCY, emptyMap(), new Metrics().toMap(), new Metrics().toMap() );
     }
 
     public BenchmarkMetrics(
@@ -54,7 +54,7 @@ public class BenchmarkMetrics
         this.metrics = Metrics.fromMap( metricsMap );
         this.maybeAuxiliaryMetrics = null == maybeAuxiliaryMetricsMap
                                      ? null
-                                     : AuxiliaryMetrics.fromMap( maybeAuxiliaryMetricsMap );
+                                     : Metrics.fromMap( maybeAuxiliaryMetricsMap );
     }
 
     @Override

@@ -9,6 +9,7 @@ import com.neo4j.bench.client.SyntheticStoreGenerator.SyntheticStoreGeneratorBui
 import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
+import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.Repository;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import org.hamcrest.CoreMatchers;
@@ -91,7 +92,7 @@ public class SyntheticStoreGeneratorIT
     {
         Repository[] tools = {MICRO_BENCH, MACRO_BENCH, LDBC_BENCH, IMPORT_BENCH};
         ToolBenchGroup[] toolBenchGroups = Arrays.stream( tools )
-                                                 .map( tool -> ToolBenchGroup.from( tool, "group-" + tool.name(), 10 ) )
+                                                 .map( tool -> ToolBenchGroup.from( Benchmark.Mode.values(), tool, "group-" + tool.name(), 10 ) )
                                                  .toArray( ToolBenchGroup[]::new );
 
         SyntheticStoreGeneratorBuilder generatorBuilder = new SyntheticStoreGeneratorBuilder()
@@ -119,7 +120,7 @@ public class SyntheticStoreGeneratorIT
     {
         Repository[] tools = {MICRO_BENCH, MACRO_BENCH, LDBC_BENCH, IMPORT_BENCH};
         ToolBenchGroup[] toolBenchGroups = Arrays.stream( tools )
-                                                 .map( tool -> ToolBenchGroup.from( tool, "group-" + tool.name(), 10 ) )
+                                                 .map( tool -> ToolBenchGroup.from( Benchmark.Mode.values(), tool, "group-" + tool.name(), 10 ) )
                                                  .toArray( ToolBenchGroup[]::new );
 
         SyntheticStoreGeneratorBuilder generatorBuilder = new SyntheticStoreGeneratorBuilder()

@@ -5,11 +5,20 @@
  */
 package com.neo4j.bench.model.model;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.IntStream;
+
+import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
 public class PlanOperator
 {
@@ -20,16 +29,10 @@ public class PlanOperator
 
     private final int id;
     private final String operatorType;
-    private final Number estimatedRows;
-    private final Number dbHits;
-    private final Number rows;
-    /*
-    Example 'arguments':
-    LabelName: 'Track'
-    KeyNames: 't, y, val, count'
-    ExpandExpression: '(t)-[  UNNAMED33 APPEARS_ON]->(al)'
-     */
-    private final Map<String,String> arguments;
+    private final Long estimatedRows;
+    private Long dbHits;
+    private Long rows;
+
     private final List<String> identifiers;
     private final List<PlanOperator> children;
 
@@ -39,26 +42,25 @@ public class PlanOperator
      */
     public PlanOperator()
     {
-        this( 1, "-1", -1, -1, -1 );
+        this( 1, "-1", -1L, -1L, -1L );
     }
 
     public PlanOperator(
             int id,
             String operatorType,
-            Number estimatedRows,
-            Number dbHits,
-            Number rows )
+            Long estimatedRows,
+            Long dbHits,
+            Long rows )
     {
-        this( id, operatorType, estimatedRows, dbHits, rows, new HashMap<>(), new ArrayList<>(), new ArrayList<>() );
+        this( id, operatorType, estimatedRows, dbHits, rows, new ArrayList<>(), new ArrayList<>() );
     }
 
     public PlanOperator(
             int id,
             String operatorType,
-            Number estimatedRows,
-            Number dbHits,
-            Number rows,
-            Map<String,String> arguments,
+            Long estimatedRows,
+            Long dbHits,
+            Long rows,
             List<String> identifiers,
             List<PlanOperator> children )
     {
@@ -67,14 +69,44 @@ public class PlanOperator
         this.estimatedRows = estimatedRows;
         this.dbHits = dbHits;
         this.rows = rows;
-        this.arguments = arguments;
         this.identifiers = identifiers;
         this.children = children;
     }
 
-    public void addArgument( String key, String value )
+    /**
+     * Sums the profiled counts (e.g., rows & db-hits) of both plans.
+     * This call will mutate the plan.
+     */
+    public void addProfiledCountsFrom( PlanOperator other )
     {
-        arguments.put( key, value );
+        if ( !isEquivalent( other ) )
+        {
+            throw new IllegalStateException( format( "Can not add profile counts from a different plan%n" +
+                                                     "This:  %s%n" +
+                                                     "Other: %s%n", this, other ) );
+        }
+        dbHits += other.dbHits;
+        rows += other.rows;
+        List<PlanOperator> thisSortedChildren = this.childrenSorted();
+        List<PlanOperator> otherSortedChildren = other.childrenSorted();
+        for ( int i = 0; i < thisSortedChildren.size(); i++ )
+        {
+            thisSortedChildren.get( i ).addProfiledCountsFrom( otherSortedChildren.get( i ) );
+        }
+    }
+
+    /**
+     * Divides the profiled counts (e.g., rows & db-hits) of this operator and all of its children by the specified count.
+     * This call will mutate the plan.
+     */
+    public void divideProfiledCountsBy( int count )
+    {
+        dbHits /= count;
+        rows /= count;
+        for ( PlanOperator child : children )
+        {
+            child.divideProfiledCountsBy( count );
+        }
     }
 
     public void addChild( PlanOperator child )
@@ -92,24 +124,19 @@ public class PlanOperator
         return operatorType;
     }
 
-    public Number estimatedRows()
+    public Long estimatedRows()
     {
         return estimatedRows;
     }
 
-    public Number dbHits()
+    public Optional<Long> dbHits()
     {
-        return dbHits;
+        return Optional.ofNullable( dbHits );
     }
 
-    public Number rows()
+    public Optional<Long> rows()
     {
-        return rows;
-    }
-
-    public Map<String,String> arguments()
-    {
-        return arguments;
+        return Optional.ofNullable( rows );
     }
 
     public List<String> identifiers()
@@ -129,30 +156,38 @@ public class PlanOperator
         map.put( ESTIMATED_ROWS, estimatedRows );
         map.put( DB_HITS, dbHits );
         map.put( ROWS, rows );
-        map.putAll( arguments );
         return map;
+    }
+
+    /**
+     * Compares plans in the same way as equals(), with one exception.
+     * Only considers fields that are present when running EXPLAIN.
+     * Any additional/PROFILE fields (e.g., rows) is ignored.
+     */
+    public boolean isEquivalent( PlanOperator other )
+    {
+        boolean shallowEquivalent = EqualsBuilder.reflectionEquals( other, this, "dbHits", "rows", "children" );
+        return shallowEquivalent && isEquivalentChildren( other );
+    }
+
+    private boolean isEquivalentChildren( PlanOperator other )
+    {
+        List<PlanOperator> thisChildrenSorted = childrenSorted();
+        List<PlanOperator> otherChildrenSorted = other.childrenSorted();
+        return thisChildrenSorted.size() == otherChildrenSorted.size() &&
+               IntStream.range( 0, thisChildrenSorted.size() )
+                        .allMatch( i -> thisChildrenSorted.get( i ).isEquivalent( otherChildrenSorted.get( i ) ) );
+    }
+
+    private List<PlanOperator> childrenSorted()
+    {
+        return children.stream().sorted( Comparator.comparingInt( o -> o.id ) ).collect( toList() );
     }
 
     @Override
     public boolean equals( Object o )
     {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-        PlanOperator that = (PlanOperator) o;
-        return id == that.id &&
-               Objects.equals( operatorType, that.operatorType ) &&
-               Objects.equals( estimatedRows, that.estimatedRows ) &&
-               Objects.equals( dbHits, that.dbHits ) &&
-               Objects.equals( rows, that.rows ) &&
-               Objects.equals( arguments, that.arguments ) &&
-               Objects.equals( identifiers, that.identifiers ) &&
-               Objects.equals( children, that.children );
+        return EqualsBuilder.reflectionEquals( o, this );
     }
 
     @Override
@@ -164,13 +199,6 @@ public class PlanOperator
     @Override
     public String toString()
     {
-        return "PlanOperator{" +
-               "operatorType='" + operatorType + '\'' +
-               ", estimatedRows=" + estimatedRows +
-               ", dbHits=" + dbHits +
-               ", rows=" + rows +
-               ", arguments=" + arguments +
-               ", children=" + children +
-               '}';
+        return ToStringBuilder.reflectionToString( this, ToStringStyle.SHORT_PREFIX_STYLE );
     }
 }

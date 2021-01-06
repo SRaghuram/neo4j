@@ -6,16 +6,16 @@
 package com.neo4j.bench.macro.execution.database;
 
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.model.model.Plan;
-import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.bench.macro.execution.CountingResultVisitor;
 import com.neo4j.bench.macro.workload.ParametersReader;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.QueryString;
+import com.neo4j.bench.model.model.Plan;
+import com.neo4j.bench.model.options.Edition;
+import com.neo4j.bench.model.util.JsonUtil;
 
 import java.nio.file.Path;
 import java.util.Map;
@@ -25,8 +25,8 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
+import static com.neo4j.bench.common.tool.macro.ExecutionMode.CARDINALITY;
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.PLAN;
-import static com.neo4j.bench.common.tool.macro.ExecutionMode.PROFILE;
 
 public class PlanCreator
 {
@@ -85,7 +85,7 @@ public class PlanCreator
         // For PROFILE run, use the provided Planner & Runtime
         QueryString profileQueryString = (defaultExplainQueryString.isPeriodicCommit())
                                          ? queryString.copyWith( PLAN )
-                                         : queryString.copyWith( PROFILE );
+                                         : queryString.copyWith( CARDINALITY );
         ExecutionPlanDescription profilePlanDescription = getPlanDescriptionFor( db, profileQueryString, queryParameters );
 
         PlannerDescription plannerDescription = PlannerDescription.fromResults( profilePlanDescription,

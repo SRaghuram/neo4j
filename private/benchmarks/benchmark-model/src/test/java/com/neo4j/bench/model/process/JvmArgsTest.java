@@ -5,14 +5,15 @@
  */
 package com.neo4j.bench.model.process;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class JvmArgsTest
 {
@@ -92,12 +93,12 @@ public class JvmArgsTest
         assertThat( jvmArgs.toArgs(), contains( "-Xloggc:gc.log" ) );
     }
 
-    @Test( expected = IllegalArgumentException.class )
+    @Test
     public void throwErrorOnUnknownArgumentType()
     {
         // given
         JvmArgs jvmArgs = JvmArgs.from( emptyList() );
-        jvmArgs = jvmArgs.set( "-NativeMemorySummary" );
+        assertThrows( IllegalArgumentException.class, () -> jvmArgs.set( "-NativeMemorySummary" ) );
     }
 
     @Test

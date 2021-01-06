@@ -111,7 +111,7 @@ public class BenchmarkDiscoveryUtils
             Statistics statistics )
     {
         return new Metrics(
-                timeUnit,
+                Metrics.MetricsUnit.latency( timeUnit ),
                 statistics.getMin(),
                 statistics.getMax(),
                 statistics.getMean(),

@@ -17,7 +17,6 @@ import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.model.model.BranchAndVersion;
-import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.process.JvmArgs;
 import org.apache.commons.lang3.StringUtils;

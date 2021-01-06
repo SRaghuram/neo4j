@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -13,14 +12,13 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
 import com.neo4j.bench.macro.workload.Query;
-import com.neo4j.bench.macro.workload.QueryString;
+import com.neo4j.bench.model.model.Parameters;
 
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.EXECUTE;
-import static com.neo4j.bench.common.tool.macro.ExecutionMode.PLAN;
 import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.single;
 
 public class CypherExecutingRunner extends QueryRunner
@@ -46,19 +44,20 @@ public class CypherExecutingRunner extends QueryRunner
             WarmupStrategy warmupStrategy = WarmupStrategy.warmupStrategyFor( query, warmupControl );
             try ( Database database = databaseCreator.apply( forkDirectory ) )
             {
-                Runner.run( jvm,
-                            database,
-                            pidParameters,
-                            pidProfilers,
-                            warmupStrategy.warmupQuery(),
-                            query.copyWith( EXECUTE ).queryString(),
-                            query.benchmarkGroup(),
-                            query.benchmark(),
-                            query.parameters().create(),
-                            forkDirectory,
-                            warmupStrategy.warmupControl(),
-                            query.isSingleShot() ? single() : measurementControl,
-                            warmupStrategy.doRollbackOnWarmup() );
+                new Runner().run( jvm,
+                                  database,
+                                  pidParameters,
+                                  pidProfilers,
+                                  warmupStrategy.warmupQuery(),
+                                  query.copyWith( EXECUTE ).queryString(),
+                                  query.benchmarkGroup(),
+                                  query.benchmark(),
+                                  query.parameters().create(),
+                                  forkDirectory,
+                                  warmupStrategy.warmupControl(),
+                                  query.isSingleShot() ? single() : measurementControl,
+                                  warmupStrategy.doRollbackOnWarmup(),
+                                  MeasuringExecutor.toMeasureLatency() );
             }
         }
         catch ( Exception e )

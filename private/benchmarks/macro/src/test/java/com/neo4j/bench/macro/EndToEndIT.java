@@ -9,6 +9,7 @@ import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
@@ -29,13 +30,13 @@ import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.test.BaseEndToEndIT;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 
 import static java.lang.String.format;
@@ -53,13 +54,21 @@ class EndToEndIT extends BaseEndToEndIT
     private static final String WRITE_WORKLOAD = "pokec_write";
     private static final String READ_WORKLOAD = "zero";
 
+    private ExpectedRecordings expectedRecordingsFor( List<ProfilerType> profilers, ExecutionMode executionMode, Deployment deployment, int forks )
+    {
+        ExpectedRecordings expectedRecordings = ExpectedRecordings.from( profilers, deploymentParameters( deployment.deploymentModes(), forks ) );
+        return (ExecutionMode.CARDINALITY.equals( executionMode ))
+               ? expectedRecordings.with( RecordingType.ASCII_PLAN, clientParameters( deployment.deploymentModes() ) )
+               : expectedRecordings;
+    }
+
     @Test
     public void runReadWorkloadEmbedded() throws Exception
     {
-
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
+        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
-        String workloadName = "zero";
+        String workloadName = READ_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.CARDINALITY;
         int recordingDirsCount = 1;
         int forks = 1;
 
@@ -75,9 +84,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -88,7 +99,8 @@ class EndToEndIT extends BaseEndToEndIT
 
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
-        String workloadName = "pokec_write";
+        String workloadName = WRITE_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int recordingDirsCount = 1;
         int forks = 1;
         Path resourcesPath = temporaryFolder.resolve( "resources" );
@@ -103,9 +115,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -116,6 +130,7 @@ class EndToEndIT extends BaseEndToEndIT
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = LOAD_CSV_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int recordingDirsCount = 1;
         int forks = 1;
         Path resourcesPath = temporaryFolder.resolve( "resources" );
@@ -130,9 +145,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -145,6 +162,7 @@ class EndToEndIT extends BaseEndToEndIT
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.server( getNeo4jDir() );
         String workloadName = READ_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.CARDINALITY;
         int recordingDirsCount = 1;
         int forks = 1;
         Path resourcesPath = temporaryFolder.resolve( "resources" );
@@ -159,9 +177,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -172,6 +192,7 @@ class EndToEndIT extends BaseEndToEndIT
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.server( getNeo4jDir() );
         String workloadName = WRITE_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int recordingDirsCount = 1;
         int forks = 1;
 
@@ -187,9 +208,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -200,6 +223,7 @@ class EndToEndIT extends BaseEndToEndIT
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.server( getNeo4jDir() );
         String workloadName = LOAD_CSV_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int recordingDirsCount = 1;
         int forks = 1;
 
@@ -215,9 +239,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -230,6 +256,7 @@ class EndToEndIT extends BaseEndToEndIT
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = READ_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int recordingDirsCount = 0;
         int forks = 0;
 
@@ -245,9 +272,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -258,6 +287,7 @@ class EndToEndIT extends BaseEndToEndIT
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = WRITE_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int forks = 0;
         int recordingDirsCount = 0;
 
@@ -271,9 +301,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -285,6 +317,7 @@ class EndToEndIT extends BaseEndToEndIT
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = LOAD_CSV_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int forks = 0;
         int recordingDirsCount = 0;
 
@@ -298,9 +331,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -312,6 +347,7 @@ class EndToEndIT extends BaseEndToEndIT
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.server( getNeo4jDir() );
         String workloadName = READ_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.CARDINALITY;
         int forks = 0;
         int recordingDirsCount = 1;
         Path resourcesPath = temporaryFolder.resolve( "resources" );
@@ -326,9 +362,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -340,6 +378,7 @@ class EndToEndIT extends BaseEndToEndIT
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.server( getNeo4jDir() );
         String workloadName = WRITE_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int forks = 0;
         int recordingDirsCount = 0;
 
@@ -353,9 +392,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -372,6 +413,7 @@ class EndToEndIT extends BaseEndToEndIT
 
         try ( Resources resources = new Resources( temporaryFolder.resolve( "resources" ) ) )
         {
+            ExecutionMode executionMode = ExecutionMode.EXECUTE;
             runReportBenchmarks( resources,
                                  scriptName(),
                                  getJar(),
@@ -380,9 +422,11 @@ class EndToEndIT extends BaseEndToEndIT
                                               profilers,
                                               workloadName,
                                               deployment,
-                                              forks ),
-                                 assertOnRecordings( deployment, workloadName, forks ),
-                                 recordingDirsCount );
+                                              forks,
+                                              executionMode ),
+                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
         }
     }
 
@@ -405,7 +449,8 @@ class EndToEndIT extends BaseEndToEndIT
                                       List<ProfilerType> profilers,
                                       String workloadName,
                                       Deployment deployment,
-                                      int forks ) throws IOException
+                                      int forks,
+                                      ExecutionMode executionMode ) throws IOException
     {
 
         Jvm jvm = Jvm.defaultJvmOrFail();
@@ -461,7 +506,7 @@ class EndToEndIT extends BaseEndToEndIT
                        // parent_teamcity_build
                        "0",
                        // execution_mode
-                       ExecutionMode.EXECUTE.name(),
+                       executionMode.name(),
                        // jvm_args
                        "-Xmx1g",
                        // recreate_schema
@@ -482,7 +527,7 @@ class EndToEndIT extends BaseEndToEndIT
                        "--aws-endpoint-url", awsEndpointUrl );
     }
 
-    protected AssertOnRecordings assertOnRecordings( Deployment deployment, String workloadName, int forks )
+    protected AssertOnRecordings assertOnRecordings( Deployment deployment, String workloadName, int forks, ExecutionMode executionMode )
     {
         return ( Path recordingDir, List<ProfilerType> profilers, Resources resources ) ->
         {
@@ -494,6 +539,7 @@ class EndToEndIT extends BaseEndToEndIT
             Parameters[] parameters = deploymentParameters( deployment.deploymentModes(), forks );
             for ( Query query : workload.queries() )
             {
+                query = query.copyWith( executionMode );
                 for ( ProfilerType profilerType : profilers )
                 {
                     for ( Parameters params : parameters )
@@ -513,8 +559,35 @@ class EndToEndIT extends BaseEndToEndIT
                         }
                     }
                 }
+
+                Parameters clientParameters = clientParameters( deployment.deploymentModes() ); // ASCII plans are only created on client side
+                if ( executionMode.equals( ExecutionMode.CARDINALITY ) )
+                {
+                    RecordingDescriptor recordingDescriptor = new RecordingDescriptor( FullBenchmarkName.from( query.benchmarkGroup(), query.benchmark() ),
+                                                                                       RunPhase.MEASUREMENT,
+                                                                                       RecordingType.ASCII_PLAN,
+                                                                                       clientParameters,
+                                                                                       Collections.emptySet(),
+                                                                                       true /*every fork will produce plans recording*/ );
+                    String profilerArtifactFilename = recordingDescriptor.filename();
+                    File file = recordingDir.resolve( profilerArtifactFilename ).toFile();
+                    assertThat( "File not found: " + file.getAbsolutePath(), file, anExistingFile() );
+                }
             }
         };
+    }
+
+    private static Parameters clientParameters( DeploymentModes deploymentModes )
+    {
+        switch ( deploymentModes )
+        {
+        case SERVER:
+            return Parameters.CLIENT;
+        case EMBEDDED:
+            return Parameters.NONE;
+        default:
+            throw new IllegalArgumentException( format( "unsupported deployment mode %s", deploymentModes ) );
+        }
     }
 
     private static Parameters[] deploymentParameters( DeploymentModes deploymentModes, int forks )

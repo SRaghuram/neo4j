@@ -11,6 +11,7 @@ import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.database.Neo4jServerWrapper.Neo4jServerConnection;
+import com.neo4j.bench.model.model.PlanOperator;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -80,6 +81,8 @@ public class ServerDatabase implements Database
     private final Driver driver;
     private final Session session;
     private final Path copyLogsToOnClose;
+    private final RowsScoreFun rowCountScore;
+    private final PlanScoreFun cardinalityScore;
 
     private ServerDatabase( Neo4jServerWrapper neo4jServer, URI boltUri, DatabaseName databaseName, Pid pid, Path copyLogsToOnClose )
     {
@@ -88,6 +91,8 @@ public class ServerDatabase implements Database
         this.databaseName = databaseName;
         this.pid = Objects.requireNonNull( pid );
         this.copyLogsToOnClose = copyLogsToOnClose;
+        this.rowCountScore = new RowsScoreFun();
+        this.cardinalityScore = new PlanScoreFun();
         try
         {
             Config driverConfig = Config.builder()
@@ -120,16 +125,32 @@ public class ServerDatabase implements Database
         return pid;
     }
 
+    public Session session()
+    {
+        return session;
+    }
+
     @Override
-    public int execute( String query, Map<String,Object> parameters, boolean executeInTx, boolean shouldRollback )
+    public PlanOperator executeAndGetPlan( String query, Map<String,Object> parameters, boolean executeInTx, boolean shouldRollback )
+    {
+        return executeAndGet( query, parameters, executeInTx, shouldRollback, cardinalityScore );
+    }
+
+    @Override
+    public int executeAndGetRows( String query, Map<String,Object> parameters, boolean executeInTx, boolean shouldRollback )
+    {
+        return executeAndGet( query, parameters, executeInTx, shouldRollback, rowCountScore );
+    }
+
+    private <SCORE> SCORE executeAndGet( String query, Map<String,Object> parameters, boolean executeInTx, boolean shouldRollback, ScoreFun<SCORE> scoreFun )
     {
         if ( !executeInTx )
         {
-            return getRowCount( session.run( query, parameters ) );
+            return scoreFun.compute( session.run( query, parameters ) );
         }
         try ( Transaction tx = session.beginTransaction() )
         {
-            int rowCount = getRowCount( tx.run( query, parameters ) );
+            SCORE score = scoreFun.compute( tx.run( query, parameters ) );
             if ( shouldRollback )
             {
                 tx.rollback();
@@ -138,23 +159,8 @@ public class ServerDatabase implements Database
             {
                 tx.commit();
             }
-            return rowCount;
+            return score;
         }
-    }
-
-    private int getRowCount( Result result )
-    {
-        int rowCount = 0;
-        while ( result.hasNext() )
-        {
-            Record record = result.next();
-            // Use record to avoid JIT dead code elimination
-            if ( record != null )
-            {
-                rowCount++;
-            }
-        }
-        return rowCount;
     }
 
     @Override
@@ -185,6 +191,37 @@ public class ServerDatabase implements Database
         if ( neo4jServer != null )
         {
             neo4jServer.stop();
+        }
+    }
+
+    private interface ScoreFun<SCORE>
+    {
+        SCORE compute( Result result );
+    }
+
+    private static class RowsScoreFun implements ServerDatabase.ScoreFun<Integer>
+    {
+        public Integer compute( Result result )
+        {
+            int rowCount = 0;
+            while ( result.hasNext() )
+            {
+                Record record = result.next();
+                // Use record to avoid JIT dead code elimination
+                if ( record != null )
+                {
+                    rowCount++;
+                }
+            }
+            return rowCount;
+        }
+    }
+
+    private static class PlanScoreFun implements ServerDatabase.ScoreFun<PlanOperator>
+    {
+        public PlanOperator compute( Result result )
+        {
+            return PlannerDescription.toPlanOperator( result.consume().plan() );
         }
     }
 }

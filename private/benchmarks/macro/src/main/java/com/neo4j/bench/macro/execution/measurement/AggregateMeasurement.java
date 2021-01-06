@@ -6,12 +6,12 @@
 package com.neo4j.bench.macro.execution.measurement;
 
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.LongStream;
+import java.util.function.DoubleFunction;
+import java.util.stream.DoubleStream;
 
 public class AggregateMeasurement
 {
-    public static AggregateMeasurement calculateFrom( long[] measurements )
+    public static AggregateMeasurement calculateFrom( double[] measurements )
     {
         if ( measurements.length == 0 )
         {
@@ -20,32 +20,27 @@ public class AggregateMeasurement
         return new AggregateMeasurement( measurements );
     }
 
-    public static AggregateMeasurement createEmpty()
-    {
-        return new AggregateMeasurement( new long[] {} );
-    }
-
-    private final long[] measurements;
+    private final double[] measurements;
     private final double mean;
 
-    private AggregateMeasurement( long[] measurements )
+    private AggregateMeasurement( double[] measurements )
     {
         this.measurements = measurements;
         Arrays.sort( measurements );
-        this.mean = LongStream.of( measurements ).average().orElse( 0 );
+        this.mean = DoubleStream.of( measurements ).average().orElse( 0 );
     }
 
-    public long min()
+    public double min()
     {
         return percentile( 0D );
     }
 
-    public long median()
+    public double median()
     {
         return percentile( 0.5D );
     }
 
-    public long max()
+    public double max()
     {
         return percentile( 1.0D );
     }
@@ -60,7 +55,7 @@ public class AggregateMeasurement
         return measurements.length;
     }
 
-    public long percentile( double percentile )
+    public double percentile( double percentile )
     {
         assertPercentileInRange( percentile );
         int index = (int) (percentile * measurements.length);
@@ -68,7 +63,7 @@ public class AggregateMeasurement
         {
             index = index - 1;
         }
-        return measurements[ index ];
+        return measurements[index];
     }
 
     @Override
@@ -99,12 +94,11 @@ public class AggregateMeasurement
         }
     }
 
-    public AggregateMeasurement convertUnit( TimeUnit fromTimeUnit, TimeUnit toTimeUnit )
+    public AggregateMeasurement convert( DoubleFunction<Double> convertFun )
     {
         return new AggregateMeasurement(
-                LongStream.of( measurements )
-                .map( m -> toTimeUnit.convert( m, fromTimeUnit ) )
-                .toArray() );
+                DoubleStream.of( measurements )
+                            .map( convertFun::apply )
+                            .toArray() );
     }
-
 }

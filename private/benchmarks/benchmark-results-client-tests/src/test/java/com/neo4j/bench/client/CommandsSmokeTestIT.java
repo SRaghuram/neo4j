@@ -52,6 +52,8 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.METRICS;
 import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.TEST_RUN;
+import static com.neo4j.bench.model.model.Benchmark.Mode.LATENCY;
+import static com.neo4j.bench.model.model.Benchmark.Mode.THROUGHPUT;
 import static com.neo4j.bench.model.model.Repository.LDBC_BENCH;
 import static com.neo4j.bench.model.model.Repository.MACRO_BENCH;
 import static com.neo4j.bench.model.model.Repository.MICRO_BENCH;
@@ -86,8 +88,8 @@ public class CommandsSmokeTestIT
 
     private URI boltUri;
 
-    private final ToolBenchGroup[] toolBenchGroups = {ToolBenchGroup.from( MICRO_BENCH, "Cypher", 5 ),
-                                                      ToolBenchGroup.from( MICRO_BENCH, "Values", 5 ),
+    private final ToolBenchGroup[] toolBenchGroups = {ToolBenchGroup.from( new Benchmark.Mode[]{LATENCY, THROUGHPUT}, MICRO_BENCH, "Cypher", 5 ),
+                                                      ToolBenchGroup.from( new Benchmark.Mode[]{LATENCY, THROUGHPUT}, MICRO_BENCH, "Values", 5 ),
                                                       ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_1, macroBench(), macroBench() ),
                                                       ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_2, macroBench(), macroBench() ),
                                                       ToolBenchGroup.from( LDBC_BENCH, LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
@@ -293,7 +295,7 @@ public class CommandsSmokeTestIT
         paramsMap.put( "scale_factor", Integer.toString( scaleFactor ) );
         return Benchmark.benchmarkFor( "Description",
                                        "Summary",
-                                       Benchmark.Mode.THROUGHPUT,
+                                       THROUGHPUT,
                                        paramsMap );
     }
 
@@ -306,7 +308,7 @@ public class CommandsSmokeTestIT
         paramsMap.put( "deployment", Deployment.embedded().parsableValue() );
         return Benchmark.benchmarkFor( "Description",
                                        "Query " + UUID.randomUUID(),
-                                       Benchmark.Mode.LATENCY,
+                                       LATENCY,
                                        paramsMap );
     }
 }

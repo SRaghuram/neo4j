@@ -125,7 +125,7 @@ public class BenchmarkGroupBenchmarkMetricsTest
     private static Metrics metrics()
     {
         ThreadLocalRandom rng = ThreadLocalRandom.current();
-        TimeUnit unit = unit();
+        Metrics.MetricsUnit unit = Metrics.MetricsUnit.latency( unit() );
         long minNs = rng.nextLong();
         long maxNs = rng.nextLong();
         long meanNs = rng.nextLong();
@@ -152,10 +152,10 @@ public class BenchmarkGroupBenchmarkMetricsTest
                 percentile999Ns );
     }
 
-    private static AuxiliaryMetrics auxiliaryMetrics()
+    private static Metrics auxiliaryMetrics()
     {
         ThreadLocalRandom rng = ThreadLocalRandom.current();
-        String unit = "rows";
+        Metrics.MetricsUnit unit = Metrics.MetricsUnit.rows();
         long minNs = rng.nextLong();
         long maxNs = rng.nextLong();
         long meanNs = rng.nextLong();
@@ -167,7 +167,7 @@ public class BenchmarkGroupBenchmarkMetricsTest
         long percentile95Ns = rng.nextLong();
         long percentile99Ns = rng.nextLong();
         long percentile999Ns = rng.nextLong();
-        return new AuxiliaryMetrics(
+        return new Metrics(
                 unit,
                 minNs,
                 maxNs,

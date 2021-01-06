@@ -99,7 +99,7 @@ public class Units
         case THROUGHPUT:
             return unit.ordinal() > NANOSECONDS.ordinal();
         default:
-            throw new IllegalArgumentException( format( "Unable to convert %s %s to smaller unit", unit.name(), mode.name() ) );
+            throw new IllegalArgumentException( format( "Unable to convert '%s' '%s' to smaller unit", unit.name(), mode.name() ) );
         }
     }
 

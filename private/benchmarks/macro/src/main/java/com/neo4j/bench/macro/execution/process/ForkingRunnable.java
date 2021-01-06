@@ -156,7 +156,7 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
         externalProfilers.forEach( profiler -> profiler.afterProcess( forkDirectory,
                                                                       profilerRecordingDescriptor( query, clientParameters, profiler ) ) );
 
-        return Results.loadFrom( forkDirectory, Results.Phase.MEASUREMENT );
+        return Results.loadFrom( forkDirectory, RunPhase.MEASUREMENT );
     }
 
     private ProfilerRecordingDescriptor profilerRecordingDescriptor( Query query, Parameters parameters, Profiler profiler )

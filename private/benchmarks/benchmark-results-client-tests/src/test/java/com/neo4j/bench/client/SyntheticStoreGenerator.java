@@ -14,7 +14,6 @@ import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.RichRandom;
 import com.neo4j.bench.model.model.Annotation;
-import com.neo4j.bench.model.model.AuxiliaryMetrics;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.Benchmark.Mode;
 import com.neo4j.bench.model.model.BenchmarkConfig;
@@ -84,7 +83,10 @@ public class SyntheticStoreGenerator
                                                                             .flatMap( tool ->
                                                                                               IntStream.range( 0, 4 )
                                                                                                        .mapToObj( Integer::toString )
-                                                                                                       .map( name -> ToolBenchGroup.from( tool, name, 10 ) )
+                                                                                                       .map( name -> ToolBenchGroup.from( Mode.values(),
+                                                                                                                                          tool,
+                                                                                                                                          name,
+                                                                                                                                          10 ) )
                                                                             )
                                                                             .toArray( ToolBenchGroup[]::new );
     private static final String[] DEFAULT_NEO4J_VERSIONS = {"3.0.2", "3.0.1", "3.0.0", "3.0-drop3.1"};
@@ -349,11 +351,11 @@ public class SyntheticStoreGenerator
                     BenchmarkGroup benchmarkGroup = toolBenchGroup.group();
                     for ( Benchmark benchmark : toolBenchGroup.benchmarks() )
                     {
-                        AuxiliaryMetrics maybeAuxiliaryMetrics = randomAuxiliaryMetrics();
+                        Metrics maybeAuxiliaryMetrics = randomAuxiliaryMetrics();
                         benchmarkGroupBenchmarkMetrics.add(
                                 benchmarkGroup,
                                 benchmark,
-                                randomMetrics(),
+                                randomMetrics( benchmark.mode() ),
                                 maybeAuxiliaryMetrics,
                                 config );
                         generationResult.addBenchmark( tool, benchmarkGroup, benchmark );
@@ -458,9 +460,12 @@ public class SyntheticStoreGenerator
         return generationResult;
     }
 
-    private Metrics randomMetrics()
+    private Metrics randomMetrics( Mode mode )
     {
-        return new Metrics( UNIT.get(),
+        Metrics.MetricsUnit unit = mode.equals( Mode.ACCURACY )
+                                   ? Metrics.MetricsUnit.accuracy()
+                                   : Metrics.MetricsUnit.latency( UNIT.get() );
+        return new Metrics( unit,
                             MIN_NS.get(),
                             MAX_NS.get(),
                             MEAN_NS.get(),
@@ -474,21 +479,21 @@ public class SyntheticStoreGenerator
                             PERC_99_9_NS.get() );
     }
 
-    private AuxiliaryMetrics randomAuxiliaryMetrics()
+    private Metrics randomAuxiliaryMetrics()
     {
         return RNG.innerRng().nextBoolean()
-               ? new AuxiliaryMetrics( "rows",
-                                       MIN_NS.get(),
-                                       MAX_NS.get(),
-                                       MEAN_NS.get(),
-                                       SAMPLE_SIZE,
-                                       PERC_25_NS.get(),
-                                       PERC_50_NS.get(),
-                                       PERC_75_NS.get(),
-                                       PERC_90_NS.get(),
-                                       PERC_95_NS.get(),
-                                       PERC_99_NS.get(),
-                                       PERC_99_9_NS.get() )
+               ? new Metrics( Metrics.MetricsUnit.rows(),
+                              MIN_NS.get(),
+                              MAX_NS.get(),
+                              MEAN_NS.get(),
+                              SAMPLE_SIZE,
+                              PERC_25_NS.get(),
+                              PERC_50_NS.get(),
+                              PERC_75_NS.get(),
+                              PERC_90_NS.get(),
+                              PERC_95_NS.get(),
+                              PERC_99_NS.get(),
+                              PERC_99_9_NS.get() )
                : null;
     }
 
@@ -555,20 +560,20 @@ public class SyntheticStoreGenerator
 
     static class ToolBenchGroup
     {
-        static ToolBenchGroup from( Repository tool, String groupName, int benchmarkCount )
+        static ToolBenchGroup from( Mode[] validModes, Repository tool, String groupName, int benchmarkCount )
         {
             String[] benchNames = IntStream.range( 0, benchmarkCount )
                                            .mapToObj( Integer::toString )
                                            .toArray( String[]::new );
-            return ToolBenchGroup.from( tool, groupName, benchNames );
+            return ToolBenchGroup.from( validModes, tool, groupName, benchNames );
         }
 
-        static ToolBenchGroup from( Repository tool, String groupName, String... benchNames )
+        static ToolBenchGroup from( Mode[] validModes, Repository tool, String groupName, String... benchNames )
         {
             BenchmarkGroup group = new BenchmarkGroup( groupName );
             Benchmark[] benchmarks = Arrays.stream( benchNames )
                                            .map( b -> Benchmark
-                                                   .benchmarkFor( "description for: " + b, b, randomFrom( Mode.values() ), BENCHMARK_PARAMETERS ) )
+                                                   .benchmarkFor( "description for: " + b, b, randomFrom( validModes ), BENCHMARK_PARAMETERS ) )
                                            .toArray( Benchmark[]::new );
             return from( tool, group, benchmarks );
         }

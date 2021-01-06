@@ -53,7 +53,7 @@ public interface MeasurementControl
         return new AndCompositeMeasurementControl( measurementControls );
     }
 
-    void register( long latency );
+    void register( double measurement );
 
     boolean isComplete();
 

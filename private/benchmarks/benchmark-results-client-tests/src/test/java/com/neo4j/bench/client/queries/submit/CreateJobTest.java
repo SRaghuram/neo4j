@@ -81,7 +81,7 @@ public class CreateJobTest
             benchmarkGroupBenchmarkMetrics.add(
                     new BenchmarkGroup( "group" ),
                     Benchmark.benchmarkFor( "description", "simpleName", Benchmark.Mode.LATENCY, emptyMap() ),
-                    new Metrics( TimeUnit.MILLISECONDS, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ),
+                    new Metrics( Metrics.MetricsUnit.latency( TimeUnit.MILLISECONDS ), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ),
                     null,
                     Neo4jConfig.empty() );
 

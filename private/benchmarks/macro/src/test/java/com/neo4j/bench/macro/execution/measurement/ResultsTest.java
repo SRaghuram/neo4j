@@ -5,28 +5,34 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
+import com.google.common.collect.Lists;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.BenchmarkUtil;
-import com.neo4j.bench.macro.execution.measurement.Results.Phase;
+import com.neo4j.bench.macro.execution.measurement.Results.MeasurementUnit;
+import com.neo4j.bench.macro.execution.measurement.Results.ResultsWriter;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Metrics;
+import com.neo4j.bench.model.model.Metrics.MetricsUnit;
 import org.junit.jupiter.api.Test;
 
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -37,153 +43,161 @@ public class ResultsTest
     public TestDirectory temporaryFolder;
 
     @Test
-    public void shouldFailToLoadWhenNoHeader() throws Exception
+    public void shouldFailToLoadWhenNoFilePresent() throws Exception
     {
-        Path existingForkDirPath = createForkDirPath();
-        ForkDirectory forkDirectory = ForkDirectory.openAt( existingForkDirPath );
+        ForkDirectory forkDirectory = createForkDirectory();
         BenchmarkUtil.assertException( RuntimeException.class,
-                                       () -> Results.loadFrom( forkDirectory, Phase.MEASUREMENT ) );
+                                       () -> Results.loadFrom( forkDirectory, RunPhase.MEASUREMENT ) );
     }
 
     @Test
-    public void shouldFailToLoadWhenNoResults() throws Exception
+    public void shouldFailToLoadWhenResultsFileIsEmpty() throws Exception
     {
-        Path existingForkDirPath = createForkDirPath();
-        ForkDirectory forkDirectory = ForkDirectory.openAt( existingForkDirPath );
-        Results.ResultsWriter resultsWriter = Results.newWriter( forkDirectory, Phase.MEASUREMENT, MILLISECONDS );
+        ForkDirectory forkDirectory = createForkDirectory();
+        ResultsWriter resultsWriter = Results.newWriter( forkDirectory, RunPhase.MEASUREMENT, MeasurementUnit.ofDuration( MILLISECONDS ) );
         resultsWriter.close();
         BenchmarkUtil.assertException( RuntimeException.class,
-                                       () -> Results.loadFrom( forkDirectory, Phase.MEASUREMENT ) );
+                                       () -> Results.loadFrom( forkDirectory, RunPhase.MEASUREMENT ) );
     }
 
     @Test
-    public void shouldBeAbleToCreateEmptyResults()
+    public void shouldLoadResultsWhenMeasurementsFileIsProperlyFormatted() throws Exception
     {
-        Results empty = Results.empty();
-        assertThat( empty.rows().count(), equalTo( 0L ) );
-        assertThat( empty.duration().count(), equalTo( 0L ) );
+        List<MeasurementUnit> measurementUnits = Lists.newArrayList( MeasurementUnit.ofDuration( MILLISECONDS ),
+                                                                     MeasurementUnit.ofDuration( SECONDS ),
+                                                                     MeasurementUnit.ofCardinality() );
+        for ( MeasurementUnit measurementUnit : measurementUnits )
+        {
+            Path resultFile = temporaryFolder.file( "result" );
+            Files.write( resultFile, Arrays.asList(
+                    format( "scheduled_start,start,%s,rows", measurementUnit.header() ),
+                    "1,2,3,4"
+            ) );
+            Results results = Results.loadFromFile( resultFile );
+            assertThat( results.measurement().count(), equalTo( 1L ) );
+        }
+    }
+
+    @Test
+    public void shouldFailToLoadWhenInvalidHeader() throws Exception
+    {
+        checkInvalidHeader( "INVALID,start,duration_ms,rows" );
+        checkInvalidHeader( "scheduled_start,INVALID,duration_ms,rows" );
+        checkInvalidHeader( "scheduled_start,start,INVALID,rows" );
+        checkInvalidHeader( "scheduled_start,start,duration_ms,INVALID" );
+        checkInvalidHeader( "scheduled_start,start,rows" );
+    }
+
+    private void checkInvalidHeader( String header ) throws IOException
+    {
+        Path resultFile = temporaryFolder.file( "results" );
+        Files.write( resultFile, Arrays.asList(
+                header,
+                "1,2,3,4"
+        ) );
+        BenchmarkUtil.assertException( IllegalStateException.class,
+                                       () -> Results.loadFromFile( resultFile ) );
     }
 
     @Test
     public void shouldFailToLoadWhenTooFewColumns() throws Exception
     {
-        File validResultFile = temporaryFolder.file( "valid-result" ).toFile();
-        try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( validResultFile.toPath() ) )
-        {
-            bufferedWriter.write( "scheduled_start,start,duration_ms,rows" );
-            bufferedWriter.newLine();
-            bufferedWriter.write( "1,2,3,4" );
-        }
-        Results.loadFromFile( validResultFile.toPath() );
-
-        File invalidResultFile = temporaryFolder.file( "invalid-results" ).toFile();
-        try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( invalidResultFile.toPath() ) )
-        {
-            bufferedWriter.write( "scheduled_start,start,duration_invalid,rows" );
-            bufferedWriter.newLine();
-            bufferedWriter.write( "1,2,3" );
-        }
+        Path resultFile = temporaryFolder.file( "results" );
+        Files.write( resultFile, Arrays.asList(
+                "scheduled_start,start,duration_ms,rows",
+                "1,2,3"
+        ) );
         BenchmarkUtil.assertException( RuntimeException.class,
-                                       () -> Results.loadFromFile( invalidResultFile.toPath() ) );
+                                       () -> Results.loadFromFile( resultFile ) );
     }
 
     @Test
     public void shouldFailToLoadWhenTooManyColumns() throws Exception
     {
-        File validResultFile = Files.createTempFile( temporaryFolder.absolutePath(), "valid-results", ".file" ).toFile();
-        try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( validResultFile.toPath() ) )
-        {
-            bufferedWriter.write( "scheduled_start,start,duration_ms,rows" );
-            bufferedWriter.newLine();
-            bufferedWriter.write( "1,2,3,4" );
-        }
-        Results.loadFromFile( validResultFile.toPath() );
-
-        File invalidResultFile = temporaryFolder.file( "invalid-results" ).toFile();
-        try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( invalidResultFile.toPath() ) )
-        {
-            bufferedWriter.write( "scheduled_start,start,duration_invalid,rows" );
-            bufferedWriter.newLine();
-            bufferedWriter.write( "1,2,3,4,5" );
-        }
+        Path resultFile = temporaryFolder.file( "results" );
+        Files.write( resultFile, Arrays.asList(
+                "scheduled_start,start,duration_ms,rows",
+                "1,2,3,4,5"
+        ) );
         BenchmarkUtil.assertException( RuntimeException.class,
-                                       () -> Results.loadFromFile( invalidResultFile.toPath() ) );
+                                       () -> Results.loadFromFile( resultFile ) );
+    }
+
+    @Test
+    public void shouldLoadAllHeaderVariations() throws Exception
+    {
+        assertRequestedHeaderIsRespected( MeasurementUnit.ofDuration( MILLISECONDS ), MetricsUnit.latency( MILLISECONDS ) );
+        assertRequestedHeaderIsRespected( MeasurementUnit.ofDuration( SECONDS ), MetricsUnit.latency( SECONDS ) );
+        assertRequestedHeaderIsRespected( MeasurementUnit.ofCardinality(), MetricsUnit.accuracy() );
+    }
+
+    private void assertRequestedHeaderIsRespected( MeasurementUnit requestedHeader, MetricsUnit readHeader ) throws Exception
+    {
+        ForkDirectory forkDirectory = createForkDirectory();
+        try ( ResultsWriter resultsWriter = Results.newWriter( forkDirectory, RunPhase.MEASUREMENT, requestedHeader ) )
+        {
+            resultsWriter.write( 1, 2, 3, 5 );
+        }
+        Results results = Results.loadFrom( forkDirectory, RunPhase.MEASUREMENT );
+        assertThat( results.metrics().toMap().get( Metrics.UNIT ), equalTo( readHeader.value() ) );
+        assertThat( results.measurement().count(), equalTo( 1L ) );
     }
 
     @Test
     public void shouldWriteAndRead() throws Exception
     {
-        Path existingForkDirPath = createForkDirPath();
-        ForkDirectory forkDirectory = ForkDirectory.openAt( existingForkDirPath );
-        try ( Results.ResultsWriter resultsWriter = Results.newWriter( forkDirectory, Phase.MEASUREMENT, MILLISECONDS ) )
+        ForkDirectory forkDirectory = createForkDirectory();
+        try ( ResultsWriter resultsWriter = Results.newWriter( forkDirectory, RunPhase.MEASUREMENT, MeasurementUnit.ofDuration( MILLISECONDS ) ) )
         {
             resultsWriter.write( 1, 2, 3, 5 );
             resultsWriter.write( 2, 2, 5, 4 );
             resultsWriter.write( 2, 2, 7, 3 );
         }
 
-        Results results = Results.loadFrom( forkDirectory, Phase.MEASUREMENT );
-        assertThat( results.duration().mean(), equalTo( 5D ) );
+        Results results = Results.loadFrom( forkDirectory, RunPhase.MEASUREMENT );
+        assertThat( results.measurement().mean(), equalTo( 5D ) );
         assertThat( results.rows().mean(), equalTo( 4D ) );
     }
 
     @Test
-    public void shouldCalculateAggregate()
+    public void shouldConvertUnit() throws Exception
     {
-        long[] measurements = new long[]{1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L};
-        AggregateMeasurement aggregate = AggregateMeasurement.calculateFrom( measurements );
+        ForkDirectory forkDirectory = createForkDirectory();
+        try ( ResultsWriter resultsWriter = Results.newWriter( forkDirectory, RunPhase.MEASUREMENT, MeasurementUnit.ofDuration( MILLISECONDS ) ) )
+        {
+            resultsWriter.write( 1, 2, 30_000, 5 );
+            resultsWriter.write( 2, 2, 50_000, 4 );
+            resultsWriter.write( 2, 2, 70_000, 3 );
+        }
 
-        assertThat( aggregate.percentile( 0.0D ), equalTo( 1L ) );
-        assertThat( aggregate.percentile( 0.1D ), equalTo( 2L ) );
-        assertThat( aggregate.percentile( 0.2D ), equalTo( 3L ) );
-        assertThat( aggregate.percentile( 0.3D ), equalTo( 4L ) );
-        assertThat( aggregate.percentile( 0.4D ), equalTo( 5L ) );
-        assertThat( aggregate.percentile( 0.5D ), equalTo( 6L ) );
-        assertThat( aggregate.percentile( 0.6D ), equalTo( 7L ) );
-        assertThat( aggregate.percentile( 0.7D ), equalTo( 8L ) );
-        assertThat( aggregate.percentile( 0.8D ), equalTo( 9L ) );
-        assertThat( aggregate.percentile( 0.9D ), equalTo( 10L ) );
-        assertThat( aggregate.percentile( 1.0D ), equalTo( 10L ) );
-
-        assertThat( aggregate.mean(), equalTo( 5.5D ) );
-        assertThat( aggregate.min(), equalTo( 1L ) );
-        assertThat( aggregate.median(), equalTo( 6L ) );
-        assertThat( aggregate.max(), equalTo( 10L ) );
+        Results convertedResults = Results.loadFrom( forkDirectory, RunPhase.MEASUREMENT ).convertTimeUnit( SECONDS );
+        assertThat( convertedResults.measurement().mean(), equalTo( 50D ) );
+        assertThat( convertedResults.rows().mean(), equalTo( 4D ) );
     }
 
     @Test
-    public void shouldCalculateSingleResultAggregate()
+    public void shouldFailToConvertNonTimeUnit() throws Exception
     {
-        long[] measurements = new long[]{1L};
-        AggregateMeasurement aggregate = AggregateMeasurement.calculateFrom( measurements );
+        ForkDirectory forkDirectory = createForkDirectory();
+        try ( ResultsWriter resultsWriter = Results.newWriter( forkDirectory, RunPhase.MEASUREMENT, MeasurementUnit.ofCardinality() ) )
+        {
+            resultsWriter.write( 1, 2, 30_000, 5 );
+            resultsWriter.write( 2, 2, 50_000, 4 );
+            resultsWriter.write( 2, 2, 70_000, 3 );
+        }
 
-        assertThat( aggregate.percentile( 0.0D ), equalTo( 1L ) );
-        assertThat( aggregate.percentile( 0.1D ), equalTo( 1L ) );
-        assertThat( aggregate.percentile( 0.2D ), equalTo( 1L ) );
-        assertThat( aggregate.percentile( 0.3D ), equalTo( 1L ) );
-        assertThat( aggregate.percentile( 0.4D ), equalTo( 1L ) );
-        assertThat( aggregate.percentile( 0.5D ), equalTo( 1L ) );
-        assertThat( aggregate.percentile( 0.6D ), equalTo( 1L ) );
-        assertThat( aggregate.percentile( 0.7D ), equalTo( 1L ) );
-        assertThat( aggregate.percentile( 0.8D ), equalTo( 1L ) );
-        assertThat( aggregate.percentile( 0.9D ), equalTo( 1L ) );
-        assertThat( aggregate.percentile( 1.0D ), equalTo( 1L ) );
-
-        assertThat( aggregate.mean(), equalTo( 1D ) );
-        assertThat( aggregate.min(), equalTo( 1L ) );
-        assertThat( aggregate.median(), equalTo( 1L ) );
-        assertThat( aggregate.max(), equalTo( 1L ) );
+        BenchmarkUtil.assertException( IllegalArgumentException.class,
+                                       () -> Results.loadFrom( forkDirectory, RunPhase.MEASUREMENT ).convertTimeUnit( SECONDS ) );
     }
 
     private static final BenchmarkGroup GROUP = new BenchmarkGroup( "group 1" );
     private static final Benchmark BENCH = Benchmark.benchmarkFor( "a benchmark", "bench 1", Benchmark.Mode.LATENCY, new HashMap<>() );
     private static final String FORK = "some fork";
 
-    private Path createForkDirPath() throws IOException
+    private ForkDirectory createForkDirectory()
     {
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( temporaryFolder.directory( "fork" ) , GROUP );
         BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH );
-        ForkDirectory forkDir = benchDir.create( FORK );
-        return Paths.get( forkDir.toAbsolutePath() );
+        return benchDir.create( FORK );
     }
 }

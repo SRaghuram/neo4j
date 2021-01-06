@@ -25,7 +25,7 @@ public class DurationMeasurementControl implements MeasurementControl
     }
 
     @Override
-    public void register( long latency )
+    public void register( double measurement )
     {
     }
 
