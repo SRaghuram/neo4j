@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.readonly;
 
-import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -17,14 +16,16 @@ import org.junit.jupiter.api.TestInstance;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.switchLeaderTo;
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_topology_refresh;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,11 +41,13 @@ public class ReadOnlyCoreIT
     @Inject
     ClusterFactory clusterFactory;
 
+    Cluster cluster;
+
     @Test
     public void whenAllCoresAreReadOnlyNoOneShouldHaveAppliedTx() throws Exception
     {
         final ClusterConfig config = getClusterConfig( Set.of(), true, true );
-        final var cluster = clusterFactory.createCluster( config );
+        cluster = clusterFactory.createCluster( config );
         cluster.start();
         cluster.awaitLeader();
 
@@ -71,7 +74,7 @@ public class ReadOnlyCoreIT
                                       assertThat( tx.getAllLabels().iterator().next().name() ).isEqualTo( label ) );
                               return !propertyExists && !labelExists;
                           } ),
-                          members -> members == 3, 3, TimeUnit.SECONDS );
+                          members -> members == 3, 1, TimeUnit.MINUTES );
     }
 
     @Test
@@ -79,11 +82,11 @@ public class ReadOnlyCoreIT
     {
         final var config = getClusterConfig( Set.of(), true, false );
 
-        final var cluster = clusterFactory.createCluster( config );
+        cluster = clusterFactory.createCluster( config );
         cluster.start();
         cluster.awaitLeader();
         var newLeader = cluster.getCoreMemberByIndex( 1 ); // We configure member 0 to be read only
-        CausalClusteringTestHelpers.switchLeaderTo( cluster, newLeader );
+        switchLeaderTo( cluster, newLeader );
 
         //when
         final var property = "property";
@@ -107,7 +110,7 @@ public class ReadOnlyCoreIT
                                       assertThat( tx.getAllLabels().iterator().next().name() ).isEqualTo( label ) );
                               return propertyExists && labelExists;
                           } ),
-                          members -> members == 3, 3, TimeUnit.SECONDS );
+                          members -> members == 3, 1, TimeUnit.MINUTES );
     }
 
     @Test
@@ -115,7 +118,7 @@ public class ReadOnlyCoreIT
     {
         final var config = getClusterConfig( Set.of(), true, false );
 
-        final var cluster = clusterFactory.createCluster( config );
+        cluster = clusterFactory.createCluster( config );
         cluster.start();
         cluster.awaitLeader();
 
@@ -142,7 +145,7 @@ public class ReadOnlyCoreIT
                                       assertThat( tx.getAllLabels().iterator().next().name() ).isEqualTo( label ) );
                               return !propertyExists && !labelExists;
                           } ),
-                          members -> members == 3, 3, TimeUnit.SECONDS );
+                          members -> members == 3, 1, TimeUnit.MINUTES );
     }
 
     @Test
@@ -151,7 +154,7 @@ public class ReadOnlyCoreIT
         //given
         final var fooDB = "foo1";
         final var config = getClusterConfig( Set.of( fooDB ), false, false ); //fooDB is readOnly
-        final var cluster = clusterFactory.createCluster( config );
+        cluster = clusterFactory.createCluster( config );
         cluster.start();
         cluster.awaitLeader();
 
@@ -178,7 +181,7 @@ public class ReadOnlyCoreIT
                                       assertThat( tx.getAllLabels().iterator().next().name() ).isEqualTo( label ) );
                               return propertyExists && labelExists;
                           } ),
-                          members -> members == 3, 3, TimeUnit.SECONDS );
+                          members -> members == 3, 1, TimeUnit.MINUTES );
     }
 
     @Test
@@ -187,12 +190,13 @@ public class ReadOnlyCoreIT
         //given
         final var fooDB = "foo1";
         final var config = getClusterConfig( Set.of( fooDB ), false, true ); //fooDB is readOnly
-        final var cluster = clusterFactory.createCluster( config );
+        cluster = clusterFactory.createCluster( config );
         cluster.start();
         cluster.awaitLeader();
 
         //create fooDB
         createDatabase( fooDB, cluster );
+        assertDatabaseEventuallyStarted( fooDB, cluster );
 
         //should not succeed to execute transaction
         final var property = "property";
@@ -203,16 +207,16 @@ public class ReadOnlyCoreIT
                 {
                     tx.execute( "CREATE (:test {" + property + ":\"" + label + "\"})" );
                     tx.commit();
-                }, 5, TimeUnit.SECONDS ) );
+                }, 1, TimeUnit.MINUTES ) );
     }
 
-    private long countMembers( Cluster cluster, Function<GraphDatabaseFacade,Boolean> countFunction )
+    private long countMembers( Cluster cluster, Predicate<GraphDatabaseFacade> countFunction )
     {
         return cluster.coreMembers()
                       .stream()
                       .map( ClusterMember::defaultDatabase )
-                      .map( countFunction )
-                      .filter( r -> r ).count();
+                      .filter( countFunction )
+                      .count();
     }
 
     private boolean dataExists( GraphDatabaseFacade facade, Consumer<Transaction> validationFunc )
