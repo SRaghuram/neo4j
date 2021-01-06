@@ -99,8 +99,16 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     @Override
     protected void dropDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context, boolean dumpData )
     {
-        super.dropDatabase( namedDatabaseId, context, dumpData );
-        cleanupClusterState( namedDatabaseId.name() );
+        try
+        {
+            super.dropDatabase0( namedDatabaseId, context, dumpData );
+            cleanupClusterState( namedDatabaseId.name() );
+            removeDatabaseContext( namedDatabaseId );
+        }
+        catch ( Throwable t )
+        {
+            throw new DatabaseManagementException( format( "An error occurred! Unable to drop database with name `%s`.", namedDatabaseId.name() ), t );
+        }
     }
 
     public void stopDatabaseBeforeStoreCopy( NamedDatabaseId namedDatabaseId )

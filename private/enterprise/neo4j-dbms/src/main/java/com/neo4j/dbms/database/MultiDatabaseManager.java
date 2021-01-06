@@ -103,7 +103,6 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             throw new DatabaseManagementException( "System database can't be dropped." );
         }
         forSingleDatabase( namedDatabaseId, ( id, context ) -> dropDatabase( id, context, dumpData ) );
-        operationCounts.increaseDropCount();
     }
 
     @Override
@@ -120,7 +119,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         operationCounts.increaseStartCount();
     }
 
-    public void removeFromCache( NamedDatabaseId namedDatabaseId )
+    public void removeDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
         databaseIdRepository().invalidate( namedDatabaseId );
         databaseMap.remove( namedDatabaseId );
@@ -178,20 +177,24 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     {
         try
         {
-            log.info( "Drop '%s'.", namedDatabaseId );
-            if ( dumpData )
-            {
-                dropDumpJob().dump( context );
-            }
-            Database database = context.database();
-            database.drop();
-            databaseIdRepository().invalidate( namedDatabaseId );
-            databaseMap.remove( namedDatabaseId );
-        }
+            dropDatabase0( namedDatabaseId, context, dumpData );
+            removeDatabaseContext( namedDatabaseId );
+       }
         catch ( Throwable t )
         {
             throw new DatabaseManagementException( format( "An error occurred! Unable to drop database with name `%s`.", namedDatabaseId.name() ), t );
         }
+    }
+
+    protected void dropDatabase0( NamedDatabaseId namedDatabaseId, DB context, boolean dumpData )
+    {
+        log.info( "Drop '%s'.", namedDatabaseId );
+        if ( dumpData )
+        {
+            dropDumpJob().dump( context );
+        }
+        Database database = context.database();
+        database.drop();
     }
 
     private void requireStarted( NamedDatabaseId namedDatabaseId )

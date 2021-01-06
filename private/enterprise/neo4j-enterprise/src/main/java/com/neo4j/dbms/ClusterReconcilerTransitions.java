@@ -72,7 +72,7 @@ final class ClusterReconcilerTransitions extends ReconcilerTransitions
         return Transition.from( STOPPED, DIRTY )
                 .doTransition( namedDatabaseId -> {
                     quarantineOperator.setQuarantineMarker( namedDatabaseId );
-                    databaseManager.removeFromCache( namedDatabaseId );
+                    databaseManager.removeDatabaseContext( namedDatabaseId );
                 } )
                 .ifSucceeded( QUARANTINED )
                 .ifFailedThenDo( nothing, QUARANTINED );
