@@ -19,22 +19,21 @@
  */
 package org.neo4j.internal.id.indexed;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Layout;
 import org.neo4j.index.internal.gbptree.ValueMerger;
 import org.neo4j.index.internal.gbptree.Writer;
 import org.neo4j.internal.id.IdGenerator.Marker;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+
 import static org.neo4j.internal.id.IdValidator.isReservedId;
-import static org.neo4j.internal.id.indexed.IdRange.BITSET_COMMIT;
-import static org.neo4j.internal.id.indexed.IdRange.BITSET_RESERVED;
-import static org.neo4j.internal.id.indexed.IdRange.BITSET_REUSE;
+import static org.neo4j.internal.id.indexed.IdRange.*;
+import static org.neo4j.internal.id.indexed.IndexedIdGenerator.NO_MONITOR;
 
 /**
  * Contains logic for merging ID state changes into the tree backing an {@link IndexedIdGenerator}.
@@ -105,10 +104,11 @@ class IdRangeMarker implements Marker, IndexedIdGenerator.ReservedMarker
      * Receives notifications of events.
      */
     private final IndexedIdGenerator.Monitor monitor;
+    private final long idSpace;
 
     IdRangeMarker( int idsPerEntry, Layout<IdRangeKey,IdRange> layout, Writer<IdRangeKey,IdRange> writer, Lock lock, ValueMerger<IdRangeKey,IdRange> merger,
             boolean started, AtomicBoolean freeIdsNotifier, long generation, AtomicLong highestWrittenId, boolean bridgeIdGaps,
-            IndexedIdGenerator.Monitor monitor )
+            IndexedIdGenerator indexedIdGenerator )
     {
         this.idsPerEntry = idsPerEntry;
         this.writer = writer;
@@ -121,7 +121,9 @@ class IdRangeMarker implements Marker, IndexedIdGenerator.ReservedMarker
         this.generation = generation;
         this.highestWrittenId = highestWrittenId;
         this.bridgeIdGaps = bridgeIdGaps;
-        this.monitor = monitor;
+        //this.indexedIdGenerator = indexedIdGenerator;
+        this.idSpace = indexedIdGenerator == null ? 0: indexedIdGenerator.getIDTypeOrdinalHigh();
+        this.monitor = indexedIdGenerator == null ? NO_MONITOR : indexedIdGenerator.monitor;
     }
 
     @Override
@@ -207,7 +209,7 @@ class IdRangeMarker implements Marker, IndexedIdGenerator.ReservedMarker
 
     private void prepareRange( long id, boolean addition )
     {
-        key.setIdRangeIdx( idRangeIndex( id ) );
+        key.setIdRangeIdx( idRangeIndex( (idSpace | id )) );
         value.clear( generation, addition );
     }
 

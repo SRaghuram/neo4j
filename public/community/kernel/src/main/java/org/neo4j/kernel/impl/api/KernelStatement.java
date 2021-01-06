@@ -20,16 +20,6 @@
 package org.neo4j.kernel.impl.api;
 
 import org.apache.commons.lang3.StringUtils;
-
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Deque;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.graphdb.TransactionTerminatedException;
@@ -45,6 +35,15 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.locking.StatementLocks;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.resources.CpuClock;
+
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Deque;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.Math.subtractExact;
 import static java.lang.String.format;
@@ -103,6 +102,11 @@ public class KernelStatement extends CloseableResourceManager implements Stateme
         this.clockContext = clockContext;
         this.versionContextSupplier = versionContextSupplier;
         this.namedDatabaseId = namedDatabaseId;
+    }
+
+    public String getQueryText()
+    {
+        return executingQuery == null? null : executingQuery.getQueryText();
     }
 
     public QueryRegistry queryRegistration()

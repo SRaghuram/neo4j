@@ -20,6 +20,8 @@
 package org.neo4j.internal.id;
 
 import org.eclipse.collections.api.set.ImmutableSet;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
@@ -29,9 +31,6 @@ import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-
-import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 /**
  * Wraps {@link IdGenerator} so that ids can be freed using reuse marker at safe points in time, after all transactions
@@ -50,6 +49,7 @@ public class BufferingIdGeneratorFactory implements IdGeneratorFactory
         this.delegate = delegate;
         this.safeThreshold = IdController.ConditionSnapshot::conditionMet;
     }
+
 
     public void initialize( Supplier<IdController.ConditionSnapshot> conditionSnapshotSupplier )
     {

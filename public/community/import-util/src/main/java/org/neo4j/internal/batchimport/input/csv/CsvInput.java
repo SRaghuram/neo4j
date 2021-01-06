@@ -19,6 +19,14 @@
  */
 package org.neo4j.internal.batchimport.input.csv;
 
+import org.neo4j.collection.RawIterator;
+import org.neo4j.csv.reader.*;
+import org.neo4j.internal.batchimport.InputIterable;
+import org.neo4j.internal.batchimport.InputIterator;
+import org.neo4j.internal.batchimport.input.*;
+import org.neo4j.io.ByteUnit;
+import org.neo4j.memory.MemoryTracker;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
@@ -27,26 +35,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.ToIntFunction;
-
-import org.neo4j.collection.RawIterator;
-import org.neo4j.csv.reader.CharReadable;
-import org.neo4j.csv.reader.CharSeeker;
-import org.neo4j.csv.reader.Configuration;
-import org.neo4j.csv.reader.Extractor;
-import org.neo4j.csv.reader.Extractors;
-import org.neo4j.csv.reader.MultiReadable;
-import org.neo4j.internal.batchimport.InputIterable;
-import org.neo4j.internal.batchimport.InputIterator;
-import org.neo4j.internal.batchimport.input.Collector;
-import org.neo4j.internal.batchimport.input.Groups;
-import org.neo4j.internal.batchimport.input.IdType;
-import org.neo4j.internal.batchimport.input.Input;
-import org.neo4j.internal.batchimport.input.InputEntity;
-import org.neo4j.internal.batchimport.input.Inputs;
-import org.neo4j.internal.batchimport.input.PropertySizeCalculator;
-import org.neo4j.internal.batchimport.input.ReadableGroups;
-import org.neo4j.io.ByteUnit;
-import org.neo4j.memory.MemoryTracker;
 
 import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
 import static org.neo4j.csv.reader.CharSeekers.charSeeker;
@@ -95,10 +83,10 @@ public class CsvInput implements Input
         this( nodeDataFactory, nodeHeaderFactory, relationshipDataFactory, relationshipHeaderFactory, idType, config, monitor, new Groups(), memoryTracker );
     }
 
-    CsvInput(
+    public CsvInput(
             Iterable<DataFactory> nodeDataFactory, Header.Factory nodeHeaderFactory,
             Iterable<DataFactory> relationshipDataFactory, Header.Factory relationshipHeaderFactory,
-            IdType idType, Configuration config, Monitor monitor, Groups groups, MemoryTracker memoryTracker )
+            IdType idType, Configuration config, Monitor monitor, Groups groups, MemoryTracker memoryTracker)
     {
         this.memoryTracker = memoryTracker;
         assertSaneConfiguration( config );

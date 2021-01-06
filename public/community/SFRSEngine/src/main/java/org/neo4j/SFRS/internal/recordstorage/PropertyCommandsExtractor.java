@@ -1,0 +1,105 @@
+/*
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.neo4j.SFRS.internal.recordstorage;
+
+import static org.neo4j.SFRS.kernel.impl.store.NodeLabelsField.fieldPointsToDynamicRecordOfLabels;
+
+/**
+ * Gathers node/property commands by node id, preparing for extraction of updates.
+ */
+public class PropertyCommandsExtractor extends TransactionApplier.Adapter
+{
+    private EntityCommandGrouper<Command.NodeCommand> nodeCommands;
+    private EntityCommandGrouper<Command.RelationshipCommand> relationshipCommands;
+    private boolean hasUpdates;
+
+    public PropertyCommandsExtractor()
+    {
+        nodeCommands = new EntityCommandGrouper<>( Command.NodeCommand.class, 16 );
+        relationshipCommands = new EntityCommandGrouper<>( Command.RelationshipCommand.class, 16 );
+    }
+
+    @Override
+    public void close()
+    {
+        nodeCommands = null;
+        relationshipCommands = null;
+    }
+
+    @Override
+    public boolean visitNodeCommand( Command.NodeCommand command )
+    {
+        nodeCommands.add( command );
+        if ( !hasUpdates && mayResultInIndexUpdates( command ) )
+        {
+            hasUpdates = true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean visitRelationshipCommand( Command.RelationshipCommand command )
+    {
+        relationshipCommands.add( command );
+        hasUpdates = true;
+        return false;
+    }
+
+    private static boolean mayResultInIndexUpdates( Command.NodeCommand command )
+    {
+        long before = command.getBefore().getLabelField();
+        long after = command.getAfter().getLabelField();
+        return before != after ||
+                // Because we don't know here, there may have been changes to a dynamic label record
+                // even though it still points to the same one
+                fieldPointsToDynamicRecordOfLabels( before ) || fieldPointsToDynamicRecordOfLabels( after );
+    }
+
+    @Override
+    public boolean visitPropertyCommand( Command.PropertyCommand command )
+    {
+        if ( command.getAfter().isNodeSet() )
+        {
+            nodeCommands.add( command );
+            hasUpdates = true;
+        }
+        else if ( command.getAfter().isRelSet() )
+        {
+            relationshipCommands.add( command );
+            hasUpdates = true;
+        }
+        return false;
+    }
+
+    public boolean containsAnyEntityOrPropertyUpdate()
+    {
+        return hasUpdates;
+    }
+
+    public EntityCommandGrouper<Command.NodeCommand>.Cursor getNodeCommands()
+    {
+        return nodeCommands.sortAndAccessGroups();
+    }
+
+    public EntityCommandGrouper<Command.RelationshipCommand>.Cursor getRelationshipCommands()
+    {
+        return relationshipCommands.sortAndAccessGroups();
+    }
+}

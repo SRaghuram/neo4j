@@ -19,13 +19,13 @@
  */
 package org.neo4j.internal.batchimport.cache;
 
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.neo4j.graphdb.Direction;
 import org.neo4j.internal.batchimport.cache.idmapping.string.BigIdTracker;
 import org.neo4j.memory.MemoryTracker;
+
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.Long.min;
 import static java.lang.Math.toIntExact;

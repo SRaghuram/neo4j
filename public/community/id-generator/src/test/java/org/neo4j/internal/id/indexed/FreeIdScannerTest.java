@@ -24,22 +24,6 @@ import org.eclipse.collections.impl.factory.primitive.LongLists;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.LongConsumer;
-
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.GBPTreeBuilder;
 import org.neo4j.internal.id.indexed.IndexedIdGenerator.ReservedMarker;
@@ -52,16 +36,21 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.LongConsumer;
+
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.neo4j.internal.id.indexed.IndexedIdGenerator.NO_MONITOR;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.test.OtherThreadExecutor.command;
@@ -603,7 +592,7 @@ class FreeIdScannerTest
         this.cache = cache;
         this.reuser = new RecordingReservedMarker( tree, generation, new AtomicLong() );
         this.atLeastOneFreeId = new AtomicBoolean();
-        return new FreeIdScanner( idsPerEntry, tree, cache, atLeastOneFreeId, reuser, generation, false, NO_MONITOR );
+        return new FreeIdScanner( idsPerEntry, tree, cache, atLeastOneFreeId, false, 0, reuser, generation, false, NO_MONITOR );
     }
 
     private void assertCacheHasIdsNonExhaustive( Range... ranges )
@@ -636,7 +625,7 @@ class FreeIdScannerTest
         return handler ->
         {
             try ( IdRangeMarker marker = new IdRangeMarker( IDS_PER_ENTRY, layout, tree.writer( NULL ),
-                    mock( Lock.class ), IdRangeMerger.DEFAULT, true, atLeastOneFreeId, generation, new AtomicLong(), false, NO_MONITOR ) )
+                    mock( Lock.class ), IdRangeMerger.DEFAULT, true, atLeastOneFreeId, generation, new AtomicLong(), false, null ) )
             {
                 for ( Range range : ranges )
                 {
@@ -701,7 +690,7 @@ class FreeIdScannerTest
                 Lock lock = new ReentrantLock();
                 lock.lock();
                 return new IdRangeMarker( IDS_PER_ENTRY, layout, tree.writer( NULL ), lock, new IdRangeMerger( false, NO_MONITOR ), true, atLeastOneFreeId,
-                        generation, highestWrittenId, false, NO_MONITOR );
+                        generation, highestWrittenId, false, null );
             }
             catch ( IOException e )
             {

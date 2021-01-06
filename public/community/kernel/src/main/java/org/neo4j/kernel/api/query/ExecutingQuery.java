@@ -20,15 +20,6 @@
 package org.neo4j.kernel.api.query;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import java.util.function.LongSupplier;
-import java.util.function.Supplier;
-
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
@@ -42,6 +33,14 @@ import org.neo4j.memory.OptionalMemoryTracker;
 import org.neo4j.resources.CpuClock;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.values.virtual.MapValue;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.atomic.AtomicLongFieldUpdater.newUpdater;
@@ -129,6 +128,11 @@ public class ExecutingQuery
                 trackQueryAllocations
         );
         onTransactionBound( new TransactionBinding( namedDatabaseId, hitsSupplier, faultsSupplier, activeLockCount ) );
+    }
+
+    public String getQueryText()
+    {
+        return obfuscatedQueryText;
     }
 
     public static class TransactionBinding

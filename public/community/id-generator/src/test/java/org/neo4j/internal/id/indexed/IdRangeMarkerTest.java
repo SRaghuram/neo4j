@@ -24,36 +24,22 @@ import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-
-import org.neo4j.index.internal.gbptree.GBPTree;
-import org.neo4j.index.internal.gbptree.GBPTreeBuilder;
-import org.neo4j.index.internal.gbptree.GBPTreeVisitor;
-import org.neo4j.index.internal.gbptree.Seeker;
-import org.neo4j.index.internal.gbptree.ValueMerger;
-import org.neo4j.index.internal.gbptree.Writer;
+import org.neo4j.index.internal.gbptree.*;
 import org.neo4j.internal.id.IdValidator;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.neo4j.internal.id.indexed.IdRange.IdState.DELETED;
-import static org.neo4j.internal.id.indexed.IndexedIdGenerator.NO_MONITOR;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @PageCacheExtension
@@ -221,7 +207,7 @@ class IdRangeMarkerTest
         // when
         Writer writer = mock( Writer.class );
         try ( IdRangeMarker marker = new IdRangeMarker( idsPerEntry, layout, writer, mock( Lock.class ), mock( ValueMerger.class ), true,
-                new AtomicBoolean(), 1, new AtomicLong( 0 ), true, NO_MONITOR ) )
+                new AtomicBoolean(), 1, new AtomicLong( 0 ), true, null ) )
         {
             verify( writer, never() ).close();
         }
@@ -239,7 +225,7 @@ class IdRangeMarkerTest
         // when
         MutableLongSet expectedIds = LongSets.mutable.empty();
         try ( IdRangeMarker marker = new IdRangeMarker( idsPerEntry, layout, tree.writer( NULL ), mock( Lock.class ), IdRangeMerger.DEFAULT, true,
-                new AtomicBoolean(), 1, new AtomicLong( reservedId - 1 ), true, NO_MONITOR ) )
+                new AtomicBoolean(), 1, new AtomicLong( reservedId - 1 ), true, null ) )
         {
             for ( long id = reservedId - 1; id <= reservedId + 1; id++ )
             {
@@ -284,7 +270,7 @@ class IdRangeMarkerTest
         // given
         Writer<IdRangeKey,IdRange> writer = mock( Writer.class );
         try ( IdRangeMarker marker = new IdRangeMarker( idsPerEntry, layout, writer, mock( Lock.class ), IdRangeMerger.DEFAULT, true,
-                new AtomicBoolean(), 1, new AtomicLong( 0 ), true, NO_MONITOR ) )
+                new AtomicBoolean(), 1, new AtomicLong( 0 ), true, null ) )
         {
             // when
             marker.markUsed( 10 );
@@ -307,6 +293,6 @@ class IdRangeMarkerTest
 
     private IdRangeMarker instantiateMarker( Lock lock, ValueMerger merger ) throws IOException
     {
-        return new IdRangeMarker( idsPerEntry, layout, tree.writer( NULL ), lock, merger, true, new AtomicBoolean(), 1, highestWritternId, true, NO_MONITOR );
+        return new IdRangeMarker( idsPerEntry, layout, tree.writer( NULL ), lock, merger, true, new AtomicBoolean(), 1, highestWritternId, true, null );
     }
 }

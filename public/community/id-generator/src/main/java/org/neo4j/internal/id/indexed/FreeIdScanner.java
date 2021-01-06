@@ -19,15 +19,15 @@
  */
 package org.neo4j.internal.id.indexed;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.internal.id.indexed.IndexedIdGenerator.ReservedMarker;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.lang.Integer.max;
 import static java.lang.Integer.min;
@@ -59,6 +59,8 @@ class FreeIdScanner implements Closeable
     private final long generation;
     private final ScanLock lock;
     private final IndexedIdGenerator.Monitor monitor;
+    private final boolean oneIdFile;
+    private final long idIndex;
     /**
      * State for whether or not there's an ongoing scan, and if so where it should begin from. This is used in
      * {@link #findSomeIdsToCache(LinkedChunkLongArray, int, PageCursorTracer)} both to know where to initiate a scan from and to set it, if the cache got
@@ -67,7 +69,8 @@ class FreeIdScanner implements Closeable
     private Long ongoingScanRangeIndex;
 
     FreeIdScanner( int idsPerEntry, GBPTree<IdRangeKey,IdRange> tree, ConcurrentLongQueue cache, AtomicBoolean atLeastOneIdOnFreelist,
-            MarkerProvider markerProvider, long generation, boolean strictlyPrioritizeFreelistOverHighId, IndexedIdGenerator.Monitor monitor )
+                   boolean oneIdFile, int idIndex, MarkerProvider markerProvider, long generation,
+                   boolean strictlyPrioritizeFreelistOverHighId, IndexedIdGenerator.Monitor monitor )
     {
         this.idsPerEntry = idsPerEntry;
         this.tree = tree;
@@ -77,6 +80,8 @@ class FreeIdScanner implements Closeable
         this.generation = generation;
         this.lock = strictlyPrioritizeFreelistOverHighId ? ScanLock.lockyAndPessimistic() : ScanLock.lockFreeAndOptimistic();
         this.monitor = monitor;
+        this.oneIdFile = oneIdFile;
+        this.idIndex = (long)idIndex;
     }
 
     /**
@@ -193,9 +198,11 @@ class FreeIdScanner implements Closeable
     private boolean findSomeIdsToCache( LinkedChunkLongArray pendingItemsToCache, int maxItemsToCache, PageCursorTracer cursorTracer ) throws IOException
     {
         boolean startedNow = ongoingScanRangeIndex == null;
-        IdRangeKey from = ongoingScanRangeIndex == null ? LOW_KEY : new IdRangeKey( ongoingScanRangeIndex );
+        IdRangeKey from = ongoingScanRangeIndex == null ? (oneIdFile ? new IdRangeKey( idIndex << 40 ) : LOW_KEY)
+                : new IdRangeKey( ongoingScanRangeIndex );
+        IdRangeKey to = oneIdFile ? new IdRangeKey( ((idIndex+1) << 40) -1) : HIGH_KEY;
         boolean seekerExhausted = false;
-        try ( Seeker<IdRangeKey,IdRange> scanner = tree.seek( from, HIGH_KEY, cursorTracer ) )
+        try ( Seeker<IdRangeKey,IdRange> scanner = tree.seek( from, to, cursorTracer ) )
         {
             // Continue scanning until the cache is full or there's nothing more to scan
             while ( pendingItemsToCache.size() < maxItemsToCache )

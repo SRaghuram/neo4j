@@ -19,11 +19,11 @@
  */
 package org.neo4j.internal.id;
 
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 class BufferingIdGenerator extends IdGenerator.Delegate
 {
@@ -49,21 +49,21 @@ class BufferingIdGenerator extends IdGenerator.Delegate
             public void markUsed( long id )
             {
                 // Goes straight in
-                actual.markUsed( id );
+                actual.markUsed( translate( id )  );
             }
 
             @Override
             public void markDeleted( long id )
             {
                 // Run these by the buffering too
-                actual.markDeleted( id );
-                buffer.offer( id );
+                actual.markDeleted( translate( id ) );
+                buffer.offer( translate( id ) );
             }
 
             @Override
             public void markFree( long id )
             {
-                actual.markFree( id );
+                actual.markFree( translate( id ) );
             }
 
             @Override
@@ -72,6 +72,12 @@ class BufferingIdGenerator extends IdGenerator.Delegate
                 actual.close();
             }
         };
+    }
+    private long translate( long id)
+    {
+        //if (!delegate.isOneIDFile())
+            return id;
+        //return id | delegate.getIDTypeOrdinalHigh();
     }
 
     @Override

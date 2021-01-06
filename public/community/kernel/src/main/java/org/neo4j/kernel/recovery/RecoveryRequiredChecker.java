@@ -72,7 +72,7 @@ class RecoveryRequiredChecker
 
     boolean isRecoveryRequiredAt( DatabaseLayout databaseLayout, LogFiles logFiles )
     {
-        if ( !storageEngineFactory.storageExists( fs, databaseLayout, pageCache ) )
+        if ( !storageEngineFactory.storageExists( fs, databaseLayout, pageCache, config ) )
         {
             return false;
         }

@@ -19,14 +19,15 @@
  */
 package org.neo4j.internal.id;
 
-import java.io.Closeable;
-import java.io.IOException;
-
 import org.neo4j.annotations.documented.ReporterFactory;
+import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.index.schema.ConsistencyCheckable;
 import org.neo4j.util.VisibleForTesting;
+
+import java.io.Closeable;
+import java.io.IOException;
 
 public interface IdGenerator extends IdSequence, Closeable, ConsistencyCheckable
 {
@@ -84,6 +85,16 @@ public interface IdGenerator extends IdSequence, Closeable, ConsistencyCheckable
      */
     void clearCache( PageCursorTracer cursorTracer );
 
+    default long getIDTypeOrdinalHigh()
+    {
+        return 0;
+    }
+
+    default boolean isOneIDFile()
+    {
+        return false;
+    }
+
     interface Marker extends AutoCloseable
     {
         void markUsed( long id );
@@ -95,7 +106,7 @@ public interface IdGenerator extends IdSequence, Closeable, ConsistencyCheckable
 
     class Delegate implements IdGenerator
     {
-        private final IdGenerator delegate;
+        final IdGenerator delegate;
 
         public Delegate( IdGenerator delegate )
         {
@@ -221,4 +232,10 @@ public interface IdGenerator extends IdSequence, Closeable, ConsistencyCheckable
         {   // no-op
         }
     };
+
+    default GBPTree getGBPTree()
+    {
+        return null;
+    }
+
 }

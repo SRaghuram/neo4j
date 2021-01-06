@@ -20,15 +20,15 @@
 package org.neo4j.internal.id;
 
 import org.eclipse.collections.api.set.ImmutableSet;
+import org.neo4j.index.internal.gbptree.GBPTree;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
-
-import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 public interface IdGeneratorFactory
 {
@@ -45,4 +45,18 @@ public interface IdGeneratorFactory
     void clearCache( PageCursorTracer cursorTracer );
 
     Collection<Path> listIdFiles();
+
+    default GBPTree getGBPTree()
+    {
+        return null;
+    }
+
+    default void putGBPTree(GBPTree tree)
+    {
+
+    }
+    default public void setOneIDFile( boolean isOneIDFile )
+    {
+
+    }
 }

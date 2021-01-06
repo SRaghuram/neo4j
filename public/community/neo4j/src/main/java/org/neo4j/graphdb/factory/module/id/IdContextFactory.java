@@ -19,17 +19,14 @@
  */
 package org.neo4j.graphdb.factory.module.id;
 
-import java.util.function.Function;
-
-import org.neo4j.internal.id.BufferedIdController;
-import org.neo4j.internal.id.BufferingIdGeneratorFactory;
-import org.neo4j.internal.id.DefaultIdController;
-import org.neo4j.internal.id.IdController;
-import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.configuration.Config;
+import org.neo4j.internal.id.*;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.util.FeatureToggles;
+
+import java.util.function.Function;
 
 public class IdContextFactory
 {
@@ -39,6 +36,7 @@ public class IdContextFactory
     private final Function<NamedDatabaseId,IdGeneratorFactory> idFactoryProvider;
     private final Function<IdGeneratorFactory,IdGeneratorFactory> factoryWrapper;
     private final PageCacheTracer cacheTracer;
+    private Config config = null;
 
     IdContextFactory( JobScheduler jobScheduler, Function<NamedDatabaseId,IdGeneratorFactory> idFactoryProvider,
             Function<IdGeneratorFactory,IdGeneratorFactory> factoryWrapper, PageCacheTracer cacheTracer )
@@ -49,6 +47,15 @@ public class IdContextFactory
         this.cacheTracer = cacheTracer;
     }
 
+    IdContextFactory(JobScheduler jobScheduler, Function<NamedDatabaseId,IdGeneratorFactory> idFactoryProvider,
+                     Function<IdGeneratorFactory,IdGeneratorFactory> factoryWrapper, Config config, PageCacheTracer cacheTracer )
+    {
+        this.jobScheduler = jobScheduler;
+        this.idFactoryProvider = idFactoryProvider;
+        this.factoryWrapper = factoryWrapper;
+        this.cacheTracer = cacheTracer;
+        this.config = config;
+    }
     public DatabaseIdContext createIdContext( NamedDatabaseId namedDatabaseId )
     {
         return ID_BUFFERING_FLAG ? createBufferingIdContext( idFactoryProvider, jobScheduler, cacheTracer, namedDatabaseId )
@@ -65,6 +72,7 @@ public class IdContextFactory
             JobScheduler jobScheduler, PageCacheTracer cacheTracer, NamedDatabaseId namedDatabaseId )
     {
         IdGeneratorFactory idGeneratorFactory = idGeneratorFactoryProvider.apply( namedDatabaseId );
+        idGeneratorFactory.setOneIDFile( config.isOneIDFile(namedDatabaseId.name()));
         BufferingIdGeneratorFactory bufferingIdGeneratorFactory = new BufferingIdGeneratorFactory( idGeneratorFactory );
         BufferedIdController bufferingController = createBufferedIdController( bufferingIdGeneratorFactory, jobScheduler, cacheTracer, namedDatabaseId.name() );
         return createIdContext( bufferingIdGeneratorFactory, bufferingController );

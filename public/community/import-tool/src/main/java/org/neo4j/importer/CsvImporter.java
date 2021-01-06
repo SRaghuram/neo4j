@@ -19,35 +19,14 @@
  */
 package org.neo4j.importer;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
-
 import org.neo4j.commandline.Util;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.csv.reader.IllegalMultilineFieldException;
 import org.neo4j.internal.batchimport.BatchImporter;
-import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.batchimport.Configuration;
 import org.neo4j.internal.batchimport.cache.idmapping.string.DuplicateInputIdException;
-import org.neo4j.internal.batchimport.input.BadCollector;
-import org.neo4j.internal.batchimport.input.Collector;
-import org.neo4j.internal.batchimport.input.IdType;
-import org.neo4j.internal.batchimport.input.Input;
-import org.neo4j.internal.batchimport.input.InputException;
-import org.neo4j.internal.batchimport.input.MissingRelationshipDataException;
+import org.neo4j.internal.batchimport.input.*;
 import org.neo4j.internal.batchimport.input.csv.CsvInput;
 import org.neo4j.internal.batchimport.input.csv.DataFactory;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
@@ -68,23 +47,31 @@ import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.service.Services;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.exception.ExceptionUtils.indexOfThrowable;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
-import static org.neo4j.internal.batchimport.input.Collectors.badCollector;
-import static org.neo4j.internal.batchimport.input.Collectors.collect;
-import static org.neo4j.internal.batchimport.input.Collectors.silentBadCollector;
-import static org.neo4j.internal.batchimport.input.InputEntityDecorators.NO_DECORATOR;
-import static org.neo4j.internal.batchimport.input.InputEntityDecorators.additiveLabels;
-import static org.neo4j.internal.batchimport.input.InputEntityDecorators.defaultRelationshipType;
-import static org.neo4j.internal.batchimport.input.csv.DataFactories.data;
-import static org.neo4j.internal.batchimport.input.csv.DataFactories.defaultFormatNodeFileHeader;
-import static org.neo4j.internal.batchimport.input.csv.DataFactories.defaultFormatRelationshipFileHeader;
+import static org.neo4j.internal.batchimport.input.Collectors.*;
+import static org.neo4j.internal.batchimport.input.InputEntityDecorators.*;
+import static org.neo4j.internal.batchimport.input.csv.DataFactories.*;
 import static org.neo4j.internal.helpers.Exceptions.throwIfUnchecked;
 import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
+
+//
 
 class CsvImporter implements Importer
 {
@@ -94,6 +81,7 @@ class CsvImporter implements Importer
     private final Config databaseConfig;
     private final org.neo4j.csv.reader.Configuration csvConfig;
     private final org.neo4j.internal.batchimport.Configuration importConfig;
+    //private final org.neo4j.SFRS.internal.batchimport.Configuration importConfigAlt;
     private final Path reportFile;
     private final IdType idType;
     private final Charset inputEncoding;
@@ -111,6 +99,7 @@ class CsvImporter implements Importer
     private final PrintStream stdErr;
     private final PageCacheTracer pageCacheTracer;
     private final MemoryTracker memoryTracker;
+    private org.neo4j.SFRS.internal.batchimport.BatchImporterFactory alternateFactory = null;
 
     private CsvImporter( Builder b )
     {
@@ -118,6 +107,7 @@ class CsvImporter implements Importer
         this.databaseConfig = requireNonNull( b.databaseConfig );
         this.csvConfig = requireNonNull( b.csvConfig );
         this.importConfig = requireNonNull( b.importConfig );
+        //this.importConfigAlt = requireNonNull( b.importConfig );
         this.reportFile = requireNonNull( b.reportFile );
         this.idType = requireNonNull( b.idType );
         this.inputEncoding = requireNonNull( b.inputEncoding );
@@ -135,6 +125,11 @@ class CsvImporter implements Importer
         this.memoryTracker = requireNonNull( b.memoryTracker );
         this.stdOut = requireNonNull( b.stdOut );
         this.stdErr = requireNonNull( b.stdErr );
+        if (databaseConfig.isSFRSEngine( databaseLayout.getDatabaseName()) ||
+            databaseConfig.isOneIDFile(databaseLayout.getDatabaseName())) {
+            //System.out.println(importStoreFactory);
+            alternateFactory = Services.loadAll( org.neo4j.SFRS.internal.batchimport.BatchImporterFactory.class).iterator().next();
+        }
     }
 
     @Override
@@ -167,29 +162,59 @@ class CsvImporter implements Importer
               OutputStream outputStream = FileSystemUtils.createOrOpenAsOutputStream( fileSystem, internalLogFile, true );
               Log4jLogProvider logProvider = Util.configuredLogProvider( databaseConfig, outputStream ) )
         {
-            ExecutionMonitor executionMonitor = verbose ? new SpectrumExecutionMonitor( 2, TimeUnit.SECONDS, stdOut,
-                    SpectrumExecutionMonitor.DEFAULT_WIDTH ) : ExecutionMonitors.defaultVisible();
 
-            BatchImporter importer = BatchImporterFactory.withHighestPriority().instantiate(
-                    databaseLayout,
-                    fileSystem,
-                    null, // no external page cache
-                    pageCacheTracer,
-                    importConfig,
-                    new SimpleLogService( NullLogProvider.getInstance(), logProvider ),
-                    executionMonitor,
-                    EMPTY,
-                    databaseConfig,
-                    RecordFormatSelector.selectForConfig( databaseConfig, logProvider ),
-                    new PrintingImportLogicMonitor( stdOut, stdErr ),
-                    jobScheduler,
-                    badCollector,
-                    TransactionLogInitializer.getLogFilesInitializer(),
-                    memoryTracker );
 
-            printOverview( databaseLayout.databaseDirectory(), nodeFiles, relationshipFiles, importConfig, stdOut );
+            if (alternateFactory == null) {
+                ExecutionMonitor executionMonitor = verbose ? new SpectrumExecutionMonitor( 2, TimeUnit.SECONDS, stdOut,
+                        SpectrumExecutionMonitor.DEFAULT_WIDTH ) : ExecutionMonitors.defaultVisible();
+                org.neo4j.internal.batchimport.BatchImporter importer = org.neo4j.internal.batchimport.BatchImporterFactory.withHighestPriority().instantiate(
+                        databaseLayout,
+                        fileSystem,
+                        null, // no external page cache
+                        pageCacheTracer,
+                        importConfig,
+                        new SimpleLogService(NullLogProvider.getInstance(), logProvider),
+                        executionMonitor,
+                        EMPTY,
+                        databaseConfig,
+                        RecordFormatSelector.selectForConfig(databaseConfig, logProvider),
+                        new PrintingImportLogicMonitor(stdOut, stdErr),
+                        jobScheduler,
+                        badCollector,
+                        TransactionLogInitializer.getLogFilesInitializer(),
+                        memoryTracker);
+                printOverview( databaseLayout.databaseDirectory(), nodeFiles, relationshipFiles, importConfig, stdOut );
 
-            importer.doImport( input );
+                importer.doImport( input );
+            } else
+            {
+                org.neo4j.SFRS.internal.batchimport.staging.ExecutionMonitor executionMonitor = verbose ? new org.neo4j.SFRS.internal.batchimport.staging.SpectrumExecutionMonitor( 2, TimeUnit.SECONDS, stdOut,
+                         org.neo4j.SFRS.internal.batchimport.staging.SpectrumExecutionMonitor.DEFAULT_WIDTH ) :  org.neo4j.SFRS.internal.batchimport.staging.ExecutionMonitors.defaultVisible();
+                BatchImporter importer = alternateFactory.instantiate(
+                        databaseLayout,
+                        fileSystem,
+                        null, // no external page cache
+                        pageCacheTracer,
+                        importConfig,
+                        new SimpleLogService(NullLogProvider.getInstance(), logProvider),
+                        executionMonitor,
+                        org.neo4j.SFRS.internal.batchimport.AdditionalInitialIds.EMPTY,
+                        databaseConfig,
+                        org.neo4j.SFRS.kernel.impl.store.format.RecordFormatSelector.selectForConfig(databaseConfig, logProvider),
+                        new org.neo4j.SFRS.importer.PrintingImportLogicMonitor(stdOut, stdErr),
+                        jobScheduler,
+                        badCollector,
+                        TransactionLogInitializer.getLogFilesInitializer(),
+                        memoryTracker);
+                printOverview( databaseLayout.databaseDirectory(), nodeFiles, relationshipFiles, importConfig, stdOut );
+
+                importer.doImport( input );
+            }
+
+
+
+
+
 
             success = true;
         }
@@ -217,6 +242,24 @@ class CsvImporter implements Importer
                         "start at your own risk or delete the store manually" );
             }
         }
+    }
+
+    public static org.neo4j.SFRS.internal.batchimport.BatchImporterFactory withHighestPriority()
+    {
+        org.neo4j.SFRS.internal.batchimport.BatchImporterFactory highestPrioritized = null;
+        Collection<org.neo4j.SFRS.internal.batchimport.BatchImporterFactory> candidates = Services.loadAll( org.neo4j.SFRS.internal.batchimport.BatchImporterFactory.class);
+        for ( org.neo4j.SFRS.internal.batchimport.BatchImporterFactory candidate : Services.loadAll( org.neo4j.SFRS.internal.batchimport.BatchImporterFactory.class ) )
+        {
+            if ( highestPrioritized == null || candidate.priority > highestPrioritized.priority )
+            {
+                highestPrioritized = candidate;
+            }
+        }
+        if ( highestPrioritized == null )
+        {
+            throw new NoSuchElementException( "No batch importers found" );
+        }
+        return highestPrioritized;
     }
 
     /**

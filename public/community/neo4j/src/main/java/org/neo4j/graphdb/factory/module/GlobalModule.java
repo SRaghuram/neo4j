@@ -19,8 +19,6 @@
  */
 package org.neo4j.graphdb.factory.module;
 
-import java.util.function.Supplier;
-
 import org.neo4j.annotations.api.IgnoreApiCheck;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
@@ -54,11 +52,7 @@ import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.pagecache.PageCacheLifecycle;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.security.URLAccessRules;
-import org.neo4j.kernel.impl.util.collection.CachingOffHeapBlockAllocator;
-import org.neo4j.kernel.impl.util.collection.CapacityLimitingBlockAllocatorDecorator;
-import org.neo4j.kernel.impl.util.collection.CollectionsFactorySupplier;
-import org.neo4j.kernel.impl.util.collection.OffHeapBlockAllocator;
-import org.neo4j.kernel.impl.util.collection.OffHeapCollectionsFactory;
+import org.neo4j.kernel.impl.util.collection.*;
 import org.neo4j.kernel.impl.util.watcher.DefaultFileSystemWatcherService;
 import org.neo4j.kernel.impl.util.watcher.FileSystemWatcherService;
 import org.neo4j.kernel.info.JvmChecker;
@@ -89,22 +83,11 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
 
+import java.util.function.Supplier;
+
 import static org.neo4j.configuration.GraphDatabaseInternalSettings.data_collector_max_recent_query_count;
 import static org.neo4j.configuration.GraphDatabaseInternalSettings.log_format;
-import static org.neo4j.configuration.GraphDatabaseSettings.TransactionStateMemoryAllocation;
-import static org.neo4j.configuration.GraphDatabaseSettings.db_timezone;
-import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
-import static org.neo4j.configuration.GraphDatabaseSettings.filewatcher_enabled;
-import static org.neo4j.configuration.GraphDatabaseSettings.memory_tracking;
-import static org.neo4j.configuration.GraphDatabaseSettings.memory_transaction_global_max_size;
-import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_level;
-import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_max_archives;
-import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
-import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_rotation_threshold;
-import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_max_off_heap_memory;
-import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_memory_allocation;
-import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_off_heap_block_cache_size;
-import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_off_heap_max_cacheable_block_size;
+import static org.neo4j.configuration.GraphDatabaseSettings.*;
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onShutdown;
 
 /**
@@ -261,13 +244,13 @@ public class GlobalModule
         if ( !globalConfig.isExplicitlySet( default_database ) )
         {
             DatabaseLayout defaultDatabaseLayout = neo4jLayout.databaseLayout( globalConfig.get( default_database ) );
-            if ( storageEngineFactory.storageExists( fileSystem, defaultDatabaseLayout, pageCache ) )
+            if ( storageEngineFactory.storageExists( fileSystem, defaultDatabaseLayout, pageCache, globalConfig ) )
             {
                 return;
             }
             final String legacyDatabaseName = "graph.db";
             DatabaseLayout legacyDatabaseLayout = neo4jLayout.databaseLayout( legacyDatabaseName );
-            if ( storageEngineFactory.storageExists( fileSystem, legacyDatabaseLayout, pageCache ) )
+            if ( storageEngineFactory.storageExists( fileSystem, legacyDatabaseLayout, pageCache, globalConfig ) )
             {
                 Log internalLog = logService.getInternalLog( getClass() );
                 globalConfig.set( default_database, legacyDatabaseName );

@@ -19,11 +19,6 @@
  */
 package org.neo4j.io.pagecache.impl.muninn;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.file.Path;
-import java.util.Objects;
-
 import org.neo4j.internal.unsafe.UnsafeUtil;
 import org.neo4j.io.pagecache.CursorException;
 import org.neo4j.io.pagecache.PageCursor;
@@ -39,9 +34,12 @@ import org.neo4j.scheduler.JobHandle;
 import org.neo4j.util.Preconditions;
 import org.neo4j.util.VisibleForTesting;
 
-import static org.neo4j.io.pagecache.PagedFile.PF_EAGER_FLUSH;
-import static org.neo4j.io.pagecache.PagedFile.PF_NO_FAULT;
-import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_WRITE_LOCK;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.file.Path;
+import java.util.Objects;
+
+import static org.neo4j.io.pagecache.PagedFile.*;
 import static org.neo4j.io.pagecache.impl.muninn.MuninnPagedFile.UNMAPPED_TTE;
 import static org.neo4j.util.FeatureToggles.flag;
 
@@ -529,9 +527,15 @@ public abstract class MuninnPageCursor extends PageCursor
         return UnsafeUtil.getByte( p );
     }
 
+    void printMessage(String msg)
+    {
+        //if (this.currentPageId == 0 && !this.pagedFile.path().toString().contains(".id") && !this.pagedFile.path().toString().contains(".db"))
+        //    System.out.println(this.pagedFile.path()+":"+msg);
+    }
     @Override
     public void putByte( byte value )
     {
+        printMessage("["+this.offset+"]-[byte, "+value+"]");
         long p = nextBoundedPointer( SIZE_OF_BYTE );
         UnsafeUtil.putByte( p, value );
         offset++;
@@ -540,6 +544,7 @@ public abstract class MuninnPageCursor extends PageCursor
     @Override
     public void putByte( int offset, byte value )
     {
+        printMessage("["+(this.offset + offset)+"]-[byte, "+value+"]");
         long p = getBoundedPointer( offset, SIZE_OF_BYTE );
         UnsafeUtil.putByte( p, value );
     }
@@ -594,6 +599,7 @@ public abstract class MuninnPageCursor extends PageCursor
     @Override
     public void putLong( long value )
     {
+        printMessage("["+(this.offset)+"]-[long, "+value+"]");
         long p = nextBoundedPointer( SIZE_OF_LONG );
         putLongAt( p, value );
         offset += SIZE_OF_LONG;
@@ -602,12 +608,15 @@ public abstract class MuninnPageCursor extends PageCursor
     @Override
     public void putLong( int offset, long value )
     {
+        printMessage("["+(this.offset + offset)+"]-[long, "+value+"]");
+        printMessage("long, "+value);
         long p = getBoundedPointer( offset, SIZE_OF_LONG );
         putLongAt( p, value );
     }
 
     private void putLongAt( long p, long value )
     {
+        //printMessage("["+p+"]-[long, "+value+"]");
         if ( UnsafeUtil.allowUnalignedMemoryAccess )
         {
             UnsafeUtil.putLong( p, UnsafeUtil.storeByteOrderIsNative ? value : Long.reverseBytes( value ) );
@@ -668,6 +677,7 @@ public abstract class MuninnPageCursor extends PageCursor
     @Override
     public void putInt( int value )
     {
+        printMessage("["+(this.offset)+"]-[int, "+value+"]");
         long p = nextBoundedPointer( SIZE_OF_INT );
         putIntAt( p, value );
         offset += SIZE_OF_INT;
@@ -676,12 +686,14 @@ public abstract class MuninnPageCursor extends PageCursor
     @Override
     public void putInt( int offset, int value )
     {
+        printMessage("["+(this.offset + offset)+"]-[int, "+value+"]");
         long p = getBoundedPointer( offset, SIZE_OF_INT );
         putIntAt( p, value );
     }
 
     private void putIntAt( long p, int value )
     {
+        //printMessage("["+(p)+"]-[int, "+value+"]");
         if ( UnsafeUtil.allowUnalignedMemoryAccess )
         {
             UnsafeUtil.putInt( p, UnsafeUtil.storeByteOrderIsNative ? value : Integer.reverseBytes( value ) );
@@ -811,6 +823,7 @@ public abstract class MuninnPageCursor extends PageCursor
     @Override
     public void putShort( short value )
     {
+        printMessage("["+(this.offset)+"]-[short, "+value+"]");
         long p = nextBoundedPointer( SIZE_OF_SHORT );
         putShortAt( p, value );
         offset += SIZE_OF_SHORT;
@@ -819,12 +832,14 @@ public abstract class MuninnPageCursor extends PageCursor
     @Override
     public void putShort( int offset, short value )
     {
+        printMessage("["+(this.offset + offset)+"]-[short, "+value+"]");
         long p = getBoundedPointer( offset, SIZE_OF_SHORT );
         putShortAt( p, value );
     }
 
     private void putShortAt( long p, short value )
     {
+        //printMessage("["+(p)+"]-[short, "+value+"]");
         if ( UnsafeUtil.allowUnalignedMemoryAccess )
         {
             UnsafeUtil.putShort( p, UnsafeUtil.storeByteOrderIsNative ? value : Short.reverseBytes( value ) );

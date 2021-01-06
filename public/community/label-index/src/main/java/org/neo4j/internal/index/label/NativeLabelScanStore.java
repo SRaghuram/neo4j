@@ -28,7 +28,7 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 
-class NativeLabelScanStore extends NativeTokenScanStore implements LabelScanStore
+public class NativeLabelScanStore extends NativeTokenScanStore implements LabelScanStore
 {
     NativeLabelScanStore( PageCache pageCache, DatabaseLayout directoryStructure, FileSystemAbstraction fs, FullStoreChangeStream fullStoreChangeStream,
             boolean readOnly, Monitors monitors, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, EntityType entityType,

@@ -19,12 +19,6 @@
  */
 package org.neo4j.kernel.recovery;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.time.Clock;
-import java.util.List;
-import java.util.Optional;
-
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
@@ -94,18 +88,17 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.monitoring.PanicEventGenerator;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.service.Services;
-import org.neo4j.storageengine.api.LogVersionRepository;
-import org.neo4j.storageengine.api.MetadataProvider;
-import org.neo4j.storageengine.api.RecoveryState;
-import org.neo4j.storageengine.api.StorageEngine;
-import org.neo4j.storageengine.api.StorageEngineFactory;
-import org.neo4j.storageengine.api.StorageFilesState;
-import org.neo4j.storageengine.api.StoreId;
-import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.storageengine.api.*;
 import org.neo4j.time.Clocks;
 import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.ReadOnlyTokenCreator;
 import org.neo4j.token.TokenHolders;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.time.Clock;
+import java.util.List;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -119,9 +112,7 @@ import static org.neo4j.scheduler.Group.INDEX_CLEANUP;
 import static org.neo4j.scheduler.Group.INDEX_CLEANUP_WORK;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 import static org.neo4j.time.Clocks.systemClock;
-import static org.neo4j.token.api.TokenHolder.TYPE_LABEL;
-import static org.neo4j.token.api.TokenHolder.TYPE_PROPERTY_KEY;
-import static org.neo4j.token.api.TokenHolder.TYPE_RELATIONSHIP_TYPE;
+import static org.neo4j.token.api.TokenHolder.*;
 import static org.neo4j.util.FeatureToggles.flag;
 
 /**
@@ -309,8 +300,10 @@ public final class Recovery
                                                                        recoveryCleanupCollector, extensionFactories );
         DefaultIndexProviderMap indexProviderMap = new DefaultIndexProviderMap( extensions, config );
 
+        DefaultIdGeneratorFactory defaultIdGeneratorFactory = new DefaultIdGeneratorFactory( fs, recoveryCleanupCollector );
+        defaultIdGeneratorFactory.setOneIDFile( config.isOneIDFile( databaseLayout.getDatabaseName()));
         StorageEngine storageEngine = storageEngineFactory.instantiate( fs, databaseLayout, config, databasePageCache, tokenHolders, schemaState,
-                getConstraintSemantics(), indexProviderMap, NO_LOCK_SERVICE, new DefaultIdGeneratorFactory( fs, recoveryCleanupCollector ),
+                getConstraintSemantics(), indexProviderMap, NO_LOCK_SERVICE, defaultIdGeneratorFactory,
                 new DefaultIdController(), databaseHealth, logService.getInternalLogProvider(), recoveryCleanupCollector, tracers.getPageCacheTracer(),
                 true, memoryTracker );
 

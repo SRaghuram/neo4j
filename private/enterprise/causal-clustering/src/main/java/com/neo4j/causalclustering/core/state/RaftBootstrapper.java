@@ -179,7 +179,7 @@ public class RaftBootstrapper
 
     private boolean isStorePresent()
     {
-        return storageEngineFactory.storageExists( fs, bootstrapContext.databaseLayout(), pageCache );
+        return storageEngineFactory.storageExists( fs, bootstrapContext.databaseLayout(), pageCache, config );
     }
 
     private void createStore( StoreId storeId, PageCursorTracer cursorTracer, boolean isSystemDatabase ) throws IOException

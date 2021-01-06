@@ -19,8 +19,6 @@
  */
 package org.neo4j.internal.batchimport;
 
-import java.util.NoSuchElementException;
-
 import org.neo4j.annotations.service.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.batchimport.input.Collector;
@@ -36,6 +34,9 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.service.NamedService;
 import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.LogFilesInitializer;
+
+import java.util.Collection;
+import java.util.NoSuchElementException;
 
 @Service
 public abstract class BatchImporterFactory implements NamedService
@@ -55,6 +56,24 @@ public abstract class BatchImporterFactory implements NamedService
     public static BatchImporterFactory withHighestPriority()
     {
         BatchImporterFactory highestPrioritized = null;
+        Collection<BatchImporterFactory> candidates = Services.loadAll( BatchImporterFactory.class);
+        for ( BatchImporterFactory candidate : Services.loadAll( BatchImporterFactory.class ) )
+        {
+            if ( highestPrioritized == null || candidate.priority > highestPrioritized.priority )
+            {
+                highestPrioritized = candidate;
+            }
+        }
+        if ( highestPrioritized == null )
+        {
+            throw new NoSuchElementException( "No batch importers found" );
+        }
+        return highestPrioritized;
+    }
+    public BatchImporterFactory withHighestPriority1()
+    {
+        BatchImporterFactory highestPrioritized = null;
+        Collection<BatchImporterFactory> candidates = Services.loadAll( BatchImporterFactory.class);
         for ( BatchImporterFactory candidate : Services.loadAll( BatchImporterFactory.class ) )
         {
             if ( highestPrioritized == null || candidate.priority > highestPrioritized.priority )

@@ -20,13 +20,6 @@
 package org.neo4j.internal.batchimport.store;
 
 import org.eclipse.collections.api.set.ImmutableSet;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.OpenOption;
-import java.nio.file.Path;
-import java.util.function.Predicate;
-
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.pagecache.ConfigurableIOBufferFactory;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
@@ -58,14 +51,7 @@ import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
-import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.store.NodeStore;
-import org.neo4j.kernel.impl.store.PropertyStore;
-import org.neo4j.kernel.impl.store.RecordStore;
-import org.neo4j.kernel.impl.store.RelationshipGroupStore;
-import org.neo4j.kernel.impl.store.RelationshipStore;
-import org.neo4j.kernel.impl.store.StoreFactory;
-import org.neo4j.kernel.impl.store.StoreType;
+import org.neo4j.kernel.impl.store.*;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.RecordStorageCapability;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
@@ -77,6 +63,12 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.Clocks;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.util.function.Predicate;
+
 import static java.lang.String.valueOf;
 import static java.nio.file.StandardOpenOption.READ;
 import static org.eclipse.collections.impl.factory.Sets.immutable;
@@ -86,10 +78,7 @@ import static org.neo4j.internal.index.label.FullStoreChangeStream.EMPTY;
 import static org.neo4j.io.IOUtils.closeAll;
 import static org.neo4j.io.mem.MemoryAllocator.createAllocator;
 import static org.neo4j.io.pagecache.IOLimiter.UNLIMITED;
-import static org.neo4j.kernel.impl.store.StoreType.PROPERTY;
-import static org.neo4j.kernel.impl.store.StoreType.PROPERTY_ARRAY;
-import static org.neo4j.kernel.impl.store.StoreType.PROPERTY_STRING;
-import static org.neo4j.kernel.impl.store.StoreType.RELATIONSHIP_GROUP;
+import static org.neo4j.kernel.impl.store.StoreType.*;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 
 /**
@@ -155,6 +144,9 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
         this.ioTracer = ioTracer;
         this.externalPageCache = externalPageCache;
         this.idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate() );
+        if (neo4jConfig.isOneIDFile( databaseLayout.getDatabaseName())) {
+            idGeneratorFactory.setOneIDFile(true);
+        }
         this.tempIdGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate() );
         this.pageCacheTracer = pageCacheTracer;
         this.memoryTracker = memoryTracker;

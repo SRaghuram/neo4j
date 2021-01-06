@@ -20,6 +20,12 @@
 package org.neo4j.internal.id;
 
 import org.eclipse.collections.api.set.ImmutableSet;
+import org.neo4j.index.internal.gbptree.GBPTree;
+import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
+import org.neo4j.internal.id.indexed.IndexedIdGenerator;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
@@ -28,12 +34,6 @@ import java.util.EnumMap;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
-
-import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
-import org.neo4j.internal.id.indexed.IndexedIdGenerator;
-import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import static org.neo4j.internal.id.indexed.LoggingIndexedIdGeneratorMonitor.defaultIdMonitor;
 import static org.neo4j.io.pagecache.IOLimiter.UNLIMITED;
@@ -44,6 +44,8 @@ public class DefaultIdGeneratorFactory implements IdGeneratorFactory
     protected final FileSystemAbstraction fs;
     private final RecoveryCleanupWorkCollector recoveryCleanupWorkCollector;
     protected final boolean allowLargeIdCaches;
+    private GBPTree gbpTree = null;
+    private Path oneIdFile = null;
 
     /**
      * By default doesn't allow large ID caches.
@@ -70,23 +72,53 @@ public class DefaultIdGeneratorFactory implements IdGeneratorFactory
         this.allowLargeIdCaches = allowLargeIdCaches;
     }
 
+    boolean isOneIDFile = false;
+    @Override
+    public void setOneIDFile( boolean isOneIDFile)
+    {
+        this.isOneIDFile = isOneIDFile;
+    }
+
+    @Override
+    public GBPTree getGBPTree()
+    {
+        return gbpTree;
+    }
+
     @Override
     public IdGenerator open( PageCache pageCache, Path filename, IdType idType, LongSupplier highIdScanner, long maxId, boolean readOnly,
             PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
     {
+        Path idFileName = filename;
+        if (isOneIDFile) {
+            if (oneIdFile == null)
+                oneIdFile = filename;
+            idFileName = oneIdFile;
+        }
         IndexedIdGenerator generator =
-                instantiate( fs, pageCache, recoveryCleanupWorkCollector, filename, highIdScanner, maxId, idType, readOnly, cursorTracer, openOptions );
+                instantiate( fs, pageCache, recoveryCleanupWorkCollector, idFileName, highIdScanner, maxId, idType, readOnly, cursorTracer, gbpTree, openOptions );
+        if (isOneIDFile && gbpTree == null)
+                gbpTree = generator.getGBPTree();
+
         generators.put( idType, generator );
         return generator;
     }
 
     protected IndexedIdGenerator instantiate( FileSystemAbstraction fs, PageCache pageCache, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
-            Path fileName, LongSupplier highIdSupplier, long maxValue, IdType idType, boolean readOnly, PageCursorTracer cursorTracer,
+                                              Path fileName, LongSupplier highIdSupplier, long maxValue, IdType idType, boolean readOnly, PageCursorTracer cursorTracer,
+                                              ImmutableSet<OpenOption> openOptions )
+    {
+        return this.instantiate( fs,  pageCache,  recoveryCleanupWorkCollector,
+                 fileName,  highIdSupplier,  maxValue,  idType,  readOnly,  cursorTracer,
+            null, openOptions);
+    }
+    protected IndexedIdGenerator instantiate( FileSystemAbstraction fs, PageCache pageCache, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
+            Path fileName, LongSupplier highIdSupplier, long maxValue, IdType idType, boolean readOnly, PageCursorTracer cursorTracer, GBPTree gbpTree,
             ImmutableSet<OpenOption> openOptions )
     {
         // highId not used when opening an IndexedIdGenerator
         return new IndexedIdGenerator( pageCache, fileName, recoveryCleanupWorkCollector, idType, allowLargeIdCaches, highIdSupplier, maxValue, readOnly,
-                cursorTracer, defaultIdMonitor( fs, fileName ), openOptions );
+                cursorTracer, defaultIdMonitor( fs, fileName ), gbpTree, isOneIDFile, openOptions );
     }
 
     @Override
@@ -101,11 +133,14 @@ public class DefaultIdGeneratorFactory implements IdGeneratorFactory
     {
         // For the potential scenario where there's no store (of course this is where this method will be called),
         // but there's a naked id generator, then delete the id generator so that it too starts from a clean state.
-        fs.deleteFile( fileName );
+        if (!isOneIDFile)
+            fs.deleteFile( fileName );
 
         IndexedIdGenerator generator =
                 new IndexedIdGenerator( pageCache, fileName, recoveryCleanupWorkCollector, idType, allowLargeIdCaches, () -> highId, maxId, readOnly,
-                        cursorTracer, defaultIdMonitor( fs, fileName ), openOptions );
+                        cursorTracer, defaultIdMonitor( fs, fileName ), gbpTree, isOneIDFile, openOptions );
+        if (isOneIDFile && gbpTree == null)
+            gbpTree = generator.getGBPTree();
         generator.checkpoint( UNLIMITED, cursorTracer );
         generators.put( idType, generator );
         return generator;

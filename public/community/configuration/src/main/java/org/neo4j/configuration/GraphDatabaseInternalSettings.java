@@ -19,30 +19,17 @@
  */
 package org.neo4j.configuration;
 
-import java.nio.file.Path;
-import java.time.Duration;
-
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.logging.FormattedLogFormat;
 
-import static java.time.Duration.ofMillis;
-import static java.time.Duration.ofMinutes;
-import static java.time.Duration.ofSeconds;
-import static org.neo4j.configuration.SettingConstraints.any;
-import static org.neo4j.configuration.SettingConstraints.is;
-import static org.neo4j.configuration.SettingConstraints.min;
-import static org.neo4j.configuration.SettingConstraints.range;
+import java.nio.file.Path;
+import java.time.Duration;
+
+import static java.time.Duration.*;
+import static org.neo4j.configuration.SettingConstraints.*;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
-import static org.neo4j.configuration.SettingValueParsers.BOOL;
-import static org.neo4j.configuration.SettingValueParsers.BYTES;
-import static org.neo4j.configuration.SettingValueParsers.DOUBLE;
-import static org.neo4j.configuration.SettingValueParsers.DURATION;
-import static org.neo4j.configuration.SettingValueParsers.INT;
-import static org.neo4j.configuration.SettingValueParsers.LONG;
-import static org.neo4j.configuration.SettingValueParsers.PATH;
-import static org.neo4j.configuration.SettingValueParsers.STRING;
-import static org.neo4j.configuration.SettingValueParsers.ofEnum;
+import static org.neo4j.configuration.SettingValueParsers.*;
 import static org.neo4j.io.ByteUnit.kibiBytes;
 import static org.neo4j.io.ByteUnit.mebiBytes;
 
@@ -524,4 +511,21 @@ public class GraphDatabaseInternalSettings implements SettingsDeclaration
     @Description( "The name of the user that should be allowed to call dbms.upgrade when `unsupported.dbms.upgrade_restriction_enabled` is enabled" )
     public static final Setting<String> upgrade_username =
             newBuilder( "unsupported.dbms.upgrade_procedure_username", STRING, "upgrade_user" ).build();
+
+    @Internal
+    @Description( "The name of the user that should be allowed to call dbms.upgrade when `unsupported.dbms.upgrade_restriction_enabled` is enabled" )
+    public static final Setting<String> sfrs_engine =
+            newBuilder( "unsupported.dbms.sfrs_storage_engine.database", STRING, "" ).build();
+
+    @Internal
+    @Description( "The name of the user that should be allowed to call dbms.upgrade when `unsupported.dbms.upgrade_restriction_enabled` is enabled" )
+    public static final Setting<String> oneIDFile =
+            newBuilder( "unsupported.dbms.oneIDFile.database", STRING, "" ).build();
+
+    @Internal
+    public static final Setting<String> storage_engine = newBuilder( "unsupported.dbms.storage_engine", STRING, "RecordStorage" ).build();
+
+    @Description( "Storage engine factory to be use in import command specified in the additionalConfig file" )
+    public static final Setting<String> batchImporterFactory = newBuilder( "unsupported.dbms.import.BatchImporterFactory", STRING , "StandardBatchImporterFactory").build();
+
 }

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+javac -Xlint:unchecked -cp /Users/sraghuram/downloads/aspectj-1.9.2/lib/aspectjrt.jar MTraceA.java
+cp MTraceA.class org/neo4j/server/aspect/MTraceA.class
+jar -uf aspects.jar org/neo4j/server/aspect/MTraceA.class
+cp MTraceA\$WhereInCode.class org/neo4j/server/aspect/MTraceA\$WhereInCode.class
+jar -uf aspects.jar org/neo4j/server/aspect/MTraceA\$WhereInCode.class
+cp MTraceA\$1.class org/neo4j/server/aspect/MTraceA\$1.class
+jar -uf aspects.jar org/neo4j/server/aspect/MTraceA\$1.class

@@ -23,6 +23,14 @@ import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.util.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.neo4j.annotations.api.IgnoreApiCheck;
+import org.neo4j.graphdb.config.Configuration;
+import org.neo4j.graphdb.config.Setting;
+import org.neo4j.internal.helpers.Exceptions;
+import org.neo4j.logging.Log;
+import org.neo4j.service.Services;
+import org.neo4j.util.FeatureToggles;
+import org.neo4j.util.Preconditions;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -33,39 +41,11 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.AclEntry;
-import java.nio.file.attribute.AclEntryPermission;
-import java.nio.file.attribute.AclEntryType;
-import java.nio.file.attribute.AclFileAttributeView;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.PosixFileAttributeView;
-import java.nio.file.attribute.PosixFileAttributes;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.UserPrincipal;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.Set;
+import java.nio.file.attribute.*;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import org.neo4j.annotations.api.IgnoreApiCheck;
-import org.neo4j.graphdb.config.Configuration;
-import org.neo4j.graphdb.config.Setting;
-import org.neo4j.internal.helpers.Exceptions;
-import org.neo4j.logging.Log;
-import org.neo4j.service.Services;
-import org.neo4j.util.FeatureToggles;
-import org.neo4j.util.Preconditions;
 
 import static java.lang.String.format;
 import static java.lang.System.lineSeparator;
@@ -1232,5 +1212,27 @@ public class Config implements Configuration
             }
             return Config.this.get( setting );
         }
+    }
+
+
+    public boolean isSFRSEngine(String dbName)
+    {
+        boolean isSFRSEngine = false;
+        String[] databases = this.get(GraphDatabaseInternalSettings.sfrs_engine).split(",");
+        for (String database : databases)
+            if (database.equalsIgnoreCase(dbName)) {
+                isSFRSEngine = true;
+                break;
+            }
+        return isSFRSEngine;
+    }
+
+
+    public boolean isOneIDFile(String dbName)
+    {
+        if (isSFRSEngine( dbName ) || this.get(GraphDatabaseInternalSettings.oneIDFile).equals("*") ||
+                this.get(GraphDatabaseInternalSettings.oneIDFile).equals(dbName))
+            return true;
+        return false;
     }
 }

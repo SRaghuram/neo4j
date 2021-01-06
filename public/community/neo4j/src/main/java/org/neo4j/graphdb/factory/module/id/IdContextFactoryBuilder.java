@@ -19,8 +19,6 @@
  */
 package org.neo4j.graphdb.factory.module.id;
 
-import java.util.function.Function;
-
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
@@ -29,6 +27,8 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.scheduler.JobScheduler;
+
+import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
@@ -83,7 +83,8 @@ public final class IdContextFactoryBuilder
         {
             factoryWrapper = identity();
         }
-        return new IdContextFactory( jobScheduler, idGeneratorFactoryProvider, factoryWrapper, cacheTracer );
+
+        return new IdContextFactory( jobScheduler, idGeneratorFactoryProvider, factoryWrapper, config, cacheTracer );
     }
 
     public static Function<NamedDatabaseId,IdGeneratorFactory> defaultIdGeneratorFactoryProvider( FileSystemAbstraction fs, Config config )

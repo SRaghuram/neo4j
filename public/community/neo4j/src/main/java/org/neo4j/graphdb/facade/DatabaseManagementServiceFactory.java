@@ -19,12 +19,6 @@
  */
 package org.neo4j.graphdb.facade;
 
-import java.nio.file.Path;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
 import org.neo4j.bolt.BoltServer;
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.collection.Dependencies;
@@ -36,14 +30,9 @@ import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManagementServiceImpl;
-import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.DbmsRuntimeSystemGraphComponent;
-import org.neo4j.dbms.database.DefaultDatabaseInitializer;
-import org.neo4j.dbms.database.SystemGraphComponents;
-import org.neo4j.dbms.database.UnableToStartDatabaseException;
+import org.neo4j.dbms.database.*;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphalgo.core.utils.mem.AllocationTracker;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -71,11 +60,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.procedure.builtin.SpecialBuiltInProcedures;
-import org.neo4j.procedure.impl.GlobalProceduresRegistry;
-import org.neo4j.procedure.impl.ProcedureConfig;
-import org.neo4j.procedure.impl.ProcedureLoginContextTransformer;
-import org.neo4j.procedure.impl.ProcedureTransactionProvider;
-import org.neo4j.procedure.impl.TerminationGuardProvider;
+import org.neo4j.procedure.impl.*;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.web.DisabledNeoWebServer;
 import org.neo4j.values.ValueMapper;
@@ -84,13 +69,15 @@ import org.neo4j.values.virtual.NodeValue;
 import org.neo4j.values.virtual.PathValue;
 import org.neo4j.values.virtual.RelationshipValue;
 
+import java.nio.file.Path;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.module.edition.CommunityEditionModule.tryResolveOrCreate;
-import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTGeometry;
-import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTNode;
-import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTPath;
-import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTPoint;
-import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTRelationship;
+import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.*;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 /**
@@ -282,6 +269,7 @@ public class DatabaseManagementServiceFactory
             globalProcedures.registerType( Geometry.class, NTGeometry );
             globalProcedures.registerType( Point.class, NTPoint );
             globalProcedures.registerType( PointValue.class, NTPoint );
+            //globalProcedures.registerType(MemoryEstimateResult.class, NTAny );
 
             // Below components are not public API, but are made available for internal
             // procedures to call, and to provide temporary workarounds for the following
@@ -308,7 +296,12 @@ public class DatabaseManagementServiceFactory
 
             globalProcedures.registerComponent( DataCollector.class, ctx -> ctx.dependencyResolver().resolveDependency( DataCollector.class ), false );
 
-            // Edition procedures
+            globalModule.getGlobalDependencies().satisfyDependency(AllocationTracker.empty() );
+            globalProcedures.registerComponent(AllocationTracker.class, ctx -> ctx.dependencyResolver().resolveDependency( AllocationTracker.class ), true );
+
+            //globalProcedures.registerComponent(AllocationTracker.class, globalProcedures.lookupComponentProvider(AllocationTracker.class, true), true );
+
+                    // Edition procedures
             try
             {
                 editionModule.registerProcedures( globalProcedures, procedureConfig, globalModule, databaseManager );

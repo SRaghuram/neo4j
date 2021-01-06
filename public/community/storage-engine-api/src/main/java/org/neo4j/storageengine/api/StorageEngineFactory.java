@@ -19,14 +19,9 @@
  */
 package org.neo4j.storageengine.api;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.List;
-
 import org.neo4j.annotations.service.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
-import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.schema.IndexConfigCompleter;
@@ -46,6 +41,12 @@ import org.neo4j.service.Services;
 import org.neo4j.storageengine.migration.SchemaRuleMigrationAccess;
 import org.neo4j.storageengine.migration.StoreMigrationParticipant;
 import org.neo4j.token.TokenHolders;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * A factory suitable for something like service-loading to load {@link StorageEngine} instances.
@@ -98,7 +99,7 @@ public interface StorageEngineFactory
      * @param pageCache page cache to open store with
      * @return true of store exist, false otherwise
      */
-    boolean storageExists( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, PageCache pageCache );
+    boolean storageExists( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, PageCache pageCache, Config config );
 
     /**
      * Instantiates a read-only {@link TransactionIdStore} to be used outside of a {@link StorageEngine}.
@@ -168,8 +169,42 @@ public interface StorageEngineFactory
      * @return the selected {@link StorageEngineFactory}.
      * @throws IllegalStateException if there were no candidates.
      */
+    //static StorageEngineFactory selectStorageEngine()
+    //{
+    //    return Iterables.single( Services.loadAll( StorageEngineFactory.class ) );
+    //}
     static StorageEngineFactory selectStorageEngine()
     {
-        return Iterables.single( Services.loadAll( StorageEngineFactory.class ) );
+        return selectDefaultStorageEngine( allAvailableStorageEngines() );
+    }
+
+    static Collection<StorageEngineFactory> allAvailableStorageEngines()
+    {
+        return Services.loadAll( StorageEngineFactory.class );
+    }
+
+    /**
+     * @return the first {@link StorageEngineFactory} that says yes when asked about
+     * {@link StorageEngineFactory#storageExists(FileSystemAbstraction, DatabaseLayout, PageCache, Config)} for the given {@code databaseLayout}.
+     * If there's no store there or none of the factories can see or load it then the {@code defaultFactory} will be returned.
+     */
+    static StorageEngineFactory selectStorageEngine( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, Config config,
+                                                     StorageEngineFactory defaultFactory )
+    {
+        Collection<StorageEngineFactory> storageEngineFactories = allAvailableStorageEngines();
+        return storageEngineFactories.stream().filter( engine -> engine.storageExists( fs, databaseLayout, pageCache, config ) ).findFirst().orElse( defaultFactory );
+    }
+
+    static StorageEngineFactory selectDefaultStorageEngine( Collection<StorageEngineFactory> storageEngineFactories )
+    {
+        return storageEngineFactories.stream().filter( engine -> engine.getClass().getSimpleName().equals( "RecordStorageEngineFactory" ) ).findFirst().get();
+    }
+
+    static StorageEngineFactory selectStorageEngine( String nameish )
+    {
+        Collection<StorageEngineFactory> storageEngineFactories = allAvailableStorageEngines();
+        Optional<StorageEngineFactory> first = storageEngineFactories.stream().filter(
+                engine -> engine.getClass().getSimpleName().toLowerCase().contains( nameish.toLowerCase() ) ).findFirst();
+        return first.orElseThrow( () -> new IllegalArgumentException( "No storage engine w/ name similar to '" + nameish + "' found" ) );
     }
 }

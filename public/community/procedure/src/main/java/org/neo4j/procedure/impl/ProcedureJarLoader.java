@@ -19,6 +19,14 @@
  */
 package org.neo4j.procedure.impl;
 
+import org.neo4j.collection.AbstractPrefetchingRawIterator;
+import org.neo4j.collection.RawIterator;
+import org.neo4j.exceptions.KernelException;
+import org.neo4j.kernel.api.procedure.CallableProcedure;
+import org.neo4j.kernel.api.procedure.CallableUserAggregationFunction;
+import org.neo4j.kernel.api.procedure.CallableUserFunction;
+import org.neo4j.logging.Log;
+
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -32,14 +40,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
-
-import org.neo4j.collection.AbstractPrefetchingRawIterator;
-import org.neo4j.collection.RawIterator;
-import org.neo4j.exceptions.KernelException;
-import org.neo4j.kernel.api.procedure.CallableProcedure;
-import org.neo4j.kernel.api.procedure.CallableUserAggregationFunction;
-import org.neo4j.kernel.api.procedure.CallableUserFunction;
-import org.neo4j.logging.Log;
 
 /**
  * Given the location of a jarfile, reads the contents of the jar and returns compiled {@link CallableProcedure}
@@ -160,19 +160,21 @@ class ProcedureJarLoader
                         {
                             String className = name.substring( 0, name.length() - ".class".length() ).replace( '/', '.' );
 
-                            try
-                            {
-                                Class<?> aClass = loader.loadClass( className );
-                                // We do getDeclaredMethods to trigger NoClassDefErrors, which loadClass above does
-                                // not do.
-                                // This way, even if some of the classes in a jar cannot be loaded, we still check
-                                // the others.
-                                aClass.getDeclaredMethods();
-                                return aClass;
-                            }
-                            catch ( UnsatisfiedLinkError | NoClassDefFoundError | VerifyError | Exception e )
-                            {
-                                log.warn( "Failed to load `%s` from plugin jar `%s`: %s", className, jar.getFile(), e.getMessage() );
+                            int tryCount = 0;
+                            NoClassDefFoundError eSave;
+                            while (tryCount < 3) {
+                                try {
+                                    Class<?> aClass = loader.loadClass(className);
+                                    // We do getDeclaredMethods to trigger NoClassDefErrors, which loadClass above does
+                                    // not do.
+                                    // This way, even if some of the classes in a jar cannot be loaded, we still check
+                                    // the others.
+                                    aClass.getDeclaredMethods();
+                                    return aClass;
+                                } catch (UnsatisfiedLinkError | NoClassDefFoundError | VerifyError | Exception e) {
+                                    if (tryCount++ > 3)
+                                        log.warn("Failed to load `%s` from plugin jar `%s`: %s", className, jar.getFile(), e.getMessage());
+                                }
                             }
                         }
                     }

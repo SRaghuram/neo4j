@@ -19,12 +19,10 @@
  */
 package org.neo4j.graphdb.factory.module;
 
-import java.util.function.Function;
-import java.util.function.LongFunction;
-
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.dbms.database.DatabaseConfig;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
@@ -68,6 +66,12 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.TokenHolders;
+
+import java.util.function.Function;
+import java.util.function.LongFunction;
+
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 public class ModularDatabaseCreationContext implements DatabaseCreationContext
 {
@@ -154,12 +158,45 @@ public class ModularDatabaseCreationContext implements DatabaseCreationContext
         this.watcherServiceFactory = editionComponents.getWatcherServiceFactory();
         this.databaseAvailabilityGuardFactory =
                 databaseTimeoutMillis -> databaseAvailabilityGuardFactory( namedDatabaseId, globalModule, databaseTimeoutMillis );
-        this.storageEngineFactory = globalModule.getStorageEngineFactory();
+        //this.storageEngineFactory = globalModule.getStorageEngineFactory();
+        this.storageEngineFactory = selectStorageEngineBasedOnName( globalModule.getStorageEngineFactory(), namedDatabaseId, globalConfig );
+        System.out.println("Engine["+this.storageEngineFactory.toString()+"] for database["+namedDatabaseId.name()+"]");
         this.fileLockerService = globalModule.getFileLockerService();
         this.accessCapabilityFactory = editionComponents.getAccessCapabilityFactory();
         this.leaseService = leaseService;
         this.startupController = editionComponents.getStartupController();
     }
+
+    private StorageEngineFactory selectStorageEngineBasedOnName( StorageEngineFactory defaultStorageEngineFactory, NamedDatabaseId namedDatabaseId, Config config )
+    {
+        if ( namedDatabaseId.isSystemDatabase() )
+        {
+            return defaultStorageEngineFactory;
+        }
+
+        // Priority of storage engine factory selection:
+        // 1. Does a store exist at this location (database layout)? - if so get the one able to load it
+        // 2. Is there a specific storage engine preference for creating new stores?
+        // 3. Does the database name give some hint about which storage engine to use?
+        // 4. Use the default one
+        String forcedStorageEngineName = globalConfig.get( GraphDatabaseInternalSettings.storage_engine );
+        StorageEngineFactory defaultFactory = isNotEmpty( forcedStorageEngineName )
+                ? selectStorageEngine( forcedStorageEngineName )
+                : storageEngineFactoryByDatabaseName( defaultStorageEngineFactory, namedDatabaseId );
+        return selectStorageEngine( fs, databaseLayout, pageCache, config, defaultFactory );
+    }
+
+    private static StorageEngineFactory storageEngineFactoryByDatabaseName( StorageEngineFactory defaultStorageEngineFactory, NamedDatabaseId namedDatabaseId )
+    {
+        int dotIndex = namedDatabaseId.name().indexOf( '.' );
+        if ( dotIndex >= 0 )
+        {
+            String prefix = namedDatabaseId.name().substring( 0, dotIndex );
+            return selectStorageEngine( prefix );
+        }
+        return defaultStorageEngineFactory;
+    }
+
 
     @Override
     public NamedDatabaseId getNamedDatabaseId()

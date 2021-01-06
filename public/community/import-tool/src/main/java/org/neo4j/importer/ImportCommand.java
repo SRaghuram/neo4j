@@ -20,20 +20,6 @@
 package org.neo4j.importer;
 
 import org.eclipse.collections.api.tuple.Pair;
-import picocli.CommandLine;
-import picocli.CommandLine.ITypeConverter;
-import picocli.CommandLine.Option;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
-
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.Converters.ByteUnitConverter;
@@ -49,6 +35,19 @@ import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.util.Converters;
 import org.neo4j.kernel.impl.util.Validators;
 import org.neo4j.util.VisibleForTesting;
+import picocli.CommandLine;
+import picocli.CommandLine.ITypeConverter;
+import picocli.CommandLine.Option;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 
 import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
@@ -59,9 +58,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.SettingValueParsers.parseLongWithUnit;
 import static org.neo4j.csv.reader.Configuration.COMMAS;
 import static org.neo4j.importer.CsvImporter.DEFAULT_REPORT_FILE_NAME;
-import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
-import static org.neo4j.internal.batchimport.Configuration.calculateMaxMemoryFromPercent;
-import static org.neo4j.internal.batchimport.Configuration.canDetectFreeMemory;
+import static org.neo4j.internal.batchimport.Configuration.*;
 import static org.neo4j.io.ByteUnit.bytesToString;
 import static picocli.CommandLine.Command;
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
@@ -287,6 +284,36 @@ public class ImportCommand extends AbstractCommand
     private org.neo4j.internal.batchimport.Configuration importConfiguration()
     {
         return new org.neo4j.internal.batchimport.Configuration()
+        {
+            @Override
+            public int maxNumberOfProcessors()
+            {
+                return processors;
+            }
+
+            @Override
+            public long maxMemoryUsage()
+            {
+                return maxMemory;
+            }
+
+            @Override
+            public boolean highIO()
+            {
+                return highIo;
+            }
+
+            @Override
+            public boolean allowCacheAllocationOnHeap()
+            {
+                return cacheOnHeap;
+            }
+        };
+    }
+
+    private org.neo4j.SFRS.internal.batchimport.Configuration importSFRSConfiguration()
+    {
+        return new org.neo4j.SFRS.internal.batchimport.Configuration()
         {
             @Override
             public int maxNumberOfProcessors()

@@ -1,0 +1,6 @@
+<aspectj>
+<aspects>
+<aspect name="org.neo4j.server.aspect.MTraceA"/>
+</aspects>
+</aspectj>
+

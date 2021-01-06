@@ -19,10 +19,10 @@
  */
 package org.neo4j.index.internal.gbptree;
 
-import java.util.Objects;
-
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
+
+import java.util.Objects;
 
 /**
  * Tree state is defined as top level tree meta data which changes as the tree and its constructs changes, such as:
@@ -220,6 +220,10 @@ class TreeState
         GenerationSafePointer.assertGenerationOnWrite( stableGeneration );
         GenerationSafePointer.assertGenerationOnWrite( unstableGeneration );
 
+        TreeState treeState = new TreeState( cursor.getCurrentPageId(), stableGeneration, unstableGeneration, rootId, rootGeneration, lastId,
+                freeListWritePageId, freeListReadPageId, freeListWritePos, freeListReadPos, clean, true );
+
+        long startOffset = cursor.getOffset();
         writeStateOnce( cursor, stableGeneration, unstableGeneration, rootId, rootGeneration, lastId,
                 freeListWritePageId, freeListReadPageId, freeListWritePos, freeListReadPos, clean ); // Write state
         writeStateOnce( cursor, stableGeneration, unstableGeneration, rootId, rootGeneration, lastId,
@@ -279,6 +283,7 @@ class TreeState
             long rootGeneration, long lastId, long freeListWritePageId, long freeListReadPageId, int freeListWritePos,
             int freeListReadPos, boolean clean )
     {
+        long startOffset = cursor.getOffset();
         cursor.putInt( (int) stableGeneration );
         cursor.putInt( (int) unstableGeneration );
         cursor.putLong( rootId );

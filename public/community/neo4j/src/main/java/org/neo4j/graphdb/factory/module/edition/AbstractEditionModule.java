@@ -19,9 +19,6 @@
  */
 package org.neo4j.graphdb.factory.module.edition;
 
-import java.util.function.Function;
-import java.util.function.Predicate;
-
 import org.neo4j.annotations.api.IgnoreApiCheck;
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.collection.Dependencies;
@@ -65,6 +62,9 @@ import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.procedure.impl.ProcedureConfig;
 import org.neo4j.time.SystemNanoClock;
 
+import java.util.function.Function;
+import java.util.function.Predicate;
+
 import static org.neo4j.procedure.impl.temporal.TemporalFunction.registerTemporalFunctions;
 
 /**
@@ -98,7 +98,7 @@ public abstract class AbstractEditionModule
         globalProcedures.registerProcedure( BuiltInDbmsProcedures.class );
         globalProcedures.registerProcedure( FulltextProcedures.class );
         globalProcedures.registerProcedure( DataCollectorProcedures.class );
-        registerTemporalFunctions( globalProcedures, procedureConfig );
+                registerTemporalFunctions( globalProcedures, procedureConfig );
 
         registerEditionSpecificProcedures( globalProcedures, databaseManager );
         BaseRoutingProcedureInstaller routingProcedureInstaller = createRoutingProcedureInstaller( globalModule, databaseManager );
