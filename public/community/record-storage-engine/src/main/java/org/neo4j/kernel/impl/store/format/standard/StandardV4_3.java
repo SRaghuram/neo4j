@@ -1,9 +1,23 @@
 /*
  * Copyright (c) "Neo4j"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.neo4j.kernel.impl.store.format.highlimit;
+package org.neo4j.kernel.impl.store.format.standard;
 
 import org.neo4j.kernel.impl.store.format.BaseRecordFormats;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
@@ -11,10 +25,6 @@ import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.RecordStorageCapability;
 import org.neo4j.kernel.impl.store.format.StoreVersion;
-import org.neo4j.kernel.impl.store.format.standard.LabelTokenRecordFormat;
-import org.neo4j.kernel.impl.store.format.standard.PropertyKeyTokenRecordFormat;
-import org.neo4j.kernel.impl.store.format.standard.RelationshipTypeTokenRecordFormat;
-import org.neo4j.kernel.impl.store.format.standard.SchemaRecordFormat;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -26,27 +36,19 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.kernel.impl.store.record.SchemaRecord;
 import org.neo4j.storageengine.api.IndexCapabilities;
 
-/**
- * Record format with very high limits, 50-bit per ID, while at the same time keeping store size small.
- *
- * @see BaseHighLimitRecordFormat
- */
-public class HighLimit extends BaseRecordFormats
+public class StandardV4_3 extends BaseRecordFormats
 {
-    public static final String STORE_VERSION = StoreVersion.HIGH_LIMIT_V4_3_0.versionString();
+    public static final String STORE_VERSION = StoreVersion.STANDARD_V4_3.versionString();
+    public static final RecordFormats RECORD_FORMATS = new StandardV4_3();
+    public static final String NAME = "standard";
 
-    public static final RecordFormats RECORD_FORMATS = new HighLimit();
-    public static final String NAME = "high_limit";
-
-    protected HighLimit()
+    public StandardV4_3()
     {
-        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V4_3_0.introductionVersion(), 7,
-                RecordStorageCapability.DENSE_NODES,
-                RecordStorageCapability.RELATIONSHIP_TYPE_3BYTES,
+        super( STORE_VERSION, StoreVersion.STANDARD_V4_3.introductionVersion(), 10,
                 RecordStorageCapability.SCHEMA,
+                RecordStorageCapability.DENSE_NODES,
                 RecordStorageCapability.POINT_PROPERTIES,
                 RecordStorageCapability.TEMPORAL_PROPERTIES,
-                RecordStorageCapability.SECONDARY_RECORD_UNITS,
                 RecordStorageCapability.FLEXIBLE_SCHEMA_STORE,
                 RecordStorageCapability.INTERNAL_TOKENS,
                 RecordStorageCapability.GBPTREE_ID_FILES,
@@ -64,15 +66,15 @@ public class HighLimit extends BaseRecordFormats
     }
 
     @Override
-    public RecordFormat<RelationshipRecord> relationship()
-    {
-        return new RelationshipRecordFormat();
-    }
-
-    @Override
     public RecordFormat<RelationshipGroupRecord> relationshipGroup()
     {
         return new RelationshipGroupRecordFormat();
+    }
+
+    @Override
+    public RecordFormat<RelationshipRecord> relationship()
+    {
+        return new RelationshipRecordFormat();
     }
 
     @Override
@@ -96,7 +98,7 @@ public class HighLimit extends BaseRecordFormats
     @Override
     public RecordFormat<RelationshipTypeTokenRecord> relationshipTypeToken()
     {
-        return new RelationshipTypeTokenRecordFormat( HighLimitFormatSettings.RELATIONSHIP_TYPE_TOKEN_MAXIMUM_ID_BITS, false );
+        return new RelationshipTypeTokenRecordFormat();
     }
 
     @Override
@@ -108,7 +110,7 @@ public class HighLimit extends BaseRecordFormats
     @Override
     public FormatFamily getFormatFamily()
     {
-        return HighLimitFormatFamily.INSTANCE;
+        return StandardFormatFamily.INSTANCE;
     }
 
     @Override

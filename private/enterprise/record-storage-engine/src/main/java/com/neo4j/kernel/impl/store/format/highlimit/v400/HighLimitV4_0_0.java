@@ -3,7 +3,16 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.impl.store.format.highlimit;
+package com.neo4j.kernel.impl.store.format.highlimit.v400;
+
+import com.neo4j.kernel.impl.store.format.highlimit.BaseHighLimitRecordFormat;
+import com.neo4j.kernel.impl.store.format.highlimit.DynamicRecordFormat;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatSettings;
+import com.neo4j.kernel.impl.store.format.highlimit.NodeRecordFormat;
+import com.neo4j.kernel.impl.store.format.highlimit.PropertyRecordFormat;
+import com.neo4j.kernel.impl.store.format.highlimit.RelationshipGroupRecordFormat;
+import com.neo4j.kernel.impl.store.format.highlimit.RelationshipRecordFormat;
 
 import org.neo4j.kernel.impl.store.format.BaseRecordFormats;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
@@ -31,16 +40,16 @@ import org.neo4j.storageengine.api.IndexCapabilities;
  *
  * @see BaseHighLimitRecordFormat
  */
-public class HighLimit extends BaseRecordFormats
+public class HighLimitV4_0_0 extends BaseRecordFormats
 {
-    public static final String STORE_VERSION = StoreVersion.HIGH_LIMIT_V4_3_0.versionString();
+    public static final String STORE_VERSION = StoreVersion.HIGH_LIMIT_V4_0_0.versionString();
 
-    public static final RecordFormats RECORD_FORMATS = new HighLimit();
-    public static final String NAME = "high_limit";
+    public static final RecordFormats RECORD_FORMATS = new HighLimitV4_0_0();
+    public static final String NAME = "high_limitV4_0_0";
 
-    protected HighLimit()
+    protected HighLimitV4_0_0()
     {
-        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V4_3_0.introductionVersion(), 7,
+        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V4_0_0.introductionVersion(), 6,
                 RecordStorageCapability.DENSE_NODES,
                 RecordStorageCapability.RELATIONSHIP_TYPE_3BYTES,
                 RecordStorageCapability.SCHEMA,
@@ -53,8 +62,7 @@ public class HighLimit extends BaseRecordFormats
                 IndexCapabilities.LuceneCapability.LUCENE_8,
                 IndexCapabilities.IndexProviderCapability.INDEX_PROVIDERS_40,
                 IndexCapabilities.ConfigCapability.SCHEMA_STORE_CONFIG,
-                RecordStorageCapability.GBPTREE_COUNTS_STORE,
-                RecordStorageCapability.KERNEL_VERSION );
+                RecordStorageCapability.GBPTREE_COUNTS_STORE );
     }
 
     @Override

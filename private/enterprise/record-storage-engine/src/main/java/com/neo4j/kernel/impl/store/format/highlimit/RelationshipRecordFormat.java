@@ -73,12 +73,12 @@ public class RelationshipRecordFormat extends BaseHighLimitRecordFormat<Relation
 
     private static final long TWO_BIT_FIXED_REFERENCE_BIT_MASK = 0x300000000L;
 
-    RelationshipRecordFormat()
+    public RelationshipRecordFormat()
     {
         this( RECORD_SIZE );
     }
 
-    RelationshipRecordFormat( int recordSize )
+    public RelationshipRecordFormat( int recordSize )
     {
         super( fixedRecordSize( recordSize ), 0, HighLimitFormatSettings.RELATIONSHIP_MAXIMUM_ID_BITS );
     }

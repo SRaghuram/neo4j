@@ -11,6 +11,7 @@ import com.neo4j.kernel.impl.store.format.highlimit.v306.HighLimitV3_0_6;
 import com.neo4j.kernel.impl.store.format.highlimit.v310.HighLimitV3_1_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v320.HighLimitV3_2_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v400.HighLimitV4_0_0;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -90,6 +91,7 @@ class RecordFormatSelectorTest
         assertSame( HighLimitV3_1_0.RECORD_FORMATS, selectForVersion( HighLimitV3_1_0.STORE_VERSION ) );
         assertSame( HighLimitV3_2_0.RECORD_FORMATS, selectForVersion( HighLimitV3_2_0.STORE_VERSION ) );
         assertSame( HighLimitV3_4_0.RECORD_FORMATS, selectForVersion( HighLimitV3_4_0.STORE_VERSION ) );
+        assertSame( HighLimitV4_0_0.RECORD_FORMATS, selectForVersion( HighLimitV4_0_0.STORE_VERSION ) );
         assertSame( HighLimit.RECORD_FORMATS, selectForVersion( HighLimit.STORE_VERSION ) );
     }
 
@@ -164,6 +166,7 @@ class RecordFormatSelectorTest
         verifySelectForStore( pageCache, HighLimitV3_1_0.RECORD_FORMATS );
         verifySelectForStore( pageCache, HighLimitV3_2_0.RECORD_FORMATS );
         verifySelectForStore( pageCache, HighLimitV3_4_0.RECORD_FORMATS );
+        verifySelectForStore( pageCache, HighLimitV4_0_0.RECORD_FORMATS );
         verifySelectForStore( pageCache, HighLimit.RECORD_FORMATS );
     }
 
@@ -351,7 +354,8 @@ class RecordFormatSelectorTest
         assertEquals( HighLimitV3_1_0.RECORD_FORMATS, findSuccessor( HighLimitV3_0_6.RECORD_FORMATS ).get() );
         assertEquals( HighLimitV3_2_0.RECORD_FORMATS, findSuccessor( HighLimitV3_1_0.RECORD_FORMATS ).get() );
         assertEquals( HighLimitV3_4_0.RECORD_FORMATS, findSuccessor( HighLimitV3_2_0.RECORD_FORMATS ).get() );
-        assertEquals( HighLimit.RECORD_FORMATS, findSuccessor( HighLimitV3_4_0.RECORD_FORMATS ).get() );
+        assertEquals( HighLimitV4_0_0.RECORD_FORMATS, findSuccessor( HighLimitV3_4_0.RECORD_FORMATS ).get() );
+        assertEquals( HighLimit.RECORD_FORMATS, findSuccessor( HighLimitV4_0_0.RECORD_FORMATS ).get() );
     }
 
     private void verifySelectForStore( PageCache pageCache, RecordFormats format ) throws IOException

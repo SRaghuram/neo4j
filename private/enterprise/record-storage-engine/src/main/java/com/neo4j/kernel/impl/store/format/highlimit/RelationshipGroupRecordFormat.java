@@ -62,12 +62,12 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
     private static final long ONE_BIT_OVERFLOW_BIT_MASK = 0xFFFF_FFFE_0000_0000L;
     private static final long HIGH_DWORD_LAST_BIT_MASK = 0x100000000L;
 
-    RelationshipGroupRecordFormat()
+    public RelationshipGroupRecordFormat()
     {
         this( RECORD_SIZE );
     }
 
-    RelationshipGroupRecordFormat( int recordSize )
+    public RelationshipGroupRecordFormat( int recordSize )
     {
         super( fixedRecordSize( recordSize ), 0, HighLimitFormatSettings.RELATIONSHIP_GROUP_MAXIMUM_ID_BITS );
     }

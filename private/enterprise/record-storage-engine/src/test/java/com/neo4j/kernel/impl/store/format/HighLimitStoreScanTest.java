@@ -11,6 +11,7 @@ import com.neo4j.kernel.impl.store.format.highlimit.v306.HighLimitV3_0_6;
 import com.neo4j.kernel.impl.store.format.highlimit.v310.HighLimitV3_1_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v320.HighLimitV3_2_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v400.HighLimitV4_0_0;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.eclipse.collections.api.factory.Sets;
 import org.eclipse.collections.api.set.ImmutableSet;
@@ -428,6 +429,7 @@ class HighLimitStoreScanTest
                 arguments( HighLimitV3_1_0.RECORD_FORMATS ),
                 arguments( HighLimitV3_2_0.RECORD_FORMATS ),
                 arguments( HighLimitV3_4_0.RECORD_FORMATS ),
+                arguments( HighLimitV4_0_0.RECORD_FORMATS ),
                 arguments( HighLimit.RECORD_FORMATS ) );
     }
 

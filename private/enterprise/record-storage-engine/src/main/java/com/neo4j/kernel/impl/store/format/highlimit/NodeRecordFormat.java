@@ -28,7 +28,7 @@ import org.neo4j.kernel.impl.store.record.Record;
  * 5B   labels
  * => 15B
  */
-class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
+public class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
 {
     static final int RECORD_SIZE = 16;
     // size of the record in fixed references format;
@@ -50,12 +50,12 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
     private static final long LOWER_NIBBLE_READ_MASK = 0xFL;
     private static final long HIGHER_NIBBLE_READ_MASK = 0xF0L;
 
-    NodeRecordFormat()
+    public NodeRecordFormat()
     {
         this( RECORD_SIZE );
     }
 
-    NodeRecordFormat( int recordSize )
+    public NodeRecordFormat( int recordSize )
     {
         super( fixedRecordSize( recordSize ), 0, HighLimitFormatSettings.NODE_MAXIMUM_ID_BITS );
     }

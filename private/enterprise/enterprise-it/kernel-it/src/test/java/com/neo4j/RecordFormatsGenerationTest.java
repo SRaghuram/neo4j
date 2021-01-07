@@ -11,6 +11,7 @@ import com.neo4j.kernel.impl.store.format.highlimit.v306.HighLimitV3_0_6;
 import com.neo4j.kernel.impl.store.format.highlimit.v310.HighLimitV3_1_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v320.HighLimitV3_2_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v400.HighLimitV4_0_0;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -26,6 +27,8 @@ import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.StoreVersion;
 import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
+import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_3;
+import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
 
@@ -43,13 +46,16 @@ class RecordFormatsGenerationTest
         List<RecordFormats> recordFormats = Arrays.asList(
                 StandardV3_4.RECORD_FORMATS,
                 StandardV4_0.RECORD_FORMATS,
+                Standard.LATEST_RECORD_FORMATS,
                 HighLimitV3_0_0.RECORD_FORMATS,
                 HighLimitV3_0_6.RECORD_FORMATS,
                 HighLimitV3_1_0.RECORD_FORMATS,
                 HighLimitV3_2_0.RECORD_FORMATS,
                 HighLimitV3_4_0.RECORD_FORMATS,
+                HighLimitV4_0_0.RECORD_FORMATS,
                 HighLimit.RECORD_FORMATS,
-                PageAlignedV4_1.RECORD_FORMATS
+                PageAlignedV4_1.RECORD_FORMATS,
+                PageAlignedV4_3.RECORD_FORMATS
         );
 
         // Verify that our list above is complete.

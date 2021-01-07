@@ -72,7 +72,7 @@ import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
-import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
+import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
@@ -743,7 +743,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 ExecutionMonitors.defaultVisible(),
                 AdditionalInitialIds.EMPTY,
                 dbConfig,
-                StandardV4_0.RECORD_FORMATS,
+                Standard.LATEST_RECORD_FORMATS,
                 NO_MONITOR,
                 jobScheduler,
                 badCollector,

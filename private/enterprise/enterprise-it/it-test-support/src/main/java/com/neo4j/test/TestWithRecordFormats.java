@@ -14,13 +14,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
+import org.neo4j.kernel.impl.store.format.aligned.PageAligned;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 
 @Target( ElementType.METHOD )
 @Retention( RetentionPolicy.RUNTIME )
 @ParameterizedTest( name = "{0}" )
-@ValueSource( strings = {Standard.LATEST_NAME, HighLimit.NAME, PageAlignedV4_1.NAME} )
+@ValueSource( strings = {Standard.LATEST_NAME, HighLimit.NAME, PageAligned.LATEST_NAME} )
 public @interface TestWithRecordFormats
 {
 }

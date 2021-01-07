@@ -77,11 +77,11 @@ import static org.neo4j.kernel.impl.store.RecordPageLocationCalculator.pageIdFor
 public abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
         extends BaseOneByteHeaderRecordFormat<RECORD>
 {
-    static final int HEADER_BYTE = Byte.BYTES;
+    protected static final int HEADER_BYTE = Byte.BYTES;
 
-    static final long NULL = Record.NULL_REFERENCE.intValue();
-    static final int HEADER_BIT_RECORD_UNIT = 0b0000_0010;
-    static final int HEADER_BIT_FIRST_RECORD_UNIT = 0b0000_0100;
+    protected static final long NULL = Record.NULL_REFERENCE.intValue();
+    protected static final int HEADER_BIT_RECORD_UNIT = 0b0000_0010;
+    protected static final int HEADER_BIT_FIRST_RECORD_UNIT = 0b0000_0100;
     public static final int HEADER_BIT_FIXED_REFERENCE = 0b0000_0100;
 
     protected BaseHighLimitRecordFormat( Function<StoreHeader,Integer> recordSize, int recordHeaderSize, int maxIdBits )
