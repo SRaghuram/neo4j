@@ -10,6 +10,8 @@ import org.neo4j.cypher.internal.compiler.planner.logical.PlannerDefaults
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
+import scala.math.round
+
 class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFileTestSupport with CypherComparisonSupport {
 
   test("should estimate rows when parameterized") {
@@ -155,8 +157,8 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
         .withLHS(aPlan("CartesianProduct").withEstimatedRows(limit)
           .withChildren(
-            aPlan("AllNodesScan").withEstimatedRowsBetween(math.floor(math.sqrt(limit)).toLong, math.ceil(math.sqrt(limit)).toLong),
-            aPlan("AllNodesScan").withEstimatedRowsBetween(math.floor(math.sqrt(limit)).toLong, math.ceil(math.sqrt(limit)).toLong)
+            aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(limit))),
+            aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(limit)))
           )
         )
       )
@@ -207,9 +209,9 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
         .withLHS(aPlan("CartesianProduct").withEstimatedRows(limit)
           .withChildren(
-            aPlan("Sort").withEstimatedRows(math.sqrt(limit).toLong)
+            aPlan("Sort").withEstimatedRows(round(math.sqrt(limit)))
               .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount)),
-            aPlan("AllNodesScan").withEstimatedRows(math.sqrt(limit).toLong)
+            aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(limit)))
           )
         )
       )
@@ -281,8 +283,8 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
         .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
           .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
               .withChildren(
-                aPlan("AllNodesScan").withEstimatedRows(math.sqrt(lowLimit).toLong),
-                aPlan("AllNodesScan").withEstimatedRows(math.sqrt(lowLimit).toLong)
+                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit))),
+                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit)))
               )
           )
         )
@@ -302,9 +304,105 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
         .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
           .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
               .withChildren(
-                aPlan("AllNodesScan").withEstimatedRows(math.sqrt(lowLimit).toLong),
-                aPlan("AllNodesScan").withEstimatedRows(math.sqrt(lowLimit).toLong)
+                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit))),
+                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit)))
               )
+          )
+        )
+      )
+  }
+
+  test("should estimate rows with lowest limit selectivity when lowest limit is latest and cardinality is increased between limits") {
+    val nodeCount = 100
+    val lowLimit = 500
+    val highLimit = 200000
+    val unwindFactor = 100
+    (0 until nodeCount).foreach(_ => createNode())
+
+    // Param so that unwind does not get auto-parameterized.
+    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $highLimit UNWIND range(1, $unwindFactor) AS i RETURN n, m, $$x LIMIT $lowLimit", Map("x" -> 10))
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
+      .withLHS(includeSomewhere.aPlan("Limit").withEstimatedRows(lowLimit)
+        .withLHS(aPlan("Unwind").withEstimatedRows(lowLimit)
+          .withLHS(aPlan("Limit").withEstimatedRows(round(lowLimit / unwindFactor.toDouble))
+            .withLHS(aPlan("CartesianProduct").withEstimatedRows(round(lowLimit / unwindFactor.toDouble))
+              .withChildren(
+                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit / unwindFactor.toDouble))),
+                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit / unwindFactor.toDouble)))
+              )
+            )
+          )
+        )
+      )
+  }
+
+  test("should estimate rows with lowest limit selectivity when lowest limit is latest and cardinality is decreased between limits") {
+    val nodeCount = 100
+    val lowLimit = 25
+    val highLimit = 200000
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $highLimit WHERE n.prop > 5 RETURN n, m LIMIT $lowLimit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
+      .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+        .withLHS(aPlan("Filter").withEstimatedRows(lowLimit)
+          .withLHS(aPlan("Limit").withEstimatedRows(round((lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor)))
+            .withLHS(aPlan("CartesianProduct").withEstimatedRows(round((lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor)))
+              .withChildren(
+                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))),
+                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor)))
+              )
+            )
+          )
+        )
+      )
+  }
+
+  test("should estimate rows with lowest limit selectivity when lowest limit is earliest and cardinality is increased between limits") {
+    val nodeCount = 100
+    val lowLimit = 5
+    val highLimit = 200000
+    val unwindFactor = 100
+    (0 until nodeCount).foreach(_ => createNode())
+
+    // Param so that unwind does not get auto-parameterized.
+    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $lowLimit UNWIND range(1, $unwindFactor) AS i RETURN n, m, $$x LIMIT $highLimit", Map("x" -> 10))
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit * unwindFactor)
+      .withLHS(includeSomewhere.aPlan("Limit").withEstimatedRows(lowLimit * unwindFactor)
+        .withLHS(aPlan("Unwind").withEstimatedRows(lowLimit * unwindFactor)
+          .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+            .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
+              .withChildren(
+                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit))),
+                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit)))
+              )
+            )
+          )
+        )
+      )
+  }
+
+  test("should estimate rows with lowest limit selectivity when lowest limit is earliest and cardinality is decreased between limits") {
+    val nodeCount = 100
+    val lowLimit = 25
+    val highLimit = 200000
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $lowLimit WHERE n.prop > 5 RETURN n, m LIMIT $highLimit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(round(lowLimit * PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))
+      .withLHS(aPlan("Limit").withEstimatedRows(round(lowLimit * PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))
+        .withLHS(aPlan("Filter").withEstimatedRows(round(lowLimit * PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))
+          .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+            .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
+              .withChildren(
+                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit))),
+                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit)))
+              )
+            )
           )
         )
       )
@@ -320,7 +418,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
         .withLHS(aPlan("Distinct").withEstimatedRows(limit)
-          .withLHS(aPlan("AllNodesScan").withEstimatedRows((limit / PlannerDefaults.DEFAULT_DISTINCT_SELECTIVITY.factor).toLong))
+          .withLHS(aPlan("AllNodesScan").withEstimatedRows(round(limit / PlannerDefaults.DEFAULT_DISTINCT_SELECTIVITY.factor)))
         )
       )
   }
@@ -335,7 +433,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
         .withLHS(aPlan("OrderedDistinct").withEstimatedRows(limit)
-          .withLHS(aPlan("Sort").withEstimatedRows((limit / PlannerDefaults.DEFAULT_DISTINCT_SELECTIVITY.factor).toLong)
+          .withLHS(aPlan("Sort").withEstimatedRows(round(limit / PlannerDefaults.DEFAULT_DISTINCT_SELECTIVITY.factor))
             .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount))
           )
         )
@@ -367,7 +465,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
         .withLHS(aPlan("OrderedAggregation").withEstimatedRows(limit)
-          .withLHS(aPlan("Sort").withEstimatedRows(((limit / math.sqrt(nodeCount)) * nodeCount).toLong)
+          .withLHS(aPlan("Sort").withEstimatedRows(round((limit / math.sqrt(nodeCount)) * nodeCount))
             .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount))
           )
         )
