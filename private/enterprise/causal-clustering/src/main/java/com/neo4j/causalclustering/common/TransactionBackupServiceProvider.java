@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.SimpleInboundCatchupProtocolMessageLogger;
-import com.neo4j.causalclustering.catchup.tx.TxStreamingStrategy;
+import com.neo4j.configuration.TxStreamingStrategy;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
@@ -40,12 +40,13 @@ public class TransactionBackupServiceProvider
     private final CatchupServerHandler catchupServerHandler;
     private final JobScheduler scheduler;
     private final ConnectorPortRegister portRegister;
+    private final TxStreamingStrategy backupStrategy;
 
     public TransactionBackupServiceProvider( LogProvider logProvider, ApplicationSupportedProtocols catchupProtocols,
-                                             Collection<ModifierSupportedProtocols> supportedModifierProtocols,
-                                             NettyPipelineBuilderFactory serverPipelineBuilderFactory,
-                                             CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler,
-                                             JobScheduler scheduler, ConnectorPortRegister portRegister )
+            Collection<ModifierSupportedProtocols> supportedModifierProtocols,
+            NettyPipelineBuilderFactory serverPipelineBuilderFactory,
+            CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler,
+            JobScheduler scheduler, ConnectorPortRegister portRegister, TxStreamingStrategy backupStrategy )
     {
         this.logProvider = logProvider;
         this.parentHandler = parentHandler;
@@ -55,6 +56,7 @@ public class TransactionBackupServiceProvider
         this.catchupServerHandler = catchupServerHandler;
         this.scheduler = scheduler;
         this.portRegister = portRegister;
+        this.backupStrategy = backupStrategy;
     }
 
     public Optional<Server> resolveIfBackupEnabled( Config config )
@@ -78,7 +80,7 @@ public class TransactionBackupServiceProvider
                     .serverName( BACKUP_SERVER_NAME )
                     .handshakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                     .catchupInboundEventListener( new SimpleInboundCatchupProtocolMessageLogger( logProvider ) )
-                    .setTxStreamingStrategy( TxStreamingStrategy.START_TIME )
+                    .setTxStreamingStrategy( backupStrategy )
                     .build();
             return Optional.of( catchupServer );
         }

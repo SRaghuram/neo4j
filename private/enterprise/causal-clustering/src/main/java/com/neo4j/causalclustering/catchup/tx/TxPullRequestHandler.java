@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol.State;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
+import com.neo4j.configuration.TxStreamingStrategy;
 import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -20,9 +21,7 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
-import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.logging.Log;
-import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_INVALID_REQUEST;
@@ -153,9 +152,9 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
     {
         switch ( txStreamingStrategy )
         {
-        case START_TIME:
+        case StartTime:
             return new TxStreamingConstraint.Limited( lastCommitTxId );
-        case UP_TO_DATE:
+        case Aggressive:
             return new TxStreamingConstraint.Unbounded();
         default:
             throw new IllegalArgumentException( " Unknown strategy " + txStreamingStrategy );

@@ -20,6 +20,8 @@ import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.TxStreamingStrategy;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.time.Duration;
@@ -159,6 +161,7 @@ public final class CatchupComponentsProvider
      */
     public Optional<Server> createBackupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler )
     {
+        var txStreamingStrategy = config.get( OnlineBackupSettings.incremental_backup_strategy );
         TransactionBackupServiceProvider transactionBackupServiceProvider =
                 new TransactionBackupServiceProvider( logProvider, supportedCatchupProtocols,
                         supportedModifierProtocols,
@@ -166,7 +169,7 @@ public final class CatchupComponentsProvider
                         catchupServerHandler,
                         installedProtocolsHandler,
                         scheduler,
-                        portRegister );
+                        portRegister, txStreamingStrategy );
 
         return transactionBackupServiceProvider.resolveIfBackupEnabled( config );
     }

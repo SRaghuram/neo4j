@@ -3,9 +3,10 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.catchup.tx;
+package com.neo4j.configuration;
 
 public enum TxStreamingStrategy
 {
-    UP_TO_DATE, START_TIME
+    Aggressive,
+    StartTime
 }

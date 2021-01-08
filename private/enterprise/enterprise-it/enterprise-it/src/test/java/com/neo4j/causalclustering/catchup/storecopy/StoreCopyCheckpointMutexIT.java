@@ -9,7 +9,7 @@ import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.causalclustering.catchup.tx.TxStreamingStrategy;
+import com.neo4j.configuration.TxStreamingStrategy;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory;
@@ -130,7 +130,7 @@ class StoreCopyCheckpointMutexIT
                 databaseStateService, injectingFS,
                 32768,
                 new Log4jLogProvider( System.out ),
-                db.getDependencyResolver(), TxStreamingStrategy.UP_TO_DATE );
+                db.getDependencyResolver(), TxStreamingStrategy.Aggressive );
 
         return CatchupServerBuilder.builder()
                 .catchupServerHandler( regularCatchupServerHandler )

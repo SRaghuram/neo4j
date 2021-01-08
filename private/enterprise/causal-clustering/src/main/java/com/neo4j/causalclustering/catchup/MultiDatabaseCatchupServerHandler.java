@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyFilesProvide
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyRequestHandler;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFileStreamingProtocol;
 import com.neo4j.causalclustering.catchup.tx.TxPullRequestHandler;
-import com.neo4j.causalclustering.catchup.tx.TxStreamingStrategy;
+import com.neo4j.configuration.TxStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdRequestHandler;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;

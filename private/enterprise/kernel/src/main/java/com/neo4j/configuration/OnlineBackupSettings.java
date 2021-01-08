@@ -15,6 +15,7 @@ import org.neo4j.graphdb.config.Setting;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
 import static org.neo4j.configuration.SettingValueParsers.BOOL;
 import static org.neo4j.configuration.SettingValueParsers.SOCKET_ADDRESS;
+import static org.neo4j.configuration.SettingValueParsers.ofEnum;
 
 @ServiceProvider
 @PublicApi
@@ -26,8 +27,13 @@ public class OnlineBackupSettings implements SettingsDeclaration
     @Description( "Enable support for running online backups." )
     public static final Setting<Boolean> online_backup_enabled = newBuilder( "dbms.backup.enabled", BOOL, true ).build();
 
+    @Description( "Strategy for incremental backup. StartTime means that this server will send transactions until the time of when the backup started has " +
+                  "been reached. Aggressive will keep sending until all committed transactions have been sent, even if they where committed after the backup " +
+                  "job started. " )
+    public static final Setting<TxStreamingStrategy> incremental_backup_strategy =
+            newBuilder( "dbms.backup.incremental.strategy", ofEnum( TxStreamingStrategy.class ), TxStreamingStrategy.Aggressive ).build();
+
     @Description( "Network interface and port for the backup server to listen on." )
     public static final Setting<SocketAddress> online_backup_listen_address =
             newBuilder( "dbms.backup.listen_address", SOCKET_ADDRESS, new SocketAddress( "127.0.0.1", DEFAULT_BACKUP_PORT ) ).build();
-
 }

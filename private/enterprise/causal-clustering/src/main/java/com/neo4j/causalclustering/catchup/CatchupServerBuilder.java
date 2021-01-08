@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.catchup.tx.TxStreamingStrategy;
+import com.neo4j.configuration.TxStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
 import com.neo4j.causalclustering.catchup.v5.CatchupProtocolServerInstallerV5;
@@ -65,7 +65,7 @@ public final class CatchupServerBuilder
             NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler,
             NeedsConfig, NeedsBootstrapConfig, NeedsPortRegister, AcceptsOptionalParams
     {
-        private TxStreamingStrategy txStreamingStrategy = TxStreamingStrategy.UP_TO_DATE;
+        private TxStreamingStrategy txStreamingStrategy = TxStreamingStrategy.Aggressive;
         private CatchupServerHandler catchupServerHandler;
         private NettyPipelineBuilderFactory pipelineBuilder;
         private ApplicationSupportedProtocols catchupProtocols;
