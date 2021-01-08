@@ -965,17 +965,22 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
   //Check so that lhs slot configuration is a prefix of the rhs slot configuration
   private def verifyLhsPrefixOfRhs(lhsSlotConfiguration: SlotConfiguration,
                                    rhsSlotConfiguration: SlotConfiguration): Unit = {
+    def assignable(from: Slot, to: Slot): Boolean =
+      to.isLongSlot == from.isLongSlot &&
+        to.nullable == from.nullable &&
+        to.offset == from.offset &&
+        to.typ.isAssignableFrom(from.typ)
     lhsSlotConfiguration.foreachSlotAndAliases {
       case SlotWithKeyAndAliases(k, s, as) =>
         k match {
           case SlotConfiguration.VariableSlotKey(name) =>
-            require(rhsSlotConfiguration.get(name).contains(s))
+            require(rhsSlotConfiguration.get(name).exists(to => assignable(s, to)))
             val rhsAliases = rhsSlotConfiguration.getAliasesFor(name)
             as.foreach(a => require(rhsAliases.contains(a)))
           case SlotConfiguration.CachedPropertySlotKey(property) =>
-            require(rhsSlotConfiguration.getCachedPropertySlot(property).contains(s))
+            require(rhsSlotConfiguration.getCachedPropertySlot(property).exists(to => assignable(s, to)))
           case SlotConfiguration.ApplyPlanSlotKey(applyPlanId) =>
-            require(rhsSlotConfiguration.getArgumentSlot(applyPlanId).contains(s))
+            require(rhsSlotConfiguration.getArgumentSlot(applyPlanId).exists(to => assignable(s, to)))
         }
     }
   }
