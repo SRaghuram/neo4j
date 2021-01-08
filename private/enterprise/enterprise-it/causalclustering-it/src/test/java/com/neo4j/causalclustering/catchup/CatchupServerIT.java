@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
+import com.neo4j.causalclustering.catchup.tx.TxStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
@@ -116,7 +117,8 @@ class CatchupServerIT
                 DatabaseStateService.class );
         final var dependencyResolver = Mockito.mock( DependencyResolver.class );
         MultiDatabaseCatchupServerHandler catchupServerHandler =
-                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, 32768, LOG_PROVIDER, dependencyResolver );
+                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, 32768, LOG_PROVIDER, dependencyResolver,
+                        TxStreamingStrategy.UP_TO_DATE );
 
         executor = Executors.newCachedThreadPool();
         catchupServer = new TestCatchupServer( catchupServerHandler, LOG_PROVIDER, executor );

@@ -6,6 +6,7 @@
 package com.neo4j.enterprise.edition;
 
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
+import com.neo4j.causalclustering.catchup.tx.TxStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
@@ -295,7 +296,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 supportedProtocolCreator.createSupportedModifierProtocols(),
                 pipelineBuilders.backupServer(),
                 new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, internalLogProvider,
-                                                       globalModule.getGlobalDependencies() ),
+                                                       globalModule.getGlobalDependencies(), TxStreamingStrategy.START_TIME ),
                 new InstalledProtocolHandler(),
                 jobScheduler, portRegister );
 

@@ -35,6 +35,7 @@ public class TransactionStream implements ChunkedInput<Object>
     private final TxPullingContext txPullingContext;
     private final CatchupServerProtocol protocol;
     private final long txIdPromise;
+    private final TxStreamingConstraint constraint;
 
     private boolean endOfInput;
     private boolean noMoreTransactions;
@@ -50,6 +51,7 @@ public class TransactionStream implements ChunkedInput<Object>
         this.expectedTxId = txPullingContext.firstTxId();
         this.txIdPromise = txPullingContext.txIdPromise();
         this.txCursor = txPullingContext.transactions();
+        this.constraint = txPullingContext.constraint();
         this.txPullingContext = txPullingContext;
         this.protocol = protocol;
     }
@@ -112,6 +114,10 @@ public class TransactionStream implements ChunkedInput<Object>
      */
     private boolean addNextTx()
     {
+        if ( !constraint.shouldContinue( lastTxId ) )
+        {
+            return false;
+        }
         CommittedTransactionRepresentation tx;
         if ( noTransactionsToPull() )
         {

@@ -42,8 +42,9 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
     private final LogEntryWriterFactory logEntryWriterFactory;
     private final TxPullRequestsMonitor monitor;
     private final Log log;
+    private final TxStreamingStrategy txStreamingStrategy;
 
-    public TxPullRequestHandler( CatchupServerProtocol protocol, Database db )
+    public TxPullRequestHandler( CatchupServerProtocol protocol, Database db, TxStreamingStrategy txStreamingStrategy )
     {
         this.protocol = protocol;
         this.db = db;
@@ -52,13 +53,14 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         this.logEntryWriterFactory = DbmsLogEntryWriterProvider.resolveEntryWriterFactory( db );
         this.monitor = db.getMonitors().newMonitor( TxPullRequestsMonitor.class );
         this.log = db.getInternalLogProvider().getLog( getClass() );
+        this.txStreamingStrategy = txStreamingStrategy;
     }
 
     @Override
     protected void channelRead0( ChannelHandlerContext ctx, final TxPullRequest msg ) throws Exception
     {
         monitor.increment();
-        Prepare prepare = prepareRequest( msg );
+        var prepare = prepareRequest( msg );
 
         if ( prepare.isComplete() )
         {
@@ -67,9 +69,9 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
             return;
         }
 
-        TxPullingContext txPullingContext = prepare.txPullingContext();
+        var txPullingContext = prepare.txPullingContext();
 
-        TransactionStream txStream = new TransactionStream( log, txPullingContext, protocol );
+        var txStream = new TransactionStream( log, txPullingContext, protocol );
         // chunked transaction stream ends the interaction internally and closes the cursor
         ctx.writeAndFlush( txStream ).addListener( f ->
         {
@@ -94,15 +96,15 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
             return Prepare.fail( E_INVALID_REQUEST );
         }
 
-        long firstTxId = msg.previousTxId() + 1;
+        var firstTxId = msg.previousTxId() + 1;
 
         if ( !databaseIsAvailable() )
         {
             log.info( "Failed to serve TxPullRequest for tx %d because the local database is unavailable.", firstTxId );
             return Prepare.fail( E_STORE_UNAVAILABLE );
         }
-        StoreId expectedStoreId = msg.expectedStoreId();
-        StoreId localStoreId = db.getStoreId();
+        var expectedStoreId = msg.expectedStoreId();
+        var localStoreId = db.getStoreId();
         if ( !localStoreId.equals( expectedStoreId ) )
         {
             log.info( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId is different from this machine with %s", firstTxId,
@@ -135,9 +137,10 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
 
         try
         {
-            TransactionCursor transactions = logicalTransactionStore.getTransactions( firstTxId );
+            var transactions = logicalTransactionStore.getTransactions( firstTxId );
+            var constraint = createConstraint( txIdPromise );
             return Prepare.readyToSend( new TxPullingContext( transactions, localStoreId, db.getNamedDatabaseId(),
-                                                              firstTxId, txIdPromise, transactionIdStore, logEntryWriterFactory ) );
+                    firstTxId, txIdPromise, transactionIdStore, logEntryWriterFactory, constraint ) );
         }
         catch ( NoSuchTransactionException e )
         {
@@ -146,9 +149,22 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         }
     }
 
+    private TxStreamingConstraint createConstraint( long lastCommitTxId )
+    {
+        switch ( txStreamingStrategy )
+        {
+        case START_TIME:
+            return new TxStreamingConstraint.Limited( lastCommitTxId );
+        case UP_TO_DATE:
+            return new TxStreamingConstraint.Unbounded();
+        default:
+            throw new IllegalArgumentException( " Unknown strategy " + txStreamingStrategy );
+        }
+    }
+
     private boolean isValid( TxPullRequest msg )
     {
-        long previousTxId = msg.previousTxId();
+        var previousTxId = msg.previousTxId();
         if ( previousTxId < BASE_TX_ID )
         {
             log.error( "Illegal tx pull request. Tx id must be greater or equal to %s but was %s", BASE_TX_ID, previousTxId );

@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.SimpleInboundCatchupProtocolMessageLogger;
+import com.neo4j.causalclustering.catchup.tx.TxStreamingStrategy;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
@@ -77,6 +78,7 @@ public class TransactionBackupServiceProvider
                     .serverName( BACKUP_SERVER_NAME )
                     .handshakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                     .catchupInboundEventListener( new SimpleInboundCatchupProtocolMessageLogger( logProvider ) )
+                    .setTxStreamingStrategy( TxStreamingStrategy.START_TIME )
                     .build();
             return Optional.of( catchupServer );
         }

@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.CatchupClientBuilder;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
+import com.neo4j.causalclustering.catchup.tx.TxStreamingStrategy;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
@@ -139,7 +140,7 @@ abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAb
                 .catchupServerHandler( new MultiDatabaseCatchupServerHandler( dependencyResolver.resolveDependency( DatabaseManager.class ),
                         databaseStateService, dependencyResolver.resolveDependency( FileSystemAbstraction.class ),
                         config().get( CausalClusteringSettings.store_copy_chunk_size ),
-                        logProvider, dependencyResolver ) )
+                        logProvider, dependencyResolver, TxStreamingStrategy.UP_TO_DATE ) )
                 .catchupProtocols( supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration() )
                 .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )

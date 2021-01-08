@@ -20,9 +20,11 @@ class TxPullingContext
     private final long txIdPromise;
     private final TransactionIdStore transactionIdStore;
     private final LogEntryWriterFactory logEntryWriterFactory;
+    private final TxStreamingConstraint constraint;
 
     TxPullingContext( TransactionCursor transactions, StoreId localStoreId, NamedDatabaseId namedDatabaseId, long firstTxId,
-            long txIdPromise, TransactionIdStore transactionIdStore, LogEntryWriterFactory logEntryWriterFactory )
+            long txIdPromise, TransactionIdStore transactionIdStore, LogEntryWriterFactory logEntryWriterFactory,
+            TxStreamingConstraint constraint )
     {
         this.transactions = transactions;
         this.localStoreId = localStoreId;
@@ -31,6 +33,7 @@ class TxPullingContext
         this.txIdPromise = txIdPromise;
         this.transactionIdStore = transactionIdStore;
         this.logEntryWriterFactory = logEntryWriterFactory;
+        this.constraint = constraint;
     }
 
     long firstTxId()
@@ -66,5 +69,10 @@ class TxPullingContext
     LogEntryWriterFactory logEntryWriterFactory()
     {
         return logEntryWriterFactory;
+    }
+
+    public TxStreamingConstraint constraint()
+    {
+        return constraint;
     }
 }

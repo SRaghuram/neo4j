@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyFilesProvide
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyRequestHandler;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFileStreamingProtocol;
 import com.neo4j.causalclustering.catchup.tx.TxPullRequestHandler;
+import com.neo4j.causalclustering.catchup.tx.TxStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdRequestHandler;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
@@ -37,13 +38,15 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 {
     private final DatabaseManager<?> databaseManager;
     private final DependencyResolver dependencyResolver;
+    private final TxStreamingStrategy txStreamingStrategy;
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
     private final DatabaseStateService databaseStateService;
     private final int maxChunkSize;
 
     public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, DatabaseStateService databaseStateService,
-                                              FileSystemAbstraction fs, int maxChunkSize, LogProvider logProvider, DependencyResolver dependencyResolver )
+            FileSystemAbstraction fs, int maxChunkSize, LogProvider logProvider, DependencyResolver dependencyResolver,
+            TxStreamingStrategy txStreamingStrategy )
     {
         this.databaseManager = databaseManager;
         this.databaseStateService = databaseStateService;
@@ -51,6 +54,7 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
         this.logProvider = logProvider;
         this.fs = fs;
         this.dependencyResolver = dependencyResolver;
+        this.txStreamingStrategy = txStreamingStrategy;
     }
 
     @Override
@@ -120,7 +124,7 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 
     private TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new TxPullRequestHandler( protocol, db );
+        return new TxPullRequestHandler( protocol, db, txStreamingStrategy );
     }
 
     private static GetStoreIdRequestHandler buildStoreIdRequestHandler( Database db, CatchupServerProtocol protocol )

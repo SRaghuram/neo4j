@@ -73,7 +73,7 @@ import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
-@ExtendWith( LifeExtension.class )
+@ExtendWith( {LifeExtension.class} )
 class TxPullRequestHandlerTest
 {
     private static final NamedDatabaseId NAMED_DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
@@ -110,7 +110,7 @@ class TxPullRequestHandlerTest
         var databaseLogService = new DatabaseLogService( NAMED_DATABASE_ID, new SimpleLogService( logProvider ) );
         when( database.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
         final var protocol = new CatchupServerProtocol();
-        txPullRequestHandler = new TxPullRequestHandler( protocol, database );
+        txPullRequestHandler = new TxPullRequestHandler( protocol, database, TxStreamingStrategy.UP_TO_DATE );
         lifeSupport.add( availabilityGuard );
     }
 
@@ -191,7 +191,7 @@ class TxPullRequestHandlerTest
 
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database );
+                new TxPullRequestHandler( protocol, database, TxStreamingStrategy.UP_TO_DATE );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, clientStoreId, DATABASE_ID ) );
@@ -213,7 +213,7 @@ class TxPullRequestHandlerTest
 
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database );
+                new TxPullRequestHandler( protocol, database, TxStreamingStrategy.UP_TO_DATE );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, storeId, DATABASE_ID ) );
@@ -231,7 +231,7 @@ class TxPullRequestHandlerTest
     {
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database );
+                new TxPullRequestHandler( protocol, database, TxStreamingStrategy.UP_TO_DATE );
 
         var request = mock( TxPullRequest.class );
         when( request.previousTxId() ).thenReturn( incorrectTxId );
@@ -260,7 +260,7 @@ class TxPullRequestHandlerTest
 
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database );
+                new TxPullRequestHandler( protocol, database, TxStreamingStrategy.UP_TO_DATE );
 
         txPullRequestHandler.channelRead0( context, new TxPullRequest( previousTxId, storeId, DATABASE_ID ) );
 
@@ -320,7 +320,7 @@ class TxPullRequestHandlerTest
             @Override
             public void close()
             {
-                cursor.close();
+                // skip
             }
 
             @Override

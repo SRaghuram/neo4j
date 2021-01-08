@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
@@ -56,6 +57,7 @@ class TransactionStreamTest
     private final TransactionCursor cursor = mock( TransactionCursor.class );
     private final int baseTxId = (int) BASE_TX_ID;
     private final TransactionIdStore transactionIdStore = mock( TransactionIdStore.class );
+    private TxStreamingConstraint constraint = new TxStreamingConstraint.Unbounded();
 
     @Test
     void shouldSucceedExactNumberOfTransactions() throws Exception
@@ -102,6 +104,28 @@ class TransactionStreamTest
         testTransactionStream( firstTxId, lastTxId, txIdPromise, SUCCESS_END_OF_STREAM );
     }
 
+    @Test
+    void shouldRespectLimitedConstraint() throws Exception
+    {
+        int firstTxId = baseTxId;
+        int lastTxId = 100;
+        int lastCommitedTxId = 10;
+        var txs = prepareCursor( firstTxId, lastTxId, null, null );
+
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId + 1 );
+
+        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, databaseId, firstTxId,
+                lastCommitedTxId, transactionIdStore, LogEntryWriterFactory.LATEST, new TxStreamingConstraint.Limited( lastCommitedTxId ) ), protocol );
+        var expectedChucks =
+                prepareExpectedElements( firstTxId, lastCommitedTxId, txs.stream().filter( tx -> tx.getCommitEntry().getTxId() <= lastCommitedTxId ).collect(
+                        Collectors.toList() ), SUCCESS_END_OF_STREAM );
+
+        // end of input is only false because thrown exception is also queued as chunk, just to be thrown is reached
+        assertExpectedElements( txStream, expectedChucks, true );
+        // the exception should have been the last chuck
+        assertTrue( txStream.isEndOfInput() );
+    }
+
     @ParameterizedTest( name = "txCountBeforeException={0}" )
     @ValueSource( ints = {0, 1, 2} )
     void shouldFailOnCursorNextException( int count ) throws Exception
@@ -114,7 +138,7 @@ class TransactionStreamTest
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId + 1 );
 
         var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, databaseId, firstTxId,
-                                                                         lastTxId, transactionIdStore, LogEntryWriterFactory.LATEST ), protocol );
+                lastTxId, transactionIdStore, LogEntryWriterFactory.LATEST, constraint ), protocol );
         var expectedChucks = prepareExpectedElements( firstTxId, lastTxId, txs, E_GENERAL_ERROR );
 
         // end of input is only false because thrown exception is also queued as chunk, just to be thrown is reached
@@ -137,7 +161,7 @@ class TransactionStreamTest
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId + 1 );
 
         var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, databaseId, firstTxId,
-                                                                         lastTxId, transactionIdStore, LogEntryWriterFactory.LATEST ), protocol );
+                lastTxId, transactionIdStore, LogEntryWriterFactory.LATEST, constraint ), protocol );
         var expectedChucks = prepareExpectedElements( firstTxId, lastTxId, txs, E_GENERAL_ERROR );
 
         // end of input is only false because thrown exception is also queued as chunk, just to be thrown is reached
@@ -161,9 +185,9 @@ class TransactionStreamTest
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId );
 
         var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, databaseId, lastTxId - 1,
-                                                                         lastTxId, transactionIdStore, LogEntryWriterFactory.LATEST ), protocol );
+                lastTxId, transactionIdStore, LogEntryWriterFactory.LATEST, constraint ), protocol );
         var expectedChucks = List.of( ResponseMessageType.TX, writable( new TxPullResponse( storeId, tx1 ) ),
-                                      ResponseMessageType.TX_STREAM_FINISHED, new TxStreamFinishedResponse( E_GENERAL_ERROR, lastTxId + 1 ) );
+                ResponseMessageType.TX_STREAM_FINISHED, new TxStreamFinishedResponse( E_GENERAL_ERROR, lastTxId + 1 ) );
 
         // end of input is only false because thrown exception is also queued as chunk, just to be thrown is reached
         assertExpectedElements( txStream, expectedChucks, false );
@@ -186,7 +210,7 @@ class TransactionStreamTest
 
         var transactionStream =
                 new TransactionStream( log, new TxPullingContext( cursor, storeId, databaseId, firstTxId,
-                                                                  txPromise, transactionIdStore, LogEntryWriterFactory.LATEST ), protocol );
+                        txPromise, transactionIdStore, LogEntryWriterFactory.LATEST, constraint ), protocol );
         var expectedChucks = prepareExpectedElements( firstTxId, lastTxId, List.of( tx1, tx2 ), SUCCESS_END_OF_STREAM );
 
         assertExpectedElements( transactionStream, expectedChucks, true );
@@ -198,7 +222,7 @@ class TransactionStreamTest
         // given
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId );
         var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, databaseId, firstTxId,
-                                                                         txIdPromise, transactionIdStore, LogEntryWriterFactory.LATEST ), protocol );
+                txIdPromise, transactionIdStore, LogEntryWriterFactory.LATEST, constraint ), protocol );
         var txs = prepareCursor( firstTxId, lastTxId );
         var expectedElements = prepareExpectedElements( firstTxId, lastTxId, txs, expectedResult );
 
@@ -260,7 +284,8 @@ class TransactionStreamTest
         for ( var expectedChunk : expectedElements )
         {
             assertFalse( txStream.isEndOfInput() );
-            assertEquals( expectedChunk, txStream.readChunk( allocator ) );
+            var actual = txStream.readChunk( allocator );
+            assertEquals( expectedChunk, actual );
         }
         assertEquals( txStream.isEndOfInput(), shouldBeEnded );
     }
