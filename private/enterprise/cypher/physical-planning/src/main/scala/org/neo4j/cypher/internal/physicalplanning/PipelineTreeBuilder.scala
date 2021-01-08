@@ -162,7 +162,7 @@ object PipelineTreeBuilder {
         case InterpretedHeadBuilder(_) => IndexedSeq.empty
       }
 
-    def result: PipelineDefinition = PipelineDefinition(id, lhs, rhs, headPlanResult, inputBuffer.result, outputDefinition, middlePlans, serial, workCanceller, NoSchedulingHint)
+    def result: PipelineDefinition = PipelineDefinition(id, lhs, rhs, headPlanResult, inputBuffer.result, outputDefinition, middlePlans, serial, workCanceller, schedulingHint)
   }
 
   abstract class BufferDefiner(val id: BufferId, val memoryTrackingOperatorId: Id, val bufferConfiguration: SlotConfiguration) {
@@ -928,7 +928,7 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan, buffer)
           pipeline.lhs = lhs.id
           pipeline.rhs = rhs.id
-          pipeline.schedulingHint = LazyRhsSchedulingHint
+          pipeline.schedulingHint = DependentInputsLazySchedulingHint
           pipeline
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
@@ -946,7 +946,7 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan, buffer)
           pipeline.lhs = lhs.id
           pipeline.rhs = rhs.id
-          pipeline.schedulingHint = EagerLhsSchedulingHint
+          pipeline.schedulingHint = DependentInputsEagerLhsSchedulingHint // The probe table needs to be completed before output can start
           pipeline
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
@@ -958,7 +958,7 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan, buffer)
           pipeline.lhs = lhs.id
           pipeline.rhs = rhs.id
-          pipeline.schedulingHint = AllLazySchedulingHint
+          pipeline.schedulingHint = IndependentInputsSchedulingHint
           pipeline
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")

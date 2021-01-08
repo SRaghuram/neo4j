@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.eclipse.collections.impl.factory.primitive.IntStacks
-import org.neo4j.cypher.internal.physicalplanning.AllLazySchedulingHint
-import org.neo4j.cypher.internal.physicalplanning.EagerLhsSchedulingHint
+import org.neo4j.cypher.internal.physicalplanning.DependentInputsEagerLhsSchedulingHint
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.IndependentInputsSchedulingHint
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
@@ -41,23 +41,24 @@ class LazyExecutionGraphScheduling(executionGraphDefinition: ExecutionGraphDefin
         result(i) = PipelineId(pipelineId)
         i += 1
 
+        def pushUpstreams(id1: PipelineId, id2: PipelineId): Unit = {
+          if (id1 != NO_PIPELINE) {
+            stack.push(id1.x)
+          }
+          if (id2 != NO_PIPELINE) {
+            stack.push(id2.x)
+          }
+        }
+
         visited(pipelineId) = true
         pipelineState.schedulingHint match {
-          case EagerLhsSchedulingHint | AllLazySchedulingHint =>
-            if (pipelineState.rhs != NO_PIPELINE) {
-              stack.push(pipelineState.rhs.x)
-            }
-            if (pipelineState.lhs != NO_PIPELINE) {
-              stack.push(pipelineState.lhs.x)
-            }
+          case DependentInputsEagerLhsSchedulingHint | IndependentInputsSchedulingHint =>
+            // Prioritize lhs if it is eager (e.g. HashJoin) or if the inputs are independent (e.g. Union)
+            pushUpstreams(pipelineState.rhs, pipelineState.lhs)
 
-          case _ => // In lazy scheduling we prioritize rhs (which corresponds to rhs of logical plan) by default
-            if (pipelineState.lhs != NO_PIPELINE) {
-              stack.push(pipelineState.lhs.x)
-            }
-            if (pipelineState.rhs != NO_PIPELINE) {
-              stack.push(pipelineState.rhs.x)
-            }
+          case _ =>
+            // In lazy scheduling we prioritize rhs by default (which corresponds to rhs of logical plan)
+            pushUpstreams(pipelineState.lhs, pipelineState.rhs)
         }
       }
     }

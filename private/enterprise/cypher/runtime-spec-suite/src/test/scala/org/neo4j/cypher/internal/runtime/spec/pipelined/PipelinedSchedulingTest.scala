@@ -64,6 +64,93 @@ class PipelinedSchedulingTest extends RuntimeTestSuite[EnterpriseRuntimeContext]
     )
     CollectScheduledWorkIds.getEvents should equal(expectedEvents)
   }
+
+  test("cartesian product should stream RHS for each LHS morsel") {
+    // given
+    nodeGraph(3)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y") // 0
+      .cartesianProduct() // 1
+      .|.allNodeScan("y") // 2
+      .allNodeScan("x") // 3
+      .build()
+
+    // when
+    val result = execute(logicalQuery, runtime)
+    consume(result)
+
+    val LHS = Id(3)
+    val RHS = Id(2)
+    val CP = Id(1)
+
+    // then
+    val expectedEvents = Seq(
+      LHS,
+      RHS,
+      CP,
+      CP,
+      CP, // Superfluously scheduled empty task
+      RHS,
+      CP,
+      CP, // Superfluously scheduled empty task
+      LHS,
+      RHS,
+      CP,
+      CP, // Superfluously scheduled empty task
+      RHS,
+      CP
+      )
+    val expectedEventsIdeal = Seq(
+      LHS,
+      RHS,
+      CP,
+      CP,
+      RHS,
+      CP,
+      LHS,
+      RHS,
+      CP,
+      RHS,
+      CP
+      )
+    Seq(CollectScheduledWorkIds.getEvents) should contain atLeastOneElementOf Seq(expectedEvents, expectedEventsIdeal)
+  }
+
+  test("nested cartesian product should stream RHS for each LHS morsel") {
+    // given
+    nodeGraph(3)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y", "z") // 0
+      .cartesianProduct() // C=1
+      .|.cartesianProduct() // CI=2
+      .|.|.allNodeScan("z") // Z=3
+      .|.allNodeScan("y") // Y=4
+      .allNodeScan("x") // X=5
+      .build()
+
+    // when
+    val result = execute(logicalQuery, runtime)
+    consume(result)
+
+    val X = Id(5)
+    val Y = Id(4)
+    val Z = Id(3)
+    val CI = Id(2)
+    val C = Id(1)
+
+    // then
+    val expectedEvents = Seq(X,Y,Z,CI,C,C,C/*empty*/,CI,C,C,C/*empty*/,CI/*empty*/,Z,CI,C,C,C/*empty*/,CI/*empty*/,
+                             Y,Z,CI,C,C,C/*empty*/,CI/*empty*/,Z,CI,C,C/*empty*/,
+                             X,Y,Z,CI,C,C/*empty*/,CI,C,C/*empty*/,CI/*empty*/,Z,CI,C,C/*empty*/,CI/*empty*/,
+                             Y,Z,CI,C,C/*empty*/,CI/*empty*/,Z,CI,C)
+    val expectedEventsIdeal = Seq(X,Y,Z,CI,C,C,CI,C,C,Z,CI,C,C,
+                                  Y,Z,CI,C,C,Z,CI,C,
+                                  X,Y,Z,CI,C,CI,C,Z,CI,C,
+                                  Y,Z,CI,C,Z,CI,C)
+    Seq(CollectScheduledWorkIds.getEvents) should contain atLeastOneElementOf Seq(expectedEvents, expectedEventsIdeal)
+  }
 }
 
 object PipelinedSchedulingTest {
