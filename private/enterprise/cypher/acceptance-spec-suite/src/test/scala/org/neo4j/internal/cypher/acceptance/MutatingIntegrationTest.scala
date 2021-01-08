@@ -350,7 +350,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
 
   test("should be able to use external variables inside foreach") {
     createNode()
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (a), (b) where id(a) = 0 AND id(b) = 0 foreach(x in [b] | create (x)-[:FOO]->(a)) ")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a), (b) where id(a) = 0 AND id(b) = 0 foreach(x in [b] | create (x)-[:FOO]->(a)) ")
 
     result.toList shouldBe empty
   }

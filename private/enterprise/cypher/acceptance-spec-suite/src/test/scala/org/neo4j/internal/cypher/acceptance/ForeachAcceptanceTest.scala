@@ -191,14 +191,14 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
         |FOREACH (x IN mixedTypeCollection | CREATE (n)-[:FOOBAR]->(x) );""".stripMargin
 
     // when
-    val explain = executeWith(Configs.InterpretedAndSlotted, s"EXPLAIN $query")
+    val explain = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"EXPLAIN $query")
 
     // then
     explain.executionPlanDescription().toString shouldNot include("CreateNode")
 
     // when
-    val config = Configs.InterpretedAndSlotted
-    failWithError(config, query, "Expected to find a node at")
+    val config = Configs.InterpretedAndSlottedAndPipelined
+    failWithError(config, query, "Expected to find a node")
   }
 
   test("foreach with inner function invocation should work ") {
