@@ -50,7 +50,6 @@ import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.mutable
-import scala.util.Random
 
 @BenchmarkEnabled(true)
 class SetPropertiesFromMap extends AbstractCypherBenchmark {
@@ -132,7 +131,6 @@ class SetPropertiesFromMap extends AbstractCypherBenchmark {
     TestSetup(produceResult, table, List.empty)
   }
 
-  val randGen: Random = Random
   var subscriber: CountSubscriber = _
 
   @Benchmark
