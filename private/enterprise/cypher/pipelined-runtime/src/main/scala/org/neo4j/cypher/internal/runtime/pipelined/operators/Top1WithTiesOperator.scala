@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Top1WithTiesOperator.Top1WithTiesTable
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
@@ -119,8 +120,10 @@ case class Top1WithTiesOperator(workIdentity: WorkIdentity,
       this
     }
 
-    override def nextTasks(input: IndexedSeq[Top1WithTiesTable],
-                           resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, Top1WithTiesTable]] = {
+    override def nextTasks(state: PipelinedQueryState,
+                           input: IndexedSeq[Top1WithTiesTable],
+                           resources: QueryResources,
+                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, Top1WithTiesTable]] = {
       singletonIndexedSeq(new OTask(input))
     }
 
@@ -128,7 +131,7 @@ case class Top1WithTiesOperator(workIdentity: WorkIdentity,
 
       override def workIdentity: WorkIdentity = Top1WithTiesOperator.this.workIdentity
 
-      override def toString: String = "TopMergeTask"
+      override def toString: String = "Top1WithTiesMergeTask"
 
       AssertMacros.checkOnlyWhenAssertionsAreEnabled(accumulators.size == 1)
       private val accumulator = accumulators.head
