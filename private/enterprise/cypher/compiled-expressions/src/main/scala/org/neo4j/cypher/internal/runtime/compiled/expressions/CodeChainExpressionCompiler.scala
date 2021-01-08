@@ -308,7 +308,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
           equal(load[AnyValue](returnValue), trueValue),
           trueValue,
           ternary(
-            equal(load[Boolean](seenNull), Constant(true)),
+            load[Boolean](seenNull),
             noValue,
             falseValue
           )

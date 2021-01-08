@@ -1102,7 +1102,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
       setField(field, next)
     }
     else {
-      val condition = limits.map(argumentStateMapId => load[Boolean](belowLimitVarName(argumentStateMapId))).reduceLeft(and)
+      val condition = and(limits.map(argumentStateMapId => load[Boolean](belowLimitVarName(argumentStateMapId))))
       ifElse(condition)(setField(field, next))(setField(field, constant(false)))
     }
   }

@@ -72,7 +72,7 @@ object ExpressionCompilation {
 
   def nullCheck(expressions: IntermediateExpression*)(onNull: IntermediateRepresentation = noValue)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
     val checks = expressions.foldLeft(Set.empty[IntermediateRepresentation])((acc, current) => acc ++ current.nullChecks)
-    if (checks.nonEmpty) ternary(checks.reduceLeft(or), onNull, onNotNull)
+    if (checks.nonEmpty) ternary(or(checks.toSeq), onNull, onNotNull)
     else onNotNull
   }
 

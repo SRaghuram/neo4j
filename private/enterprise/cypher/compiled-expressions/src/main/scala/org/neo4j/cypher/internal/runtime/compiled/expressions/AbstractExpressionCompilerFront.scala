@@ -1545,10 +1545,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       val (tokenFields, inits) = tokenFieldsForLabels(lateLabels)
 
       val predicate: IntermediateRepresentation = ternary(
-        (resolvedLabelTokens.map { tokenId => isLabelSetOnNode(constant(tokenId), offset)
+        and(resolvedLabelTokens.map { tokenId => isLabelSetOnNode(constant(tokenId), offset)
         } ++
         tokenFields.map { tokenField => isLabelSetOnNode(loadField(tokenField), offset)
-        }).reduceLeft(and), trueValue, falseValue)
+        }), trueValue, falseValue)
 
       Some(IntermediateExpression(block(inits :+ predicate:_*),
         tokenFields, Seq(vNODE_CURSOR), Set.empty, requireNullCheck = false))
@@ -1557,10 +1557,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       val (tokenFields, inits) = tokenFieldsForTypes(lateTypes)
 
       val predicate: IntermediateRepresentation = ternary(
-        (resolvedTypeTokens.map { tokenId => isTypeSetOnRelationship(constant(tokenId), offset)
+        and(resolvedTypeTokens.map { tokenId => isTypeSetOnRelationship(constant(tokenId), offset)
         } ++
           tokenFields.map { tokenField => isTypeSetOnRelationship(loadField(tokenField), offset)
-          }).reduceLeft(and), trueValue, falseValue)
+          }), trueValue, falseValue)
 
       Some(IntermediateExpression(block(inits :+ predicate:_*),
         tokenFields, Seq(vRELATIONSHIP_CURSOR), Set.empty, requireNullCheck = false))
@@ -1569,10 +1569,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       for (node <- compileExpression(nodeExpression, id)) yield {
         val (tokenFields, inits) = tokenFieldsForLabels(labels.map(_.name))
 
-        val predicate: IntermediateRepresentation = ternary(tokenFields.map { token =>
+        val predicate: IntermediateRepresentation = ternary(and(tokenFields.map { token =>
           invokeStatic(method[CypherFunctions, Boolean, AnyValue, Int, DbAccess, NodeCursor]("hasLabel"),
                        node.ir, loadField(token), DB_ACCESS, NODE_CURSOR)
-        }.reduceLeft(and), trueValue, falseValue)
+        }), trueValue, falseValue)
 
         IntermediateExpression(block(inits :+ predicate:_*),
                                node.fields ++ tokenFields, node.variables :+ vNODE_CURSOR, node.nullChecks)
@@ -1980,7 +1980,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             //tempVariable = hd; if (tempVariable == NO_VALUE){[continue with tail]}
             if (expression.nullChecks.nonEmpty) {
               block(assign(tempVariable, nullCheckIfRequired(expression)),
-                condition(expression.nullChecks.reduceLeft((acc, current) => or(acc, current)))(loop(tail)))
+                condition(or(expression.nullChecks.toSeq))(loop(tail)))
             } // WHOAH[Keanu Reeves voice] if not nullable we don't even need to generate code for the coming expressions,
             else {
               assign(tempVariable, expression.ir)

@@ -548,7 +548,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
    *  orLhs = "x"
    *  if (orLhs == null) seenNull = true else {
    *    try {
-   *      orReturn = coerseToPredicate(orLhs)
+   *      orReturn = coerceToPredicate(orLhs)
    *    } catch (e: exception) {
    *      error = e
    *    }
@@ -558,7 +558,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
    *    orRhs = "y"
    *    if (orRhs == null) seenNull = true else {
    *     try {
-   *       orReturn = coerseToPredicate(orRhs)
+   *       orReturn = coerceToPredicate(orRhs)
    *     } catch (e) {
    *       error = e;
    *     }
