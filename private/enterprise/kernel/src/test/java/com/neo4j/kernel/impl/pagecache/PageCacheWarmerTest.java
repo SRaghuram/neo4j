@@ -26,6 +26,7 @@ import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -78,6 +79,8 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createSchedule
 import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
 import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
 import static org.neo4j.logging.LogAssertions.assertThat;
+import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @EphemeralTestDirectoryExtension
 class PageCacheWarmerTest
@@ -434,7 +437,7 @@ class PageCacheWarmerTest
                 long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
                 warmer.stop();
 
-                assertEquals( numPages, cacheTracer.faults() );
+                assertEventually( () -> cacheTracer.faults(), equalityCondition( (long) numPages ), 1, TimeUnit.MINUTES );
                 assertEquals( numPages, pagesLoadedReportedByWarmer );
             }
         }
@@ -463,7 +466,7 @@ class PageCacheWarmerTest
                 long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
                 warmer.stop();
 
-                assertEquals( numPagesFile1 + numPagesFile2, cacheTracer.faults() );
+                assertEventually( () -> cacheTracer.faults(), equalityCondition( (long) numPagesFile1 + numPagesFile2 ), 1, TimeUnit.MINUTES );
                 assertEquals( numPagesFile1 + numPagesFile2, pagesLoadedReportedByWarmer );
             }
         }
@@ -500,7 +503,7 @@ class PageCacheWarmerTest
                 long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
                 warmer.stop();
 
-                assertEquals( numPagesFile1 + numPagesFile3, cacheTracer.faults() );
+                assertEventually( () -> cacheTracer.faults(), equalityCondition( (long) numPagesFile1 + numPagesFile3 ), 1, TimeUnit.MINUTES );
                 assertEquals( numPagesFile1 + numPagesFile3, pagesLoadedReportedByWarmer );
 
             }
@@ -584,7 +587,7 @@ class PageCacheWarmerTest
     }
 
     @Test
-    void shouldOnlyPrefetchWhatFitsInPageCache() throws IOException, InterruptedException
+    void shouldOnlyPrefetchWhatFitsInPageCache() throws IOException
     {
         //Given
         PageCacheConfig smallPageCache = PageCacheConfig.config().withMemory( "1M" ).withTracer( this.cacheTracer );
@@ -605,8 +608,9 @@ class PageCacheWarmerTest
                 long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
                 warmer.stop();
 
-                assertThat( pagesLoadedReportedByWarmer ).isEqualTo( pageCache.maxCachedPages() );
-                //The actual page-loading during prefetch is asynchronous so we can not assert on tracer faults
+                long maxSize = pageCache.maxCachedPages();
+                assertThat( pagesLoadedReportedByWarmer ).isEqualTo( maxSize );
+                assertEventually( () -> cacheTracer.faults(), equalityCondition( maxSize ), 1, TimeUnit.MINUTES );
             }
         }
     }
