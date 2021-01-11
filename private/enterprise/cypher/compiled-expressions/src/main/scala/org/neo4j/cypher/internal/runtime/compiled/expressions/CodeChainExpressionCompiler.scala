@@ -352,7 +352,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
       val maybeList = load[AnyValue](namer.nextVariableName("maybeList"))
       val list = load[ListValue](namer.nextVariableName("list"))
       val extracted = load[util.ArrayList[AnyValue]](namer.nextVariableName("extracted"))
-      val iter = load[util.ArrayList[AnyValue]](namer.nextVariableName("iter"))
+      val iter = load[java.util.Iterator[AnyValue]](namer.nextVariableName("iter"))
       val result = load[AnyValue](namer.nextVariableName("result"))
       val heapUsage = load[Long](namer.nextVariableName("heapUsage"))
 
