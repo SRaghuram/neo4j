@@ -58,8 +58,8 @@ class LazyExecutionGraphSchedulingTest extends CypherFunSuite {
     // then
     policy.pipelinesInLazyOrder.toList should be(List(
       PipelineId(2),
+      PipelineId(1),
       PipelineId(0),
-      PipelineId(1)
     ))
   }
 
@@ -78,9 +78,9 @@ class LazyExecutionGraphSchedulingTest extends CypherFunSuite {
     // then
     policy.pipelinesInLazyOrder.toList should be(List(
       PipelineId(3),
-      PipelineId(1),
+      PipelineId(2),
       PipelineId(0),
-      PipelineId(2)
+      PipelineId(1)
     ))
   }
 
