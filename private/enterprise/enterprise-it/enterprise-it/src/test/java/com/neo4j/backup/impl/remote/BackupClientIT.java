@@ -10,7 +10,7 @@ import com.neo4j.backup.impl.BackupsLifecycle;
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseIdDownloadFailedException;
-import com.neo4j.configuration.TxStreamingStrategy;
+import com.neo4j.configuration.TransactionStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v4.metadata.IncludeMetadata;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -87,7 +87,7 @@ class BackupClientIT
                 .catchupServerHandler( new MultiDatabaseCatchupServerHandler( defaultDatabaseAPI.getDependencyResolver().resolveDependency(
                         DatabaseManager.class ), defaultDatabaseAPI.getDependencyResolver().resolveDependency( DatabaseStateService.class ),
                         testDirectory.getFileSystem(), 32768, NullLogProvider.getInstance(), defaultDatabaseAPI.getDependencyResolver(),
-                        TxStreamingStrategy.StartTime ) )
+                        () -> TransactionStreamingStrategy.StartTime ) )
                 .catchupProtocols( new ApplicationSupportedProtocols( CATCHUP, emptyList() ) )
                 .modifierProtocols( emptyList() )
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )

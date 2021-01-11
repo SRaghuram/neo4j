@@ -10,12 +10,13 @@ import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol.State;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
-import com.neo4j.configuration.TxStreamingStrategy;
+import com.neo4j.configuration.TransactionStreamingStrategy;
 import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.io.IOException;
+import java.util.function.Supplier;
 
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
@@ -41,9 +42,9 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
     private final LogEntryWriterFactory logEntryWriterFactory;
     private final TxPullRequestsMonitor monitor;
     private final Log log;
-    private final TxStreamingStrategy txStreamingStrategy;
+    private final Supplier<TransactionStreamingStrategy> txStreamingStrategyProviderProvider;
 
-    public TxPullRequestHandler( CatchupServerProtocol protocol, Database db, TxStreamingStrategy txStreamingStrategy )
+    public TxPullRequestHandler( CatchupServerProtocol protocol, Database db, Supplier<TransactionStreamingStrategy> txStreamingStrategyProvider )
     {
         this.protocol = protocol;
         this.db = db;
@@ -52,14 +53,14 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         this.logEntryWriterFactory = DbmsLogEntryWriterProvider.resolveEntryWriterFactory( db );
         this.monitor = db.getMonitors().newMonitor( TxPullRequestsMonitor.class );
         this.log = db.getInternalLogProvider().getLog( getClass() );
-        this.txStreamingStrategy = txStreamingStrategy;
+        this.txStreamingStrategyProviderProvider = txStreamingStrategyProvider;
     }
 
     @Override
     protected void channelRead0( ChannelHandlerContext ctx, final TxPullRequest msg ) throws Exception
     {
         monitor.increment();
-        var prepare = prepareRequest( msg );
+        var prepare = prepareRequest( msg, txStreamingStrategyProviderProvider.get() );
 
         if ( prepare.isComplete() )
         {
@@ -88,7 +89,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         } );
     }
 
-    private Prepare prepareRequest( TxPullRequest msg ) throws IOException
+    private Prepare prepareRequest( TxPullRequest msg, TransactionStreamingStrategy transactionStreamingStrategy ) throws IOException
     {
         if ( !isValid( msg ) )
         {
@@ -137,7 +138,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         try
         {
             var transactions = logicalTransactionStore.getTransactions( firstTxId );
-            var constraint = createConstraint( txIdPromise );
+            var constraint = createConstraint( txIdPromise, transactionStreamingStrategy );
             return Prepare.readyToSend( new TxPullingContext( transactions, localStoreId, db.getNamedDatabaseId(),
                     firstTxId, txIdPromise, transactionIdStore, logEntryWriterFactory, constraint ) );
         }
@@ -148,16 +149,16 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         }
     }
 
-    private TxStreamingConstraint createConstraint( long lastCommitTxId )
+    private TxStreamingConstraint createConstraint( long lastCommitTxId, TransactionStreamingStrategy transactionStreamingStrategy )
     {
-        switch ( txStreamingStrategy )
+        switch ( transactionStreamingStrategy )
         {
         case StartTime:
             return new TxStreamingConstraint.Limited( lastCommitTxId );
         case Aggressive:
             return new TxStreamingConstraint.Unbounded();
         default:
-            throw new IllegalArgumentException( " Unknown strategy " + txStreamingStrategy );
+            throw new IllegalArgumentException( " Unknown strategy " + txStreamingStrategyProviderProvider );
         }
     }
 

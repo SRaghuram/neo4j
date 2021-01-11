@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.configuration.TxStreamingStrategy;
+import com.neo4j.configuration.TransactionStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
@@ -99,7 +99,7 @@ abstract class EnterpriseCatchupTest
         final var dependencyResolver = mock( DependencyResolver.class );
         serverResponseHandler =
                 new MultiDatabaseCatchupServerHandler( databaseManager, mock( DatabaseStateService.class ), fsa, 32768, LOG_PROVIDER, dependencyResolver,
-                        TxStreamingStrategy.Aggressive );
+                        () -> TransactionStreamingStrategy.Aggressive );
     }
 
     void executeTestScenario( Function<DatabaseManager<?>,RequestResponse> responseFunction ) throws Exception

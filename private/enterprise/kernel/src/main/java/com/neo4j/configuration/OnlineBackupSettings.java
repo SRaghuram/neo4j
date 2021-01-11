@@ -30,8 +30,9 @@ public class OnlineBackupSettings implements SettingsDeclaration
     @Description( "Strategy for incremental backup. StartTime means that this server will send transactions until the time of when the backup started has " +
                   "been reached. Aggressive will keep sending until all committed transactions have been sent, even if they where committed after the backup " +
                   "job started. " )
-    public static final Setting<TxStreamingStrategy> incremental_backup_strategy =
-            newBuilder( "dbms.backup.incremental.strategy", ofEnum( TxStreamingStrategy.class ), TxStreamingStrategy.Aggressive ).build();
+    public static final Setting<TransactionStreamingStrategy> incremental_backup_strategy =
+            newBuilder( "dbms.backup.incremental.strategy", ofEnum( TransactionStreamingStrategy.class ), TransactionStreamingStrategy.Aggressive ).dynamic()
+                    .build();
 
     @Description( "Network interface and port for the backup server to listen on." )
     public static final Setting<SocketAddress> online_backup_listen_address =

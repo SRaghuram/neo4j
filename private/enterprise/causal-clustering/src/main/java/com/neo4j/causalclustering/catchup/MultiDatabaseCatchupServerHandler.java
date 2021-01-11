@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyFilesProvide
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyRequestHandler;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFileStreamingProtocol;
 import com.neo4j.causalclustering.catchup.tx.TxPullRequestHandler;
-import com.neo4j.configuration.TxStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdRequestHandler;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
@@ -22,7 +21,10 @@ import com.neo4j.causalclustering.catchup.v4.info.InfoRequestHandler;
 import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataRequestHandler;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestHandler;
+import com.neo4j.configuration.TransactionStreamingStrategy;
 import io.netty.channel.ChannelHandler;
+
+import java.util.function.Supplier;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.DatabaseStateService;
@@ -38,7 +40,7 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 {
     private final DatabaseManager<?> databaseManager;
     private final DependencyResolver dependencyResolver;
-    private final TxStreamingStrategy txStreamingStrategy;
+    private final Supplier<TransactionStreamingStrategy> txStreamingStrategyProvider;
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
     private final DatabaseStateService databaseStateService;
@@ -46,7 +48,7 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 
     public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, DatabaseStateService databaseStateService,
             FileSystemAbstraction fs, int maxChunkSize, LogProvider logProvider, DependencyResolver dependencyResolver,
-            TxStreamingStrategy txStreamingStrategy )
+            Supplier<TransactionStreamingStrategy> txStreamingStrategyProvider )
     {
         this.databaseManager = databaseManager;
         this.databaseStateService = databaseStateService;
@@ -54,7 +56,7 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
         this.logProvider = logProvider;
         this.fs = fs;
         this.dependencyResolver = dependencyResolver;
-        this.txStreamingStrategy = txStreamingStrategy;
+        this.txStreamingStrategyProvider = txStreamingStrategyProvider;
     }
 
     @Override
@@ -124,7 +126,7 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 
     private TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new TxPullRequestHandler( protocol, db, txStreamingStrategy );
+        return new TxPullRequestHandler( protocol, db, txStreamingStrategyProvider );
     }
 
     private static GetStoreIdRequestHandler buildStoreIdRequestHandler( Database db, CatchupServerProtocol protocol )

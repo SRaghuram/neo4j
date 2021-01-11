@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.catchup.tx;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
-import com.neo4j.configuration.TxStreamingStrategy;
+import com.neo4j.configuration.TransactionStreamingStrategy;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -111,7 +111,7 @@ class TxPullRequestHandlerTest
         var databaseLogService = new DatabaseLogService( NAMED_DATABASE_ID, new SimpleLogService( logProvider ) );
         when( database.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
         final var protocol = new CatchupServerProtocol();
-        txPullRequestHandler = new TxPullRequestHandler( protocol, database, TxStreamingStrategy.Aggressive );
+        txPullRequestHandler = new TxPullRequestHandler( protocol, database, TransactionStreamingStrategy.Aggressive );
         lifeSupport.add( availabilityGuard );
     }
 
@@ -192,7 +192,7 @@ class TxPullRequestHandlerTest
 
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database, TxStreamingStrategy.Aggressive );
+                new TxPullRequestHandler( protocol, database, TransactionStreamingStrategy.Aggressive );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, clientStoreId, DATABASE_ID ) );
@@ -214,7 +214,7 @@ class TxPullRequestHandlerTest
 
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database, TxStreamingStrategy.Aggressive );
+                new TxPullRequestHandler( protocol, database, TransactionStreamingStrategy.Aggressive );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, storeId, DATABASE_ID ) );
@@ -232,7 +232,7 @@ class TxPullRequestHandlerTest
     {
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database, TxStreamingStrategy.Aggressive );
+                new TxPullRequestHandler( protocol, database, TransactionStreamingStrategy.Aggressive );
 
         var request = mock( TxPullRequest.class );
         when( request.previousTxId() ).thenReturn( incorrectTxId );
@@ -261,7 +261,7 @@ class TxPullRequestHandlerTest
 
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database, TxStreamingStrategy.Aggressive );
+                new TxPullRequestHandler( protocol, database, TransactionStreamingStrategy.Aggressive );
 
         txPullRequestHandler.channelRead0( context, new TxPullRequest( previousTxId, storeId, DATABASE_ID ) );
 

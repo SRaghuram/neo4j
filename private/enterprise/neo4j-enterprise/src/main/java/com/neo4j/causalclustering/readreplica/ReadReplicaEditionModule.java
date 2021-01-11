@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.configuration.TxStreamingStrategy;
+import com.neo4j.configuration.TransactionStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
@@ -255,7 +255,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
         var catchupServerHandler =
                 new MultiDatabaseCatchupServerHandler( databaseManager, reconcilerModule.databaseStateService(), fileSystem, maxChunkSize, logProvider,
-                                                       globalModule.getGlobalDependencies(), TxStreamingStrategy.Aggressive );
+                                                       globalModule.getGlobalDependencies(), () -> TransactionStreamingStrategy.Aggressive );
         var installedProtocolsHandler = new InstalledProtocolHandler();
 
         var catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );

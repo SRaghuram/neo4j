@@ -6,16 +6,15 @@
 package com.neo4j.enterprise.edition;
 
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.configuration.TxStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
+import com.neo4j.causalclustering.common.TransactionStreamingStrategyProvider;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.FabricEnterpriseConfig;
-import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphDbmsModel;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
@@ -292,15 +291,15 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         PipelineBuilders pipelineBuilders = new PipelineBuilders( sslPolicyLoader );
 
         int maxChunkSize = config.get( CausalClusteringSettings.store_copy_chunk_size );
-        var backupStrategy = config.get( OnlineBackupSettings.incremental_backup_strategy );
+        var backupStrategyProvider = TransactionStreamingStrategyProvider.register( config );
         TransactionBackupServiceProvider backupServiceProvider = new TransactionBackupServiceProvider(
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
                 supportedProtocolCreator.createSupportedModifierProtocols(),
                 pipelineBuilders.backupServer(),
                 new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, internalLogProvider,
-                                                       globalModule.getGlobalDependencies(), TxStreamingStrategy.StartTime ),
+                        globalModule.getGlobalDependencies(), backupStrategyProvider ),
                 new InstalledProtocolHandler(),
-                jobScheduler, portRegister, backupStrategy );
+                jobScheduler, portRegister );
 
         Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
 

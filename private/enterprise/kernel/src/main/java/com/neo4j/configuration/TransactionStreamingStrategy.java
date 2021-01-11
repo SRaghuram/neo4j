@@ -5,7 +5,10 @@
  */
 package com.neo4j.configuration;
 
-public enum TxStreamingStrategy
+import org.neo4j.annotations.api.PublicApi;
+
+@PublicApi
+public enum TransactionStreamingStrategy
 {
     Aggressive,
     StartTime
