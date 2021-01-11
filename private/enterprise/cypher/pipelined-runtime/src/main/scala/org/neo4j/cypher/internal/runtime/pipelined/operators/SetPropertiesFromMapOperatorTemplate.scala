@@ -61,7 +61,9 @@ import org.neo4j.values.virtual.VirtualRelationshipValue
 
 class SetPropertiesFromMapOperatorTemplate(override val inner: OperatorTaskTemplate,
                                            override val id: Id,
+                                           entityExpression: String,
                                            entity: () => IntermediateExpression,
+                                           expression: String,
                                            propertiesExpression: () => IntermediateExpression,
                                            removeOtherProps: Boolean)(protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
@@ -105,7 +107,11 @@ class SetPropertiesFromMapOperatorTemplate(override val inner: OperatorTaskTempl
       )(
         block(
           condition(notEqual(load(entityValueVar), noValue))(
-            fail(newInstance(constructor[InvalidArgumentException, String], constant("Expected to set property on a node or a relationship.")))
+            fail(newInstance(constructor[InvalidArgumentException, String],
+              invoke(
+                constant(s"The expression $entityExpression should have been a node or a relationship, but got "),
+                method[String, String, String]("concat"),
+                invoke(load(entityValueVar), method[AnyValue, String]("toString")))))
           )
         )
       )),
@@ -131,7 +137,8 @@ class SetPropertiesFromMapOperatorTemplate(override val inner: OperatorTaskTempl
 
   override protected def isHead: Boolean = false
 
-  private def setPropertyFromMap(isNode: Boolean, id: IntermediateRepresentation, propValueMap: IntermediateRepresentation, removeOtherProps : Boolean): IntermediateRepresentation = {
+  private def setPropertyFromMap(isNode: Boolean, id: IntermediateRepresentation, propValueMap: IntermediateRepresentation,
+                                 removeOtherProps: Boolean): IntermediateRepresentation = {
     val errorVar = codeGen.namer.nextVariableName("errorN")
     val acquireLockFunction = if (isNode) "acquireExclusiveNodeLock" else "acquireExclusiveRelationshipLock"
     val releaseLockFunction = if (isNode) "releaseExclusiveNodeLock" else "releaseExclusiveRelationshipLock"
@@ -142,7 +149,8 @@ class SetPropertiesFromMapOperatorTemplate(override val inner: OperatorTaskTempl
       IntermediateRepresentation.tryCatch[Exception](errorVar)
         (block(
           invokeStatic(
-            method[SetOperator, Unit, Long, AnyValue, Boolean, Token, Write, Read, MutableQueryStatistics, NodeCursor, RelationshipScanCursor, PropertyCursor](setFunction),
+            method[SetOperator, Unit, Long, AnyValue, Boolean, Token, Write, Read, MutableQueryStatistics, NodeCursor, RelationshipScanCursor, PropertyCursor,
+              String](setFunction),
             id,
             propValueMap,
             constant(removeOtherProps),
@@ -153,6 +161,7 @@ class SetPropertiesFromMapOperatorTemplate(override val inner: OperatorTaskTempl
             NODE_CURSOR,
             RELATIONSHIP_CURSOR,
             PROPERTY_CURSOR,
+            constant(expression)
           ),
           invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](releaseLockFunction), arrayOf[Long](id)),
         ))

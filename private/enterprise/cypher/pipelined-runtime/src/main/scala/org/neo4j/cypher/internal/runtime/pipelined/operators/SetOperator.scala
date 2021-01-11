@@ -116,8 +116,9 @@ object SetOperator {
                                queryStatisticsTracker: MutableQueryStatistics,
                                nodeCursor: NodeCursor,
                                relCursor: RelationshipScanCursor,
-                               propertyCursor: PropertyCursor): Unit = {
-    val propValueMap = transformToPropertyValueMap(propertiesMap, token, read, nodeCursor, relCursor, propertyCursor)
+                               propertyCursor: PropertyCursor,
+                               expression: String): Unit = {
+    val propValueMap = transformToPropertyValueMap(propertiesMap, token, read, nodeCursor, relCursor, propertyCursor, expression)
     propValueMap.foreach { case (k, v) => setNodeProperty(nodeId, k, v, token, write, queryStatisticsTracker) }
 
     //delete remaining properties
@@ -178,8 +179,9 @@ object SetOperator {
                                        queryStatisticsTracker: MutableQueryStatistics,
                                        nodeCursor: NodeCursor,
                                        relCursor: RelationshipScanCursor,
-                                       propertyCursor: PropertyCursor): Unit = {
-    val propValueMap = transformToPropertyValueMap(propertiesMap, token, read, nodeCursor, relCursor, propertyCursor)
+                                       propertyCursor: PropertyCursor,
+                                       expression: String): Unit = {
+    val propValueMap = transformToPropertyValueMap(propertiesMap, token, read, nodeCursor, relCursor, propertyCursor, expression)
     propValueMap.foreach { case (propertyId, value) => setRelationshipProperty(relationShipId, propertyId, makeValueNeoSafe(value), token, write, queryStatisticsTracker) }
 
     //delete remaining properties
@@ -221,7 +223,8 @@ object SetOperator {
                                           read: Read,
                                           nodeCursor: NodeCursor,
                                           relCursor: RelationshipScanCursor,
-                                          propertyCursor: PropertyCursor): mutable.Map[Int, AnyValue] = value match {
+                                          propertyCursor: PropertyCursor,
+                                          expression: String): mutable.Map[Int, AnyValue] = value match {
     case mapValue: MapValue =>
       val map = mutable.Map[Int, AnyValue]()
       mapValue.foreach {
@@ -249,7 +252,7 @@ object SetOperator {
         mutable.Map.empty
       }
     case _ =>
-      throw new CypherTypeException(s"Parameter provided for setting properties is not a Map, instead got $value")
+      throw new CypherTypeException(s"Expected $expression to be a map, but it was :`$value`")
   }
 
   private def getPropertyKey(propertyName: String, value: Value, token: Token): Int = {

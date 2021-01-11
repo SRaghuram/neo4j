@@ -869,7 +869,8 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
 
         case plan@plans.SetPropertiesFromMap(_, entity, expression, removeOtherProps) =>
           ctx: TemplateContext =>
-            new SetPropertiesFromMapOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(entity, plan.id), ctx.compileExpression(expression, plan.id), removeOtherProps)(ctx.expressionCompiler)
+            new SetPropertiesFromMapOperatorTemplate(ctx.inner, plan.id, entity.toString, ctx.compileExpression(entity, plan.id), expression.toString,
+              ctx.compileExpression(expression, plan.id), removeOtherProps)(ctx.expressionCompiler)
 
         case plan@plans.LockNodes(_, nodesToLock) =>
           ctx: TemplateContext =>
