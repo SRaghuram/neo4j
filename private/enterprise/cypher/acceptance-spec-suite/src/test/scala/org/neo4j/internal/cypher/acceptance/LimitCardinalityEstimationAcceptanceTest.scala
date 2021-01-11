@@ -468,7 +468,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     (0 until nodeCount).foreach(_ => createNode())
 
     val result = executeSingle(s"MATCH (n) WITH n ORDER BY n RETURN n, collect(n) LIMIT $limit")
-    
+
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
         .withLHS(aPlan("OrderedAggregation").withEstimatedRows(limit)
@@ -528,8 +528,6 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
 
     val result = executeSingle(s"profile MATCH (n) CALL my.first.proc() RETURN n LIMIT $limit")
 
-    println(result.executionPlanDescription())
-
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
         .withLHS(aPlan("ProcedureCall").withEstimatedRows(limit)
@@ -539,5 +537,126 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
           )
         )
       )
+  }
+
+  test("semiApply with increasing cardinality in rhs") {
+    createNodesAndRels(nodeCount = 100, relCount = 1000)
+
+    val result = executeSingle(s"CYPHER runtime=slotted MATCH (n) WHERE (n)-->() RETURN n")
+
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("SemiApply")
+      // -- per row: original=100, fraction=1/100, effective=100*1/100=1 -- reported: 1*100
+      .withRHS(aPlan("Expand(All)").withEstimatedRows(100)
+           // -- per row: original=1, fraction=1/100, effective=1*1/100=1/100 -rounded-> 1 -- reported: 1*100
+          .withLHS(aPlan("Argument").withEstimatedRows(100)))
+      // -- original: 100
+      .withLHS(aPlan("AllNodesScan").withEstimatedRows(100))
+  }
+
+  test("antiSemiApply with increasing cardinality in rhs") {
+    createNodesAndRels(nodeCount = 100, relCount = 1000)
+
+    val result = executeSingle(s"CYPHER runtime=slotted MATCH (n) WHERE NOT (n)-->() RETURN n")
+
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("AntiSemiApply")
+      // -- per row: original=100, fraction=1/100, effective=100*1/100=1 -- reported: 1*100
+      .withRHS(aPlan("Expand(All)").withEstimatedRows(100)
+         // -- per row: original=1, fraction=1/100, effective=1*1/100=1/100 -rounded-> 1 -- reported: 1*100
+        .withLHS(aPlan("Argument").withEstimatedRows(100)))
+      // -- original: 100
+      .withLHS(aPlan("AllNodesScan").withEstimatedRows(100))
+  }
+
+  test("semiApply with increasing cardinality in rhs under limit") {
+    createNodesAndRels(100, 1000)
+    val limit = 5
+
+    val result = executeSingle(s"CYPHER runtime=slotted MATCH (n) WHERE (n)-->() RETURN n LIMIT $limit")
+
+    result.executionPlanDescription() should includeSomewhere
+       // original: 75, fraction: 5/75
+      .aPlan("SemiApply").withEstimatedRows(5)
+      // -- per row: original=100, fraction=5/75*1/7, effective=100*5/75*1/7~=1 -- reported: 1*7
+      .withRHS(aPlan("Expand(All)").withEstimatedRows(7)
+        // -- per row: original=1, fraction=5/75*1/7, effective=1*5/75*1/7 -rounded-> 1 -- reported: 1*7
+        .withLHS(aPlan("Argument").withEstimatedRows(7)))
+      // -- original: 100, fraction 5/75
+      .withLHS(aPlan("AllNodesScan").withEstimatedRows(7))
+  }
+
+  test("semiApply with label scan and increasing cardinality in rhs") {
+    // 10x :A
+    // 12x :B
+    // 1000x (:A)-->(:B)
+    createAsAndBs(aNodes = 10, bNodes = 12, abRelsPerPair = 100)
+
+    val result = executeSingle(s"CYPHER runtime=slotted MATCH (a:A) WHERE (a)-->(:B) RETURN a")
+
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("SemiApply").withEstimatedRows(7)
+      // -- per row: original=100, fraction=1/100, effective=100*1/100=1 -- reported: 10
+      .withRHS(aPlan("Expand(Into)").withEstimatedRows(10)
+        // -- per row: original=12, fraction=1/100, effective=12*1/100=0.12 -- reported: 1
+        .withLHS(aPlan("NodeByLabelScan").withEstimatedRows(1)))
+      // -- original: 10
+      .withLHS(aPlan("NodeByLabelScan").withEstimatedRows(10))
+  }
+
+  test("semiApply with label scan and increasing then decreasing cardinality in rhs") {
+    // 10x :A
+    // 12x :B
+    // 1000x (:A)-->(:B)
+    createAsAndBs(aNodes = 10, bNodes = 12, abRelsPerPair = 100)
+
+    val result = executeSingle(s"CYPHER runtime=slotted MATCH (a:A) WHERE (a)-[{x: 1}]->(:B) RETURN a")
+
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("SemiApply").withEstimatedRows(7)
+      // -- per row: original=10, fraction=1/10=0.1, effective=10*0.1=1 -- reported: 1*10
+      .withRHS(aPlan("Filter").withEstimatedRows(10)
+        // -- per row: original=100, fraction=0.1, effective=100*0.1=10 -- reported: 10*10
+        .withLHS(aPlan("Expand(Into)").withEstimatedRows(100)
+          // -- per row: original=12, fraction=0.1, effective=12*0.1=1.2 -- reported: 1.2*10
+          .withLHS(aPlan("NodeByLabelScan").withEstimatedRows(12))))
+      // -- original: 10
+      .withLHS(aPlan("NodeByLabelScan").withEstimatedRows(10))
+  }
+
+  test("semiApply with label scan and increasing then decreasing cardinality in rhs under limit") {
+    // 10x :A
+    // 12x :B
+    // 1000x (:A)-->(:B)
+    createAsAndBs(aNodes = 10, bNodes = 12, abRelsPerPair = 100)
+    val result = executeSingle(s"CYPHER runtime=slotted MATCH (a:A) WHERE (a)-[{x: 1}]->(:B) RETURN a LIMIT 5")
+
+    result.executionPlanDescription() should includeSomewhere
+      // original: 7, fraction: 5/7
+      .aPlan("SemiApply").withEstimatedRows(5)
+      // -- per row: original=10, fraction=5/7*1/7, effective=10*5/7*1/7~=1 -- reported: 1*7
+      .withRHS(aPlan("Filter").withEstimatedRows(7)
+        // -- per row: original=100, fraction=5/7*1/7, effective=100*5/7*1/7~=10 -- reported: 10*7
+        .withLHS(aPlan("Expand(Into)").withEstimatedRows(67)
+          // -- per row: original=12, fraction=5/7*1/7, effective=12*5/7*1/7~=1.2 -- reported: 1.2*7
+          .withLHS(aPlan("NodeByLabelScan").withEstimatedRows(8))))
+      // original: 10, fraction: 5/7
+      .withLHS(aPlan("NodeByLabelScan").withEstimatedRows(7))
+  }
+
+  private def createNodesAndRels(nodeCount: Int, relCount: Int) = {
+    createAsAndBs(nodeCount/2, nodeCount/2, relCount/(nodeCount/2))
+    (nodeCount, relCount)
+  }
+
+  private def createAsAndBs(aNodes: Int, bNodes: Int, abRelsPerPair: Int): Unit = {
+    val shared = Math.min(aNodes, bNodes)
+    (0 until shared).foreach { _ =>
+      val a = createLabeledNode("A")
+      val b = createLabeledNode("B")
+      (0 until abRelsPerPair).foreach(_ => relate(a, b))
+    }
+    (shared until aNodes).foreach(_ => createLabeledNode("A"))
+    (shared until bNodes).foreach(_ => createLabeledNode("B"))
   }
 }
