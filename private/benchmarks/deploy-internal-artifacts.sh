@@ -46,8 +46,8 @@ modules_list=$(IFS=","; echo "${modules_names[*]}")
 mvn versions:set -DnewVersion="$version" -DprocessAllModules=true
 
 # compile and package, only the things we need
-mvn clean install -Dcheckstyle.skip -Drevapi.skip -DskipTests -Dlicensing.skip -Dlicense.skip -TC2 -pl \
-  "$modules_list" -am
+mvn clean install -Dcheckstyle.skip -Drevapi.skip -DskipTests -Dlicensing.skip -Dlicense.skip -TC2 \
+    -PbenchmarksDeploy -pl "$modules_list" -am
 
 # flatten POM structure
 mvn org.codehaus.mojo:flatten-maven-plugin:flatten -pl "$modules_list"
@@ -58,6 +58,7 @@ for module_dir in "${dirs[@]}"; do
     cd "private/benchmarks/${module_dir}"
     module_name=$(basename "$module_dir")
     artifact_file="target/$module_name-$version.jar"
+    source_file="target/$module_name-$version-sources.jar"
 
     # check if shaded file exists, and attach it to deployment
     files=
@@ -80,6 +81,7 @@ for module_dir in "${dirs[@]}"; do
       ${files:+-Dfiles=$files} \
       ${classifiers:+-Dclassifiers=$classifiers} \
       ${types:+-Dtypes=$types} \
+      -Dsources=${source_file} \
       -Durl="$url" -DrepositoryId="neo4j-internal-releases"
   )
 done

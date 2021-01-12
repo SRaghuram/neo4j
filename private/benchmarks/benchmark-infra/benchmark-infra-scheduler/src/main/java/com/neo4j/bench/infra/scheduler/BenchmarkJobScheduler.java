@@ -34,14 +34,15 @@ import net.jodah.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -185,17 +186,37 @@ public class BenchmarkJobScheduler
                                        JobParams jobParams,
                                        Workspace workspace,
                                        URI artifactWorkerUri,
-                                       File jobParameterJson )
+                                       String jobParametersJson,
+                                       Optional<JobScheduler.JobRequestConsumer> jobRequestConsumer )
+            throws ArtifactStoreException
+    {
+        InfraParams infraParams = jobParams.infraParams();
+
+        URI artifactBaseURI = uploadWorkspace( jobParams, workspace, jobParametersJson, infraParams );
+
+        // job name should follow these restrictions, https://docs.aws.amazon.com/cli/latest/reference/batch/submit-job.html
+        // The first character must be alphanumeric, and up to 128 letters (uppercase and lowercase), numbers, hyphens, and underscores are allowed.
+        String sanitizedJobName = InfraNamesHelper.sanitizeJobName( jobName );
+
+        JobId jobId = jobScheduler.schedule( artifactWorkerUri, artifactBaseURI, sanitizedJobName, jobParametersJson, jobRequestConsumer );
+        LOG.info( "job scheduled, with id {}", jobId.id() );
+        scheduledJobs.put( jobId, BatchBenchmarkJob.newJob( jobName,
+                                                            jobParams.benchmarkingRun().testRunId(),
+                                                            new JobStatus( jobId, null, null, null ),
+                                                            Clock.systemDefaultZone() ) );
+        return jobId;
+    }
+
+    public JobId scheduleBenchmarkJob( String jobName,
+                                       JobParams jobParams,
+                                       Workspace workspace,
+                                       URI artifactWorkerUri )
             throws ArtifactStoreException
     {
 
         InfraParams infraParams = jobParams.infraParams();
 
-        JsonUtil.serializeJson( jobParameterJson.toPath(), jobParams );
-
-        URI artifactBaseURI = infraParams.artifactBaseUri();
-        artifactStorage.uploadBuildArtifacts( artifactBaseURI, workspace );
-        LOG.info( "uploaded build artifacts into {}", artifactBaseURI );
+        URI artifactBaseURI = uploadWorkspace( jobParams, workspace, Workspace.JOB_PARAMETERS_JSON, infraParams );
 
         // job name should follow these restrictions, https://docs.aws.amazon.com/cli/latest/reference/batch/submit-job.html
         // The first character must be alphanumeric, and up to 128 letters (uppercase and lowercase), numbers, hyphens, and underscores are allowed.
@@ -246,5 +267,17 @@ public class BenchmarkJobScheduler
                                                  benchmarkJob.testRunId() );
             storeClient.execute( createJob );
         }
+    }
+
+    private URI uploadWorkspace( JobParams jobParams, Workspace workspace, String jobParametersJson, InfraParams infraParams ) throws ArtifactStoreException
+    {
+        Path jobParameterJson = workspace.baseDir().resolve( jobParametersJson );
+        LOG.info( "creating job parameters json in {}", jobParameterJson );
+        JsonUtil.serializeJson( jobParameterJson, jobParams );
+
+        URI artifactBaseURI = infraParams.artifactBaseUri();
+        artifactStorage.uploadBuildArtifacts( artifactBaseURI, workspace );
+        LOG.info( "uploaded build artifacts into {}", artifactBaseURI );
+        return artifactBaseURI;
     }
 }

@@ -19,15 +19,14 @@ import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
-import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.ResultStoreCredentials;
+import com.neo4j.bench.infra.Workspace;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 
@@ -39,6 +38,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -54,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class BenchmarkJobSchedulerTest
 {
@@ -90,17 +91,74 @@ public class BenchmarkJobSchedulerTest
         String testRunId = UUID.randomUUID().toString();
         String jobName = "jobName";
 
-        Mockito.when(
+        when(
                 jobScheduler.schedule(
                         URI.create( "http://localhost/worker.jar" ),
                         URI.create( "http://localhost/artifact/" ),
                         jobName ) )
-               .thenReturn( jobId );
+                .thenReturn( jobId );
 
         LinkedBlockingDeque<String> jobStatuses = Queues.newLinkedBlockingDeque( asList( "SUBMITTED", "RUNNING", "SUCCEEDED" ) );
-        Mockito.when( jobScheduler.jobsStatuses( anyList() ) )
-               .then( (Answer<List<JobStatus>>) invocation ->
-                       singletonList( new JobStatus( jobId, jobStatuses.take(), null, null ) ) );
+        when( jobScheduler.jobsStatuses( anyList() ) )
+                .then( (Answer<List<JobStatus>>) invocation ->
+                        singletonList( new JobStatus( jobId, jobStatuses.take(), null, null ) ) );
+
+        JobParams<NoopBenchmarkingToolRunnerParams> jobParams = getJobParams( testRunId );
+
+        // when
+        JobId actualjobId = benchmarkJobScheduler.scheduleBenchmarkJob( jobName,
+                                                                        jobParams,
+                                                                        workspace,
+                                                                        URI.create( "http://localhost/worker.jar" ) );
+        // then
+        assertEquals( jobId, actualjobId );
+
+        // when
+        Collection<BatchBenchmarkJob> benchmarkJobs = benchmarkJobScheduler.awaitFinished();
+
+        // then
+        BatchBenchmarkJob benchmarkJob = benchmarkJobs.stream().findFirst().get();
+
+        assertBenchmarkJob( jobId, jobName, benchmarkJob );
+        assertTrue( benchmarkJob.lastJobStatus().isDone() );
+        assertFalse( benchmarkJob.lastJobStatus().isFailed() );
+
+        // when
+        StoreClient storeClient = mock( StoreClient.class );
+        benchmarkJobScheduler.reportJobsTo( storeClient );
+
+        // then
+        ArgumentCaptor<CreateJob> varArgs = ArgumentCaptor.forClass( CreateJob.class );
+        verify( storeClient ).execute( varArgs.capture() );
+
+        CreateJob actualCreateJob = varArgs.getValue();
+        assertCreateJob( benchmarkJob, testRunId, actualCreateJob );
+    }
+
+    @Test( timeout = 10_000 )
+    public void scheduleJobWithJobRequestConsumerAwaitFinishWhenSucceededAndReport() throws Exception
+    {
+        // given
+        JobId jobId = new JobId( UUID.randomUUID().toString() );
+        String testRunId = UUID.randomUUID().toString();
+        String jobName = "jobName";
+        String jobParametersJson = "custom-job-paramters.json";
+        Optional<JobScheduler.JobRequestConsumer> jobRequestConsumer = Optional.of( submitJobRequest ->
+                                                                                    {
+                                                                                    } );
+
+        when( jobScheduler.schedule(
+                URI.create( "http://localhost/worker.jar" ),
+                URI.create( "http://localhost/artifact/" ),
+                jobName,
+                jobParametersJson,
+                jobRequestConsumer
+        ) ).thenReturn( jobId );
+
+        LinkedBlockingDeque<String> jobStatuses = Queues.newLinkedBlockingDeque( asList( "SUBMITTED", "RUNNING", "SUCCEEDED" ) );
+        when( jobScheduler.jobsStatuses( anyList() ) )
+                .then( (Answer<List<JobStatus>>) invocation ->
+                        singletonList( new JobStatus( jobId, jobStatuses.take(), null, null ) ) );
 
         JobParams<NoopBenchmarkingToolRunnerParams> jobParams = getJobParams( testRunId );
 
@@ -109,7 +167,8 @@ public class BenchmarkJobSchedulerTest
                                                                         jobParams,
                                                                         workspace,
                                                                         URI.create( "http://localhost/worker.jar" ),
-                                                                        Files.createTempFile( tempDir, "job-parameters", ".json" ).toFile() );
+                                                                        jobParametersJson,
+                                                                        jobRequestConsumer );
         // then
         assertEquals( jobId, actualjobId );
 
@@ -144,16 +203,16 @@ public class BenchmarkJobSchedulerTest
         String testRunId = UUID.randomUUID().toString();
         String jobName = "jobName";
 
-        Mockito.when(
+        when(
                 jobScheduler.schedule(
                         URI.create( "http://localhost/worker.jar" ),
                         URI.create( "http://localhost/artifact/" ),
                         jobName ) )
-               .thenReturn( jobId );
+                .thenReturn( jobId );
 
         LinkedBlockingDeque<String> jobStatuses = Queues.newLinkedBlockingDeque( asList( "SUBMITTED", "RUNNING", "FAILED" ) );
-        Mockito.when( jobScheduler.jobsStatuses( anyList() ) )
-               .then( (Answer<List<JobStatus>>) invocation -> singletonList( new JobStatus( jobId, jobStatuses.take(), null, null ) ) );
+        when( jobScheduler.jobsStatuses( anyList() ) )
+                .then( (Answer<List<JobStatus>>) invocation -> singletonList( new JobStatus( jobId, jobStatuses.take(), null, null ) ) );
 
         JobParams<NoopBenchmarkingToolRunnerParams> jobParams = getJobParams( testRunId );
 
@@ -161,8 +220,7 @@ public class BenchmarkJobSchedulerTest
         JobId actualjobId = benchmarkJobScheduler.scheduleBenchmarkJob( jobName,
                                                                         jobParams,
                                                                         workspace,
-                                                                        URI.create( "http://localhost/worker.jar" ),
-                                                                        Files.createTempFile( tempDir, "job-parameters", ".json" ).toFile() );
+                                                                        URI.create( "http://localhost/worker.jar" ) );
         // then
         assertEquals( jobId, actualjobId );
 

@@ -215,9 +215,10 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                     UUID uuid = UUID.randomUUID();
                     URI artifactBaseQueryRunURI = artifactBaseWorkloadURI.resolve( URIHelper.toURIPart( uuid.toString() ) );
                     URI artifactWorkerQueryRunURI = artifactBaseQueryRunURI.resolve( "benchmark-infra-worker.jar" );
-                    // then store job params as JSON
                     infraParams = infraParams.withArtifactBaseUri( artifactBaseQueryRunURI );
+
                     String testRunId = UUID.randomUUID().toString();
+
                     JobParams jobParams = new JobParams( infraParams,
                                                          new BenchmarkingRun(
                                                                  new BenchmarkingTool( MacroToolRunner.class,
@@ -234,8 +235,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                                             runMacroWorkloadParams.triggeredBy() ),
                                                                 jobParams,
                                                                 workspace,
-                                                                artifactWorkerQueryRunURI,
-                                                                jobParameterJson );
+                                                                artifactWorkerQueryRunURI );
                 }
                 awaitFinished.get();
             }

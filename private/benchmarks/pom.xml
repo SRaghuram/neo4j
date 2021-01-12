@@ -28,7 +28,7 @@
         <benchmarks.deploy.skip>true</benchmarks.deploy.skip>
         <!-- This is benchmark version, that is going to be used for internal release -->
         <!-- DO NOT REMOVE IT !!!, TOUCH IT ONLY WHEN YOU WANT TO DO INTERNAL RELEASE -->
-        <benchmarks.version>1.1.4-alpha0</benchmarks.version>
+        <benchmarks.version>1.1.4-alpha3</benchmarks.version>
         <jmh.version>1.24</jmh.version>
     </properties>
 
@@ -128,10 +128,28 @@
 
     <profiles>
 		<profile>
-			<properties>
+            <id>benchmarksDeploy</id>
+            <properties>
 				<benchmarks.deploy.skip>false</benchmarks.deploy.skip>
+                <!-- this is needed, because with attach sources it tries to checkstyle JMH generated classes -->
+                <checkstyle.skip>true</checkstyle.skip>
 			</properties>
-			<id>benchmarksDeploy</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
 		</profile>
         <!-- needed for packaging builds -->
         <profile>
