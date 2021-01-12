@@ -68,7 +68,6 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
 
   private val TEST_FALLBACK_POLICY = SLOTTED_FALLBACK_BY_CLASS(classOf[FindShortestPaths], Seq(classOf[NonPipelined], classOf[ProduceResult]))
   case class SLOTTED_FALLBACK_BY_CLASS(breaking: Class[_ <: LogicalPlan], nonBreaking: Seq[Class[_ <: LogicalPlan]]) extends InterpretedPipesFallbackPolicy {
-    override def readOnly: Boolean = true
     override def breakOn(lp: LogicalPlan): Boolean = {
       val c = lp.getClass
       if (c == breaking) true

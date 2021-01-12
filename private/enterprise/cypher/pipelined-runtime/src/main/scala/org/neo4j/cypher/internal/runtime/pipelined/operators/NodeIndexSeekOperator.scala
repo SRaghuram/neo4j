@@ -44,15 +44,19 @@ import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.CompositeValueIndexCursor
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
+import org.neo4j.cypher.internal.runtime.NodeValueHit
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ValuedNodeIndexCursor
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExactSeek
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeek
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LockingUniqueIndexSeek
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekByRange
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
@@ -82,15 +86,17 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
-import org.neo4j.internal.kernel.api.IndexQueryConstraints.constrained
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.schema.IndexOrder
+import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.values.storable.FloatingPointValue
 import org.neo4j.values.storable.Value
 import org.neo4j.values.storable.Values
+
+import scala.collection.mutable.ArrayBuffer
 
 class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                             offset: Int,
@@ -213,16 +219,17 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
                               kernelIndexOrder: IndexOrder,
                               needsValues: Boolean): (NodeValueIndexCursor, Array[NodeValueIndexCursor]) = {
     if (indexQueries.size == 1) {
-      val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-      seek(state.queryIndexes(queryIndex), cursor, read, indexQueries.head)
-      (cursor, Array(cursor))
+      val (cursor, closers) = nonCompositeSeek(state.queryIndexes(queryIndex), resources, read, indexQueries.head)
+      (cursor, closers)
     } else {
-      val cursorsToClose = indexQueries.filterNot(isImpossible).map(query => {
-        val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-        read.nodeIndexSeek(state.queryIndexes(queryIndex), cursor, constrained(kernelIndexOrder, needsValues), query: _*)
-        cursor
-      }).toArray
-      (orderedCursor(kernelIndexOrder, cursorsToClose), cursorsToClose)
+      val cursors = ArrayBuffer.empty[NodeValueIndexCursor]
+      val cursorsToClose = ArrayBuffer.empty[NodeValueIndexCursor]
+      indexQueries.filterNot(isImpossible).foreach(query => {
+        val (cursor, toClose) = seek(state.queryIndexes(queryIndex), resources, read, query, needsValues)
+        cursors += cursor
+        cursorsToClose ++= toClose
+      })
+      (orderedCursor(kernelIndexOrder, cursors.toArray), cursorsToClose.toArray)
     }
   }
 
@@ -234,15 +241,15 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
 
   private def needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  private def seek[RESULT <: AnyRef](index: IndexReadSession,
-                                     nodeCursor: NodeValueIndexCursor,
-                                     read: Read,
-                                     predicates: Seq[IndexQuery]): Unit = {
-
-
+  //Only used for non-composite indexes, contains optimizations so that we
+  //can avoid getting the value from the index when doing exact seeks.
+  private def nonCompositeSeek(index: IndexReadSession,
+                   resources: QueryResources,
+                   read: Read,
+                   predicates: Seq[IndexQuery]): (NodeValueIndexCursor, Array[NodeValueIndexCursor]) = {
 
     if (isImpossible(predicates)) {
-      return // leave cursor un-initialized/empty
+      return (NodeValueHit.EMPTY, Array.empty)// leave cursor un-initialized/empty
     }
 
     // We don't need property values from the index for an exact seek
@@ -253,7 +260,40 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
         null
       }
     val needsValuesFromIndexSeek = exactSeekValues == null && needsValues
-    read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.constrained(indexOrder, needsValuesFromIndexSeek), predicates: _*)
+
+    seek(index, resources, read, predicates, needsValuesFromIndexSeek)
+  }
+
+  private def seek(index: IndexReadSession,
+                    resources: QueryResources,
+                    read: Read,
+                    predicates: Seq[IndexQuery],
+                    needsValuesFromIndexSeek: Boolean): (NodeValueIndexCursor, Array[NodeValueIndexCursor]) = {
+    indexMode match {
+      case _: ExactSeek |
+           _: SeekByRange =>
+        val nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+        read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.constrained(indexOrder, needsValuesFromIndexSeek), predicates: _*)
+        (nodeCursor, Array(nodeCursor))
+      case LockingUniqueIndexSeek =>
+        val nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+        try {
+          val ex = predicates.map(_.asInstanceOf[ExactPredicate])
+          if (ex.exists(q => q.value() eq Values.NO_VALUE)) {
+            (NodeValueHit.EMPTY, Array.empty)
+          } else {
+            val resultNodeId = read.lockingNodeUniqueIndexSeek(index.reference(), nodeCursor, ex: _*)
+            if (StatementConstants.NO_SUCH_NODE == resultNodeId) {
+              (NodeValueHit.EMPTY, Array.empty)
+            } else {
+              val values = ex.map(_.value()).toArray
+              (new NodeValueHit(resultNodeId, values, read), Array.empty)
+            }
+          }
+        } finally {
+          nodeCursor.close()
+        }
+    }
   }
 }
 

@@ -289,11 +289,6 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy[Ne
  */
 trait InterpretedPipesFallbackPolicy {
   /**
-   * True if the fallback only allows read-only plans
-   */
-  def readOnly: Boolean
-
-  /**
    * True if the an operator should be the start of a new pipeline.
    * @throws CantCompileQueryException if the logical plan is not supported with this policy
    */
@@ -318,9 +313,6 @@ object InterpretedPipesFallbackPolicy {
   //===================================
   // DISABLED
   private case class INTERPRETED_PIPES_FALLBACK_DISABLED(runtimeName: String) extends InterpretedPipesFallbackPolicy {
-
-    override def readOnly: Boolean = true
-
     override def breakOn(lp: LogicalPlan): Boolean = {
       throw unsupported(lp.getClass.getSimpleName, runtimeName)
     }
@@ -329,8 +321,6 @@ object InterpretedPipesFallbackPolicy {
   //===================================
   // WHITELIST
   private case class INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution: Boolean, runtimeName: String) extends InterpretedPipesFallbackPolicy {
-
-    override def readOnly: Boolean = true
 
     val WHITELIST: PartialFunction[LogicalPlan, Boolean] = {
       //------------------------------------------------------------------------------------
@@ -356,8 +346,6 @@ object InterpretedPipesFallbackPolicy {
   //===================================
   // BLACKLIST
   private case class INTERPRETED_PIPES_FALLBACK_FOR_ALL_POSSIBLE_PLANS(parallelExecution: Boolean, runtimeName: String) extends InterpretedPipesFallbackPolicy {
-
-    override def readOnly: Boolean = false
 
     private val WHITELIST = INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution, runtimeName).WHITELIST
 
