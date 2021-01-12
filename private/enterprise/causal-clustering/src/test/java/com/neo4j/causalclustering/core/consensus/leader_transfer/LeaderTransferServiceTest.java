@@ -27,6 +27,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.LogAssertions;
 import org.neo4j.scheduler.CallableExecutorService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.FakeClock;
@@ -118,6 +120,40 @@ class LeaderTransferServiceTest
         assertThat( jobHasFinished ).succeedsWithin( Duration.ofSeconds( 30 ) );
         assertThat( messageHandler.proposals.stream().map( RaftMessages.InboundRaftMessageContainer::message ) )
                 .containsExactly( new RaftMessages.LeadershipTransfer.Proposal( myRaftId, remoteRaftId, Set.of() ) );
+    }
+
+    @Test
+    void shouldHandleRejection()
+    {
+        // given
+        var clock = new FakeClock();
+        var databaseManager = new StubClusteredDatabaseManager();
+        var raftMembership = new StubRaftMembershipResolver();
+        databaseWithLeader( databaseId, databaseManager, myRaftId, raftMembership );
+        var messageHandler = new TransferLeaderJobTest.TrackingMessageHandler();
+        var leaderService = new StubLeaderService( Map.of( databaseId, myIdentity.serverId() ) );
+        var logProvider = new AssertableLogProvider();
+
+        var leaderTransferService = new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, myIdentity,
+                leaderMemberBackoff, logProvider, clock, leaderService, serverGroupsProvider, raftMembership );
+        var rejection = new RaftMessages.LeadershipTransfer.Rejection( remoteRaftId, 100, 1 );
+
+        //when
+        leaderTransferService.handleRejection( rejection, databaseId );
+
+        //then
+        assertThat( leaderTransferService.databasePenalties().notSuspended( databaseId.databaseId(), remoteIdentity.serverId() ) ).isTrue();
+        LogAssertions.assertThat( logProvider ).forLevel( AssertableLogProvider.Level.WARN ).containsMessages(
+                String.format( "LeaderTransferRequest rejected (%s) by %s whose ServerId is not present any more", databaseId, remoteRaftId ) );
+
+        //when
+        logProvider.clear();
+        raftMembership.addReverseMapping( remoteIdentity.serverId(), remoteIdentity.raftMemberId( databaseId ) );
+        leaderTransferService.handleRejection( rejection, databaseId );
+
+        //then
+        assertThat( leaderTransferService.databasePenalties().notSuspended( databaseId.databaseId(), remoteIdentity.serverId() ) ).isFalse();
+        LogAssertions.assertThat( logProvider ).doesNotHaveAnyLogs();
     }
 
     private NamedDatabaseId databaseWithLeader( NamedDatabaseId dbId, StubClusteredDatabaseManager databaseManager, RaftMemberId member,

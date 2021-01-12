@@ -19,6 +19,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 
 class StubRaftMembershipResolver implements RaftMembershipResolver
 {
+    private final Map<RaftMemberId,ServerId> reverseMappings = new HashMap<>();
     private final Map<NamedDatabaseId,Set<CoreServerIdentity>> dbServers = new HashMap<>();
 
     StubRaftMembershipResolver()
@@ -60,6 +61,11 @@ class StubRaftMembershipResolver implements RaftMembershipResolver
     @Override
     public ServerId resolveServerForRaftMember( RaftMemberId memberId )
     {
-        throw new UnsupportedOperationException();
+        return reverseMappings.get( memberId );
+    }
+
+    public void addReverseMapping( ServerId serverId, RaftMemberId raftMemberId )
+    {
+        reverseMappings.put( raftMemberId, serverId );
     }
 }

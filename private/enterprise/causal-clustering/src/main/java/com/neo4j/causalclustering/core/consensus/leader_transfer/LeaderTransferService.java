@@ -103,7 +103,15 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     {
         RaftMemberId memberId = rejection.from();
         ServerId serverId = membershipResolver.resolveServerForRaftMember( memberId );
-        databasePenalties.issuePenalty( serverId, namedDatabaseId );
+        // rejection could be caused by remote server is shutting down, in such case mapping could have been removed already
+        if ( serverId != null )
+        {
+            databasePenalties.issuePenalty( serverId, namedDatabaseId );
+        }
+        else
+        {
+            log.warn( "LeaderTransferRequest rejected (%s) by %s whose ServerId is not present any more", namedDatabaseId, memberId );
+        }
     }
 
     @VisibleForTesting
@@ -124,6 +132,12 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
         {
             throw new RuntimeException( e );
         }
+    }
+
+    @VisibleForTesting
+    DatabasePenalties databasePenalties()
+    {
+        return databasePenalties;
     }
 
     private static SelectionStrategy pickSelectionStrategy( Config config, DatabaseManager<ClusteredDatabaseContext> databaseManager,
