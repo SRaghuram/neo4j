@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.ir.StrictnessMode
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -161,7 +160,6 @@ class TreeBuilderTest extends CypherFunSuite {
                         override val rhs: Option[StringPlan]) extends LogicalPlan(idGen) {
 
     override def availableSymbols: Set[String] = ???
-    override def strictness: StrictnessMode = ???
   }
 
   sealed trait CallBack
