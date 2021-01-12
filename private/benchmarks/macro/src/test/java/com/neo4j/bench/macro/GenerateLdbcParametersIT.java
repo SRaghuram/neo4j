@@ -24,6 +24,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -157,7 +158,7 @@ public class GenerateLdbcParametersIT
                               }
                               catch ( IOException e )
                               {
-                                  throw new RuntimeException( e );
+                                  throw new UncheckedIOException( e );
                               }
                           } );
             bufferedWriter.flush();
