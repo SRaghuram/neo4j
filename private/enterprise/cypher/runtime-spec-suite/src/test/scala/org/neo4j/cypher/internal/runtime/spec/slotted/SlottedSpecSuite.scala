@@ -53,6 +53,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LockNodesTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LockingUniqueNodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryDeallocationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
@@ -153,6 +154,7 @@ class SlottedNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.DEFAULT,
                                with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
                                with NodeLockingUniqueIndexSeekTestBase[EnterpriseRuntimeContext]
                                with EnterpriseNodeIndexSeekTestBase[EnterpriseRuntimeContext]
+class SlottedLockingUniqueNodeIndexSeekTest extends LockingUniqueNodeIndexSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexStartsWithSeekTest extends NodeIndexStartsWithSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexPointDistanceSeekTest extends NodeIndexPointDistanceSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedInputTest extends InputTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)

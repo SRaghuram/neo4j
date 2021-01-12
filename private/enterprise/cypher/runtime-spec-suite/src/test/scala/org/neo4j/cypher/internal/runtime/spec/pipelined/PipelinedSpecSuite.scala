@@ -66,6 +66,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LockNodesTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LockingUniqueNodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryDeallocationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
@@ -245,6 +246,9 @@ class PipelinedMultiNodeIndexSeekRewriterTest extends MultiNodeIndexSeekRewriter
 class PipelinedMultiNodeIndexSeekRewriterNoFusingTest extends MultiNodeIndexSeekRewriterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedAssertSameNodeRewriterTest extends AssertSameNodeRewriterTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedAssertSameNodeRewriterNoFusingTest extends AssertSameNodeRewriterTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
+class PipelinedRuntimeUniqueLockingNodeIndexSeekTest extends LockingUniqueNodeIndexSeekTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedRuntimeUniqueLockingNodeIndexSeekNoFusingTest extends LockingUniqueNodeIndexSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+
 
 // INDEX SCAN
 class PipelinedNodeIndexScanTest extends NodeIndexScanTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
