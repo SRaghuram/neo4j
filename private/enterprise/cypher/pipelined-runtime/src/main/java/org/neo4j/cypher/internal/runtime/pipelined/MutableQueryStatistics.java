@@ -36,6 +36,11 @@ public class MutableQueryStatistics implements QueryStatistics
         setProperties++;
     }
 
+    public void setProperties(long numberOfProperties)
+    {
+        setProperties+=numberOfProperties;
+    }
+
     public void addLabel()
     {
         addedLabels++;
