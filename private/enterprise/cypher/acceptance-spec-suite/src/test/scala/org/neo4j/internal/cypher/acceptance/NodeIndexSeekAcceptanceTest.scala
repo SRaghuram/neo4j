@@ -255,10 +255,10 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should not use indexes when RHS of property comparison depends on the node searched for (equality)") {
     // Given
-    val n1 = createLabeledNode(Map("a" -> 1), "MyNodes")
+    createLabeledNode(Map("a" -> 1), "MyNodes")
     val n2 = createLabeledNode(Map("a" -> 0), "MyNodes")
     val n3 = createLabeledNode(Map("a" -> 1, "b" -> 1), "MyNodes")
-    val n4 = createLabeledNode(Map("a" -> 1, "b" -> 5), "MyNodes")
+    createLabeledNode(Map("a" -> 1, "b" -> 5), "MyNodes")
 
     graph.createIndex("MyNodes", "a")
 
@@ -283,8 +283,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   test("should not use indexes when RHS of property comparison depends on the node searched for (range query)") {
     // Given
     val n1 = createLabeledNode(Map("a" -> 1), "MyNodes")
-    val n2 = createLabeledNode(Map("a" -> 0), "MyNodes")
-    val n3 = createLabeledNode(Map("a" -> 1, "b" -> 1), "MyNodes")
+    createLabeledNode(Map("a" -> 0), "MyNodes")
+    createLabeledNode(Map("a" -> 1, "b" -> 1), "MyNodes")
     val n4 = createLabeledNode(Map("a" -> 5, "b" -> 1), "MyNodes")
 
     graph.createIndex("MyNodes", "a")
@@ -347,7 +347,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     // Given
     graph.createIndex("L", "prop")
     val node1 = createLabeledNode(Map("prop" -> Array(1,2,3)), "L")
-    val node2 = createLabeledNode(Map("prop" -> Array(3,2,1)), "L")
+    createLabeledNode(Map("prop" -> Array(3,2,1)), "L")
 
     // When
     val result = executeWith(Configs.All, "MATCH (n:L) WHERE n.prop = [1,2,3] RETURN n",
@@ -361,7 +361,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     // Given
     graph.createUniqueConstraint("L", "prop")
     val node1 = createLabeledNode(Map("prop" -> Array(1,2,3)), "L")
-    val node2 = createLabeledNode(Map("prop" -> Array(3,2,1)), "L")
+    createLabeledNode(Map("prop" -> Array(3,2,1)), "L")
 
     // When
     val result = executeWith(Configs.All, "MATCH (n:L) WHERE n.prop = [1,2,3] RETURN n",
@@ -390,7 +390,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     graph.createIndex("Label1", "prop1")
     graph.createIndex("Label1", "prop2")
     val node1 = createLabeledNode(Map("prop1" -> "val"), "Label1")
-    val node2 = createLabeledNode(Map("prop2" -> "anotherVal"), "Label1")
+    createLabeledNode(Map("prop2" -> "anotherVal"), "Label1")
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:Label1) WHERE n.prop1 = 'val' OR n.prop2 = 'val' RETURN n",
@@ -500,8 +500,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   test("should specialize cartesian product of multiple (2) node unique index seeks") {
     // Given
     graph.createUniqueConstraint("L", "prop")
-    val node1 = createLabeledNode(Map("prop" -> 1), "L")
-    val node2 = createLabeledNode(Map("prop" -> 10), "L")
+    createLabeledNode(Map("prop" -> 1), "L")
+    createLabeledNode(Map("prop" -> 10), "L")
     createLabeledNode(Map("prop" -> 100), "L")
 
     // When
@@ -519,9 +519,9 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   test("should specialize cartesian product of multiple (3) node unique index seeks") {
     // Given
     graph.createUniqueConstraint("L", "prop")
-    val node1 = createLabeledNode(Map("prop" -> 1), "L")
-    val node2 = createLabeledNode(Map("prop" -> 10), "L")
-    val node3 = createLabeledNode(Map("prop" -> 100), "L")
+    createLabeledNode(Map("prop" -> 1), "L")
+    createLabeledNode(Map("prop" -> 10), "L")
+    createLabeledNode(Map("prop" -> 100), "L")
     createLabeledNode(Map("prop" -> 1000), "L")
 
     // When
@@ -539,10 +539,10 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   test("should specialize cartesian product of multiple (2) node index seeks") {
     // Given
     graph.createIndex("L", "prop")
-    val node11 = createLabeledNode(Map("prop" -> 1), "L")
-    val node12 = createLabeledNode(Map("prop" -> 1), "L")
-    val node21 = createLabeledNode(Map("prop" -> 10), "L")
-    val node22 = createLabeledNode(Map("prop" -> 10), "L")
+    createLabeledNode(Map("prop" -> 1), "L")
+    createLabeledNode(Map("prop" -> 1), "L")
+    createLabeledNode(Map("prop" -> 10), "L")
+    createLabeledNode(Map("prop" -> 10), "L")
     createLabeledNode(Map("prop" -> 100), "L")
 
     // When
@@ -560,12 +560,12 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   test("should specialize cartesian product of multiple (3) node index seeks") {
     // Given
     graph.createIndex("L", "prop")
-    val node11 = createLabeledNode(Map("prop" -> 1), "L")
-    val node12 = createLabeledNode(Map("prop" -> 1), "L")
-    val node21 = createLabeledNode(Map("prop" -> 10), "L")
-    val node22 = createLabeledNode(Map("prop" -> 10), "L")
-    val node31 = createLabeledNode(Map("prop" -> 100), "L")
-    val node32 = createLabeledNode(Map("prop" -> 100), "L")
+    createLabeledNode(Map("prop" -> 1), "L")
+    createLabeledNode(Map("prop" -> 1), "L")
+    createLabeledNode(Map("prop" -> 10), "L")
+    createLabeledNode(Map("prop" -> 10), "L")
+    createLabeledNode(Map("prop" -> 100), "L")
+    createLabeledNode(Map("prop" -> 100), "L")
     createLabeledNode(Map("prop" -> 1000), "L")
 
     // When
@@ -583,12 +583,12 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   test("should specialize cartesian product of multiple (3) node index seeks with multiple input rows") {
     // Given
     graph.createIndex("L", "prop")
-    val node11 = createLabeledNode(Map("prop" -> 1), "L")
-    val node12 = createLabeledNode(Map("prop" -> 1), "L")
-    val node21 = createLabeledNode(Map("prop" -> 10), "L")
-    val node22 = createLabeledNode(Map("prop" -> 10), "L")
-    val node31 = createLabeledNode(Map("prop" -> 100), "L")
-    val node32 = createLabeledNode(Map("prop" -> 100), "L")
+    createLabeledNode(Map("prop" -> 1), "L")
+    createLabeledNode(Map("prop" -> 1), "L")
+    createLabeledNode(Map("prop" -> 10), "L")
+    createLabeledNode(Map("prop" -> 10), "L")
+    createLabeledNode(Map("prop" -> 100), "L")
+    createLabeledNode(Map("prop" -> 100), "L")
     createLabeledNode(Map("prop" -> 1000), "L")
 
     // When

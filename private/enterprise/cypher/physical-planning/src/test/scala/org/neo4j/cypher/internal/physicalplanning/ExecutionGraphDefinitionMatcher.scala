@@ -346,7 +346,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
           RegularBufferVariant)(SlotConfiguration.empty))
       val apply = applyBuffer(onFalseId, argumentSlotOffset, planId)
-      val bd = buffers.getOrElseUpdate(conditionalId,
+      buffers.getOrElseUpdate(conditionalId,
         BufferDefinition(
           BufferId(conditionalId),
           Id(planId),

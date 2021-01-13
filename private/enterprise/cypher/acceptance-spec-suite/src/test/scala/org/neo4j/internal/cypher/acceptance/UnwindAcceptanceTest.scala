@@ -134,7 +134,8 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("Unwind query should plan successfully with data") {
     createLabeledNode(Map("prop" -> 42, "other" -> 43), "Elements")
-    val result = executeSingle(
+    // Should not throw
+    executeSingle(
       """
         |explain CYPHER RUNTIME=slotted MATCH (m:Elements:Creation:Model{polyglotID:$polyglotID})
         |WITH *

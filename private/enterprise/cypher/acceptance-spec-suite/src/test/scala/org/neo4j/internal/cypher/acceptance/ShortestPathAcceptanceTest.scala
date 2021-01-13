@@ -837,7 +837,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val p6: Node = createPersonNode(6)
     val p7: Node = createPersonNode(7)
     val p8: Node = createPersonNode(8)
-    val p9: Node = createPersonNode(9)
+    createPersonNode(9)
 
     val p0Post1 = createPostNode(0)
     val p1Post1 = createPostNode(1)

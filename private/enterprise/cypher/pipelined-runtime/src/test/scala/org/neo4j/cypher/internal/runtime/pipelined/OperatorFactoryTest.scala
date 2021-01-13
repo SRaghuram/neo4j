@@ -65,8 +65,6 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
   implicit val idGen: SameId = SameId(theId)
 
   private val input = BufferDefinition(BufferId(1), Id.INVALID_ID, ReadOnlyArray.empty, ReadOnlyArray.empty, RegularBufferVariant)(SlotConfiguration.empty)
-  private val source = Argument()
-  private val patternParser = new PatternParser
 
   private val TEST_FALLBACK_POLICY = SLOTTED_FALLBACK_BY_CLASS(classOf[FindShortestPaths], Seq(classOf[NonPipelined], classOf[ProduceResult]))
   case class SLOTTED_FALLBACK_BY_CLASS(breaking: Class[_ <: LogicalPlan], nonBreaking: Seq[Class[_ <: LogicalPlan]]) extends InterpretedPipesFallbackPolicy {

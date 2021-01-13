@@ -432,7 +432,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val node1 = createNode()
     val node2 = createNode()
     val r1 = relate(node1, node2, "prop" -> 10)
-    val r2 = relate(node1, node2, "prop" -> 0)
+    relate(node1, node2, "prop" -> 0)
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
@@ -511,7 +511,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     // given
     val n = createLabeledNode(Map("email" -> "me@mine"), "User")
     val m = createLabeledNode(Map("email" -> "you@yours"), "User")
-    val p = createLabeledNode(Map("emailx" -> "youtoo@yours"), "User")
+    createLabeledNode(Map("emailx" -> "youtoo@yours"), "User")
     graph.createIndex("User", "email")
 
     // when
@@ -526,7 +526,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     // given
     val n = createLabeledNode(Map("email" -> "me@mine"), "User")
     val m = createLabeledNode(Map("email" -> "you@yours"), "User")
-    val p = createLabeledNode(Map("emailx" -> "youtoo@yours"), "User")
+    createLabeledNode(Map("emailx" -> "youtoo@yours"), "User")
     graph.createIndex("User", "email")
 
     // when
@@ -553,7 +553,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     // given
     val n = createLabeledNode(Map("email" -> "me@mine"), "User")
     val m = createLabeledNode(Map("email" -> "you@yours"), "User")
-    val p = createLabeledNode(Map("emailx" -> "youtoo@yours"), "User")
+    createLabeledNode(Map("emailx" -> "youtoo@yours"), "User")
     graph.createIndex("User", "email")
 
     // when
@@ -747,7 +747,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     // given
     val a = createNode().getId
     val b = createNode().getId
-    val c = createNode().getId
+    createNode()
     val d = createNode().getId
     1.to(1000).foreach(_ => createNode())
 

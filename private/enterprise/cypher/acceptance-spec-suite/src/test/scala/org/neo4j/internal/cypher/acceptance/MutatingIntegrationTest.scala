@@ -306,8 +306,8 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   }
 
   test("created paths honor directions") {
-    val a = createNode(Map("prop" -> "start"))
-    val b = createNode(Map("prop" -> "end"))
+    createNode(Map("prop" -> "start"))
+    createNode(Map("prop" -> "end"))
 
     val query = "match (a), (b) where a.prop = 'start' AND b.prop = 'end' create p = (a)<-[:X]-(b) with p unwind nodes(p) as x return x.prop"
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)

@@ -42,7 +42,7 @@ class ArgumentStateMapMemoryManagementTest extends MorselUnitTest {
     val (asm, morsel, excluded) = createTestAsmAndMorsel(numberOfArguments)
 
     // Then
-    val measuredFirst = assertMemoryEstimationExact(asm, excluded, 0)
+    assertMemoryEstimationExact(asm, excluded, 0)
 
     ArgumentStateMap.foreach(0, morsel, (arg: Long, view: Morsel) => {
       asm.initiate(arg, view.readCursor(), null, 1)
@@ -73,7 +73,7 @@ class ArgumentStateMapMemoryManagementTest extends MorselUnitTest {
     val (asm, morsel, excluded) = createTestAsmAndMorsel(numberOfArguments)
 
     // Then
-    val measuredFirst = assertMemoryEstimationExact(asm, excluded, 0)
+    assertMemoryEstimationExact(asm, excluded, 0)
 
     ArgumentStateMap.foreach(0, morsel, (arg: Long, view: Morsel) => {
       asm.initiate(arg, view.readCursor(), null, 1)
@@ -129,7 +129,7 @@ class ArgumentStateMapMemoryManagementTest extends MorselUnitTest {
     val (asm, morsel, excluded) = createTestAsmAndMorsel(numberOfArguments)
 
     // Then
-    val measuredFirst = assertMemoryEstimationExact(asm, excluded, 0)
+    assertMemoryEstimationExact(asm, excluded, 0)
 
     ArgumentStateMap.foreach(0, morsel, (arg: Long, view: Morsel) => {
       asm.initiate(arg, view.readCursor(), null, 1)
@@ -207,7 +207,7 @@ class ArgumentStateMapMemoryManagementTest extends MorselUnitTest {
     val (asm, morsel, excluded) = createTestAsmAndMorsel(numberOfArguments)
 
     // Then
-    val measuredFirst = assertMemoryEstimationExact(asm, excluded, 0)
+    assertMemoryEstimationExact(asm, excluded, 0)
 
     ArgumentStateMap.foreach(0, morsel, (arg: Long, view: Morsel) => {
       asm.initiate(arg, view.readCursor(), null, 1)
@@ -292,12 +292,6 @@ class ArgumentStateMapMemoryManagementTest extends MorselUnitTest {
       measured shouldEqual estimated
     }
     measured
-  }
-
-  private def assertNoMemoryLeak(): Unit = {
-    withClue("Leaking memory") {
-      0L shouldEqual memoryTracker.estimatedHeapMemory
-    }
   }
 
   private def createTestAsmAndMorsel(numberOfArguments: Int): (ArgumentStateMap[TestArgumentState], Morsel, Long) = {

@@ -54,14 +54,6 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
     }
   }
 
-  private implicit class RichDb(db: GraphDatabaseCypherService) {
-    def planDescriptionForQuery(tx:InternalTransaction, query: String): ExecutionPlanDescription = {
-      val res = tx.execute(query)
-      res.resultAsString()
-      res.getExecutionPlanDescription
-    }
-  }
-
   class AllNodesProcedure extends CallableProcedure {
 
     private val results = Map[String, AnyRef]("node" -> Neo4jTypes.NTInteger)

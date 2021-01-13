@@ -23,7 +23,7 @@ import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("should not populate node unless asked to") {
-    val n1 = createNode()
+    createNode()
 
     val query = "MATCH (n) RETURN n"
 

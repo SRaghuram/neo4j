@@ -722,10 +722,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
          |WHERE distance(p.location, point({x: 0, y: 0, crs: 'cartesian'})) <= 10
          |RETURN p.location as point
         """.stripMargin
-    // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
-
-    // Then
+    // When & Then
     expectResultsAndIndexUsage(query, Set.empty, inclusiveRange = true)
   }
 

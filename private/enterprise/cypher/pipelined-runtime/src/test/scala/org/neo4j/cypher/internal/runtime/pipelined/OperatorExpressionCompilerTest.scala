@@ -116,7 +116,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       oec.resetCounts()
 
       // When
-      val getFirstTimeIr = oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
+      oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
 
       // Then first time IR should get from input context (i.e. not from store and not from local)
       oec.initCachedPropertyFromContextCount shouldEqual 1
@@ -124,7 +124,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       oec.loadLocalCachedPropertyCount shouldEqual 0
 
       // When
-      val getSecondTimeIr = oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
+      oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
 
       // Then second time IR should get from local
       oec.initCachedPropertyFromContextCount shouldEqual 1
@@ -132,7 +132,6 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       oec.loadLocalCachedPropertyCount shouldEqual 1
 
       // Then
-      val local = refSlotLocal(i)
       oec.getAllLocalsForCachedProperties shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more cached property local
       oec.getAllLocalsForRefSlots shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more local
     }
@@ -160,7 +159,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       oec.loadLocalCachedPropertyCount shouldEqual 0
 
       // When
-      val getSecondTimeIr = oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
+      oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
 
       // Then second time IR should get from local (i.e. not from context and not from store)
       oec.initCachedPropertyFromContextCount shouldEqual 0

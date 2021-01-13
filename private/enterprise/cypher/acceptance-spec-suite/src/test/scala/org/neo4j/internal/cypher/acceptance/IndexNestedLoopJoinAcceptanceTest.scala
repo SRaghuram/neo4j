@@ -93,8 +93,8 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
 
   test("should use index on other node property value where there is no incoming horizon") {
     val nodes = Range(0,125).map(i => createLabeledNode(Map("id" -> i), "Foo"))
-    val n1=createLabeledNode(Map("id"->122),"Bar")
-    val n2=createLabeledNode(Map("id"->123),"Bar")
+    createLabeledNode(Map("id"->122),"Bar")
+    createLabeledNode(Map("id"->123),"Bar")
     graph.createIndex("Foo", "id")
     val query =
       """
@@ -109,8 +109,8 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
 
   test("should use index on other node property value where there is an incoming horizon") {
     val nodes = Range(0,125).map(i => createLabeledNode(Map("id" -> i), "Foo"))
-    val n1=createLabeledNode(Map("id"->122),"Bar")
-    val n2=createLabeledNode(Map("id"->123),"Bar")
+    createLabeledNode(Map("id"->122),"Bar")
+    createLabeledNode(Map("id"->123),"Bar")
     graph.createIndex("Foo", "id")
     val query =
       """
@@ -160,7 +160,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
   // TODO: Not sure why this is not solved using indexes. Come back to this once we have good index support for CONTAINS and ENDS WITH
   ignore("should be able to plan index use for CONTAINS") {
     val aNodes = (0 to 1250).map(i => createLabeledNode(Map("prop" -> s"prefix${i}suffix"), "Foo"))
-    val bNode = createLabeledNode(Map("prop2" -> "12"), "Bar")
+    createLabeledNode(Map("prop2" -> "12"), "Bar")
     graph.createIndex("Foo", "prop")
     val query =
       """ MATCH (a:Foo), (b:Bar) WHERE a.prop CONTAINS b.prop2
@@ -175,7 +175,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
 
   ignore("should be able to plan index use for ENDS WITH") {
     val aNodes = (0 to 1250).map(i => createLabeledNode(Map("prop" -> s"prefix$i"), "Foo"))
-    val bNode = createLabeledNode(Map("prop2" -> "12"), "Bar")
+    createLabeledNode(Map("prop2" -> "12"), "Bar")
     graph.createIndex("Foo", "prop")
     val query =
       """ MATCH (a:Foo), (b:Bar) WHERE a.prop ENDS WITH b.prop2

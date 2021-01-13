@@ -131,9 +131,9 @@ class TemporalIndexAcceptanceTest extends IndexingTestSupport {
 
   test("should handle datetime with named zone and second offset") {
     createIndex()
-    val node1 = createIndexedNode(DateTimeValue.datetime(1818, 7, 15, 14, 12, 12, 0, "+01:12"))
+    createIndexedNode(DateTimeValue.datetime(1818, 7, 15, 14, 12, 12, 0, "+01:12"))
     val node2 = createIndexedNode(DateTimeValue.datetime(1818, 7, 15, 14, 12, 12, 0, "Europe/Stockholm")) // corresponds to +01:12:12
-    val node3 = createIndexedNode(DateTimeValue.datetime(1818, 7, 15, 14, 12, 12, 0, "+01:13"))
+    createIndexedNode(DateTimeValue.datetime(1818, 7, 15, 14, 12, 12, 0, "+01:13"))
 
     val query =
       """

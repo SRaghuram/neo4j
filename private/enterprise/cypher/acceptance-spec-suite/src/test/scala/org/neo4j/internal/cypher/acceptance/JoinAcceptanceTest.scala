@@ -14,8 +14,8 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   test("find friends of others") {
     // given
     createLabeledNode(Map("id" -> 1), "A")
-    val a = createLabeledNode(Map("id" -> 2), "A")
-    val b = createLabeledNode(Map("id" -> 2), "B")
+    createLabeledNode(Map("id" -> 2), "A")
+    createLabeledNode(Map("id" -> 2), "B")
     createLabeledNode(Map("id" -> 3), "B")
 
     // when

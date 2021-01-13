@@ -166,7 +166,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     val a1 = createLabeledNode(Map("prop" -> "www123"), "Address")
     val a2 = createLabeledNode(Map("prop" -> "www"), "Address")
-    val a3 = createLabeledNode(Map("prop" -> "ww"), "Address")
+    createLabeledNode(Map("prop" -> "ww"), "Address")
 
     graph.createIndex("Address", "prop")
 
@@ -189,7 +189,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     val a1 = createLabeledNode(Map("prop" -> "www123"), "Address")
     val a2 = createLabeledNode(Map("prop" -> "www"), "Address")
-    val a3 = createLabeledNode(Map("prop" -> "ww"), "Address")
+    createLabeledNode(Map("prop" -> "ww"), "Address")
 
     graph.createUniqueConstraint("Address", "prop")
 

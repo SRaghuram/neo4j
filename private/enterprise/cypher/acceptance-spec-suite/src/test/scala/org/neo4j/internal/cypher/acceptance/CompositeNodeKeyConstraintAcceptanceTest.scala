@@ -156,7 +156,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
   test("composite NODE KEY constraint should fail when we have nodes with same properties") {
     // When
     val a = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User").getId
-    val b = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User").getId
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User").getId
     val c = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User").getId
 
     // Then

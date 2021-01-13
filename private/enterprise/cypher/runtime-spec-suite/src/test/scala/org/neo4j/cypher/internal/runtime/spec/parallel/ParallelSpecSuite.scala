@@ -235,8 +235,7 @@ class ParallelRuntimeExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING
 class ParallelRuntimeOptionalExpandAllTest extends OptionalExpandAllTestBase(FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite {
   test("should handle many optional expand with random predicates II") {
     // given
-    val nodeLabel = label("Label")
-    val nodes = given {
+    given {
       val allLabels = Array("A", "B", "C", "D", "E")
       def randomLabel = label(allLabels(Random.nextInt(allLabels.length)))
       val nodes = nodeGraph(sizeHint, "N")

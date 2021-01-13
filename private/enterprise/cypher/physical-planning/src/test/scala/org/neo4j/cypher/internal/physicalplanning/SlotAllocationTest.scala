@@ -70,7 +70,6 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
   private val LABEL = labelName("label")
   private val semanticTable = SemanticTable()
   private val NO_EXPR_VARS = new AvailableExpressionVariables()
-  private val leveragedOrders = new LeveragedOrders
   private val config = CypherRuntimeConfiguration.defaultConfiguration
 
 

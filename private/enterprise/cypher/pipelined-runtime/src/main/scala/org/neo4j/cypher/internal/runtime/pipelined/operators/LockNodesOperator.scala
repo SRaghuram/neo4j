@@ -50,7 +50,7 @@ class LockNodesOperator(val workIdentity: WorkIdentity,
 object LockNodesOperator {
   def lockNodes(locks: Locks, nodesFromLongSlot: Array[Long], nodesFromRefSlots: Array[AnyValue]): Unit = {
     var i = 0
-    var ids = mutable.ArrayBuffer.empty[Long]
+    val ids = mutable.ArrayBuffer.empty[Long]
     while (i < nodesFromLongSlot.length) {
       if (nodesFromLongSlot(i) != StatementConstants.NO_SUCH_NODE) {
         ids += nodesFromLongSlot(i)

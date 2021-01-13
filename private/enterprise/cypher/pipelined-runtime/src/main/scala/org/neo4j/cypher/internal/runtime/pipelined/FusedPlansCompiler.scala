@@ -67,7 +67,7 @@ class FusedPlansCompiler(readOnly: Boolean,
     val innermost = new DelegateOperatorTaskTemplate()(expressionCompiler)
     var currentTemplate: OperatorTaskTemplate = innermost
 
-    var argumentStates = new ArrayBuffer[ArgumentStateDescriptor]
+    val argumentStates = new ArrayBuffer[ArgumentStateDescriptor]
 
     for (fixTemplate <- templates.reverse) {
       val ctx = TemplateContext(slots,

@@ -232,7 +232,7 @@ class EagerizationAcceptanceTest
 
   test("should not introduce extra eagerness after CALL of writing procedure") {
     // Given
-    var counter = Counter()
+    val counter = Counter()
 
     registerProcedure("user.mkRel") { builder =>
       builder.in("x", Neo4jTypes.NTNode)
@@ -268,7 +268,7 @@ class EagerizationAcceptanceTest
 
   test("should not introduce extra eagerness after CALL of writing void procedure") {
     // Given
-    var counter = Counter()
+    val counter = Counter()
 
     registerProcedure("user.mkRel") { builder =>
       builder.in("x", Neo4jTypes.NTNode)
@@ -358,7 +358,7 @@ class EagerizationAcceptanceTest
 
   test("should not introduce extra eagerness after CALL of reading VOID procedure") {
     // Given
-    var counter = Counter()
+    val counter = Counter()
 
     registerProcedure("user.expand") { builder =>
       builder.in("x", Neo4jTypes.NTNode)
@@ -642,8 +642,8 @@ class EagerizationAcceptanceTest
   test("should introduce eagerness between MATCH and DELETE + DELETE and MERGE for relationship") {
     val a = createNode()
     val b = createNode()
-    val rel1 = relate(a, b, "T", Map("id" -> 1))
-    val rel2 = relate(a, b, "T", Map("id" -> 2))
+    relate(a, b, "T", Map("id" -> 1))
+    relate(a, b, "T", Map("id" -> 2))
     val query =
       """
         |MATCH (a)-[t:T]->(b)
@@ -663,7 +663,7 @@ class EagerizationAcceptanceTest
   test("should introduce eagerness between MATCH and DELETE + DELETE and MERGE for relationship, direction reversed") {
     val a = createNode()
     val b = createNode()
-    val rel1 = relate(a, b, "T", Map("id" -> 1))
+    relate(a, b, "T", Map("id" -> 1))
     val query =
       """
         |MATCH (a)-[t:T]->(b)
@@ -1351,7 +1351,7 @@ class EagerizationAcceptanceTest
     val node0 = createLabeledNode("Person")
     val node1 = createLabeledNode("Person")
     val node2 = createLabeledNode("Movie")
-    val node3 = createLabeledNode("Movie")
+    createLabeledNode("Movie")
     val node4 = createNode()
     relate(node0, node1)
     relate(node0, node1)
@@ -1564,8 +1564,8 @@ class EagerizationAcceptanceTest
 
   test("should not introduce eagerness when the ON MATCH includes writing to a left-side matched label") {
     val node0 = createLabeledNode("Foo")
-    val node1 = createLabeledNode("Foo")
-    val node2 = createLabeledNode("Bar")
+    createLabeledNode("Foo")
+    createLabeledNode("Bar")
     val node3 = createLabeledNode("Bar")
     relate(node0, node3, "KNOWS")
 
@@ -1581,8 +1581,8 @@ class EagerizationAcceptanceTest
 
   test("should introduce eagerness when the ON MATCH includes writing to a right-side matched label") {
     val node0 = createLabeledNode("Foo")
-    val node1 = createLabeledNode("Foo")
-    val node2 = createLabeledNode("Bar")
+    createLabeledNode("Foo")
+    createLabeledNode("Bar")
     val node3 = createLabeledNode("Bar")
     relate(node0, node3, "KNOWS")
 
@@ -1596,8 +1596,8 @@ class EagerizationAcceptanceTest
 
   test("should not introduce eagerness when the ON CREATE includes writing to a left-side matched label") {
     val node0 = createLabeledNode("Foo")
-    val node1 = createLabeledNode("Foo")
-    val node2 = createLabeledNode("Bar")
+    createLabeledNode("Foo")
+    createLabeledNode("Bar")
     val node3 = createLabeledNode("Bar")
     relate(node0, node3, "KNOWS")
 
@@ -1613,8 +1613,8 @@ class EagerizationAcceptanceTest
 
   test("should introduce eagerness when the ON CREATE includes writing to a right-side matched label") {
     val node0 = createLabeledNode("Foo")
-    val node1 = createLabeledNode("Foo")
-    val node2 = createLabeledNode("Bar")
+    createLabeledNode("Foo")
+    createLabeledNode("Bar")
     val node3 = createLabeledNode("Bar")
     relate(node0, node3, "KNOWS")
 
@@ -1638,7 +1638,7 @@ class EagerizationAcceptanceTest
   }
 
   test("should add eagerness when reading and merging nodes and relationships on matching same label") {
-    val node0 = createLabeledNode("A")
+    createLabeledNode("A")
     val node1 = createLabeledNode("A")
     val node2 = createLabeledNode("A")
     relate(node1, node2, "BAR")
@@ -2784,7 +2784,7 @@ class EagerizationAcceptanceTest
   }
 
   test("should always be eager after deleted nodes if there are any subsequent matches that might load them") {
-    val cookies = (0 until 2).foldLeft(Map.empty[String, Node]) { (nodes, index) =>
+    (0 until 2).foldLeft(Map.empty[String, Node]) { (nodes, index) =>
       val name = s"c$index"
       val cookie = createLabeledNode(Map("name" -> name), "Cookie")
       nodes + (name -> cookie)
@@ -2800,7 +2800,7 @@ class EagerizationAcceptanceTest
   }
 
   test("should always be eager after deleted paths if there are any subsequent matches that might load them") {
-    val cookies = (0 until 2).foldLeft(Map.empty[String, Node]) { (nodes, index) =>
+    (0 until 2).foldLeft(Map.empty[String, Node]) { (nodes, index) =>
       val name = s"c$index"
       val cookie = createLabeledNode(Map("name" -> name), "Cookie")
       nodes + (name -> cookie)

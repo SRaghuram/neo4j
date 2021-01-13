@@ -366,8 +366,6 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val refSlot = RefSlot(0, nullable = true, CTAny)
 
     // then
-    val expectedSlots = SlotConfiguration.empty
-      .newReference("x", refSlot.nullable, refSlot.typ)
     pipe should equal(OptionalSlottedPipe(
       ProjectionPipe(
         ArgumentSlottedPipe()(),
@@ -699,7 +697,6 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val pipe = build(sort)
 
     // then
-    val expectedSlots1 = SlotConfiguration.empty
     val xSlot = RefSlot(0, nullable = true, CTAny)
     val expectedSlots2 = SlotConfiguration.empty
       .newReference("x", xSlot.nullable, xSlot.typ)

@@ -177,8 +177,8 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   //Not TCK material
   // This test exposed a bug in the slotted runtime where it could mix up long slots with ref slots
   test("should not accidentally create relationship between the wrong nodes") {
-    val a = createLabeledNode("A")
-    val b = createLabeledNode("B")
+    createLabeledNode("A")
+    createLabeledNode("B")
 
     val query =
       """
