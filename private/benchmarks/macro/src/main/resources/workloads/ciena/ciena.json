@@ -49,7 +49,7 @@
       "queryFile": "queries/Q1_physicalConnection.cypher"
     },
     {
-      "name": "Q1 ORDER BY physicalConnection.drniId, name",
+      "name": "Q1 ORDER BY physicalConnection.drniId name",
       "description": "Q1, ordering by physicalConnection.drniId and then name",
       "queryFile": "queries/Q1_physicalConnection_2cols.cypher"
     },
