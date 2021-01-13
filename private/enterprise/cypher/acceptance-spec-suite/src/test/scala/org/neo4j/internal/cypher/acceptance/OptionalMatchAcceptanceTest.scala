@@ -80,7 +80,7 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
   test("Movies query should plan with data") {
 
     // GIVEN
-    insertMoviesDataset
+    insertMoviesDataset()
     executeSingle("CREATE INDEX movie_title FOR (n:Movie) ON (n.title)")
     executeSingle("CREATE INDEX person_name FOR (n:Person) ON (n.name)")
 
@@ -102,10 +102,10 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
                                  |   count(c) as countC
                                  |RETURN DISTINCT movie { .title }, countA, countB, countC""".stripMargin)
 
-    result.size shouldBe 38;
+    result.size shouldBe 38
   }
 
-  private def insertMoviesDataset: RewindableExecutionResult = {
+  private def insertMoviesDataset(): RewindableExecutionResult = {
     execute("""CREATE (TheMatrix:Movie {title:'The Matrix', released:1999, tagline:'Welcome to the Real World'})
                  |CREATE (Keanu:Person {name:'Keanu Reeves', born:1964})
                  |CREATE (Carrie:Person {name:'Carrie-Anne Moss', born:1967})
@@ -617,7 +617,7 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
   }
 
   // Tests with grid helper methods
-  {
+  locally {
     def create10x10grid(): Unit = {
       // Create a 10x10 grid where also the first and last nodes of each row and column are connected.
       val rows = for {
@@ -698,5 +698,62 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
       val resultPipelined = executeSingle(s"CYPHER runtime=pipelined connectComponentsPlanner=idp $gridQuery")
       shouldPlanOptionalLast(resultPipelined)
     }
+  }
+
+  test("should not plan an index scan to solve has-label predicate for a variable that is already solved with existence constraint") {
+    for (i <- 1 to 5) {
+      val a = createLabeledNode(Map("prop" -> i), "From")
+      if (i % 2 == 0) {
+        val b = createLabeledNode(Map("x" -> i), "To")
+        relate(a, b)
+      }
+    }
+
+    graph.createIndex("From", "prop")
+    graph.createNodeExistenceConstraint("From", "prop")
+
+    val q =
+      """MATCH (n:From)
+        |OPTIONAL MATCH (n:From)-[:REL]->(m:To)
+        |RETURN n.prop, m.x
+        |ORDER BY n.prop
+        |""".stripMargin
+
+    val res = executeWith(Configs.All, q,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Argument"))
+    )
+
+    res.toList shouldBe List(
+      Map("n.prop" -> 1, "m.x" -> null),
+      Map("n.prop" -> 2, "m.x" -> 2),
+      Map("n.prop" -> 3, "m.x" -> null),
+      Map("n.prop" -> 4, "m.x" -> 4),
+      Map("n.prop" -> 5, "m.x" -> null),
+    )
+  }
+
+  test("should not plan an index scan to solve has-label predicate for a variable that is already solved with aggregation on indexed property") {
+    for (i <- 1 to 5) {
+      val a = createLabeledNode(Map("prop" -> i), "From")
+      val b = createLabeledNode(Map("x" -> i), "To")
+      relate(a, b)
+    }
+
+    graph.createIndex("From", "prop")
+
+    val q =
+      """MATCH (n:From) WHERE n.prop = 1
+        |OPTIONAL MATCH (n:From)-[:REL]->(m:To)
+        |OPTIONAL MATCH (m)-[:REL]->()
+        |RETURN count(n.prop) AS c
+        |""".stripMargin
+
+    val res = executeWith(Configs.All, q,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Argument"))
+    )
+
+    res.toList shouldBe List(
+      Map("c" -> 1)
+    )
   }
 }
