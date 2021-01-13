@@ -46,7 +46,7 @@ class NodeIndexScanSlottedPipeTest extends CypherFunSuite {
     pipe.rowFactory = SlottedCypherRowFactory(slots, SlotConfiguration.Size.zero)
     // exhaust
     pipe.createResults(state).toList
-    monitor.closedResources.collect { case t@`cursor` => t } should have size (1)
+    monitor.closedResources.collect { case `cursor` => cursor } should have size (1)
   }
 
   test("close should close cursor") {
@@ -71,6 +71,6 @@ class NodeIndexScanSlottedPipeTest extends CypherFunSuite {
     pipe.rowFactory = SlottedCypherRowFactory(slots, SlotConfiguration.Size.zero)
     val result = pipe.createResults(state)
     result.close()
-    monitor.closedResources.collect { case t@`cursor` => t } should have size (1)
+    monitor.closedResources.collect { case `cursor` => cursor } should have size (1)
   }
 }

@@ -39,7 +39,7 @@ class OptionalExpandAllSlottedPipeTest extends CypherFunSuite {
     // exhaust
     pipe.createResults(state).toList
     input.wasClosed shouldBe true
-    monitor.closedResources.collect { case r@`relCursor` => r } should have size(1)
+    monitor.closedResources.collect { case `relCursor` => relCursor } should have size(1)
   }
 
   test("close should close buffer") {
@@ -62,6 +62,6 @@ class OptionalExpandAllSlottedPipeTest extends CypherFunSuite {
     result.hasNext shouldBe true // Need to initialize to get cursor registered
     result.close()
     input.wasClosed shouldBe true
-    monitor.closedResources.collect { case r@`relCursor` => r } should have size(1)
+    monitor.closedResources.collect { case `relCursor` => relCursor } should have size(1)
   }
 }
