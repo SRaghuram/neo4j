@@ -180,6 +180,8 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
       // We need two separate IntermediateExpressions to make sure the property value is evaluated
       // at the correct place. If the "value()" contains a "oneTime"-expression, it would otherwise
       // end up with only evaluating the expression in the first condition.
+      // Note: we can't evaluate the expression before the condition, since we need to lock the node/relationship
+      // before evaluating the expression.
       relationshipProperty = value()
       nodeProperty = value()
     }
