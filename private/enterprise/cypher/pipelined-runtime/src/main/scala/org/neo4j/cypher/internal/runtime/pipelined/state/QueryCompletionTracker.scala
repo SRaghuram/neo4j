@@ -11,7 +11,6 @@ import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FlowControl
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources

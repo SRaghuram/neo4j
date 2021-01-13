@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentQueryCompletionTrackerStressTest.POISON_PILL
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer

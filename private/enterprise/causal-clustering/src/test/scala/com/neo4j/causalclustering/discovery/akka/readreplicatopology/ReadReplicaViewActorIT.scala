@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.discovery.akka.readreplicatopology
 import java.time.Duration
 import java.time.Instant
 import java.util.Collections
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import akka.Done
@@ -23,7 +22,6 @@ import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.Tick
 import com.neo4j.causalclustering.identity.IdFactory
-import org.neo4j.dbms.identity.ServerId
 import org.neo4j.time.Clocks
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter

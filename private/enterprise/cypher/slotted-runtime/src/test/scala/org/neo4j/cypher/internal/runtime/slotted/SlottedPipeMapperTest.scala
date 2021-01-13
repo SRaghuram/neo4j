@@ -74,7 +74,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SkipPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SortPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.UniqueIndexSeek
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedPrimitiveGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.expressions.NodeProperty
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedCommandProjection

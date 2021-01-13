@@ -7,10 +7,8 @@ package org.neo4j.cypher.internal.runtime.spec.util
 
 import java.nio.file.Path
 
-import org.neo4j.io.fs.EphemeralFileSystemAbstraction
 import org.netbeans.lib.profiler.heap.ArrayItemValue
 import org.netbeans.lib.profiler.heap.GCRoot
-import org.netbeans.lib.profiler.heap.Heap
 import org.netbeans.lib.profiler.heap.HeapFactory
 import org.netbeans.lib.profiler.heap.Instance
 import org.netbeans.lib.profiler.heap.JavaClass
@@ -19,7 +17,6 @@ import org.netbeans.lib.profiler.heap.ObjectArrayInstance
 import org.netbeans.lib.profiler.heap.ObjectFieldValue
 import org.netbeans.lib.profiler.heap.PrimitiveArrayInstance
 import org.netbeans.lib.profiler.heap.ThreadObjectGCRoot
-import org.netbeans.lib.profiler.heap.Value
 import org.openjdk.jol.info.ClassData
 import org.openjdk.jol.info.ClassLayout
 import org.openjdk.jol.layouters.CurrentLayouter

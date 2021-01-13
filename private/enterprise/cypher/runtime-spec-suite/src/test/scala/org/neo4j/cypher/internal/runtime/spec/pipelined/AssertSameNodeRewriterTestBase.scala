@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.spec.pipelined
 import org.neo4j.cypher.QueryPlanTestSupport
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
-import org.neo4j.cypher.internal.runtime.pipelined.rewriters.pipelinedPrePhysicalPlanRewriter
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
