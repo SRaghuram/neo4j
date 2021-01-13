@@ -198,21 +198,6 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     }
   }
 
-  test("graph projections with aggregation") {
-
-    val actor = createLabeledNode(Map("name" -> "Actor 1"), "Actor")
-    relate(actor, createLabeledNode(Map("title" -> "Movie 1"), "Movie"))
-    relate(actor, createLabeledNode(Map("title" -> "Movie 2"), "Movie"))
-
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, """MATCH (actor:Actor)-->(movie:Movie)
-                                                                          |RETURN actor{ .name, movies: collect(movie{.title}) }""".stripMargin)
-    result.toList should equal(
-      List(Map("actor" ->
-        Map("name" -> "Actor 1", "movies" -> Seq(
-          Map("title" -> "Movie 1"),
-          Map("title" -> "Movie 2"))))))
-  }
-
   test("prepending item to a list should behave correctly in all runtimes") {
     val query = "CYPHER WITH {a:[1,2,3]} AS x RETURN 'a:' + x.a AS r"
 
