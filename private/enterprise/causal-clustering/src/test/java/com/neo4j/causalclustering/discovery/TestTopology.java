@@ -41,19 +41,19 @@ public class TestTopology
         return ConnectorAddresses.fromList( singletonList( new ConnectorUri( bolt, advertisedSocketAddress ) ) );
     }
 
-    public static CoreServerInfo addressesForCore( int id, boolean refuseToBeLeader )
+    public static CoreServerInfo addressesForCore( int id )
     {
-        return addressesForCore( id, refuseToBeLeader, DEFAULT_DATABASE_IDS );
+        return addressesForCore( id, DEFAULT_DATABASE_IDS );
     }
 
-    public static CoreServerInfo addressesForCore( int id, boolean refuseToBeLeader, Set<DatabaseId> databaseIds )
+    public static CoreServerInfo addressesForCore( int id, Set<DatabaseId> databaseIds )
     {
         var raftServerAddress = new SocketAddress( "localhost", 3000 + id );
         var catchupServerAddress = new SocketAddress( "localhost", 4000 + id );
         var boltServerAddress = new SocketAddress( "localhost", 5000 + id );
 
         return new CoreServerInfo( raftServerAddress, catchupServerAddress, wrapAsClientConnectorAddresses( boltServerAddress ),
-                ServerGroupName.setOf( "core", "core" + id ), databaseIds, refuseToBeLeader );
+                ServerGroupName.setOf( "core", "core" + id ), databaseIds );
     }
 
     public static Config configFor( CoreServerInfo coreServerInfo )
@@ -65,7 +65,6 @@ public class TestTopology
                 .set( BoltConnector.advertised_address, coreServerInfo.connectors().clientBoltAddress() )
                 .set( BoltConnector.enabled, true )
                 .set( CausalClusteringSettings.server_groups, new ArrayList<>( coreServerInfo.groups() ) )
-                .set( CausalClusteringSettings.refuse_to_be_leader, coreServerInfo.refusesToBeLeader() )
                 .build();
     }
 

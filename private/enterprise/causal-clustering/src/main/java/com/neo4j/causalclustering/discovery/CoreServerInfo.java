@@ -22,17 +22,15 @@ public class CoreServerInfo implements DiscoveryServerInfo
     private final ConnectorAddresses connectorAddresses;
     private final Set<ServerGroupName> groups;
     private final Set<DatabaseId> startedDatabaseIds;
-    private final boolean refuseToBeLeader;
 
     public CoreServerInfo( SocketAddress raftServer, SocketAddress catchupServer, ConnectorAddresses connectorAddresses, Set<ServerGroupName> groups,
-            Set<DatabaseId> startedDatabaseIds, boolean refuseToBeLeader )
+                           Set<DatabaseId> startedDatabaseIds )
     {
         this.raftServer = raftServer;
         this.catchupServer = catchupServer;
         this.connectorAddresses = connectorAddresses;
         this.groups = groups;
         this.startedDatabaseIds = startedDatabaseIds;
-        this.refuseToBeLeader = refuseToBeLeader;
     }
 
     public static CoreServerInfo fromRaw( Config config, Set<DatabaseId> databaseIds )
@@ -41,8 +39,7 @@ public class CoreServerInfo implements DiscoveryServerInfo
         var catchupAddress = config.get( CausalClusteringSettings.transaction_advertised_address );
         var connectorUris = ConnectorAddresses.fromConfig( config );
         var groups = Set.copyOf( config.get( CausalClusteringSettings.server_groups ) );
-        var refuseToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
-        return new CoreServerInfo( raftAddress, catchupAddress, connectorUris, groups, databaseIds, refuseToBeLeader );
+        return new CoreServerInfo( raftAddress, catchupAddress, connectorUris, groups, databaseIds );
     }
 
     public static CoreServerInfo from( Config config, Set<DatabaseId> databaseIds )
@@ -79,11 +76,6 @@ public class CoreServerInfo implements DiscoveryServerInfo
         return groups;
     }
 
-    public boolean refusesToBeLeader()
-    {
-        return refuseToBeLeader;
-    }
-
     @Override
     public boolean equals( Object o )
     {
@@ -96,8 +88,7 @@ public class CoreServerInfo implements DiscoveryServerInfo
             return false;
         }
         var that = (CoreServerInfo) o;
-        return refuseToBeLeader == that.refuseToBeLeader &&
-               Objects.equals( raftServer, that.raftServer ) &&
+        return Objects.equals( raftServer, that.raftServer ) &&
                Objects.equals( catchupServer, that.catchupServer ) &&
                Objects.equals( connectorAddresses, that.connectorAddresses ) &&
                Objects.equals( groups, that.groups ) &&
@@ -107,7 +98,7 @@ public class CoreServerInfo implements DiscoveryServerInfo
     @Override
     public int hashCode()
     {
-        return Objects.hash( raftServer, catchupServer, connectorAddresses, groups, startedDatabaseIds, refuseToBeLeader );
+        return Objects.hash( raftServer, catchupServer, connectorAddresses, groups, startedDatabaseIds );
     }
 
     @Override
@@ -119,7 +110,6 @@ public class CoreServerInfo implements DiscoveryServerInfo
                ", connectorAddresses=" + connectorAddresses +
                ", groups=" + groups +
                ", startedDatabaseIds=" + startedDatabaseIds +
-               ", refuseToBeLeader=" + refuseToBeLeader +
                '}';
     }
 }

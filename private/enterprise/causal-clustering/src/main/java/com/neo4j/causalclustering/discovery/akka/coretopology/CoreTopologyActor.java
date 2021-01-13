@@ -229,7 +229,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 
         knownDatabaseIds = receivedDatabaseIds; // override the set of known IDs to no accumulate deleted ones
 
-        var bootstrapped =  new BootstrapState( clusterView, memberData, myClusterAddress, config, bootstrappedRafts );
+        var bootstrapped =  new BootstrapState( clusterView, memberData, myClusterAddress, bootstrappedRafts );
         bootstrapStateSink.offer( bootstrapped );
     }
 

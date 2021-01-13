@@ -84,7 +84,7 @@ class CoreTopologyListenerServiceTest
 
     private static Set<RaftMemberId> createTopologyAndGetMembers( NamedDatabaseId id )
     {
-        var coreServerInfo = TestTopology.addressesForCore( 1, false );
+        var coreServerInfo = TestTopology.addressesForCore( 1 );
         var coreTopology = new DatabaseCoreTopology(
                 id.databaseId(), RaftGroupId.from( id.databaseId() ), Map.of( IdFactory.randomServerId(), coreServerInfo ) );
         return coreTopology.resolve( ( databaseId, serverId ) -> IdFactory.randomRaftMemberId() );

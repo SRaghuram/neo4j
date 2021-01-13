@@ -255,7 +255,7 @@ final class ClusteringDatabaseStatusUtil
 
             var allCoreServers = coreRoles.entrySet()
                                           .stream()
-                                          .collect( toMap( Entry::getKey, entry -> TestTopology.addressesForCore( entry.hashCode(), false ) ) );
+                                          .collect( toMap( Entry::getKey, entry -> TestTopology.addressesForCore( entry.hashCode() ) ) );
 
             when( topologyService.allCoreServers() ).thenReturn( allCoreServers );
 

@@ -148,9 +148,9 @@ class PruningStateSinkTest
         var databaseId = randomNamedDatabaseId().databaseId();
         var raftGroupId = RaftGroupId.from( databaseId );
         var coreMembers = Map.of(
-                IdFactory.randomServerId(), addressesForCore( 0, false ),
-                IdFactory.randomServerId(), addressesForCore( 1, false ),
-                IdFactory.randomServerId(), addressesForCore( 2, false ) );
+                IdFactory.randomServerId(), addressesForCore( 0 ),
+                IdFactory.randomServerId(), addressesForCore( 1 ),
+                IdFactory.randomServerId(), addressesForCore( 2 ) );
 
         return new DatabaseCoreTopology( databaseId, raftGroupId, coreMembers );
     }

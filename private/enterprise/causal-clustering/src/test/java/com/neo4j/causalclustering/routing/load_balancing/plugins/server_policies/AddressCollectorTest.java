@@ -527,7 +527,7 @@ class AddressCollectorTest
             }
             var nextId = new MutableInt( 0 );
             var coreServerInfos = cores.entrySet().stream().flatMap( entry -> IntStream.range( 0, entry.getValue() ).map( ignore -> nextId.getAndIncrement() )
-                    .mapToObj( id -> Pair.of( new ServerInfo( TestTopology.addressesForCore( id, false ).boltAddress(), RaftTestMember.server( id ), Set.of() ),
+                    .mapToObj( id -> Pair.of( new ServerInfo( TestTopology.addressesForCore( id ).boltAddress(), RaftTestMember.server( id ), Set.of() ),
                             entry.getKey() ) ) ).collect( Collectors.toMap( Pair::first, Pair::other ) );
 
             var readReplicaServerInfos =

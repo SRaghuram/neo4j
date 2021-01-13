@@ -20,7 +20,7 @@ class CoreServerInfoForServerIdMarshalTest extends BaseMarshalTest<CoreServerInf
     @Override
     Collection<CoreServerInfoForServerId> originals()
     {
-        return singletonList( new CoreServerInfoForServerId( IdFactory.randomServerId(), TestTopology.addressesForCore( 1, false ) ) );
+        return singletonList( new CoreServerInfoForServerId( IdFactory.randomServerId(), TestTopology.addressesForCore( 1 ) ) );
     }
 
     @Override

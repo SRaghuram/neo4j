@@ -65,12 +65,12 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       val member1Address = UniqueAddress(Address("udp", system.name, "1.2.3.4", 8213), 1L)
       val member1Info = new CoreServerInfoForServerId(
         IdFactory.randomServerId(),
-        TestTopology.addressesForCore(0, false)
+        TestTopology.addressesForCore(0)
       )
       val member2Address = UniqueAddress(Address("udp", system.name, "1.2.3.5", 8214), 2L)
       val member2Info = new CoreServerInfoForServerId(
         IdFactory.randomServerId(),
-        TestTopology.addressesForCore(1, false)
+        TestTopology.addressesForCore(1)
       )
 
       val metadata1 = LWWMap.empty.put(cluster, member1Address, member1Info)
@@ -161,7 +161,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     val serverSnapshotFactory: CoreServerSnapshotFactory = TestCoreServerSnapshot.factory _
     val snapshot = serverSnapshotFactory.createSnapshot(identityModule, stateService, Map.empty[DatabaseId, LeaderInfo].asJava)
 
-    val coreServerInfo = TestTopology.addressesForCore(0, false, (Set.empty[DatabaseId] ++ namedDatabaseIds.map(_.databaseId())).asJava)
+    val coreServerInfo = TestTopology.addressesForCore(0, (Set.empty[DatabaseId] ++ namedDatabaseIds.map(_.databaseId())).asJava)
 
     val config = {
       val conf = Config.newBuilder().fromConfig(TestTopology.configFor(coreServerInfo)).build();

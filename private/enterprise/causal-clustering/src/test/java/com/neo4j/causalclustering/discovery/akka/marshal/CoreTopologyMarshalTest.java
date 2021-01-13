@@ -48,7 +48,7 @@ class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopology>
     static Map<ServerId,CoreServerInfo> coreServerInfos( int count )
     {
         return IntStream.range( 0, count )
-                .mapToObj( i -> Pair.of( IdFactory.randomServerId(), TestTopology.addressesForCore( i, false ) ) )
+                .mapToObj( i -> Pair.of( IdFactory.randomServerId(), TestTopology.addressesForCore( i ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
     }
 }

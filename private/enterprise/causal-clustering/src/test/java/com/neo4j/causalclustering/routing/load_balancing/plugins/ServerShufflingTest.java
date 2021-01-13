@@ -111,11 +111,11 @@ class ServerShufflingTest
 
         var leaderId = server( 0 );
         var coreMembers = Map.of(
-                leaderId, addressesForCore( 0, false ),
-                server( 1 ), addressesForCore( 1, false ),
-                server( 2 ), addressesForCore( 2, false ),
-                server( 3 ), addressesForCore( 3, false ),
-                server( 4 ), addressesForCore( 4, false )
+                leaderId, addressesForCore( 0 ),
+                server( 1 ), addressesForCore( 1 ),
+                server( 2 ), addressesForCore( 2 ),
+                server( 3 ), addressesForCore( 3 ),
+                server( 4 ), addressesForCore( 4 )
         );
 
         var leaderService = mock( LeaderService.class );

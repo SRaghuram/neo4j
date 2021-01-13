@@ -55,11 +55,10 @@ class PreElectionIT
     }
 
     @Test
-    void shouldActuallyStartAClusterWithPreVotingAndARefuseToBeLeader()
+    void shouldActuallyStartAClusterWithMultiDcLicense()
     {
         assertDoesNotThrow( () -> startCluster(
                 clusterConfig
-                        .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, this::trueIfServerIdZero )
                         .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE ) ) );
     }
 
@@ -95,40 +94,6 @@ class PreElectionIT
         CoreClusterMember newLeader = cluster.awaitLeader();
 
         assertThat( newLeader.index(), not( equalTo( oldLeader.index() ) ) );
-    }
-
-    @Test
-    void shouldElectANewLeaderIfAServerRefusesToBeLeader() throws Exception
-    {
-        // given
-        Cluster cluster = startCluster( clusterConfig
-                .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, this::trueIfServerIdZero )
-                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE ) );
-
-        CoreClusterMember oldLeader = cluster.awaitLeader();
-        assertNotEquals( oldLeader.index(), 0 );
-
-        int expectedNextLeaderId = oldLeader.index() == 1 ? 2 : 1;
-        assertEventually( () -> getAppendIndex( cluster.getCoreMemberByIndex( expectedNextLeaderId ) ), i -> i == getAppendIndex( oldLeader ), 1, MINUTES );
-
-        // when
-        cluster.removeCoreMember( oldLeader );
-
-        // then
-        CoreClusterMember newLeader = cluster.awaitLeader();
-        assertEquals( newLeader.index(), expectedNextLeaderId );
-
-        assertThat( newLeader.index(), not( equalTo( oldLeader.index() ) ) );
-    }
-
-    private long getAppendIndex( CoreClusterMember oldLeader )
-    {
-        return oldLeader.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class ).state().appendIndex();
-    }
-
-    private String trueIfServerIdZero( int id )
-    {
-        return id == 0 ? "true" : "false";
     }
 
     private Cluster startCluster( ClusterConfig clusterConfig ) throws Exception

@@ -33,9 +33,9 @@ public class CoreServerInfoMarshal extends DiscoveryServerInfoMarshal<CoreServer
         ConnectorAddresses connectorAddresses = clientConnectorAddressesMarshal.unmarshal( channel );
         Set<ServerGroupName> groups = unmarshalGroups( channel );
         Set<DatabaseId> databaseIds = unmarshalDatabaseIds( channel );
-        boolean refuseToBeLeader = BooleanMarshal.unmarshal( channel );
+        BooleanMarshal.unmarshal( channel ); // result of this ignored as refuse to be a leader is no longer supported
 
-        return new CoreServerInfo( raftServer, catchupServer, connectorAddresses, groups, databaseIds, refuseToBeLeader );
+        return new CoreServerInfo( raftServer, catchupServer, connectorAddresses, groups, databaseIds );
     }
 
     @Override
@@ -46,6 +46,7 @@ public class CoreServerInfoMarshal extends DiscoveryServerInfoMarshal<CoreServer
         clientConnectorAddressesMarshal.marshal( coreServerInfo.connectors(), channel );
         marshalGroups( coreServerInfo, channel );
         marshalDatabaseIds( coreServerInfo, channel );
-        BooleanMarshal.marshal( channel, coreServerInfo.refusesToBeLeader() );
+        var refuseToBeLeader = false; //Setting no longer supported. Remains in marshal for compat.
+        BooleanMarshal.marshal( channel, refuseToBeLeader );
     }
 }

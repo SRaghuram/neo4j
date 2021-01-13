@@ -49,7 +49,7 @@ class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
                 .withSharedCoreParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
                 .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
                 .withSharedCoreParam( CausalClusteringSettings.upstream_selection_strategy, LeaderOnlyStrategy.IDENTITY )
-                .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, id -> id == 0 ? FALSE : TRUE )
+                .withInstanceCoreParam( GraphDatabaseSettings.read_only_database_default, id -> id == 0 ? FALSE : TRUE )
                 .withSharedReadReplicaParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
                 .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE )
                 .withSharedReadReplicaParam( CausalClusteringSettings.pull_interval, "100ms" )

@@ -259,7 +259,7 @@ class WaitProcedureTest
     @Test
     void shouldAlsoWorkForStandalone() throws UnavailableException, ProcedureException
     {
-        var boltAddress = addressesForCore( 0, false ).boltAddress();
+        var boltAddress = addressesForCore( 0 ).boltAddress();
         var standalone = WaitProcedure.standalone( myself, boltAddress, Clocks.systemClock(), logProvider,
                 mockReconciliationProvider( 1, null ) );
 
@@ -301,9 +301,9 @@ class WaitProcedureTest
 
         Map<ServerId,CoreServerInfo> coreMembers = new HashMap<>();
 
-        coreMembers.put( myself, addressesForCore( 0, false, Set.of() ) );
-        coreMembers.put( other1, addressesForCore( 1, false, Set.of() ) );
-        coreMembers.put( other2, addressesForCore( 2, false, Set.of() ) );
+        coreMembers.put( myself, addressesForCore( 0, Set.of() ) );
+        coreMembers.put( other1, addressesForCore( 1, Set.of() ) );
+        coreMembers.put( other2, addressesForCore( 2, Set.of() ) );
 
         Map<ServerId,ReadReplicaInfo> replicaMembers = new HashMap<>();
 

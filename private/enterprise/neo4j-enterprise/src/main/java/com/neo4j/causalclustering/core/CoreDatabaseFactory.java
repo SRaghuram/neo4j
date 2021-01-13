@@ -384,10 +384,9 @@ class CoreDatabaseFactory
                                                      storageEngineFactory, config, bootstrapSaver, pageCacheTracer, memoryTracker );
 
         var minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
-        var refuseToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
         var clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
         return new RaftBinder( namedDatabaseId, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> sleep( 100 ),
-                               clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, refuseToBeLeader, monitors );
+                               clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, monitors );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( ServerId myself, Config config, LogProvider logProvider,

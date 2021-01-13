@@ -460,8 +460,7 @@ class GlobalTopologyStateTest
         var httpUri = new ConnectorUri( http, new SocketAddress( "http-" + serverId.uuid(), 4 ) );
         var connectorUris = ConnectorAddresses.fromList( List.of( boltUri, httpUri ) );
         var groups = ServerGroupName.setOf( "group-1-" + serverId.uuid(), "group-2-" + serverId.uuid() );
-        var refuseToBeLeader = serverId.uuid().getLeastSignificantBits() % 2 == 0;
-        return new CoreServerInfo( raftAddress, catchupAddress, connectorUris, groups, databaseIds, refuseToBeLeader );
+        return new CoreServerInfo( raftAddress, catchupAddress, connectorUris, groups, databaseIds );
     }
 
     private static ReadReplicaInfo newReadReplicaInfo( ServerId serverId, Set<DatabaseId> databaseIds )

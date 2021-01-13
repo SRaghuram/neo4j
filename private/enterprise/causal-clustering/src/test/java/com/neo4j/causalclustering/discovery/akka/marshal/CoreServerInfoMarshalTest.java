@@ -22,12 +22,12 @@ public class CoreServerInfoMarshalTest extends BaseMarshalTest<CoreServerInfo>
     Collection<CoreServerInfo> originals()
     {
         return List.of(
-                addressesForCore( 42, false, Set.of() ),
-                addressesForCore( 4242, true, Set.of() ),
-                addressesForCore( 513, false, Set.of( randomDatabaseId() ) ),
-                addressesForCore( 98738, true, Set.of( randomDatabaseId() ) ),
-                addressesForCore( 145, false, Set.of( randomDatabaseId(), randomDatabaseId(), randomDatabaseId() ) ),
-                addressesForCore( 8361, true, Set.of( randomDatabaseId(), randomDatabaseId(), randomDatabaseId() ) )
+                addressesForCore( 42, Set.of() ),
+                addressesForCore( 4242, Set.of() ),
+                addressesForCore( 513, Set.of( randomDatabaseId() ) ),
+                addressesForCore( 98738, Set.of( randomDatabaseId() ) ),
+                addressesForCore( 145, Set.of( randomDatabaseId(), randomDatabaseId(), randomDatabaseId() ) ),
+                addressesForCore( 8361, Set.of( randomDatabaseId(), randomDatabaseId(), randomDatabaseId() ) )
         );
     }
 

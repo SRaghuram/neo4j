@@ -108,9 +108,8 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<SelectionStrategies> leader_balancing =
             newBuilder( "causal_clustering.leadership_balancing", ofEnum( SelectionStrategies.class ), SelectionStrategies.EQUAL_BALANCING ).build();
 
-    @Description( "Prevents the current instance from volunteering to become Raft leader. Defaults to false, and " +
-            "should only be used in exceptional circumstances by expert users. Using this can result in reduced " +
-            "availability for the cluster." )
+    @Deprecated
+    @Description( "Deprecated, use dbms.databases.default_to_read_only" )
     public static final Setting<Boolean> refuse_to_be_leader =
             newBuilder( "causal_clustering.refuse_to_be_leader", BOOL, false ).build();
 

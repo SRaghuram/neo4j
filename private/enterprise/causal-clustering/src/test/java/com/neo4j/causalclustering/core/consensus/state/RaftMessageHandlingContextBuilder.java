@@ -45,7 +45,6 @@ public class RaftMessageHandlingContextBuilder
 
     private ReadableRaftState state;
     private RaftStateBuilder stateBuilder;
-    private boolean refuseToBeLeader;
     private boolean supportsPreVoting;
     private BooleanSupplier shutdownInProgressSupplier = () -> false;
     private BooleanSupplier isReadOnly = () -> false;
@@ -64,19 +63,12 @@ public class RaftMessageHandlingContextBuilder
     {
         var config = Config.newBuilder()
                 .set( CausalClusteringSettings.enable_pre_voting, supportsPreVoting )
-                .set( CausalClusteringSettings.refuse_to_be_leader, refuseToBeLeader )
                 .build();
         if ( state == null )
         {
             state = stateBuilder.build();
         }
         return new RaftMessageHandlingContext( state, config, listen( config ), shutdownInProgressSupplier, isReadOnly );
-    }
-
-    public RaftMessageHandlingContextBuilder refusesToBeLeader( boolean refuseToBeLeader )
-    {
-        this.refuseToBeLeader = refuseToBeLeader;
-        return this;
     }
 
     public RaftMessageHandlingContextBuilder supportsPreVoting( boolean supportsPreVoting )

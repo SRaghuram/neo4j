@@ -67,7 +67,7 @@ class BaseAkkaSerializerTest
                 new Object[]{new UniqueAddress( new Address( "protocol", "system" ), 398L ), new UniqueAddressSerializer()},
                 new Object[]{new UniqueAddress( new Address( "protocol", "system", "host", 79 ), 398L ),
                              new UniqueAddressSerializer()},
-                new Object[]{new CoreServerInfoForServerId( IdFactory.randomServerId(), TestTopology.addressesForCore( 1, false ) ),
+                new Object[]{new CoreServerInfoForServerId( IdFactory.randomServerId(), TestTopology.addressesForCore( 1 ) ),
                              new CoreServerInfoForServerIdSerializer()},
                 new Object[]{new ReadReplicaRefreshMessage(
                         TestTopology.addressesForReadReplica( 432 ),

@@ -116,14 +116,14 @@ class RaftBinderTest
     {
         ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, emptySet() );
         return new RaftBinder( SOME_NAMED_DATABASE_ID, me, raftIdStorage, topologyService, systemGraph, clock,
-                () -> clock.forward( 1, TimeUnit.SECONDS ), Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, false, new Monitors() );
+                               () -> clock.forward( 1, TimeUnit.SECONDS ), Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors() );
     }
 
     private RaftBinder raftBinder( SimpleStorage<RaftGroupId> raftIdStorage, CoreTopologyService topologyService, NamedDatabaseId namedDatabaseId,
             ClusterSystemGraphDbmsModel systemGraph )
     {
         return new RaftBinder( namedDatabaseId, me, raftIdStorage, topologyService, systemGraph, clock,
-                () -> clock.forward( 1, TimeUnit.SECONDS ), Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, false, new Monitors() );
+                               () -> clock.forward( 1, TimeUnit.SECONDS ), Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors() );
     }
 
     @Test
@@ -278,7 +278,7 @@ class RaftBinderTest
         var namedDatabaseId = randomNamedDatabaseId();
         var servers = IntStream.range( 0, minCoreHosts ).boxed().collect( Collectors.toMap(
                         i -> IdFactory.randomServerId(),
-                        i -> addressesForCore( i, false, singleton( namedDatabaseId.databaseId() ) ) ) );
+                        i -> addressesForCore( i, singleton( namedDatabaseId.databaseId() ) ) ) );
         var raftMembers = servers.keySet().stream().map( sid -> new RaftMemberId( sid.uuid() ) ).collect( Collectors.toSet() );
 
         var bootstrappableTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), null, servers );
@@ -312,7 +312,7 @@ class RaftBinderTest
         var namedDatabaseId = randomNamedDatabaseId();
         var servers = IntStream.range( 0, minCoreHosts ).boxed().collect( Collectors.toMap(
                 i -> IdFactory.randomServerId(),
-                i -> addressesForCore( i, false, singleton( namedDatabaseId.databaseId() ) ) ) );
+                i -> addressesForCore( i, singleton( namedDatabaseId.databaseId() ) ) ) );
 
         var bootstrappableTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), null, servers );
         var topologyService = mock( CoreTopologyService.class );
@@ -350,7 +350,7 @@ class RaftBinderTest
     {
         // given
         var servers = IntStream.range( 0, minCoreHosts ).boxed()
-                .collect( Collectors.toMap( i -> IdFactory.randomServerId(), i -> addressesForCore( i, false ) ) );
+                .collect( Collectors.toMap( i -> IdFactory.randomServerId(), i -> addressesForCore( i ) ) );
         var raftMembers = servers.keySet().stream().map( sId -> new RaftMemberId( sId.uuid() ) ).collect( Collectors.toSet() );
 
         DatabaseCoreTopology topology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), null, servers );
@@ -391,9 +391,9 @@ class RaftBinderTest
     {
         // given
         var servers = IntStream.range( 0, minCoreHosts - 1 )
-                .mapToObj( i -> Pair.of( IdFactory.randomServerId(), addressesForCore( i, false ) ) )
+                .mapToObj( i -> Pair.of( IdFactory.randomServerId(), addressesForCore( i ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
-        servers.put( me.serverId(), addressesForCore( minCoreHosts, false ) );
+        servers.put( me.serverId(), addressesForCore( minCoreHosts ) );
         var raftMembers = servers.keySet().stream().map( sid -> new RaftMemberId( sid.uuid() ) ).collect( Collectors.toSet() );
 
         DatabaseCoreTopology topology = new DatabaseCoreTopology( SOME_NAMED_DATABASE_ID.databaseId(), null, servers );
@@ -482,7 +482,7 @@ class RaftBinderTest
     {
         // given
         var topologyMembers = IntStream.range( 0, minCoreHosts ).boxed()
-                .collect( Collectors.toMap( i -> new ServerId( randomUUID() ), i -> addressesForCore( i, false ) ) );
+                .collect( Collectors.toMap( i -> new ServerId( randomUUID() ), i -> addressesForCore( i ) ) );
         var raftId = RaftGroupId.from( namedDatabaseId.databaseId() );
         var boundTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), raftId, topologyMembers );
 

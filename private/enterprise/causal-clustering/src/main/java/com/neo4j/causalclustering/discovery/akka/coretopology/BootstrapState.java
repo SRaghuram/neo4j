@@ -14,40 +14,35 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static com.neo4j.configuration.CausalClusteringSettings.refuse_to_be_leader;
 import static java.util.Objects.requireNonNull;
 
 public class BootstrapState
 {
     public static final BootstrapState EMPTY = new BootstrapState( ClusterViewMessage.EMPTY,
-            MetadataMessage.EMPTY, null, null, Map.of() );
+                                                                   MetadataMessage.EMPTY, null, Map.of() );
 
     private final ClusterViewMessage clusterView;
     private final MetadataMessage memberData;
     private final UniqueAddress selfAddress;
-    private final Config config;
     private final Map<RaftGroupId,RaftMemberId> previouslyBootstrapped;
 
     BootstrapState( ClusterViewMessage clusterView, MetadataMessage memberData, UniqueAddress selfAddress,
-                   Config config, Map<RaftGroupId,RaftMemberId> previouslyBootstrapped )
+                    Map<RaftGroupId,RaftMemberId> previouslyBootstrapped )
     {
         this.clusterView = requireNonNull( clusterView );
         this.memberData = requireNonNull( memberData );
         this.selfAddress = selfAddress;
-        this.config = config;
         this.previouslyBootstrapped = previouslyBootstrapped;
     }
 
     public boolean canBootstrapRaft( NamedDatabaseId namedDatabaseId )
     {
-        boolean iDoNotRefuseToBeLeader = config != null && !config.get( refuse_to_be_leader );
         boolean clusterHasConverged = clusterView.converged();
         boolean iAmFirstPotentialLeader = iAmFirstPotentialLeader( namedDatabaseId );
 
-        return iDoNotRefuseToBeLeader && clusterHasConverged && iAmFirstPotentialLeader;
+        return clusterHasConverged && iAmFirstPotentialLeader;
     }
 
     public boolean memberBootstrappedRaft( NamedDatabaseId namedDatabaseId, RaftMemberId raftMemberId )
@@ -72,14 +67,13 @@ public class BootstrapState
         return Objects.equals( clusterView, that.clusterView ) &&
                Objects.equals( memberData, that.memberData ) &&
                Objects.equals( selfAddress, that.selfAddress ) &&
-               Objects.equals( config, that.config ) &&
                Objects.equals( previouslyBootstrapped, that.previouslyBootstrapped );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( clusterView, memberData, selfAddress, config, previouslyBootstrapped );
+        return Objects.hash( clusterView, memberData, selfAddress, previouslyBootstrapped );
     }
 
     @Override
@@ -113,6 +107,6 @@ public class BootstrapState
     private static boolean isPotentialLeader( CoreServerInfoForServerId infoForMember, NamedDatabaseId namedDatabaseId )
     {
         CoreServerInfo info = infoForMember.coreServerInfo();
-        return !info.refusesToBeLeader() && info.startedDatabaseIds().contains( namedDatabaseId.databaseId() );
+        return info.startedDatabaseIds().contains( namedDatabaseId.databaseId() );
     }
 }

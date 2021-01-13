@@ -161,7 +161,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
         ConnectorAddresses clientConnectorAddress = ConnectorAddresses.fromList( Collections.emptyList() );
         Set<ServerGroupName> groups = Set.of( groupNames );
         Set<DatabaseId> databaseIds = Set.of( DATABASE_ID );
-        return new CoreServerInfo( anyRaftAddress, anyCatchupServer, clientConnectorAddress, groups, databaseIds, false );
+        return new CoreServerInfo( anyRaftAddress, anyCatchupServer, clientConnectorAddress, groups, databaseIds );
     }
 
     private static ReadReplicaInfo readReplicaInfo( ServerGroupName... groupNames )

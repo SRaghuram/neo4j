@@ -77,7 +77,7 @@ class Follower implements RaftMessageHandler
         var upToDate = localAppendIndex >= request.previousIndex();
         var myGroups = ctx.serverGroups();
 
-        var mayBecomeLeaderAtAll = !ctx.isReadOnly() && !ctx.refusesToBeLeader() && !ctx.isProcessShutdownInProgress();
+        var mayBecomeLeaderAtAll = !ctx.isReadOnly() && !ctx.isProcessShutdownInProgress();
         var satisfiesRequestPriorities = noRequestedPriority( request ) || iAmInPriority( myGroups, request );
 
         if ( mayBecomeLeaderAtAll && sameTerm && upToDate && satisfiesRequestPriorities )
@@ -273,7 +273,7 @@ class Follower implements RaftMessageHandler
     private static OutcomeBuilder handleElectionTimeout( OutcomeBuilder outcomeBuilder, RaftMessageHandlingContext ctx, Log log ) throws IOException
     {
         var state = ctx.state();
-        var mayBecomeLeaderAtAll = !ctx.refusesToBeLeader() && !ctx.isProcessShutdownInProgress();
+        var mayBecomeLeaderAtAll = !ctx.isProcessShutdownInProgress();
         if ( ctx.supportPreVoting() )
         {
             if ( mayBecomeLeaderAtAll )
@@ -414,33 +414,17 @@ class Follower implements RaftMessageHandler
         final PreVoteRequestHandler preVoteRequestHandler;
         final PreVoteResponseHandler preVoteResponseHandler;
 
-        if ( ctx.refusesToBeLeader() )
+        if ( ctx.supportPreVoting() )
         {
-            preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
-            if ( ctx.supportPreVoting() )
-            {
-                preVoteRequestHandler = ( state.isPreElection() || !state.areTimersStarted() ) ?
-                        PreVoteRequestVotingHandler.INSTANCE : PreVoteRequestDecliningHandler.INSTANCE;
-            }
-            else
-            {
-                preVoteRequestHandler = PreVoteRequestNoOpHandler.INSTANCE;
-            }
+            preVoteRequestHandler = (state.isPreElection() || !state.areTimersStarted()) ?
+                                    PreVoteRequestVotingHandler.INSTANCE : PreVoteRequestDecliningHandler.INSTANCE;
+            preVoteResponseHandler = (state.isPreElection()) ?
+                                     PreVoteResponseSolicitingHandler.INSTANCE : PreVoteResponseNoOpHandler.INSTANCE;
         }
         else
         {
-            if ( ctx.supportPreVoting() )
-            {
-                preVoteRequestHandler = (state.isPreElection() || !state.areTimersStarted()) ?
-                        PreVoteRequestVotingHandler.INSTANCE : PreVoteRequestDecliningHandler.INSTANCE;
-                preVoteResponseHandler = (state.isPreElection()) ?
-                        PreVoteResponseSolicitingHandler.INSTANCE : PreVoteResponseNoOpHandler.INSTANCE;
-            }
-            else
-            {
-                preVoteRequestHandler = PreVoteRequestNoOpHandler.INSTANCE;
-                preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
-            }
+            preVoteRequestHandler = PreVoteRequestNoOpHandler.INSTANCE;
+            preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
         }
         return new Handler( preVoteRequestHandler, preVoteResponseHandler, ctx, log );
     }

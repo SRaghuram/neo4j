@@ -138,7 +138,7 @@ class GetRoutingTableProcedureForSingleDCTest
     @RoutingConfigsTest
     void ttlShouldBeInSeconds( Config config ) throws Exception
     {
-        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0 ) );
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
         var leaderService = newLeaderService( coreTopologyService );
@@ -176,7 +176,7 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldProvideReaderAndRouterForSingleCoreSetup( Config config ) throws Exception
     {
         // given
-        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0 ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -187,8 +187,8 @@ class GetRoutingTableProcedureForSingleDCTest
 
         // then
         var builder = new ClusterView.Builder();
-        builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -200,9 +200,9 @@ class GetRoutingTableProcedureForSingleDCTest
         leaderService.setLeader( server( 0 ) );
 
         var coreMembers = Map.of(
-                server( 0 ), addressesForCore( 0, false ),
-                server( 1 ), addressesForCore( 1, false ),
-                server( 2 ), addressesForCore( 2, false ) );
+                server( 0 ), addressesForCore( 0 ),
+                server( 1 ), addressesForCore( 1 ),
+                server( 2 ), addressesForCore( 2 ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -213,16 +213,16 @@ class GetRoutingTableProcedureForSingleDCTest
 
         // then
         var builder = new ClusterView.Builder();
-        builder.writeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
-        builder.readAddress( addressesForCore( 1, false ).connectors().clientBoltAddress() );
-        builder.readAddress( addressesForCore( 2, false ).connectors().clientBoltAddress() );
+        builder.writeAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 1 ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 2 ).connectors().clientBoltAddress() );
         if ( config.get( cluster_allow_reads_on_leader ) )
         {
-            builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+            builder.readAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
         }
-        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
-        builder.routeAddress( addressesForCore( 1, false ).connectors().clientBoltAddress() );
-        builder.routeAddress( addressesForCore( 2, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 1 ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 2 ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -232,7 +232,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         leaderService.setLeader( server( 0 ) );
-        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0 ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -243,9 +243,9 @@ class GetRoutingTableProcedureForSingleDCTest
 
         // then
         var builder = new ClusterView.Builder();
-        builder.writeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
-        builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.writeAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -255,8 +255,8 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         leaderService.setLeader( server( 0 ) );
-        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ),
-                                  server( 1 ), addressesForCore( 1, false ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0 ),
+                                  server( 1 ), addressesForCore( 1 ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, readReplicaInfoMap( 1 ) );
 
@@ -266,8 +266,8 @@ class GetRoutingTableProcedureForSingleDCTest
         var clusterView = run( procedure, config );
 
         // then
-        var coreBoltAddress0 = addressesForCore( 0, false ).connectors().clientBoltAddress();
-        var coreBoltAddress1 = addressesForCore( 1, false ).connectors().clientBoltAddress();
+        var coreBoltAddress0 = addressesForCore( 0 ).connectors().clientBoltAddress();
+        var coreBoltAddress1 = addressesForCore( 1 ).connectors().clientBoltAddress();
         var readReplicaBoltAddress = addressesForReadReplica( 1 ).connectors().clientBoltAddress();
 
         var builder = new ClusterView.Builder();
@@ -295,7 +295,7 @@ class GetRoutingTableProcedureForSingleDCTest
         // given
         leaderService.setLeader( server( 0 ) );
 
-        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0 ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -306,9 +306,9 @@ class GetRoutingTableProcedureForSingleDCTest
 
         // then
         var builder = new ClusterView.Builder();
-        builder.writeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
-        builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.writeAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -317,7 +317,7 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnNoWriteEndpointsIfThereIsNoLeader( Config config ) throws Exception
     {
         // given
-        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0 ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -328,8 +328,8 @@ class GetRoutingTableProcedureForSingleDCTest
 
         // then
         var builder = new ClusterView.Builder();
-        builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -339,7 +339,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         leaderService.setLeader( server( 1 ) );
-        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0 ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -351,8 +351,8 @@ class GetRoutingTableProcedureForSingleDCTest
         // then
 
         var builder = new ClusterView.Builder();
-        builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -365,9 +365,9 @@ class GetRoutingTableProcedureForSingleDCTest
         leaderService.setLeader( server( 0 ) );
 
         var coreMembers = Map.of(
-                server( 0 ), addressesForCore( 0, false ),
-                server( 1 ), addressesForCore( 1, false ),
-                server( 2 ), addressesForCore( 2, false ) );
+                server( 0 ), addressesForCore( 0 ),
+                server( 1 ), addressesForCore( 1 ),
+                server( 2 ), addressesForCore( 2 ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -449,9 +449,9 @@ class GetRoutingTableProcedureForSingleDCTest
         leaderService.setLeader( databaseId, server( 0 ) );
 
         var coreMembers = Map.of(
-                server( 0 ), addressesForCore( 0, false ),
-                server( 1 ), addressesForCore( 1, false ),
-                server( 2 ), addressesForCore( 2, false ) );
+                server( 0 ), addressesForCore( 0 ),
+                server( 1 ), addressesForCore( 1 ),
+                server( 2 ), addressesForCore( 2 ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap(), databaseId, raftGroupId );
 
@@ -460,16 +460,16 @@ class GetRoutingTableProcedureForSingleDCTest
         var clusterView = run( proc, databaseId, config );
 
         var builder = new ClusterView.Builder();
-        builder.writeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.writeAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
         if ( config.get( cluster_allow_reads_on_leader ) )
         {
-            builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+            builder.readAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
         }
-        builder.readAddress( addressesForCore( 1, false ).connectors().clientBoltAddress() );
-        builder.readAddress( addressesForCore( 2, false ).connectors().clientBoltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
-        builder.routeAddress( addressesForCore( 1, false ).connectors().clientBoltAddress() );
-        builder.routeAddress( addressesForCore( 2, false ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 1 ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 2 ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0 ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 1 ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 2 ).connectors().clientBoltAddress() );
         assertEquals( builder.build(), clusterView );
     }
 

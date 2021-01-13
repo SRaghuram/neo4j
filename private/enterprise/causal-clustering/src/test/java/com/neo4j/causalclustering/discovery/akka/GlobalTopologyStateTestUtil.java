@@ -39,7 +39,7 @@ final class GlobalTopologyStateTestUtil
         {
             for ( var i = 0; i < coreIds.length; i++ )
             {
-                coreMembers.put( coreIds[i], addressesForCore( i + 1, false, Set.of( databaseId ) ) );
+                coreMembers.put( coreIds[i], addressesForCore( i + 1, Set.of( databaseId ) ) );
             }
         }
 

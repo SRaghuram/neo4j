@@ -69,13 +69,12 @@ public class RaftBinder implements Supplier<Optional<RaftGroupId>>
     private final ThrowingAction<InterruptedException> retryWaiter;
     private final Duration timeout;
     private final int minCoreHosts;
-    private final boolean refuseToBeLeader;
-
     private RaftGroupId raftGroupId;
 
     public RaftBinder( NamedDatabaseId namedDatabaseId, CoreServerIdentity myIdentity, SimpleStorage<RaftGroupId> raftGroupIdStorage,
-            CoreTopologyService topologyService, ClusterSystemGraphDbmsModel systemGraph, Clock clock, ThrowingAction<InterruptedException> retryWaiter,
-            Duration timeout, RaftBootstrapper raftBootstrapper, int minCoreHosts, boolean refuseToBeLeader, Monitors monitors )
+                       CoreTopologyService topologyService, ClusterSystemGraphDbmsModel systemGraph, Clock clock,
+                       ThrowingAction<InterruptedException> retryWaiter, Duration timeout, RaftBootstrapper raftBootstrapper, int minCoreHosts,
+                       Monitors monitors )
     {
         this.namedDatabaseId = namedDatabaseId;
         this.myIdentity = myIdentity;
@@ -88,7 +87,6 @@ public class RaftBinder implements Supplier<Optional<RaftGroupId>>
         this.retryWaiter = retryWaiter;
         this.timeout = timeout;
         this.minCoreHosts = minCoreHosts;
-        this.refuseToBeLeader = refuseToBeLeader;
     }
 
     /**
@@ -241,7 +239,7 @@ public class RaftBinder implements Supplier<Optional<RaftGroupId>>
     private BoundState bindToRaftGroupNotPartOfInitialDatabases( BindingConditions bindingConditions, Set<ServerId> initialServers, RaftMemberId raftMemberId )
             throws Exception
     {
-        if ( !initialServers.contains( myIdentity.serverId() ) || refuseToBeLeader )
+        if ( !initialServers.contains( myIdentity.serverId() ) )
         {
             return awaitBootstrapByOther( bindingConditions, raftMemberId );
         }

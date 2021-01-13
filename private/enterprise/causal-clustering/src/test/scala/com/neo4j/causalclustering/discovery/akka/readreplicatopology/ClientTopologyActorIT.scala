@@ -74,8 +74,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
         val dbId = randomNamedDatabaseId().databaseId()
         val raftGroupId = RaftGroupId.from(dbId)
         val newCoreTopology = new DatabaseCoreTopology(dbId, raftGroupId, Map(
-                                            IdFactory.randomServerId() -> TestTopology.addressesForCore(0, false),
-                                            IdFactory.randomServerId() -> TestTopology.addressesForCore(1, false)
+                                            IdFactory.randomServerId() -> TestTopology.addressesForCore(0),
+                                            IdFactory.randomServerId() -> TestTopology.addressesForCore(1)
                                           ).asJava)
 
         When("incoming topology")

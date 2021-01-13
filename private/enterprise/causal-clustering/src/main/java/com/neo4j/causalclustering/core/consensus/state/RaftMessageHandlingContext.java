@@ -22,7 +22,6 @@ public class RaftMessageHandlingContext
 {
     private final ReadableRaftState state;
     private final boolean supportPreVoting;
-    private final boolean refuseToBeLeader;
     private final ServerGroupsSupplier serverGroupsSupplier;
     private final BooleanSupplier shutdownInProgressSupplier;
     private final BooleanSupplier isReadOnly;
@@ -32,7 +31,6 @@ public class RaftMessageHandlingContext
     {
         this.state = state;
         this.supportPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
-        this.refuseToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
         this.serverGroupsSupplier = serverGroupsSupplier;
         this.shutdownInProgressSupplier = shutdownInProgressSupplier;
         this.isReadOnly = isReadOnly;
@@ -46,11 +44,6 @@ public class RaftMessageHandlingContext
     public boolean supportPreVoting()
     {
         return supportPreVoting;
-    }
-
-    public boolean refusesToBeLeader()
-    {
-        return refuseToBeLeader;
     }
 
     public Set<ServerGroupName> serverGroups()

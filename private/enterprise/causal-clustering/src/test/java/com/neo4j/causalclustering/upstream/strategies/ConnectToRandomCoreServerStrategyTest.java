@@ -94,7 +94,7 @@ class ConnectToRandomCoreServerStrategyTest
 
         for ( ServerId serverId : serverIds )
         {
-            coreMembers.put( serverId, TestTopology.addressesForCore( offset, false ) );
+            coreMembers.put( serverId, TestTopology.addressesForCore( offset ) );
             offset++;
         }
 

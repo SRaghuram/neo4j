@@ -58,7 +58,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
         var databaseIds = namedDatabaseIds.stream().map( NamedDatabaseId::databaseId ).collect( Collectors.toSet() );
         for ( ServerId core : cores )
         {
-            coreMembers.put( core, TestTopology.addressesForCore( offset, false, databaseIds ) );
+            coreMembers.put( core, TestTopology.addressesForCore( offset, databaseIds ) );
             offset++;
         }
 
@@ -116,7 +116,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     {
         Function<CoreServerInfo,CoreServerInfo> coreInfoTransform = serverInfo ->
                 new CoreServerInfo( serverInfo.getRaftServer(), serverInfo.catchupServer(),
-                        serverInfo.connectors(), groups, serverInfo.startedDatabaseIds(), serverInfo.refusesToBeLeader() );
+                        serverInfo.connectors(), groups, serverInfo.startedDatabaseIds() );
 
         Function<ReadReplicaInfo,ReadReplicaInfo> replicaInfoTransform = serverInfo ->
                 new ReadReplicaInfo( serverInfo.connectors(),
@@ -129,7 +129,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     {
         Function<CoreServerInfo,CoreServerInfo> coreInfoTransform = serverInfo ->
                 new CoreServerInfo( serverInfo.getRaftServer(), serverInfo.catchupServer(),
-                        serverInfo.connectors(), serverInfo.groups(), databases, serverInfo.refusesToBeLeader() );
+                        serverInfo.connectors(), serverInfo.groups(), databases );
 
         Function<ReadReplicaInfo,ReadReplicaInfo> replicaInfoTransform = serverInfo ->
                 new ReadReplicaInfo( serverInfo.connectors(),

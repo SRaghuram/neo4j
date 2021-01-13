@@ -152,8 +152,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           topologyActorRef ! metadataMessage
 
           Then("update bootstrap state")
-          val expectedBootstrapState = new BootstrapState(clusterView, metadataMessage,
-            myUniqueAddress, config, Map.empty[RaftGroupId,RaftMemberId].asJava)
+          val expectedBootstrapState = new BootstrapState(clusterView, metadataMessage, myUniqueAddress, Map.empty[RaftGroupId,RaftMemberId].asJava)
           bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState)
         }
 
@@ -164,10 +163,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           val previouslyBootstrapped = Map(raftId -> IdFactory.randomRaftMemberId).asJava
           val bootstrappedRaftsMessage = new BootstrappedRaftsMessage(previouslyBootstrapped)
 
-          val expectedBootstrapState1 = new BootstrapState(clusterView, metadataMessage,
-            myUniqueAddress, config, Map.empty[RaftGroupId,RaftMemberId].asJava)
-          val expectedBootstrapState2 = new BootstrapState(clusterView, metadataMessage,
-            myUniqueAddress, config, previouslyBootstrapped)
+          val expectedBootstrapState1 = new BootstrapState(clusterView, metadataMessage, myUniqueAddress, Map.empty[RaftGroupId,RaftMemberId].asJava)
+          val expectedBootstrapState2 = new BootstrapState(clusterView, metadataMessage, myUniqueAddress, previouslyBootstrapped)
 
           When("metadata message received")
           topologyActorRef ! metadataMessage
@@ -195,12 +192,10 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           topologyActorRef ! clusterViewMessage
 
           Then("update bootstrap state")
-          val expectedBootstrapState1 = new BootstrapState(initialClusterView, metadataMessage,
-            myUniqueAddress, config, Map.empty[RaftGroupId,RaftMemberId].asJava)
+          val expectedBootstrapState1 = new BootstrapState(initialClusterView, metadataMessage, myUniqueAddress, Map.empty[RaftGroupId,RaftMemberId].asJava)
           bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState1)
 
-          val expectedBootstrapState2 = new BootstrapState(clusterViewMessage, metadataMessage,
-            myUniqueAddress, config, Map.empty[RaftGroupId,RaftMemberId].asJava)
+          val expectedBootstrapState2 = new BootstrapState(clusterViewMessage, metadataMessage, myUniqueAddress, Map.empty[RaftGroupId,RaftMemberId].asJava)
           bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState2)
         }
       }
@@ -300,7 +295,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     }
 
     def coreServerInfo(serverId: Int, databaseId: DatabaseId = databaseId): CoreServerInfo =
-      TestTopology.addressesForCore(serverId, false, Set[DatabaseId](databaseId).asJava)
+      TestTopology.addressesForCore(serverId, Set[DatabaseId](databaseId).asJava)
 
     def sendInitialData(): ClusterViewMessage = {
       val myInfo = new CoreServerInfoForServerId(identityModule.serverId(), coreServerInfo(0, databaseId))

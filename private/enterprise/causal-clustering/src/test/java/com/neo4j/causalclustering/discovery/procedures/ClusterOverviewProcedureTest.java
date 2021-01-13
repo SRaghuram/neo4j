@@ -91,9 +91,9 @@ class ClusterOverviewProcedureTest
         Set<NamedDatabaseId> leaderDatabases = databaseIds( "customers", "orders", "system" );
         Set<NamedDatabaseId> follower1Databases = databaseIds( "system", "orders" );
         Set<NamedDatabaseId> follower2Databases = databaseIds( "system" );
-        coreMembers.put( theLeader, addressesForCore( 0, false, toRaw( leaderDatabases ) ) );
-        coreMembers.put( follower1, addressesForCore( 1, false, toRaw( follower1Databases ) ) );
-        coreMembers.put( follower2, addressesForCore( 2, false, toRaw( follower2Databases ) ) );
+        coreMembers.put( theLeader, addressesForCore( 0, toRaw( leaderDatabases ) ) );
+        coreMembers.put( follower1, addressesForCore( 1, toRaw( follower1Databases ) ) );
+        coreMembers.put( follower2, addressesForCore( 2, toRaw( follower2Databases ) ) );
 
         Map<ServerId,ReadReplicaInfo> replicaMembers = new HashMap<>();
         ServerId replica4 = new ServerId( new UUID( 4, 0 ) );

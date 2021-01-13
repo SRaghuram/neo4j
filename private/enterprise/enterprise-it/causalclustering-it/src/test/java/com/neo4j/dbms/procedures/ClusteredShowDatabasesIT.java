@@ -8,7 +8,6 @@ package com.neo4j.dbms.procedures;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.EnterpriseEditionSettings;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import com.neo4j.dbms.ShowDatabasesHelpers;
@@ -33,6 +32,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.OperatorState;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
@@ -451,16 +451,11 @@ class ClusteredShowDatabasesIT
                     .map( ClusterMember::boltAdvertisedAddress )
                     .collect( Collectors.toSet() );
 
-            // one follower which refuses to be leader configured with a max # databases of 2
-            // one rr configured with a max # databases of 2
+            // follower which is configured as dbms.read_only and will be unable to bootstrap a database.
             var misConfiguredCore = cluster.addCoreMemberWithIndex( additionalCoreIndex );
-            misConfiguredCore.updateConfig( EnterpriseEditionSettings.max_number_of_databases, 2L );
-            misConfiguredCore.updateConfig( CausalClusteringSettings.refuse_to_be_leader, true );
-            var misConfiguredRR = cluster.addReadReplicaWithIndex( additionalRRIndex );
-            misConfiguredRR.updateConfig( EnterpriseEditionSettings.max_number_of_databases, 2L );
+            misConfiguredCore.updateConfig( GraphDatabaseSettings.read_only, true );
 
             misConfiguredCore.start();
-            misConfiguredRR.start();
 
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
                               sizeCondition( cluster.allMembers().size() * defaultDatabases.size() ), timeoutSeconds, SECONDS );
@@ -468,16 +463,16 @@ class ClusteredShowDatabasesIT
                               containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 3 followers per database", () -> showDatabases( cluster ),
                               containsRole( "follower", defaultDatabases, 3 ), timeoutSeconds, SECONDS );
-            assertEventually( "SHOW DATABASES should return 3 read replicas per database", () -> showDatabases( cluster ),
-                              containsRole( "read_replica", defaultDatabases, 3 ), timeoutSeconds, SECONDS );
+            assertEventually( "SHOW DATABASES should return 2 read replicas per database", () -> showDatabases( cluster ),
+                              containsRole( "read_replica", defaultDatabases, 2 ), timeoutSeconds, SECONDS );
 
             // when
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
             waitForClusterToReachLocalState( initialMembers, getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME ), STARTED );
 
             // then
-            assertEventually( "SHOW DATABASES should return 2 rows with an error for database foo", () -> showDatabases( cluster ),
-                              containsError( "The total limit of databases is already reached", "foo", 2 ), timeoutSeconds, SECONDS );
+            assertEventually( "SHOW DATABASES should return a row with an error for database foo", () -> showDatabases( cluster ),
+                              containsError( "Unable to start database", "foo", 1 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for database foo", initialClusterAddresses ),
                               () -> showDatabases( cluster ),
                               membersHaveStateForDatabases( initialClusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED ), timeoutSeconds,

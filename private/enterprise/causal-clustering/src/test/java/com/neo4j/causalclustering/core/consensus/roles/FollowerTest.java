@@ -230,7 +230,6 @@ class FollowerTest
         // given
         var validLeadershipTransfer = new ValidLeadershipTransfer();
         var ctx = validLeadershipTransfer.ctxBuilder
-                .refusesToBeLeader( true )
                 .build();
 
         var message = validLeadershipTransfer.message;
@@ -277,39 +276,7 @@ class FollowerTest
     }
 
     @Test
-    void shouldNotInstigateElectionOnElectionTimeoutIfRefusingToBeLeaderAndPreVoteNotSupported() throws Throwable
-    {
-        // given
-        var ctx = contextBuilder()
-                .refusesToBeLeader( true )
-                .supportsPreVoting( false )
-                .build();
-
-        // when
-        var outcome = new Follower().handle( new Election( myself ), ctx, log() );
-
-        // then
-        assertThat( outcome.getOutgoingMessages() ).isEmpty();
-    }
-
-    @Test
-    void shouldIgnoreAnElectionTimeoutIfRefusingToBeLeaderAndPreVoteNotSupported() throws Throwable
-    {
-        // given
-        var ctx = contextBuilder()
-                .refusesToBeLeader( true )
-                .supportsPreVoting( false )
-                .build();
-
-        // when
-        var outcome = new Follower().handle( new Election( myself ), ctx, log() );
-
-        // then
-        Assertions.assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, ctx.state() ).build(), outcome );
-    }
-
-    @Test
-    void shouldSetPreElectionOnTimeoutIfSupportedAndIAmVoterAndIRefuseToLead() throws Throwable
+    void shouldSetPreElectionOnTimeoutIfSupportedAndIAmVoter() throws Throwable
     {
         // given
         var state = builder()
@@ -318,7 +285,6 @@ class FollowerTest
                 .build();
         var ctx = contextBuilder( state )
                 .supportsPreVoting( true )
-                .refusesToBeLeader( true )
                 .build();
 
         // when
@@ -338,7 +304,6 @@ class FollowerTest
                 .build();
         var ctx = contextBuilder( state )
                 .supportsPreVoting( true )
-                .refusesToBeLeader( true )
                 .build();
 
         // when
@@ -356,7 +321,6 @@ class FollowerTest
                 .myself( myself )
                 .build();
         var ctx = contextBuilder( state )
-                .refusesToBeLeader( true )
                 .supportsPreVoting( true )
                 .build();
 
@@ -964,7 +928,7 @@ class FollowerTest
     }
 
     @Test
-    void shouldIgnorePreVoteResponseWhenPreElectionFalseRefuseToBeLeader() throws Throwable
+    void shouldIgnorePreVoteResponseWhenPreElectionFalse() throws Throwable
     {
         // given
         var raftState = builder()
@@ -972,7 +936,6 @@ class FollowerTest
                 .votingMembers( asSet( myself, member1, member2 ) )
                 .build();
         var ctx = contextBuilder( raftState )
-                .refusesToBeLeader( true )
                 .supportsPreVoting( true )
                 .build();
 
@@ -984,49 +947,7 @@ class FollowerTest
     }
 
     @Test
-    void shouldIgnorePreVoteResponseWhenPreElectionTrueAndRefuseLeader() throws Throwable
-    {
-        // given
-        RaftState raftState = builder()
-                .myself( myself )
-                .addInitialOutcome( OutcomeTestBuilder.builder().setPreElection( true ).build() )
-                .votingMembers( asSet( myself, member1, member2 ) )
-                .build();
-        var ctx = contextBuilder( raftState )
-                .refusesToBeLeader( true )
-                .supportsPreVoting( true )
-                .build();
-
-        // when
-        Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Response( member1, raftState.term(), true ), ctx, log() );
-
-        // then
-        Assertions.assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
-    }
-
-    @Test
-    void shouldNotInstigateElectionOnPreVoteResponseWhenPreElectionTrueAndRefuseLeader() throws Throwable
-    {
-        // given
-        RaftState raftState = builder()
-                .myself( myself )
-                .addInitialOutcome( OutcomeTestBuilder.builder().setPreElection( true ).build() )
-                .votingMembers( asSet( myself, member1, member2 ) )
-                .build();
-        var ctx = contextBuilder( raftState )
-                .refusesToBeLeader( true )
-                .supportsPreVoting( true )
-                .build();
-
-        // when
-        Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Response( member1, raftState.term(), true ), ctx, log() );
-
-        // then
-        assertThat( outcome.getOutgoingMessages() ).isEmpty();
-    }
-
-    @Test
-    void shouldDeclinePreVoteRequestsIfPreElectionNotActiveAndRefusesToLead() throws Throwable
+    void shouldDeclinePreVoteRequestsIfPreElectionNotActive() throws Throwable
     {
         // given
         var raftState = builder()
@@ -1034,7 +955,6 @@ class FollowerTest
                 .votingMembers( asSet( myself, member1, member2 ) )
                 .build();
         var ctx = contextBuilder( raftState )
-                .refusesToBeLeader( true )
                 .supportsPreVoting( true )
                 .build();
 
@@ -1046,7 +966,7 @@ class FollowerTest
     }
 
     @Test
-    void shouldApprovePreVoteRequestIfPreElectionActiveAndRefusesToLead() throws Throwable
+    void shouldApprovePreVoteRequestIfPreElectionActive() throws Throwable
     {
         // given
         var raftState = builder()
@@ -1055,7 +975,6 @@ class FollowerTest
                 .votingMembers( asSet( myself, member1, member2 ) )
                 .build();
         var ctx = contextBuilder( raftState )
-                .refusesToBeLeader( true )
                 .supportsPreVoting( true )
                 .build();
 

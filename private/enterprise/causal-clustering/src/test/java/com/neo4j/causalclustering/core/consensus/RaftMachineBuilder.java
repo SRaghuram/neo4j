@@ -100,7 +100,6 @@ public class RaftMachineBuilder
         termState.update( term );
         var config = Config.newBuilder()
                            .set( CausalClusteringSettings.enable_pre_voting, false )
-                           .set( CausalClusteringSettings.refuse_to_be_leader, false )
                            .set( CausalClusteringSettings.leader_failure_detection_window, detectionWindow )
                            .set( CausalClusteringSettings.election_failure_detection_window, detectionWindow )
                            .build();

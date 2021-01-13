@@ -28,7 +28,6 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
-import static com.neo4j.configuration.CausalClusteringSettings.refuse_to_be_leader;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -49,18 +48,17 @@ class BootstrapStateTest
     private final Member member3 = newMemberMock();
 
     private final List<Member> allMembers = Stream.of( member1, member2, member3 )
-            .sorted( Member.ordering() )
-            .collect( toUnmodifiableList() );
+                                                  .sorted( Member.ordering() )
+                                                  .collect( toUnmodifiableList() );
 
     @Test
     void shouldNotBootstrapUnknownDatabase()
     {
         var me = first( allMembers );
-        var iRefuseToBeLeader = false;
         var clusterViewMessage = newClusterViewMessage( true, allMembers, List.of() );
-        var metadataMessage = newMetadataMessage( namedDatabaseId, me, iRefuseToBeLeader );
+        var metadataMessage = newMetadataMessage( namedDatabaseId );
 
-        var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
+        var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress() );
 
         assertFalse( bootstrapState.canBootstrapRaft( unknownNamedDatabaseId ) );
     }
@@ -69,64 +67,34 @@ class BootstrapStateTest
     void shouldNotBootstrapWhenClusterDidNotConverge()
     {
         var me = first( allMembers );
-        var iRefuseToBeLeader = false;
         var clusterViewMessage = newClusterViewMessage( false, allMembers, List.of() );
-        var metadataMessage = newMetadataMessage( namedDatabaseId, me, iRefuseToBeLeader );
+        var metadataMessage = newMetadataMessage( namedDatabaseId );
 
-        var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
-
-        assertFalse( bootstrapState.canBootstrapRaft( namedDatabaseId ) );
-    }
-
-    @Test
-    void shouldNotBootstrapWhenThisServerRefusesToBeLeader()
-    {
-        var me = first( allMembers );
-        var iRefuseToBeLeader = true;
-        var clusterViewMessage = newClusterViewMessage( true, allMembers, List.of() );
-        var metadataMessage = newMetadataMessage( namedDatabaseId, me, iRefuseToBeLeader );
-
-        var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
+        var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress() );
 
         assertFalse( bootstrapState.canBootstrapRaft( namedDatabaseId ) );
     }
 
     @Test
-    void shouldNotBootstrapWhenNoneRefuseToBeLeaderButThisServerIsNotFirstMember()
+    void shouldNotBootstrapWhenNoneThisServerIsNotFirstMember()
     {
         var me = last( allMembers );
-        var iRefuseToBeLeader = false;
         var clusterViewMessage = newClusterViewMessage( true, allMembers, List.of() );
-        var metadataMessage = newMetadataMessage( namedDatabaseId, me, iRefuseToBeLeader );
+        var metadataMessage = newMetadataMessage( namedDatabaseId );
 
-        var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
+        var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress() );
 
         assertFalse( bootstrapState.canBootstrapRaft( namedDatabaseId ) );
     }
 
     @Test
-    void shouldBootstrapWhenNoneRefuseToBeLeaderAndThisServerIsTheFirstMember()
+    void shouldBootstrapWhenThisServerIsTheFirstMember()
     {
         var me = first( allMembers );
-        var iRefuseToBeLeader = false;
         var clusterViewMessage = newClusterViewMessage( true, allMembers, List.of() );
-        var metadataMessage = newMetadataMessage( namedDatabaseId, me, iRefuseToBeLeader );
+        var metadataMessage = newMetadataMessage( namedDatabaseId );
 
-        var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
-
-        assertTrue( bootstrapState.canBootstrapRaft( namedDatabaseId ) );
-    }
-
-    @Test
-    void shouldBootstrapWhenThisServerIsTheFirstNonRefuseToBeLeaderMember()
-    {
-        var me = last( allMembers );
-        var iRefuseToBeLeader = false;
-        var othersRefuseToBeLeader = true;
-        var clusterViewMessage = newClusterViewMessage( true, allMembers, List.of() );
-        var metadataMessage = newMetadataMessage( namedDatabaseId, me, iRefuseToBeLeader, othersRefuseToBeLeader );
-
-        var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(), iRefuseToBeLeader );
+        var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress() );
 
         assertTrue( bootstrapState.canBootstrapRaft( namedDatabaseId ) );
     }
@@ -136,9 +104,8 @@ class BootstrapStateTest
     {
         var otherNamedDatabased = databaseIdRepository.getRaw( "otherKnown" );
         var me = last( allMembers );
-        var refuseToBeLeader = false;
         var clusterViewMessage = newClusterViewMessage( true, allMembers, List.of() );
-        var metadataMessage = newMetadataMessage( namedDatabaseId, me, refuseToBeLeader );
+        var metadataMessage = newMetadataMessage( namedDatabaseId );
 
         var myRaftMemberId = IdFactory.randomRaftMemberId();
         var otherRaftMemberId = IdFactory.randomRaftMemberId();
@@ -148,7 +115,7 @@ class BootstrapStateTest
                 RaftGroupId.from( otherNamedDatabased.databaseId() ), otherRaftMemberId );
 
         var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(),
-                refuseToBeLeader, previouslyBootstrapped );
+                                                previouslyBootstrapped );
 
         assertFalse( bootstrapState.memberBootstrappedRaft( otherNamedDatabased, myRaftMemberId ) );
         assertFalse( bootstrapState.memberBootstrappedRaft( unknownNamedDatabaseId, myRaftMemberId ) );
@@ -156,22 +123,17 @@ class BootstrapStateTest
     }
 
     private static BootstrapState newBootstrapState( ClusterViewMessage clusterViewMessage, MetadataMessage metadataMessage,
-            UniqueAddress uniqueAddress, boolean refuseToBeLeader )
+                                                     UniqueAddress uniqueAddress )
     {
-        var config = Config.defaults(refuse_to_be_leader, refuseToBeLeader );
-
-        return new BootstrapState( clusterViewMessage, metadataMessage, uniqueAddress, config, Map.of() );
+        return new BootstrapState( clusterViewMessage, metadataMessage, uniqueAddress, Map.of() );
     }
 
     private static BootstrapState newBootstrapState( ClusterViewMessage clusterViewMessage,
                                                      MetadataMessage metadataMessage,
                                                      UniqueAddress uniqueAddress,
-                                                     boolean refuseToBeLeader,
                                                      Map<RaftGroupId,RaftMemberId> previouslyBootstrapped )
     {
-        var config = Config.defaults(refuse_to_be_leader, refuseToBeLeader );
-
-        return new BootstrapState( clusterViewMessage, metadataMessage, uniqueAddress, config, previouslyBootstrapped );
+        return new BootstrapState( clusterViewMessage, metadataMessage, uniqueAddress, previouslyBootstrapped );
     }
 
     private static ClusterViewMessage newClusterViewMessage( boolean converged, List<Member> reachable, List<Member> unreachable )
@@ -182,17 +144,11 @@ class BootstrapStateTest
         return new ClusterViewMessage( converged, reachableSet, unreachableSet );
     }
 
-    private MetadataMessage newMetadataMessage( NamedDatabaseId namedDatabaseId, Member me, boolean meRefuseToBeLeader )
-    {
-        var othersRefuseToBeLeader = false;
-        return newMetadataMessage( namedDatabaseId, me, meRefuseToBeLeader, othersRefuseToBeLeader );
-    }
-
-    private MetadataMessage newMetadataMessage( NamedDatabaseId namedDatabaseId, Member me, boolean meRefuseToBeLeader, boolean othersRefuseToBeLeader )
+    private MetadataMessage newMetadataMessage( NamedDatabaseId namedDatabaseId )
     {
         var metadata = allMembers.stream().collect( toMap(
                 Member::uniqueAddress,
-                member -> newCoreInfoForMember( namedDatabaseId, member == me ? meRefuseToBeLeader : othersRefuseToBeLeader ) ) );
+                member -> newCoreInfoForMember( namedDatabaseId ) ) );
 
         return new MetadataMessage( metadata );
     }
@@ -208,17 +164,17 @@ class BootstrapStateTest
         return member;
     }
 
-    private static CoreServerInfoForServerId newCoreInfoForMember( NamedDatabaseId namedDatabaseId, boolean refuseToBeLeader )
+    private static CoreServerInfoForServerId newCoreInfoForMember( NamedDatabaseId namedDatabaseId )
     {
-        var info = newCoreInfo( namedDatabaseId, refuseToBeLeader );
+        var info = newCoreInfo( namedDatabaseId );
         return new CoreServerInfoForServerId( IdFactory.randomServerId(), info );
     }
 
-    private static CoreServerInfo newCoreInfo( NamedDatabaseId namedDatabaseId, boolean refuseToBeLeader )
+    private static CoreServerInfo newCoreInfo( NamedDatabaseId namedDatabaseId )
     {
         var raftAddress = new SocketAddress( "neo4j.com", 1 );
         var catchupAddress = new SocketAddress( "neo4j.com", 2 );
         var connectorAddresses = ConnectorAddresses.fromList( List.of() );
-        return new CoreServerInfo( raftAddress, catchupAddress, connectorAddresses, Set.of(), Set.of( namedDatabaseId.databaseId() ), refuseToBeLeader );
+        return new CoreServerInfo( raftAddress, catchupAddress, connectorAddresses, Set.of(), Set.of( namedDatabaseId.databaseId() ) );
     }
 }
