@@ -27,6 +27,7 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -542,6 +543,22 @@ class WorkloadTest
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.INVALID_WORKLOAD_FIELD ) );
+        }
+    }
+
+    //There is some problems with parsing queries with commas,and we should not allow that.
+    @Test
+    public void queriesNamesShouldNotHaveCommas() throws IOException
+    {
+        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
+        {
+            for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
+            {
+                for ( Query query : workload.queries() )
+                {
+                    assertThat( query.name(), not( containsString( "," ) ) );
+                }
+            }
         }
     }
 
