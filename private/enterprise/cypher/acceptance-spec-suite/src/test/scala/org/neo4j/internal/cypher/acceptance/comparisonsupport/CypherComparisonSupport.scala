@@ -198,8 +198,8 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   private def validateError[R](expectedSpecificFailureFrom: TestConfiguration,
                                executeQuery: String => R,
                                query: String,
-                               message: Seq[String] = Seq.empty,
-                               errorType: Seq[String] = Seq.empty): Unit = {
+                               message: Seq[String],
+                               errorType: Seq[String]): Unit = {
     val explicitlyRequestedExperimentalScenarios = expectedSpecificFailureFrom.scenarios intersect Configs.Experimental.scenarios
     val scenariosToExecute = Configs.All.scenarios ++ Configs.Experimental.scenarios
     for (thisScenario <- scenariosToExecute) {

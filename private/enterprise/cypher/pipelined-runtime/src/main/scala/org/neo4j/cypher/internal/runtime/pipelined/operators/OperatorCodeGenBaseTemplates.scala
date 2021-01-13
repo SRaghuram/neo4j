@@ -826,7 +826,7 @@ object OperatorTaskTemplate {
 }
 
 trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskTemplate {
-  override protected def genConstructorParameters(): Seq[Parameter] = Seq(
+  override protected def genConstructorParameters: Seq[Parameter] = Seq(
     TX_CONSTRUCTOR_PARAMETER,
     INPUT_MORSEL_CONSTRUCTOR_PARAMETER,
     ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
@@ -850,7 +850,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
 
 trait ContinuableOperatorTaskWithMorselDataTemplate extends ContinuableOperatorTaskTemplate {
 
-  override protected def genConstructorParameters(): Seq[Parameter] = Seq(
+  override protected def genConstructorParameters: Seq[Parameter] = Seq(
     TX_CONSTRUCTOR_PARAMETER,
     INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER,
     ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
@@ -875,7 +875,7 @@ trait ContinuableOperatorTaskWithMorselDataTemplate extends ContinuableOperatorT
 // This takes just a single accumulator from the accumulators (assumes accumulatorsPerTask == 1)
 trait ContinuableOperatorTaskWithSingleAccumulatorTemplate extends ContinuableOperatorTaskTemplate {
 
-  override protected def genConstructorParameters(): Seq[Parameter] = Seq(
+  override protected def genConstructorParameters: Seq[Parameter] = Seq(
     TX_CONSTRUCTOR_PARAMETER,
     INPUT_ACCUMULATORS_CONSTRUCTOR_PARAMETER,
     ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER,

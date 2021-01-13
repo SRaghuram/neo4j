@@ -105,7 +105,7 @@ sealed trait CodeChain {
   /**
    * Returns a list of all the links in the CodeChain
    */
-  def toList: List[CodeChain]
+  def toList(): List[CodeChain]
 
   /**
    * If we have the following code:
