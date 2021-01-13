@@ -147,12 +147,12 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     // WHEN .. THEN
     withClue("No TRAVERSE on relationship:") {
       Seq(
-        denseTestHelper.sizeOfLovesSparseNode -> (0, denseTestHelper.superCount),
-        denseTestHelper.sizeOfAllSparseNode -> (0, denseTestHelper.superCount),
-        denseTestHelper.sizeOfLovesDenseNode -> (0, 1),
-        denseTestHelper.sizeOfAllDenseNode -> (0, 1),
-        denseTestHelper.countLovesDenseNode -> (0, 1),
-        denseTestHelper.countAllDenseNode -> (0, 1)
+        denseTestHelper.sizeOfLovesSparseNode -> ((0, denseTestHelper.superCount)),
+        denseTestHelper.sizeOfAllSparseNode -> ((0, denseTestHelper.superCount)),
+        denseTestHelper.sizeOfLovesDenseNode -> ((0, 1)),
+        denseTestHelper.sizeOfAllDenseNode -> ((0, 1)),
+        denseTestHelper.countLovesDenseNode -> ((0, 1)),
+        denseTestHelper.countAllDenseNode -> ((0, 1))
       ).foreach(denseTestHelper.testCounts)
     }
   }
@@ -167,12 +167,12 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     // WHEN .. THEN
     withClue("TRAVERSE LOVES on relationship:") {
       Seq(
-        denseTestHelper.sizeOfLovesSparseNode -> (1, denseTestHelper.superCount),
-        denseTestHelper.sizeOfAllSparseNode -> (1, denseTestHelper.superCount),
-        denseTestHelper.sizeOfLovesDenseNode -> (denseTestHelper.superCount, 1),
-        denseTestHelper.sizeOfAllDenseNode -> (denseTestHelper.superCount, 1),
-        denseTestHelper.countLovesDenseNode -> (denseTestHelper.superCount, 1),
-        denseTestHelper.countAllDenseNode -> (denseTestHelper.superCount, 1)
+        denseTestHelper.sizeOfLovesSparseNode -> ((1, denseTestHelper.superCount)),
+        denseTestHelper.sizeOfAllSparseNode -> ((1, denseTestHelper.superCount)),
+        denseTestHelper.sizeOfLovesDenseNode -> ((denseTestHelper.superCount, 1)),
+        denseTestHelper.sizeOfAllDenseNode -> ((denseTestHelper.superCount, 1)),
+        denseTestHelper.countLovesDenseNode -> ((denseTestHelper.superCount, 1)),
+        denseTestHelper.countAllDenseNode -> ((denseTestHelper.superCount, 1))
       ).foreach(denseTestHelper.testCounts)
     }
   }
@@ -187,12 +187,12 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     // WHEN .. THEN
     withClue("TRAVERSE * on relationship:") {
       Seq(
-        denseTestHelper.sizeOfLovesSparseNode -> (1, denseTestHelper.superCount),
-        denseTestHelper.sizeOfAllSparseNode -> (2, denseTestHelper.superCount),
-        denseTestHelper.sizeOfLovesDenseNode -> (denseTestHelper.superCount, 1),
-        denseTestHelper.sizeOfAllDenseNode -> (denseTestHelper.superCount * 2, 1),
-        denseTestHelper.countLovesDenseNode -> (denseTestHelper.superCount, 1),
-        denseTestHelper.countAllDenseNode -> (denseTestHelper.superCount * 2, 1)
+        denseTestHelper.sizeOfLovesSparseNode -> ((1, denseTestHelper.superCount)),
+        denseTestHelper.sizeOfAllSparseNode -> ((2, denseTestHelper.superCount)),
+        denseTestHelper.sizeOfLovesDenseNode -> ((denseTestHelper.superCount, 1)),
+        denseTestHelper.sizeOfAllDenseNode -> ((denseTestHelper.superCount * 2, 1)),
+        denseTestHelper.countLovesDenseNode -> ((denseTestHelper.superCount, 1)),
+        denseTestHelper.countAllDenseNode -> ((denseTestHelper.superCount * 2, 1))
       ).foreach(denseTestHelper.testCounts)
     }
   }
@@ -208,12 +208,12 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     // WHEN .. THEN
     withClue("deny TRAVERSE C on nodes:") {
       Seq(
-        denseTestHelper.sizeOfLovesSparseNode -> (1, denseTestHelper.superCount),
-        denseTestHelper.sizeOfAllSparseNode -> (1, denseTestHelper.superCount),
-        denseTestHelper.sizeOfLovesDenseNode -> (denseTestHelper.superCount, 1),
-        denseTestHelper.sizeOfAllDenseNode -> (denseTestHelper.superCount, 1),
-        denseTestHelper.countLovesDenseNode -> (denseTestHelper.superCount, 1),
-        denseTestHelper.countAllDenseNode -> (denseTestHelper.superCount, 1)
+        denseTestHelper.sizeOfLovesSparseNode -> ((1, denseTestHelper.superCount)),
+        denseTestHelper.sizeOfAllSparseNode -> ((1, denseTestHelper.superCount)),
+        denseTestHelper.sizeOfLovesDenseNode -> ((denseTestHelper.superCount, 1)),
+        denseTestHelper.sizeOfAllDenseNode -> ((denseTestHelper.superCount, 1)),
+        denseTestHelper.countLovesDenseNode -> ((denseTestHelper.superCount, 1)),
+        denseTestHelper.countAllDenseNode -> ((denseTestHelper.superCount, 1))
       ).foreach(denseTestHelper.testCounts)
     }
   }
@@ -230,12 +230,12 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     // WHEN .. THEN
     withClue("deny TRAVERSE LOVES on relationship:") {
       Seq(
-        denseTestHelper.sizeOfLovesSparseNode -> (0, denseTestHelper.superCount),
-        denseTestHelper.sizeOfAllSparseNode -> (0, denseTestHelper.superCount),
-        denseTestHelper.sizeOfLovesDenseNode -> (0, 1),
-        denseTestHelper.sizeOfAllDenseNode -> (0, 1),
-        denseTestHelper.countLovesDenseNode -> (0, 1),
-        denseTestHelper.countAllDenseNode -> (0, 1)
+        denseTestHelper.sizeOfLovesSparseNode -> ((0, denseTestHelper.superCount)),
+        denseTestHelper.sizeOfAllSparseNode -> ((0, denseTestHelper.superCount)),
+        denseTestHelper.sizeOfLovesDenseNode -> ((0, 1)),
+        denseTestHelper.sizeOfAllDenseNode -> ((0, 1)),
+        denseTestHelper.countLovesDenseNode -> ((0, 1)),
+        denseTestHelper.countAllDenseNode -> ((0, 1))
       ).foreach(denseTestHelper.testCounts)
     }
   }
