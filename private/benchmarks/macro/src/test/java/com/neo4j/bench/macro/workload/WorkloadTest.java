@@ -550,7 +550,7 @@ class WorkloadTest
     @Test
     public void queriesNamesShouldNotHaveCommas() throws IOException
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
