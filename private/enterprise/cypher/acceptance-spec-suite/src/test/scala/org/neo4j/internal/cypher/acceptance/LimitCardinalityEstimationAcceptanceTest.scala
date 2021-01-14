@@ -5,10 +5,17 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.collection.RawIterator
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.compiler.planner.logical.PlannerDefaults
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException
+import org.neo4j.internal.kernel.api.procs.ProcedureSignature.VOID
+import org.neo4j.kernel.api.ResourceTracker
+import org.neo4j.kernel.api.procedure.CallableProcedure.BasicProcedure
+import org.neo4j.kernel.api.procedure.Context
+import org.neo4j.values.AnyValue
 
 import scala.math.round
 
@@ -498,6 +505,37 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
         .withLHS(aPlan("Skip").withEstimatedRows(limit)
           .withLHS(aPlan("AllNodesScan").withEstimatedRows(limit + PlannerDefaults.DEFAULT_SKIP_ROW_COUNT)
+          )
+        )
+      )
+  }
+
+  test("should reset selectivity through eager procedure") {
+    val nodeCount = 1000
+    val limit = 30
+    (0 until nodeCount).foreach(_ => createNode())
+
+    registerProcedure("my.first.proc") { builder =>
+      builder.eager(true)
+        .out(VOID)
+
+      new BasicProcedure(builder.build) {
+        override def apply(ctx: Context, input: Array[AnyValue],
+                           resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] =
+          RawIterator.of[Array[AnyValue], ProcedureException](input)
+      }
+    }
+
+    val result = executeSingle(s"profile MATCH (n) CALL my.first.proc() RETURN n LIMIT $limit")
+
+    println(result.executionPlanDescription())
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit)
+        .withLHS(aPlan("ProcedureCall").withEstimatedRows(limit)
+          .withLHS(aPlan("Eager").withEstimatedRows(round(limit / PlannerDefaults.DEFAULT_MULTIPLIER.coefficient))
+            .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount)
+            )
           )
         )
       )
