@@ -71,11 +71,11 @@ class SetOperator(val workIdentity: WorkIdentity,
     val queryState = state.queryStateForExpressionEvaluation(resources)
 
     val cursor: MorselFullCursor = morsel.fullCursor()
-    var setCount = 0
+    var setCount = 0L
     while (cursor.next()) {
-      setCount += 1
-      val sss = setOperation.set(cursor, queryState)
-      resources.queryStatisticsTracker.setProperties(sss)
+      val nbrOfSetProperties = setOperation.set(cursor, queryState)
+      setCount += nbrOfSetProperties
+      resources.queryStatisticsTracker.setProperties(nbrOfSetProperties)
     }
 
     // write::nodeSetProperty and write::relationshipSetProperty uses an internal property cursor
