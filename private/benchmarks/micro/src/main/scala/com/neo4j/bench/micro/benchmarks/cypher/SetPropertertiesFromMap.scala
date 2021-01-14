@@ -55,7 +55,7 @@ import scala.collection.mutable
 class SetPropertiesFromMap extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
-    base = Array(Slotted.NAME)
+    base = Array(Pipelined.NAME)
   )
   @Param(Array[String]())
   var runtime: String = _
