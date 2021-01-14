@@ -156,7 +156,7 @@ import org.neo4j.cypher.internal.util.ZeroOneOrMany
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
-import org.neo4j.internal.kernel.api.IndexQuery
+import org.neo4j.internal.kernel.api.PropertyIndexQuery
 import org.neo4j.internal.schema.IndexOrder
 
 sealed trait ArgumentStateDescriptor {
@@ -1023,7 +1023,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
         Some(
           (ctx: TemplateContext) =>
             SeekExpression(Seq(ctx.compileExpression(inner, id)),
-                           in => arrayOf[IndexQuery](exactSeek(property.propertyKeyId, in.head))))
+                           in => arrayOf[PropertyIndexQuery](exactSeek(property.propertyKeyId, in.head))))
 
       case ManyQueryExpression(expr) =>
         Some(
@@ -1036,7 +1036,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
           maybeSeek => {
             ctx: TemplateContext => {
               maybeSeek(ctx) match {
-                case seek if seek.single => seek.copy(generatePredicate = in => arrayOf[IndexQuery](seek.generatePredicate(in)))
+                case seek if seek.single => seek.copy(generatePredicate = in => arrayOf[PropertyIndexQuery](seek.generatePredicate(in)))
                 case seek => seek
               }
             }
@@ -1046,7 +1046,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
         Some(
           (ctx: TemplateContext) =>
             SeekExpression(Seq.empty,
-                           _ => arrayOf[IndexQuery](existsSeek(property.propertyKeyId))))
+                           _ => arrayOf[PropertyIndexQuery](existsSeek(property.propertyKeyId))))
 
       case CompositeQueryExpression(_) =>
         throw new InternalException("A CompositeQueryExpression can't be nested in a CompositeQueryExpression")

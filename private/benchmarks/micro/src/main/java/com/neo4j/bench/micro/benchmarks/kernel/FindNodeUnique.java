@@ -28,7 +28,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.SplittableRandom;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.PropertyIndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
@@ -174,7 +174,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public long findNodeByLabelKeyValue( TxState txState, RNGState rngState ) throws KernelException
     {
-        IndexQuery query = IndexQuery.exact( txState.propertyKey, txState.nextValue( rngState.rng ) );
+        PropertyIndexQuery query = PropertyIndexQuery.exact( txState.propertyKey, txState.nextValue( rngState.rng ) );
         txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, unconstrained(), query );
         return assertCursorNotNull( txState.node );
     }
@@ -183,7 +183,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public void countNodesWithLabelKeyValue( TxState txState, RNGState rngState, Blackhole bh ) throws KernelException
     {
-        IndexQuery query = IndexQuery.exact( txState.propertyKey, txState.nextValue( rngState.rng ) );
+        PropertyIndexQuery query = PropertyIndexQuery.exact( txState.propertyKey, txState.nextValue( rngState.rng ) );
         txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, unconstrained(), query );
         assertCount( txState.node, 1, bh );
     }

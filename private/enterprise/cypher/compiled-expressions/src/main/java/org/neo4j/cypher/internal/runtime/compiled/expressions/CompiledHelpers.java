@@ -16,7 +16,7 @@ import org.neo4j.cypher.operations.CypherFunctions;
 import org.neo4j.exceptions.CypherTypeException;
 import org.neo4j.exceptions.ParameterWrongTypeException;
 import org.neo4j.internal.helpers.collection.Pair;
-import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.PropertyIndexQuery;
 import org.neo4j.util.CalledFromGeneratedCode;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
@@ -41,7 +41,7 @@ import static org.neo4j.values.storable.Values.NO_VALUE;
 @SuppressWarnings( {"unused"} )
 public final class CompiledHelpers
 {
-    private static final IndexQuery[] EMPTY_PREDICATE = new IndexQuery[0];
+    private static final PropertyIndexQuery[] EMPTY_PREDICATE = new PropertyIndexQuery[0];
 
     private CompiledHelpers()
     {
@@ -81,7 +81,7 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
-    public static boolean possibleRangePredicate( IndexQuery query )
+    public static boolean possibleRangePredicate( PropertyIndexQuery query )
     {
         if ( query == null )
         {
@@ -101,19 +101,19 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery exactSeek( int property, AnyValue value )
+    public static PropertyIndexQuery exactSeek( int property, AnyValue value )
     {
-        return IndexQuery.exact( property, asStorableValue( value ) );
+        return PropertyIndexQuery.exact( property, asStorableValue( value ) );
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery lessThanSeek( int property, AnyValue value, boolean inclusive )
+    public static PropertyIndexQuery lessThanSeek( int property, AnyValue value, boolean inclusive )
     {
-        return IndexQuery.range( property, null, false, asStorableValue( value ), inclusive );
+        return PropertyIndexQuery.range( property, null, false, asStorableValue( value ), inclusive );
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery multipleLessThanSeek( int property, AnyValue[] values,
+    public static PropertyIndexQuery multipleLessThanSeek( int property, AnyValue[] values,
             boolean[] inclusive )
     {
         assert values.length == inclusive.length;
@@ -122,7 +122,7 @@ public final class CompiledHelpers
         int index = seekMinRangeAnConvertToStorable( values, inclusive );
         if ( index >= 0 )
         {
-            return IndexQuery.range( property, null, false, (Value) values[index], inclusive[index] );
+            return PropertyIndexQuery.range( property, null, false, (Value) values[index], inclusive[index] );
         }
         else
         {
@@ -131,13 +131,13 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery greaterThanSeek( int property, AnyValue value, boolean inclusive )
+    public static PropertyIndexQuery greaterThanSeek( int property, AnyValue value, boolean inclusive )
     {
-        return IndexQuery.range( property, asStorableValue( value ), inclusive, null, false );
+        return PropertyIndexQuery.range( property, asStorableValue( value ), inclusive, null, false );
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery multipleGreaterThanSeek( int property, AnyValue[] values, boolean[] inclusive )
+    public static PropertyIndexQuery multipleGreaterThanSeek( int property, AnyValue[] values, boolean[] inclusive )
     {
         assert values.length == inclusive.length;
         assert values.length > 0;
@@ -145,7 +145,7 @@ public final class CompiledHelpers
         int index = seekMaxRangeAnConvertToStorable( values, inclusive );
         if ( index >= 0 )
         {
-            return IndexQuery.range( property, (Value) values[index], inclusive[index], null, false );
+            return PropertyIndexQuery.range( property, (Value) values[index], inclusive[index], null, false );
         }
         else
         {
@@ -154,14 +154,14 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery rangeBetweenSeek( int property, AnyValue from, boolean fromInclusive, AnyValue to,
+    public static PropertyIndexQuery rangeBetweenSeek( int property, AnyValue from, boolean fromInclusive, AnyValue to,
             boolean toInclusive )
     {
-        return IndexQuery.range( property, asStorableValue( from ), fromInclusive,  asStorableValue( to ), toInclusive );
+        return PropertyIndexQuery.range( property, asStorableValue( from ), fromInclusive,  asStorableValue( to ), toInclusive );
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery multipleRangeBetweenSeek( int property, AnyValue[] gtValues, boolean[] gtInclusive,
+    public static PropertyIndexQuery multipleRangeBetweenSeek( int property, AnyValue[] gtValues, boolean[] gtInclusive,
             AnyValue[] ltValues, boolean[] ltInclusive )
     {
         assert gtValues.length == gtInclusive.length;
@@ -179,12 +179,12 @@ public final class CompiledHelpers
         {
             return null;
         }
-        return IndexQuery.range( property, (Value) gtValues[gtIndex], gtInclusive[gtIndex], (Value) ltValues[ltIndex],
+        return PropertyIndexQuery.range( property, (Value) gtValues[gtIndex], gtInclusive[gtIndex], (Value) ltValues[ltIndex],
                 ltInclusive[ltIndex] );
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery stringPrefix( int property, AnyValue value )
+    public static PropertyIndexQuery stringPrefix( int property, AnyValue value )
     {
         if ( value == NO_VALUE )
         {
@@ -192,7 +192,7 @@ public final class CompiledHelpers
         }
         else if ( value instanceof TextValue )
         {
-            return IndexQuery.stringPrefix( property, (TextValue) value );
+            return PropertyIndexQuery.stringPrefix( property, (TextValue) value );
         }
         else
         {
@@ -201,7 +201,7 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery[] pointRange( int property, AnyValue point, AnyValue distance, boolean rangeIsInclusive )
+    public static PropertyIndexQuery[] pointRange( int property, AnyValue point, AnyValue distance, boolean rangeIsInclusive )
     {
         if ( point instanceof PointValue && distance instanceof NumberValue )
         {
@@ -214,11 +214,11 @@ public final class CompiledHelpers
             // The geographic calculator pads the range to avoid numerical errors, which means we rely more on post-filtering
             // This also means we can fix the date-line '<' case by simply being inclusive
             boolean inclusive = size > 1 || rangeIsInclusive;
-            IndexQuery[] queries = new IndexQuery[size];
+            PropertyIndexQuery[] queries = new PropertyIndexQuery[size];
             for ( int i = 0; i < size; i++ )
             {
                 Pair<PointValue,PointValue> bbox = bboxes.get( i );
-                queries[i] = IndexQuery.range( property, bbox.first(), inclusive, bbox.other(), inclusive );
+                queries[i] = PropertyIndexQuery.range( property, bbox.first(), inclusive, bbox.other(), inclusive );
             }
 
             return queries;
@@ -230,7 +230,7 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery[] manyExactQueries( int property, AnyValue seekValues )
+    public static PropertyIndexQuery[] manyExactQueries( int property, AnyValue seekValues )
     {
         Set<AnyValue> seen = new HashSet<>();
         ListValueBuilder builder = ListValueBuilder.newListBuilder();
@@ -244,10 +244,10 @@ public final class CompiledHelpers
         }
         ListValue listOfSeekValues = builder.build();
         final int size = listOfSeekValues.size();
-        IndexQuery[] predicates = new IndexQuery[size];
+        PropertyIndexQuery[] predicates = new PropertyIndexQuery[size];
         for ( int i = 0; i < size; i++ )
         {
-            predicates[i] = IndexQuery.exact( property, asStorableValue( listOfSeekValues.value( i ) ) );
+            predicates[i] = PropertyIndexQuery.exact( property, asStorableValue( listOfSeekValues.value( i ) ) );
         }
         return predicates;
     }

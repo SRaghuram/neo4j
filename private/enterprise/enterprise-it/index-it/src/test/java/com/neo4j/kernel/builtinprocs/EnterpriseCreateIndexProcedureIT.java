@@ -19,7 +19,7 @@ import org.neo4j.collection.RawIterator;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Label;
-import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.PropertyIndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Procedures;
@@ -284,10 +284,10 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         try ( NodeValueIndexCursor indexCursor = transaction.cursors()
                                                             .allocateNodeValueIndexCursor( transaction.pageCursorTracer(), transaction.memoryTracker() ) )
         {
-            IndexQuery[] query = new IndexQuery[propertyKeyIds.length];
+            PropertyIndexQuery[] query = new PropertyIndexQuery[propertyKeyIds.length];
             for ( int i = 0; i < propertyKeyIds.length; i++ )
             {
-                query[i] = IndexQuery.exact( propertyKeyIds[i], value );
+                query[i] = PropertyIndexQuery.exact( propertyKeyIds[i], value );
             }
             IndexReadSession indexSession = transaction.dataRead().indexReadSession( index );
             transaction.dataRead().nodeIndexSeek( indexSession, indexCursor, unconstrained(), query );

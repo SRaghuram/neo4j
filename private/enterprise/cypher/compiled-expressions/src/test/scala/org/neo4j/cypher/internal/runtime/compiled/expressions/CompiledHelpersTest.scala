@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers.mu
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers.multipleLessThanSeek
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CypherTypeException
-import org.neo4j.internal.kernel.api.IndexQuery
+import org.neo4j.internal.kernel.api.PropertyIndexQuery
 import org.neo4j.values.storable.Value
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.FALSE
@@ -55,12 +55,12 @@ class CompiledHelpersTest extends CypherFunSuite {
                          Array(true, false, true)) shouldBe null
   }
 
-  private def lt(prop: Int, value: Any): IndexQuery.RangePredicate[_ <: Value] =
-    IndexQuery.range(prop, null, false, Values.of(value), false)
-  private def lte(prop: Int, value: Any): IndexQuery.RangePredicate[_ <: Value] =
-    IndexQuery.range(prop, null, false, Values.of(value), true)
-  private def gt(prop: Int, value: Any): IndexQuery.RangePredicate[_ <: Value] =
-    IndexQuery.range(prop, Values.of(value), false, null, false)
-  private def gte(prop: Int, value: Any): IndexQuery.RangePredicate[_ <: Value] =
-    IndexQuery.range(prop, Values.of(value), true, null, false)
+  private def lt(prop: Int, value: Any): PropertyIndexQuery.RangePredicate[_ <: Value] =
+    PropertyIndexQuery.range(prop, null, false, Values.of(value), false)
+  private def lte(prop: Int, value: Any): PropertyIndexQuery.RangePredicate[_ <: Value] =
+    PropertyIndexQuery.range(prop, null, false, Values.of(value), true)
+  private def gt(prop: Int, value: Any): PropertyIndexQuery.RangePredicate[_ <: Value] =
+    PropertyIndexQuery.range(prop, Values.of(value), false, null, false)
+  private def gte(prop: Int, value: Any): PropertyIndexQuery.RangePredicate[_ <: Value] =
+    PropertyIndexQuery.range(prop, Values.of(value), true, null, false)
 }

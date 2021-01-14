@@ -83,11 +83,10 @@ import org.neo4j.cypher.operations.CypherCoercions
 import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.Direction
+import org.neo4j.internal.kernel.api.PropertyIndexQuery.ExistsPredicate
+import org.neo4j.internal.kernel.api.PropertyIndexQuery.StringContainsPredicate
+import org.neo4j.internal.kernel.api.PropertyIndexQuery.StringSuffixPredicate
 import org.neo4j.internal.kernel.api.Cursor
-import org.neo4j.internal.kernel.api.IndexQuery
-import org.neo4j.internal.kernel.api.IndexQuery.ExistsPredicate
-import org.neo4j.internal.kernel.api.IndexQuery.StringContainsPredicate
-import org.neo4j.internal.kernel.api.IndexQuery.StringSuffixPredicate
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.KernelReadTracer
@@ -96,6 +95,7 @@ import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
+import org.neo4j.internal.kernel.api.PropertyIndexQuery
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.Token
@@ -438,14 +438,14 @@ object OperatorCodeGenHelperTemplates {
                     order: IndexOrder,
                     needsValues: Boolean): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ),
-      method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexQueryConstraints, Array[IndexQuery]]("nodeIndexSeek"),
+      method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexQueryConstraints, Array[PropertyIndexQuery]]("nodeIndexSeek"),
       indexReadSession,
       cursor,
       invokeStatic(
         method[IndexQueryConstraints, IndexQueryConstraints, IndexOrder, Boolean]("constrained"),
         indexOrder(order),
         constant(needsValues)),
-      arrayOf[IndexQuery](query))
+      arrayOf[PropertyIndexQuery](query))
 
   def indexOrder(indexOrder: IndexOrder): IntermediateRepresentation = indexOrder match {
     case IndexOrder.ASCENDING => getStatic[IndexOrder, IndexOrder]("ASCENDING")
@@ -454,32 +454,32 @@ object OperatorCodeGenHelperTemplates {
   }
 
   def exactSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue]("exactSeek"),
+    invokeStatic(method[CompiledHelpers, PropertyIndexQuery, Int, AnyValue]("exactSeek"),
                  constant(prop),
                  expression )
 
   def lessThanSeek(prop: Int, inclusive: Boolean, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue, Boolean]("lessThanSeek"),
+    invokeStatic(method[CompiledHelpers, PropertyIndexQuery, Int, AnyValue, Boolean]("lessThanSeek"),
                  constant(prop),
                  expression,
                  constant(inclusive))
 
   def multipleLessThanSeek(prop: Int, expressions: Seq[IntermediateRepresentation], inclusives: Seq[Boolean]): IntermediateRepresentation = {
-    invokeStatic(method[CompiledHelpers, IndexQuery, Int, Array[AnyValue], Array[Boolean]]("multipleLessThanSeek"),
+    invokeStatic(method[CompiledHelpers, PropertyIndexQuery, Int, Array[AnyValue], Array[Boolean]]("multipleLessThanSeek"),
                  constant(prop),
                  arrayOf[AnyValue](expressions:_*),
                  arrayOf[Boolean](inclusives.map(constant):_*))
   }
 
   def greaterThanSeek(prop: Int, inclusive: Boolean, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue, Boolean]("greaterThanSeek"),
+    invokeStatic(method[CompiledHelpers, PropertyIndexQuery, Int, AnyValue, Boolean]("greaterThanSeek"),
                  constant(prop),
                  expression,
                  constant(inclusive))
 
   def multipleGreaterThanSeek(prop: Int, expressions: Seq[IntermediateRepresentation], inclusives: Seq[Boolean]): IntermediateRepresentation = {
     invokeStatic(
-      method[CompiledHelpers, IndexQuery, Int, Array[AnyValue], Array[Boolean]]("multipleGreaterThanSeek"),
+      method[CompiledHelpers, PropertyIndexQuery, Int, Array[AnyValue], Array[Boolean]]("multipleGreaterThanSeek"),
       constant(prop),
       arrayOf[AnyValue](expressions: _*),
       arrayOf[Boolean](inclusives.map(constant): _*))
@@ -490,7 +490,7 @@ object OperatorCodeGenHelperTemplates {
                        fromExpression: IntermediateRepresentation,
                        toInclusive: Boolean,
                        toExpression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue, Boolean, AnyValue, Boolean]("rangeBetweenSeek"),
+    invokeStatic(method[CompiledHelpers, PropertyIndexQuery, Int, AnyValue, Boolean, AnyValue, Boolean]("rangeBetweenSeek"),
                  constant(prop),
                  fromExpression,
                  constant(fromInclusive),
@@ -502,7 +502,7 @@ object OperatorCodeGenHelperTemplates {
                        fromExpressions: Seq[IntermediateRepresentation],
                        toInclusive: Seq[Boolean],
                        toExpressions: Seq[IntermediateRepresentation]): IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, IndexQuery, Int, Array[AnyValue], Array[Boolean], Array[AnyValue], Array[Boolean]]("multipleRangeBetweenSeek"),
+    invokeStatic(method[CompiledHelpers, PropertyIndexQuery, Int, Array[AnyValue], Array[Boolean], Array[AnyValue], Array[Boolean]]("multipleRangeBetweenSeek"),
                  constant(prop),
                  arrayOf[AnyValue](fromExpressions:_*),
                  arrayOf[Boolean](fromInclusive.map(constant): _*),
@@ -510,21 +510,21 @@ object OperatorCodeGenHelperTemplates {
                  arrayOf[Boolean](toInclusive.map(constant): _*))
 
   def stringPrefixSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue]("stringPrefix"),
+    invokeStatic(method[CompiledHelpers, PropertyIndexQuery, Int, AnyValue]("stringPrefix"),
                  constant(prop),
                  expression)
 
   def existsSeek(prop: Int): IntermediateRepresentation =
-    invokeStatic(method[IndexQuery, ExistsPredicate, Int]("exists"),
+    invokeStatic(method[PropertyIndexQuery, ExistsPredicate, Int]("exists"),
                  constant(prop))
 
   def stringContainsScan(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[IndexQuery, StringContainsPredicate, Int, TextValue]("stringContains"),
+    invokeStatic(method[PropertyIndexQuery, StringContainsPredicate, Int, TextValue]("stringContains"),
                  constant(prop),
                  expression)
 
   def stringEndsWithScan(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[IndexQuery, StringSuffixPredicate, Int, TextValue]("stringSuffix"),
+    invokeStatic(method[PropertyIndexQuery, StringSuffixPredicate, Int, TextValue]("stringSuffix"),
                  constant(prop),
                  expression)
 
@@ -532,14 +532,14 @@ object OperatorCodeGenHelperTemplates {
                         point: IntermediateRepresentation,
                         distance: IntermediateRepresentation,
                         inclusive: Boolean): IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, Array[IndexQuery], Int, AnyValue, AnyValue, Boolean]("pointRange"),
+    invokeStatic(method[CompiledHelpers, Array[PropertyIndexQuery], Int, AnyValue, AnyValue, Boolean]("pointRange"),
                  constant(prop),
                  point,
                  distance,
                  constant(inclusive))
 
   def manyExactSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, Array[IndexQuery], Int, AnyValue]("manyExactQueries"),
+    invokeStatic(method[CompiledHelpers, Array[PropertyIndexQuery], Int, AnyValue]("manyExactQueries"),
                  constant(prop),
                  expression)
 

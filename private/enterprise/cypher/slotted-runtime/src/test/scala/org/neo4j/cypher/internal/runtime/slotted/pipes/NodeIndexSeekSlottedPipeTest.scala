@@ -22,9 +22,9 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedCypherRowFactory
 import org.neo4j.cypher.internal.util.LabelId
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
-import org.neo4j.internal.kernel.api.IndexQuery
-import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.helpers.StubNodeValueIndexCursor
+import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.PropertyIndexQuery
 
 class NodeIndexSeekSlottedPipeTest extends CypherFunSuite {
   test("exhaust should close cursor") {
@@ -34,7 +34,7 @@ class NodeIndexSeekSlottedPipeTest extends CypherFunSuite {
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
 
     val cursor = new StubNodeValueIndexCursor().withNode(0)
-    when(state.query.indexSeek(any[IndexReadSession], any[Boolean], any[IndexOrder], any[Seq[IndexQuery]])).thenAnswer((_: InvocationOnMock) => {
+    when(state.query.indexSeek(any[IndexReadSession], any[Boolean], any[IndexOrder], any[Seq[PropertyIndexQuery]])).thenAnswer((_: InvocationOnMock) => {
       //NOTE: this is what is done in TransactionBoundQueryContext
       resourceManager.trace(cursor)
       cursor
@@ -62,7 +62,7 @@ class NodeIndexSeekSlottedPipeTest extends CypherFunSuite {
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
 
     val cursor = new StubNodeValueIndexCursor().withNode(0)
-    when(state.query.indexSeek(any[IndexReadSession], any[Boolean], any[IndexOrder], any[Seq[IndexQuery]])).thenAnswer((_: InvocationOnMock) => {
+    when(state.query.indexSeek(any[IndexReadSession], any[Boolean], any[IndexOrder], any[Seq[PropertyIndexQuery]])).thenAnswer((_: InvocationOnMock) => {
       //NOTE: this is what is done in TransactionBoundQueryContext
       resourceManager.trace(cursor)
       cursor

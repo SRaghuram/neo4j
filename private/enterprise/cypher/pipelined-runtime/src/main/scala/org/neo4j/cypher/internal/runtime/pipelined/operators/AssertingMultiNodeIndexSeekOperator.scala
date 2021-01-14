@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIn
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.exceptions.MergeConstraintConflictException
-import org.neo4j.internal.kernel.api.IndexQuery
+import org.neo4j.internal.kernel.api.PropertyIndexQuery
 
 class AssertingMultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                           argumentSize: SlotConfiguration.Size,
@@ -70,7 +70,7 @@ class AssertingMultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
       while (i < numberOfSeeks) {
         val currentSeekParameters = nodeIndexSeekParameters(i)
         val seeker = indexSeekers(i)
-        val indexQueries: Seq[Seq[IndexQuery]] = seeker.computeIndexQueries(queryState, initExecutionContext)
+        val indexQueries: Seq[Seq[PropertyIndexQuery]] = seeker.computeIndexQueries(queryState, initExecutionContext)
         val (nodeCursor, cursorsToClose) =
           computeCursor(indexQueries, read, state, resources, currentSeekParameters.queryIndex, currentSeekParameters.kernelIndexOrder, needsValues = false)
         try {

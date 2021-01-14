@@ -28,9 +28,9 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.Cursor;
-import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
+import org.neo4j.internal.kernel.api.PropertyIndexQuery;
 import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.schema.IndexDescriptor;
@@ -123,7 +123,7 @@ class HighLimitIndexIT
         {
             try ( NodeValueIndexCursor cursor = tx.cursors().allocateNodeValueIndexCursor( NULL, INSTANCE ) )
             {
-                tx.dataRead().nodeIndexSeek( session, cursor, unconstrained(), IndexQuery.exists( propertyKeyId ) );
+                tx.dataRead().nodeIndexSeek( session, cursor, unconstrained(), PropertyIndexQuery.exists( propertyKeyId ) );
                 while ( cursor.next() )
                 {
                     assertThat( nodeIds.remove( cursor.nodeReference() ) ).isTrue();
@@ -149,7 +149,7 @@ class HighLimitIndexIT
         {
             try ( RelationshipValueIndexCursor cursor = tx.cursors().allocateRelationshipValueIndexCursor( NULL, INSTANCE ) )
             {
-                tx.dataRead().relationshipIndexSeek( session, cursor, unconstrained(), IndexQuery.exists( propertyKeyId ) );
+                tx.dataRead().relationshipIndexSeek( session, cursor, unconstrained(), PropertyIndexQuery.exists( propertyKeyId ) );
                 while ( cursor.next() )
                 {
                     assertThat( relationshipIds.remove( cursor.relationshipReference() ) ).isTrue();

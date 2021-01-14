@@ -23,7 +23,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
-import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.PropertyIndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
@@ -143,7 +143,7 @@ public class Fulltext extends AbstractKernelBenchmark
 
         public NodeValueIndexCursor query( String query ) throws Exception
         {
-            IndexQuery indexQuery = IndexQuery.fulltextSearch( query );
+            PropertyIndexQuery indexQuery = PropertyIndexQuery.fulltextSearch( query );
             read.nodeIndexSeek( indexReadSession, node, unconstrained(), indexQuery );
             return node;
         }

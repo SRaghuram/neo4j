@@ -84,12 +84,12 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIn
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.internal.kernel.api.IndexQuery
-import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
+import org.neo4j.internal.kernel.api.PropertyIndexQuery
+import org.neo4j.internal.kernel.api.PropertyIndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.kernel.api.StatementConstants
@@ -212,7 +212,7 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
   }
 
   // HELPERS
-  protected def computeCursor(indexQueries: Seq[Seq[IndexQuery]],
+  protected def computeCursor(indexQueries: Seq[Seq[PropertyIndexQuery]],
                               read: Read,
                               state: PipelinedQueryState,
                               resources: QueryResources,
@@ -247,7 +247,7 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
   private def nonCompositeSeek(index: IndexReadSession,
                    resources: QueryResources,
                    read: Read,
-                   predicates: Seq[IndexQuery]): (NodeValueIndexCursor, Array[NodeValueIndexCursor]) = {
+                   predicates: Seq[PropertyIndexQuery]): (NodeValueIndexCursor, Array[NodeValueIndexCursor]) = {
 
     if (isImpossible(predicates)) {
       return (NodeValueHit.EMPTY, Array.empty)// leave cursor un-initialized/empty
@@ -268,7 +268,7 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
   private def seek(index: IndexReadSession,
                     resources: QueryResources,
                     read: Read,
-                    predicates: Seq[IndexQuery],
+                    predicates: Seq[PropertyIndexQuery],
                     needsValuesFromIndexSeek: Boolean): (NodeValueIndexCursor, Array[NodeValueIndexCursor]) = {
     val pool = resources.cursorPools.nodeValueIndexCursorPool
     indexMode match {
@@ -465,7 +465,7 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
     and(notEqual(load(seekValueVariable), noValue), not(isNaN(load(seekValueVariable))))
 
   override protected def predicate: IntermediateRepresentation =
-    invokeStatic(method[IndexQuery, ExactPredicate, Int, Object]("exact"), constant(property.propertyKeyId), load(seekValueVariable))
+    invokeStatic(method[PropertyIndexQuery, ExactPredicate, Int, Object]("exact"), constant(property.propertyKeyId), load(seekValueVariable))
 }
 
 /**
@@ -485,7 +485,7 @@ class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                                                          SingleQueryNodeIndexSeekTaskTemplate(inner, id, innermost, nodeVarName, offset, property, order, property.getValueFromIndex, queryIndexId,
                                                                                            argumentSize, codeGen) {
   private var seekValues: Seq[IntermediateExpression] = _
-  private val predicateVar = variable[IndexQuery](codeGen.namer.nextVariableName(), constant(null))
+  private val predicateVar = variable[PropertyIndexQuery](codeGen.namer.nextVariableName(), constant(null))
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, predicateVar)
   override def genExpressions: Seq[IntermediateExpression] = seekValues
@@ -498,7 +498,7 @@ class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
     assign(predicateVar, seekExpression.generatePredicate(seekValues.map(_.ir)))
   }
   override protected def isPredicatePossible: IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, Boolean, IndexQuery]("possibleRangePredicate"), predicate)
+    invokeStatic(method[CompiledHelpers, Boolean, PropertyIndexQuery]("possibleRangePredicate"), predicate)
   override protected def predicate: IntermediateRepresentation = load(predicateVar)
 }
 
@@ -687,7 +687,7 @@ class CompositeNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
       case (vs, p) => p(vs.map(_.ir))
     }
     invokeStatic(ManyQueriesNodeIndexSeekTaskTemplate.compositeCreateCursorsMethod,
-      arrayOf[Array[IndexQuery]](predicates:_*),
+      arrayOf[Array[PropertyIndexQuery]](predicates:_*),
       indexReadSession(queryIndexId),
       indexOrder(order),
       constant(needsValues),
@@ -700,7 +700,7 @@ class CompositeNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
 }
 
 object ManyQueriesNodeIndexSeekTaskTemplate {
-  def createCursors(predicates: Array[IndexQuery],
+  def createCursors(predicates: Array[PropertyIndexQuery],
                     index: IndexReadSession,
                     order: IndexOrder,
                     needsValues: Boolean,
@@ -725,7 +725,7 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
     }
   }
 
-  def compositeCreateCursors(predicates: Array[Array[IndexQuery]],
+  def compositeCreateCursors(predicates: Array[Array[PropertyIndexQuery]],
                              index: IndexReadSession,
                              order: IndexOrder,
                              needsValues: Boolean,
@@ -758,23 +758,23 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
     cursors
   }
 
-  def isImpossible(predicates: Seq[IndexQuery]): Boolean = predicates.exists(isImpossible)
+  def isImpossible(predicates: Seq[PropertyIndexQuery]): Boolean = predicates.exists(isImpossible)
 
-  def isImpossible(predicate: IndexQuery): Boolean = predicate match {
-        case p: IndexQuery.ExactPredicate => (p.value() eq Values.NO_VALUE) || (p.value().isInstanceOf[FloatingPointValue] && p.value().asInstanceOf[FloatingPointValue].isNaN)
-        case p: IndexQuery.RangePredicate[_] => !RANGE_SEEKABLE_VALUE_GROUPS.contains(p.valueGroup())
+  def isImpossible(predicate: PropertyIndexQuery): Boolean = predicate match {
+        case p: PropertyIndexQuery.ExactPredicate => (p.value() eq Values.NO_VALUE) || (p.value().isInstanceOf[FloatingPointValue] && p.value().asInstanceOf[FloatingPointValue].isNaN)
+        case p: PropertyIndexQuery.RangePredicate[_] => !RANGE_SEEKABLE_VALUE_GROUPS.contains(p.valueGroup())
         case _ => false
   }
 
   def getPropertyValue(iterator: CompositePredicateIterator, nodeCursor: NodeValueIndexCursor, offset: Int): Value =
     propertyValue(iterator.previous(offset), nodeCursor, offset)
 
-  private def propertyValue(predicate: IndexQuery, nodeCursor: NodeValueIndexCursor, offset: Int) = predicate match {
+  private def propertyValue(predicate: PropertyIndexQuery, nodeCursor: NodeValueIndexCursor, offset: Int) = predicate match {
     case exactPredicate: ExactPredicate => exactPredicate.value()
     case _ => nodeCursor.propertyValue(offset)
   }
 
-  def compositeQueryIterator(predicates: Array[Array[IndexQuery]]): CompositePredicateIterator = {
+  def compositeQueryIterator(predicates: Array[Array[PropertyIndexQuery]]): CompositePredicateIterator = {
     //Combine predicates
     //[ [a, b], [c], [d, e, f]] => [
     //                                [a, c, d],
@@ -788,16 +788,16 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
   }
 
   val createCursorsMethod: Method =
-    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[IndexQuery], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("createCursors")
+    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[PropertyIndexQuery], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("createCursors")
   val compositeCreateCursorsMethod: Method =
-    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[Array[IndexQuery]], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("compositeCreateCursors")
+    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[Array[PropertyIndexQuery]], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("compositeCreateCursors")
   val compositeGetPropertyMethod: Method =
     method[ManyQueriesNodeIndexSeekTaskTemplate,
       Value,
       CompositePredicateIterator,
       NodeValueIndexCursor,
       Int]("getPropertyValue")
-  val compositeQueryIteratorMethod: Method = method[ManyQueriesNodeIndexSeekTaskTemplate, CompositePredicateIterator, Array[Array[IndexQuery]]]("compositeQueryIterator")
+  val compositeQueryIteratorMethod: Method = method[ManyQueriesNodeIndexSeekTaskTemplate, CompositePredicateIterator, Array[Array[PropertyIndexQuery]]]("compositeQueryIterator")
   val compositeCursorToFreeMethod: Method = method[ManyQueriesNodeIndexSeekTaskTemplate, NodeValueIndexCursor, NodeValueIndexCursor]("compositeCursorToFree")
 }
 
@@ -806,30 +806,30 @@ case class SeekExpression(generateSeekValues: Seq[() => IntermediateExpression],
                           single: Boolean = false)
 
 
-class ManyPredicateIterator(predicates: Array[IndexQuery]) {
+class ManyPredicateIterator(predicates: Array[PropertyIndexQuery]) {
   private var pos = 0
 
   def hasNext: Boolean = pos < predicates.length
 
-  def next(): IndexQuery = {
+  def next(): PropertyIndexQuery = {
     val current = predicates(pos)
     pos += 1
     current
   }
 
-  def previous: IndexQuery = predicates(pos - 1)
+  def previous: PropertyIndexQuery = predicates(pos - 1)
 }
 
-class CompositePredicateIterator(predicates: Array[Array[IndexQuery]]) {
+class CompositePredicateIterator(predicates: Array[Array[PropertyIndexQuery]]) {
   private var pos = 0
 
   def hasNext: Boolean = pos < predicates.length
 
-  def next(): Array[IndexQuery] = {
+  def next(): Array[PropertyIndexQuery] = {
     val current = predicates(pos)
     pos += 1
     current
   }
 
-  def previous: Array[IndexQuery] = predicates(pos - 1)
+  def previous: Array[PropertyIndexQuery] = predicates(pos - 1)
 }

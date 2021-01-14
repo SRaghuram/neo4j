@@ -22,7 +22,7 @@ import org.openjdk.jmh.annotations.State;
 
 import java.util.function.Supplier;
 
-import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.PropertyIndexQuery;
 import org.neo4j.kernel.impl.locking.ResourceIds;
 import org.neo4j.values.storable.PointValue;
 import org.neo4j.values.storable.Value;
@@ -185,7 +185,7 @@ public class HashCode extends AbstractValuesBenchmark
     public long indexEntryHashCode4xx( ThreadState threadState )
     {
         return ResourceIds.indexEntryResourceId(
-                ARBITRARY_UNIMPORTANT_IMAGINARY_LABEL_ID, IndexQuery.exact(
+                ARBITRARY_UNIMPORTANT_IMAGINARY_LABEL_ID, PropertyIndexQuery.exact(
                         ARBITRARY_UNIMPORTANT_IMAGINARY_PROPERTY_KEY_ID,
                         threadState.nextValue.get() ) );
     }

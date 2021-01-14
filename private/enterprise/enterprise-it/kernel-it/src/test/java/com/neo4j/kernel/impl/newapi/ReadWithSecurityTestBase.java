@@ -18,7 +18,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.PropertyIndexQuery;
 import org.neo4j.internal.kernel.api.IndexQueryConstraints;
 import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeCursor;
@@ -385,7 +385,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         IndexReadSession indexSession = read.indexReadSession( index );
         try ( NodeValueIndexCursor cursor = cursors.allocateNodeValueIndexCursor( NULL, tx.memoryTracker() ) )
         {
-            read.nodeIndexSeek( indexSession, cursor, IndexQueryConstraints.unconstrained(), IndexQuery.exact( prop1Key, 1 ) );
+            read.nodeIndexSeek( indexSession, cursor, IndexQueryConstraints.unconstrained(), PropertyIndexQuery.exact( prop1Key, 1 ) );
             while ( cursor.next() )
             {
                 ids.add( cursor.nodeReference() );
@@ -406,8 +406,8 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         try ( NodeValueIndexCursor cursor1 = cursors.allocateNodeValueIndexCursor( NULL, tx.memoryTracker() );
               NodeValueIndexCursor cursor2 = cursors.allocateNodeValueIndexCursor( NULL, tx.memoryTracker() ) )
         {
-            ids.add( read.lockingNodeUniqueIndexSeek( index, cursor1, IndexQuery.exact( prop2Key, 3 ) ) );
-            ids.add( read.lockingNodeUniqueIndexSeek( index, cursor2, IndexQuery.exact( prop2Key, 4 ) ) );
+            ids.add( read.lockingNodeUniqueIndexSeek( index, cursor1, PropertyIndexQuery.exact( prop2Key, 3 ) ) );
+            ids.add( read.lockingNodeUniqueIndexSeek( index, cursor2, PropertyIndexQuery.exact( prop2Key, 4 ) ) );
         }
 
         // then

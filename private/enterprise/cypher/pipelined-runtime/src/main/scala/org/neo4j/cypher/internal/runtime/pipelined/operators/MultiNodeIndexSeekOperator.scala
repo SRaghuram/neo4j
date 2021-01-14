@@ -23,11 +23,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.internal.kernel.api.IndexQuery
-import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
+import org.neo4j.internal.kernel.api.PropertyIndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
+import org.neo4j.internal.kernel.api.PropertyIndexQuery
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.values.storable.FloatingPointValue
@@ -60,7 +60,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
     // We have one node cursor for each index seek
     private var nodeCursors: Array[NodeValueIndexCursor] = _
 
-    private var indexQueries: Seq[Seq[IndexQuery]] = _
+    private var indexQueries: Seq[Seq[PropertyIndexQuery]] = _
 
     // For exact seeks we also cache the values that we extract from the predicates instead of reading the property values
     // from the index using the cursor (which by definition have to be the same)
@@ -228,16 +228,16 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
     private def seek[RESULT <: AnyRef](index: IndexReadSession,
                                        nodeCursor: NodeValueIndexCursor,
                                        read: Read,
-                                       predicates: Seq[IndexQuery],
+                                       predicates: Seq[PropertyIndexQuery],
                                        needsValues: Boolean,
                                        indexOrder: IndexOrder,
                                        exactSeekValueIndex: Int): () => Unit = {
 
       val impossiblePredicate =
         predicates.exists {
-          case p: IndexQuery.ExactPredicate => (p.value() eq Values.NO_VALUE) || (p.value().isInstanceOf[FloatingPointValue] && p.value().asInstanceOf[FloatingPointValue].isNaN)
-          case _: IndexQuery.ExistsPredicate if predicates.length > 1 => false
-          case p: IndexQuery =>
+          case p: PropertyIndexQuery.ExactPredicate => (p.value() eq Values.NO_VALUE) || (p.value().isInstanceOf[FloatingPointValue] && p.value().asInstanceOf[FloatingPointValue].isNaN)
+          case _: PropertyIndexQuery.ExistsPredicate if predicates.length > 1 => false
+          case p: PropertyIndexQuery =>
             !RANGE_SEEKABLE_VALUE_GROUPS.contains(p.valueGroup())
         }
 

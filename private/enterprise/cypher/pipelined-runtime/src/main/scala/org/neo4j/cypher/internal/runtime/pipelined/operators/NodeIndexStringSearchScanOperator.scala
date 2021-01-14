@@ -58,11 +58,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CypherTypeException
-import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
+import org.neo4j.internal.kernel.api.PropertyIndexQuery
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.TextValue
@@ -88,7 +88,7 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
     singletonIndexedSeq(new OTask(inputMorsel.nextCopy, indexSession))
   }
 
-  def computeIndexQuery(property: Int, value: TextValue): IndexQuery
+  def computeIndexQuery(property: Int, value: TextValue): PropertyIndexQuery
 
   class OTask(inputMorsel: Morsel, index: IndexReadSession) extends InputLoopTask(inputMorsel) {
 
@@ -161,7 +161,7 @@ class NodeIndexContainsScanOperator(workIdentity: WorkIdentity,
     argumentSize) {
 
   override def computeIndexQuery(property: Int,
-                                 value: TextValue): IndexQuery = IndexQuery.stringContains(property, value)
+                                 value: TextValue): PropertyIndexQuery = PropertyIndexQuery.stringContains(property, value)
 }
 
 class NodeIndexEndsWithScanOperator(workIdentity: WorkIdentity,
@@ -180,7 +180,7 @@ class NodeIndexEndsWithScanOperator(workIdentity: WorkIdentity,
     argumentSize) {
 
   override def computeIndexQuery(property: Int,
-                                 value: TextValue): IndexQuery = IndexQuery.stringSuffix(property, value)
+                                 value: TextValue): PropertyIndexQuery = PropertyIndexQuery.stringSuffix(property, value)
 }
 
 class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,

@@ -24,7 +24,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.PropertyIndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
@@ -186,7 +186,7 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public void countNodesWithLabelKeyValueWhenSelectivityHigh( TxState txState, Blackhole bh ) throws KernelException
     {
-        IndexQuery query = IndexQuery.exact( txState.propertyKey, highSelectivityValue );
+        PropertyIndexQuery query = PropertyIndexQuery.exact( txState.propertyKey, highSelectivityValue );
         txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, unconstrained(), query );
         assertCount( txState.node, txState.highSelectivityMin, txState.highSelectivityMax, bh );
     }
@@ -195,7 +195,7 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public void countNodesWithLabelKeyValueWhenSelectivityMedium( TxState txState, Blackhole bh ) throws KernelException
     {
-        IndexQuery query = IndexQuery.exact( txState.propertyKey, mediumSelectivityValue );
+        PropertyIndexQuery query = PropertyIndexQuery.exact( txState.propertyKey, mediumSelectivityValue );
         txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, unconstrained(), query );
         assertCount( txState.node, txState.mediumSelectivityMin, txState.mediumSelectivityMax, bh );
     }
@@ -204,7 +204,7 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public void countNodesWithLabelKeyValueWhenSelectivityLow( TxState txState, Blackhole bh ) throws KernelException
     {
-        IndexQuery query = IndexQuery.exact( txState.propertyKey, lowSelectivityValue );
+        PropertyIndexQuery query = PropertyIndexQuery.exact( txState.propertyKey, lowSelectivityValue );
         txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, unconstrained(), query );
         assertCount( txState.node, txState.lowSelectivityMin, txState.lowSelectivityMax, bh );
     }
