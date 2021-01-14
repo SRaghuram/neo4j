@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
-import com.neo4j.bench.micro.data.CRS
+import com.neo4j.bench.data.CRS
 import org.neo4j.graphdb.Label
 import org.neo4j.values.storable.CoordinateReferenceSystem
 

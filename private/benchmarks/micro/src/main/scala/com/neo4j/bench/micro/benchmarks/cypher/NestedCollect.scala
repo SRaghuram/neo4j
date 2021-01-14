@@ -6,12 +6,13 @@
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.common.Neo4jConfigBuilder
+import com.neo4j.bench.data.DataGeneratorConfig
+import com.neo4j.bench.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.data.RelationshipDefinition
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.data.DataGeneratorConfig
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.micro.data.Plans
 import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.astAnds
@@ -20,7 +21,6 @@ import com.neo4j.bench.micro.data.Plans.astListLiteral
 import com.neo4j.bench.micro.data.Plans.astNestedCollect
 import com.neo4j.bench.micro.data.Plans.astTrue
 import com.neo4j.bench.micro.data.Plans.astVariable
-import com.neo4j.bench.micro.data.RelationshipDefinition
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING

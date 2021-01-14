@@ -7,14 +7,14 @@ package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.IndexType;
-import com.neo4j.bench.micro.data.LabelKeyDefinition;
+import com.neo4j.bench.data.DataGeneratorConfig;
+import com.neo4j.bench.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.data.IndexType;
+import com.neo4j.bench.data.LabelKeyDefinition;
 import com.neo4j.bench.micro.data.ManagedStore;
-import com.neo4j.bench.micro.data.PropertyDefinition;
-import com.neo4j.bench.micro.data.RelationshipDefinition;
-import com.neo4j.bench.micro.data.ValueGeneratorUtil;
+import com.neo4j.bench.data.PropertyDefinition;
+import com.neo4j.bench.data.RelationshipDefinition;
+import com.neo4j.bench.data.ValueGeneratorUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -25,10 +25,10 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
 
-import static com.neo4j.bench.micro.data.IndexType.SCHEMA;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
+import static com.neo4j.bench.data.IndexType.SCHEMA;
+import static com.neo4j.bench.data.ValueGeneratorUtil.LNG;
+import static com.neo4j.bench.data.ValueGeneratorUtil.STR_SML;
+import static com.neo4j.bench.data.ValueGeneratorUtil.STR_SML_ARR;
 
 @BenchmarkEnabled( true )
 public class StartupDb extends AbstractCoreBenchmark

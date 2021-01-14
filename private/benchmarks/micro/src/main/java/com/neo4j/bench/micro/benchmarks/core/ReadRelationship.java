@@ -10,11 +10,11 @@ import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.data.DataGenerator.Order;
-import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.RelationshipDefinition;
+import com.neo4j.bench.data.DataGenerator.Order;
+import com.neo4j.bench.data.DataGenerator.RelationshipLocality;
+import com.neo4j.bench.data.DataGeneratorConfig;
+import com.neo4j.bench.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.data.RelationshipDefinition;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -31,7 +31,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
 
-import static com.neo4j.bench.micro.data.RelationshipDefinition.from;
+import static com.neo4j.bench.data.RelationshipDefinition.from;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 

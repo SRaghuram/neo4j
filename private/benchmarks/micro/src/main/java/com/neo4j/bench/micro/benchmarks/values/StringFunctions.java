@@ -8,8 +8,8 @@ package com.neo4j.bench.micro.benchmarks.values;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.data.ValueGeneratorFun;
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.Range;
+import com.neo4j.bench.data.ValueGeneratorFun;
+import com.neo4j.bench.data.ValueGeneratorUtil.Range;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.CompilerControl;
@@ -27,10 +27,10 @@ import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.ListValue;
 
 import static com.neo4j.bench.micro.Main.run;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randGeneratorFor;
+import static com.neo4j.bench.data.ValueGeneratorUtil.STR_BIG;
+import static com.neo4j.bench.data.ValueGeneratorUtil.STR_SML;
+import static com.neo4j.bench.data.ValueGeneratorUtil.defaultRangeFor;
+import static com.neo4j.bench.data.ValueGeneratorUtil.randGeneratorFor;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 @BenchmarkEnabled( true )

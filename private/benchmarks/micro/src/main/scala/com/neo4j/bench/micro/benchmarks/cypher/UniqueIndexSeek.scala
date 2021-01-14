@@ -5,8 +5,13 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
-import java.util
+import com.neo4j.bench.data.DataGeneratorConfig
+import com.neo4j.bench.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.data.LabelKeyDefinition
+import com.neo4j.bench.data.PropertyDefinition
+import com.neo4j.bench.data.ValueGeneratorFun
 
+import java.util
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.benchmarks.RNGState
@@ -31,8 +36,8 @@ import com.neo4j.bench.micro.data.TypeParamValues.STR_BIG
 import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
 import com.neo4j.bench.micro.data.TypeParamValues.TIME
 import com.neo4j.bench.micro.data.ValueGeneratorFun
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.ascGeneratorFor
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.randGeneratorFor
+import com.neo4j.bench.data.ValueGeneratorUtil.ascGeneratorFor
+import com.neo4j.bench.data.ValueGeneratorUtil.randGeneratorFor
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.DoNotGetValue

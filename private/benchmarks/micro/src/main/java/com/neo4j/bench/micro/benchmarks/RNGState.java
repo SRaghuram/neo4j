@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks;
 
+import com.neo4j.bench.data.SplittableRandomProvider;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -20,17 +21,6 @@ public class RNGState
     @Setup
     public void setUp( ThreadParams threadParams )
     {
-        this.rng = newRandom( threadParams );
-    }
-
-    public static SplittableRandom newRandom( ThreadParams threadParams )
-    {
-        // ensures that every thread gets a different seed
-        return newRandom( threadParams.getThreadIndex() );
-    }
-
-    public static SplittableRandom newRandom( long seed )
-    {
-        return new SplittableRandom( seed );
+        this.rng = SplittableRandomProvider.newRandom( threadParams.getThreadIndex() );
     }
 }

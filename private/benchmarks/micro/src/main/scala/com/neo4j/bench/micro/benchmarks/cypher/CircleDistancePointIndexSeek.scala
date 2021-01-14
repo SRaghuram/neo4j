@@ -25,11 +25,11 @@ import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
 import com.neo4j.bench.micro.data.Plans.astRangeBetweenPointsQueryExpression
 import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.Plans.distanceFunction
-import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition
+import com.neo4j.bench.data.PointGenerator.ClusterGridDefinition
 import com.neo4j.bench.micro.data.PointGenerator.circleGrid
-import com.neo4j.bench.micro.data.PropertyDefinition
+import com.neo4j.bench.data.PropertyDefinition
 import com.neo4j.bench.micro.data.ValueGeneratorFun
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL
+import com.neo4j.bench.data.ValueGeneratorUtil.DBL
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.LessThanOrEqual
 import org.neo4j.cypher.internal.logical.plans

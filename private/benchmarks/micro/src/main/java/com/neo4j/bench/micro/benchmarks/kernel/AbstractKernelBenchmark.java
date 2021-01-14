@@ -8,8 +8,8 @@ package com.neo4j.bench.micro.benchmarks.kernel;
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.micro.benchmarks.KernelTxBatch;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.PropertyDefinition;
-import com.neo4j.bench.micro.data.RelationshipDefinition;
+import com.neo4j.bench.data.PropertyDefinition;
+import com.neo4j.bench.data.RelationshipDefinition;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Label;

@@ -15,7 +15,7 @@ import com.neo4j.bench.jmh.api.Runner;
 import com.neo4j.bench.jmh.api.RunnerParams;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
-import com.neo4j.bench.micro.data.Stores;
+import com.neo4j.bench.data.Stores;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.Neo4jConfig;

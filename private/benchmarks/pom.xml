@@ -18,6 +18,7 @@
 
     <properties>
         <moduleName>com.neo4j.bench</moduleName>
+        <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
         <license-text.header>build/license-header.txt</license-text.header>
         <neo4j-java-driver.version>4.2.0</neo4j-java-driver.version>
         <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
@@ -155,6 +156,7 @@
         <module>benchmark-neo4j-common-test</module>
         <module>benchmark-results-client-tests</module>
         <module>benchmark-model</module>
+        <module>benchmark-data-generator</module>
     </modules>
 
     <profiles>

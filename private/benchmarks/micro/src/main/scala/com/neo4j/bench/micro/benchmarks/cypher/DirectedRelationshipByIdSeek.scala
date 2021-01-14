@@ -6,21 +6,20 @@
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.util
-
 import com.neo4j.bench.common.Neo4jConfigBuilder
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.data.ArrayGenerator.intArray
-import com.neo4j.bench.micro.data.DataGeneratorConfig
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
-import com.neo4j.bench.micro.data.NumberGenerator.randInt
-import com.neo4j.bench.micro.data.Plans.IdGen
-import com.neo4j.bench.micro.data.Plans.astParameter
-import com.neo4j.bench.micro.data.Plans.astVariable
-import com.neo4j.bench.micro.data.RelationshipDefinition
-import com.neo4j.bench.micro.data.ValueGeneratorFun
+import com.neo4j.bench.data.ArrayGenerator.intArray
+import com.neo4j.bench.data.DataGeneratorConfig
+import com.neo4j.bench.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.data.NumberGenerator.randInt
+import com.neo4j.bench.data.Plans.IdGen
+import com.neo4j.bench.data.Plans.astParameter
+import com.neo4j.bench.data.Plans.astVariable
+import com.neo4j.bench.data.RelationshipDefinition
+import com.neo4j.bench.data.ValueGeneratorFun
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans

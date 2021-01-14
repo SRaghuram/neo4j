@@ -9,11 +9,11 @@ import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.LabelKeyDefinition;
-import com.neo4j.bench.micro.data.PropertyDefinition;
-import com.neo4j.bench.micro.data.ValueGeneratorFun;
+import com.neo4j.bench.data.DataGeneratorConfig;
+import com.neo4j.bench.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.data.LabelKeyDefinition;
+import com.neo4j.bench.data.PropertyDefinition;
+import com.neo4j.bench.data.ValueGeneratorFun;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -30,10 +30,10 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
+import static com.neo4j.bench.data.ValueGeneratorUtil.INT;
+import static com.neo4j.bench.data.ValueGeneratorUtil.LNG;
+import static com.neo4j.bench.data.ValueGeneratorUtil.STR_SML;
+import static com.neo4j.bench.data.ValueGeneratorUtil.randPropertyFor;
 
 @BenchmarkEnabled( false )
 public class CreateNodesWithProperty extends AbstractMarketingBenchmark

@@ -7,12 +7,12 @@ package com.neo4j.bench.micro.benchmarks.bolt;
 
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.PropertyDefinition;
-import com.neo4j.bench.micro.data.RelationshipDefinition;
-import com.neo4j.bench.micro.data.ValueGeneratorFun;
+import com.neo4j.bench.data.DataGeneratorConfig;
+import com.neo4j.bench.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.data.PropertyDefinition;
+import com.neo4j.bench.data.RelationshipDefinition;
+import com.neo4j.bench.data.SplittableRandomProvider;
+import com.neo4j.bench.data.ValueGeneratorFun;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -45,11 +45,11 @@ import org.neo4j.values.virtual.VirtualValues;
 
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.benchmarks.bolt.BoltPropertySerialization.META_MSG;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
+import static com.neo4j.bench.data.ValueGeneratorUtil.DBL;
+import static com.neo4j.bench.data.ValueGeneratorUtil.LNG;
+import static com.neo4j.bench.data.ValueGeneratorUtil.STR_BIG;
+import static com.neo4j.bench.data.ValueGeneratorUtil.STR_SML;
+import static com.neo4j.bench.data.ValueGeneratorUtil.randPropertyFor;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
@@ -114,7 +114,7 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
         @Setup
         public void setup( BoltValueSerialization state, ThreadParams threadParams ) throws Throwable
         {
-            random = RNGState.newRandom( threadParams );
+            random = SplittableRandomProvider.newRandom( threadParams.getThreadIndex() );
             prefix = String.format( "CYPHER runtime=%s ", state.runtime );
             boltFactory = boltFactory( (GraphDatabaseAPI) state.db() );
             machine = boltFactory.newStateMachine( BOLT_VERSION, BOLT_CHANNEL );

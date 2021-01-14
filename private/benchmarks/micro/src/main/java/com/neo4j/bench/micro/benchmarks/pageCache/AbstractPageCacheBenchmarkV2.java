@@ -7,7 +7,7 @@ package com.neo4j.bench.micro.benchmarks.pageCache;
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.micro.benchmarks.Throttler;
-import com.neo4j.bench.micro.data.ValueGeneratorFun;
+import com.neo4j.bench.data.ValueGeneratorFun;
 import org.openjdk.jmh.infra.ThreadParams;
 
 import java.io.File;
@@ -42,8 +42,8 @@ import org.neo4j.logging.NullLog;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
+import static com.neo4j.bench.data.ValueGeneratorUtil.LNG;
+import static com.neo4j.bench.data.ValueGeneratorUtil.nonContendingStridingFor;
 import static org.neo4j.io.ByteUnit.KibiByte;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 

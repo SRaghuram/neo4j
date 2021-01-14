@@ -10,10 +10,10 @@ import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.micro.data.DataGenerator.Order;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.ValueGeneratorFun;
+import com.neo4j.bench.data.DataGenerator.Order;
+import com.neo4j.bench.data.DataGeneratorConfig;
+import com.neo4j.bench.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.data.ValueGeneratorFun;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -31,8 +31,8 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
+import static com.neo4j.bench.data.ValueGeneratorUtil.LNG;
+import static com.neo4j.bench.data.ValueGeneratorUtil.nonContendingStridingFor;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @BenchmarkEnabled( true )

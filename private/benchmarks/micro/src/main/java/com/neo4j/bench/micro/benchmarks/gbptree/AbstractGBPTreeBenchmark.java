@@ -7,8 +7,8 @@ package com.neo4j.bench.micro.benchmarks.gbptree;
 
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
-import com.neo4j.bench.micro.data.Augmenterizer;
-import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
+import com.neo4j.bench.data.Augmenterizer;
+import com.neo4j.bench.data.Stores.StoreAndConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

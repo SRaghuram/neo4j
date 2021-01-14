@@ -14,6 +14,11 @@
     <properties>
         <moduleName>com.neo4j.bench.micro</moduleName>
         <uberjar.name>micro-benchmarks</uberjar.name>
+        <metrics.version>3.1.2</metrics.version>
+        <scala.version>2.11.8</scala.version>
+        <scalatest.version>2.2.5</scalatest.version>
+        <mockito.version>1.10.19</mockito.version>
+        <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
         <test.runner.jvm.settings.additional>-Xmx6g -Djmh.ignoreLock=true</test.runner.jvm.settings.additional>
@@ -35,6 +40,11 @@
         <dependency>
             <groupId>com.neo4j.bench</groupId>
             <artifactId>benchmark-infra-scheduler</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-data-generator</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

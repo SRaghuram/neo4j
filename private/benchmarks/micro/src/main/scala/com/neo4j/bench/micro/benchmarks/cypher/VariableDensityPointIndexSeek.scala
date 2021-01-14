@@ -21,11 +21,11 @@ import com.neo4j.bench.micro.data.Plans.astParameter
 import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
 import com.neo4j.bench.micro.data.Plans.astRangeBetweenPointsQueryExpression
 import com.neo4j.bench.micro.data.Plans.astVariable
-import com.neo4j.bench.micro.data.PointGenerator.grid
+import com.neo4j.bench.data.PointGenerator.grid
 import com.neo4j.bench.micro.data.PointGenerator.random
-import com.neo4j.bench.micro.data.PropertyDefinition
+import com.neo4j.bench.data.PropertyDefinition
 import com.neo4j.bench.micro.data.ValueGeneratorFun
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL
+import com.neo4j.bench.data.ValueGeneratorUtil.DBL
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.DoNotGetValue
