@@ -159,6 +159,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
         if ( logContext != null )
         {
             logContext.close();
+            logContext = null;
             log = null;
         }
     }

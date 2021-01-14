@@ -725,15 +725,25 @@ class QueryLoggerIT
                 transaction.execute( QUERY ).close();
                 transaction.commit();
             }
+
+            // Value should not change when disabled
+            strings = readAllLines( logFilename );
+            assertEquals( 2, strings.size() );
+
+            try ( Transaction transaction = database.beginTx() )
+            {
+                transaction.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'verbose')" ).close();
+                transaction.execute( QUERY ).close();
+                transaction.commit();
+            }
         }
         finally
         {
             databaseManagementService.shutdown();
         }
 
-        // Value should not change when disabled
         strings = readAllLines( logFilename );
-        assertEquals( 2, strings.size() );
+        assertEquals( 5, strings.size() );
     }
 
     @Test
