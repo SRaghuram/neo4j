@@ -41,12 +41,9 @@ class LazyExecutionGraphScheduling(executionGraphDefinition: ExecutionGraphDefin
         result(i) = PipelineId(pipelineId)
         i += 1
 
-        def pushUpstreams(id1: PipelineId, id2: PipelineId): Unit = {
-          if (id1 != NO_PIPELINE) {
-            stack.push(id1.x)
-          }
-          if (id2 != NO_PIPELINE) {
-            stack.push(id2.x)
+        def pushUpstream(id: PipelineId): Unit = {
+          if (id != NO_PIPELINE) {
+            stack.push(id.x)
           }
         }
 
@@ -54,11 +51,14 @@ class LazyExecutionGraphScheduling(executionGraphDefinition: ExecutionGraphDefin
         pipelineState.schedulingHint match {
           case DependentInputsEagerLhsSchedulingHint | IndependentInputsSchedulingHint =>
             // Prioritize lhs if it is eager (e.g. HashJoin) or if the inputs are independent (e.g. Union)
-            pushUpstreams(pipelineState.rhs, pipelineState.lhs)
+            // (In Union there is no data dependencies between the two-sides, so they can be produced in any order. Doing LHS first seemed least surprising)
+            pushUpstream(pipelineState.rhs)
+            pushUpstream(pipelineState.lhs)
 
           case _ =>
             // In lazy scheduling we prioritize rhs by default (which corresponds to rhs of logical plan)
-            pushUpstreams(pipelineState.lhs, pipelineState.rhs)
+            pushUpstream(pipelineState.lhs)
+            pushUpstream(pipelineState.rhs)
         }
       }
     }

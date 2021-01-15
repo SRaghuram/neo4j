@@ -197,7 +197,8 @@ sealed trait SchedulingHint
 case object NoSchedulingHint extends SchedulingHint
 case object DependentInputsEagerLhsSchedulingHint extends SchedulingHint // Output depends on fully completed input from lhs, and some input from rhs
 case object DependentInputsLazySchedulingHint extends SchedulingHint  // Output depends on some input from both lhs and rhs, but can proceed without full completion
-case object IndependentInputsSchedulingHint extends SchedulingHint  // Output is independent of which side it gets input from
+case object IndependentInputsSchedulingHint extends SchedulingHint  // Output is independent of which side it gets input from,
+                                                                    // i.e. the entire output for one input side can be produced without looking at the other side, e.g. Union
 
 // -- EXECUTION GRAPH
 case class ExecutionGraphDefinition(physicalPlan: PhysicalPlan,
