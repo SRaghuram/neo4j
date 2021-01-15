@@ -65,7 +65,7 @@ class SetNodePropertyOperator(val workIdentity: WorkIdentity,
       val nodeId = getNodeIdFunction.applyAsLong(cursor)
 
       if (nodeId != StatementConstants.NO_SUCH_NODE) {
-        SetPropertyOperator.setNodeProperty(
+        SetOperator.setNodeProperty(
           nodeId,
           propertyKey,
           propertyValue.apply(cursor, queryState),
@@ -114,7 +114,7 @@ class SetNodePropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
       declareAndAssign(typeRefOf[Long], entityId, nodeId),
       condition(notEqual(load(entityId), constant(StatementConstants.NO_SUCH_NODE)))(
         invokeStatic(
-          method[SetPropertyOperator, Unit, Long, String, AnyValue, Token, Write, MutableQueryStatistics]("setNodeProperty"),
+          method[SetOperator, Unit, Long, String, AnyValue, Token, Write, MutableQueryStatistics]("setNodeProperty"),
           load(entityId),
           constant(key),
           nullCheckIfRequired(propertyValue),
