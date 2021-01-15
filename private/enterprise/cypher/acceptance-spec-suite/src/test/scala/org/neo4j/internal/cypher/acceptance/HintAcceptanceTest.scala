@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.time.LocalDate
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.exceptions.HintException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
@@ -158,5 +159,62 @@ class HintAcceptanceTest
 
     result.toSet shouldBe Set(Map("p.name"->"foo", "p.job"->"janitor"))
 
+  }
+
+  test("Should plan index scan with index hint") {
+    val a = createLabeledNode(Map("prop" -> 1), "A")
+    val b = createLabeledNode("B")
+    val c = createLabeledNode(Map("prop" -> 1), "C")
+    val d = createLabeledNode("D")
+    val e = createLabeledNode(Map("prop" -> 1), "E")
+
+    relate(a, b, "R1")
+    relate(b, c, "R2")
+    relate(c, d, "R3")
+    relate(d, e, "R4")
+
+    graph.createIndex("A", "prop")
+    graph.createIndex("C", "prop")
+    graph.createIndex("E", "prop")
+
+    val query = """
+                  |MATCH (a:A {prop:1})-[:R1]->(b:B)-[:R2]->(c:C)-[:R3]->(d:D)-[:R4]->(e:E {prop:1})
+                  |USING INDEX c:C(prop)
+                  |WHERE c.prop IS NOT NULL
+                  |RETURN a.prop, e.prop
+                  |""".stripMargin
+
+    val result = executeWith(Configs.All, query,
+      planComparisonStrategy = ComparePlansWithAssertion(p => {
+        p should includeSomewhere.nTimes(1, aPlan("NodeIndexScan"))
+      }))
+
+    result.toSet shouldBe Set(Map("a.prop" -> 1, "e.prop" -> 1))
+  }
+
+  test("Should not plan index scan with index seek hint") {
+    val a = createLabeledNode(Map("prop" -> 1), "A")
+    val b = createLabeledNode("B")
+    val c = createLabeledNode(Map("prop" -> 1), "C")
+    val d = createLabeledNode("D")
+    val e = createLabeledNode(Map("prop" -> 1), "E")
+
+    relate(a, b, "R1")
+    relate(b, c, "R2")
+    relate(c, d, "R3")
+    relate(d, e, "R4")
+
+    graph.createIndex("A", "prop")
+    graph.createIndex("C", "prop")
+    graph.createIndex("E", "prop")
+
+    val query = """
+        |MATCH (a:A {prop:1})-[:R1]->(b:B)-[:R2]->(c:C)-[:R3]->(d:D)-[:R4]->(e:E {prop:1})
+        |USING INDEX SEEK c:C(prop)
+        |WHERE c.prop IS NOT NULL
+        |RETURN *
+        |""".stripMargin
+
+    an [HintException] shouldBe thrownBy(executeSingle(query))
   }
 }
