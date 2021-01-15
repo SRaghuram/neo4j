@@ -157,7 +157,8 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
     forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers,
       (buffer, id) => {
         var i = 0
-        while (i < nbrOfMorsels) {
+        // NOTE: We also decrement the extra +1 at the EndOfStream (which was incremented in LeftOuterRhsStreamingSink.initiate())
+        while (i < nbrOfTrackerDecrements) {
           buffer.decrement(id)
           i += 1
         }
@@ -257,7 +258,13 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
     DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
     // Increment for an ArgumentID in RHS's accumulator
-    val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
+    // NOTE: Add an extra increment to keep downstream reducers from completing until we reach the EndOfStream for this argument id
+    //       This will be decremented in LHSAccumulatingRHSArgumentStreamingSource.close() on EndOfStream
+    val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel,
+                                                                                            (acc, argumentRowId) => {
+                                                                                              acc.increment(argumentRowId)
+                                                                                              acc.increment(argumentRowId)
+                                                                                            })
     rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
     // Count Type: RHS Accumulator Init
     tracker.increment()
