@@ -345,4 +345,40 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
       Map("p.name" -> "Some person", "q.name" -> "Another person"),
     ))
   }
+
+  test("Order of nullable column should be correctly kept/recomputed after a NodeLeftOuterHashJoin") {
+    for(aIndex <- 0 until 10) {
+      val a = createLabeledNode("A")
+      if (aIndex % 2 == 0) {
+        for (bIndex <- 0 until 10) {
+          val b = createLabeledNode(Map("prop" -> bIndex), "B")
+          relate(a, b)
+        }
+      }
+    }
+
+    graph.createIndex("B", "prop")
+
+    val query =
+      """MATCH (a:A)
+        |OPTIONAL MATCH (a)-->(b:B)
+        |USING JOIN ON a
+        |WHERE b.prop IS NOT NULL
+        |RETURN b.prop ORDER BY b.prop
+        |""".stripMargin
+
+    val expected = for {
+      prop <- (0 to 9) :+ null
+      _ <- 1 to 5
+    } yield Map("b.prop" -> prop)
+
+    val ascResult = executeWith(Configs.All, query + " ASC")
+    val descResult = executeWith(Configs.All, query + " DESC")
+
+    ascResult.executionPlanDescription() should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
+    descResult.executionPlanDescription() should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
+
+    ascResult.toList should equal(expected)
+    descResult.toList should equal(expected.reverse)
+  }
 }
