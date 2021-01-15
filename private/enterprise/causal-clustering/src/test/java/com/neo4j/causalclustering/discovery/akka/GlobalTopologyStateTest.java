@@ -26,6 +26,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.identity.ServerId;
@@ -42,6 +45,7 @@ import static java.lang.String.format;
 import static java.lang.System.lineSeparator;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -452,6 +456,31 @@ class GlobalTopologyStateTest
                 format( "%sDatabase %s lost its leader. Previous leader was %s", prefix, databaseId1, myIdentity2.raftMemberId( namedDatabaseId1 ) ) );
     }
 
+    @Test
+    void shouldNotCallbackInParallel() throws ExecutionException, InterruptedException
+    {
+        var listener = new ParallelCallDetectingRaftListener();
+        var state = new GlobalTopologyState( logProvider, listener, new JobSchedulerAdapter() );
+
+        var initialTopology = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), Map.of( coreId1, coreInfo1 ) );
+        var updatedTopology = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), Map.of( coreId1, coreInfo1, coreId2, coreInfo2 ) );
+        var initialMapping = Map.of( coreId1, IdFactory.randomRaftMemberId() );
+        var updatedMapping = Map.of( coreId1, initialMapping.get( coreId1 ), coreId2, IdFactory.randomRaftMemberId() );
+
+        state.onTopologyUpdate( initialTopology );
+        setupRaftMapping( state, namedDatabaseId1, initialMapping );
+
+        listener.reset();
+
+        var updateTopology = CompletableFuture.runAsync( () -> state.onTopologyUpdate( updatedTopology ) );
+        var updateRaftMapping = CompletableFuture.runAsync( () -> setupRaftMapping( state, namedDatabaseId1, updatedMapping ) );
+
+        updateTopology.get();
+        updateRaftMapping.get();
+
+        assertFalse( listener.hadParallelCall() );
+    }
+
     private static CoreServerInfo newCoreInfo( ServerId serverId, Set<DatabaseId> databaseIds )
     {
         var raftAddress = new SocketAddress( "raft-" + serverId.uuid(), 1 );
@@ -476,5 +505,43 @@ class GlobalTopologyStateTest
     private Set<RaftMemberId> toRaftMembers( DatabaseCoreTopology coreTopology )
     {
         return coreTopology.resolve( state::resolveRaftMemberForServer );
+    }
+
+    private static class ParallelCallDetectingRaftListener implements RaftListener
+    {
+        private final AtomicBoolean fail = new AtomicBoolean( false );
+        private final AtomicBoolean inCall = new AtomicBoolean( true );
+
+        @Override
+        public void accept( DatabaseId databaseId, Set<RaftMemberId> memberIds )
+        {
+            if ( inCall.getAndSet( true ) )
+            {
+                fail.set( true );
+            }
+            else
+            {
+                try
+                {
+                    Thread.sleep( 100 );
+                }
+                catch ( InterruptedException e )
+                {
+                    // no-op
+                }
+                inCall.set( false );
+            }
+        }
+
+        void reset()
+        {
+            inCall.set( false );
+            fail.set( false );
+        }
+
+        boolean hadParallelCall()
+        {
+            return fail.get();
+        }
     }
 }
