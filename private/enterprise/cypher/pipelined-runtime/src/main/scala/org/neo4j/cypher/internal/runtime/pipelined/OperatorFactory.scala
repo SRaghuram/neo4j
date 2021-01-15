@@ -59,6 +59,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetNodePropertyOperation
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetPropertyFromMapOperation
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetPropertyOperation
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
@@ -127,7 +128,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsHea
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsMiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
-import org.neo4j.cypher.internal.runtime.pipelined.operators.SetNodePropertyOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SkipOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
@@ -993,7 +993,13 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         Some(new LockNodesOperator(WorkIdentity.fromPlan(plan), nodesToLock))
 
       case plans.SetNodeProperty(_, idName, propertyKey, propertyValue) if !parallelExecution =>
-        Some(new SetNodePropertyOperator(WorkIdentity.fromPlan(plan), slots(idName), propertyKey.name, converters.toCommandExpression(id, propertyValue)))
+        Some(new SetOperator(
+          WorkIdentity.fromPlan(plan),
+          SetNodePropertyOperation(
+            idName,
+            LazyPropertyKey(propertyKey)(semanticTable),
+            converters.toCommandExpression(id, propertyValue),
+          )))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)
