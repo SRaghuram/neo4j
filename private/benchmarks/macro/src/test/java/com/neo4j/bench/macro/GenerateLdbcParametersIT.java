@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
 package com.neo4j.bench.macro;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.Resources;
@@ -88,11 +89,11 @@ public class GenerateLdbcParametersIT
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
             Workload workload = Workload.fromName( workloadName, resources, Deployment.embedded() );
-            try ( Store store = Store.createFrom( storeDir ) )
+            try ( Store store = Neo4jStore.createFrom( storeDir ) )
             {
                 try ( EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile() ) )
                 {
-                    GraphDatabaseService db = database.db();
+                    GraphDatabaseService db = database.inner();
 
                     Set<String> messageIds = new HashSet<>();
                     Set<String> personIds = new HashSet<>();
@@ -127,7 +128,7 @@ public class GenerateLdbcParametersIT
                                 Map<String,Object> queryParameters = parametersReader.next();
                                 try ( Transaction tx = db.beginTx() )
                                 {
-                                    try ( Result result = db.execute( query.queryString().value(), queryParameters ) )
+                                    try ( Result result = tx.execute( query.queryString().value(), queryParameters ) )
                                     {
                                         result.forEachRemaining( row -> consumers.forEach( consumer -> consumer.accept( row ) ) );
                                     }
