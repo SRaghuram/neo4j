@@ -58,6 +58,7 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
     "CREATE ROLE foo AS COPY OF reader",
     "CREATE OR REPLACE ROLE foo AS COPY OF reader",
     "CREATE ROLE foo IF NOT EXISTS AS COPY OF reader",
+    "ALTER ROLE foo SET NAME bar",
     "DROP ROLE foo",
     "DROP ROLE foo IF EXISTS",
     "GRANT ROLE reader TO neo4j",

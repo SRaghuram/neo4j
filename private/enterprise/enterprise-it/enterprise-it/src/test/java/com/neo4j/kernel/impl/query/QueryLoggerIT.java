@@ -137,13 +137,14 @@ class QueryLoggerIT
         executeSystemCommandSuperUser( "SHOW USERS" );
         executeSystemCommandSuperUser( "SHOW DATABASES" );
         executeSystemCommandSuperUser( "DROP USER foo" );
-        executeSystemCommandSuperUser( "DROP ROLE role" );
+        executeSystemCommandSuperUser( "ALTER ROLE role SET NAME tbd" );
+        executeSystemCommandSuperUser( "DROP ROLE tbd" );
 
         databaseManagementService.shutdown();
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines.size(), equalTo( 10 ) );
+        assertThat( logLines.size(), equalTo( 11 ) );
         String connectionDetails = connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME );
         assertThat( logLines, contains(
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails,
@@ -158,7 +159,8 @@ class QueryLoggerIT
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "SHOW USERS" ) ),
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "SHOW DATABASES" ) ),
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "DROP USER foo" ) ),
-                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "DROP ROLE role" ) )
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "ALTER ROLE role SET NAME tbd" ) ),
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "DROP ROLE tbd" ) )
         ) );
     }
 

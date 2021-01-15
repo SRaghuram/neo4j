@@ -61,6 +61,7 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.collection.MapUtil;
@@ -205,6 +206,33 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
             assertThat( record.get( "roles" ).asList(), equalTo( List.of( "agent", PredefinedRoles.PUBLIC ) ) );
             assertThat( record.get( "passwordChangeRequired" ).asBoolean(), equalTo( false ) );
             assertThat( record.get( "suspended" ).asBoolean(), equalTo( false ) );
+        }
+    }
+
+    @Test
+    public void shouldNotAlterRoleNameWhenUsingLDAP()
+    {
+        startDatabase();
+        createRole( "agent" );
+        try ( Driver driver = connectDriver( boltUri, "smith", "abc123" );
+              Session session = driver.session() )
+        {
+            // when
+            try
+            {
+                session.run( "ALTER ROLE agent SET NAME bot" ).single();
+                fail( "An exception was expected but not thrown here." );
+            }
+            catch ( DatabaseException e )
+            {
+                assertThat( e.getMessage(),
+                            equalTo( "Changing role name is not supported when using an authentication or authentication provider apart from native." ) );
+            }
+
+            // then
+            // role name should not have been changed
+            Record record = session.run( "SHOW CURRENT USER" ).single();
+            assertThat( record.get( "roles" ).asList(), equalTo( List.of( "agent", PredefinedRoles.PUBLIC ) ) );
         }
     }
 

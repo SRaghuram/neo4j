@@ -37,6 +37,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       "CREATE OR REPLACE ROLE bar3 AS COPY OF foo" -> 1,
       "GRANT ROLE foo TO Bar" -> 1,
       "REVOKE ROLE foo FROM Bar" -> 1,
+      "ALTER ROLE foo3 SET NAME foo232" -> 1,
       "DROP ROLE foo" -> 1,
       "DROP ROLE foo2 IF EXISTS" -> 1,
       "GRANT ROLE a,b,c TO x,y,z" -> 9
@@ -759,6 +760,85 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     exceptionCopy.getMessage should include("Failed to create the specified role 'foo': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
+  }
+
+  // Tests for altering roles
+
+  test("should alter role") {
+    // WHEN
+    execute("CREATE ROLE foo")
+    execute("ALTER ROLE foo SET NAME bar")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("bar").map))
+  }
+
+  test("should alter role with parameter for from") {
+    // WHEN
+    execute("CREATE ROLE foo")
+    execute("ALTER ROLE $role SET NAME bar", Map("role" -> "foo"))
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("bar").map))
+  }
+
+  test("should alter role with parameter for to") {
+    // WHEN
+    execute("CREATE ROLE foo")
+    execute("ALTER ROLE foo SET NAME $role", Map("role" -> "bar"))
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("bar").map))
+  }
+
+  test("should alter role with parameters for both inputs") {
+    // WHEN
+    execute("CREATE ROLE foo")
+    execute("ALTER ROLE $from SET NAME $to", Map("from" -> "foo", "to" -> "bar"))
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("bar").map))
+  }
+
+  test("should not alter role if role does not exists") {
+    // WHEN
+    val exception = the[IllegalStateException] thrownBy execute("ALTER ROLE foo SET NAME bar")
+    exception.getMessage should startWith("Failed to rename the specified role 'foo' to 'bar': The role 'foo' does not exist.")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles)
+  }
+
+  test("should not alter to existing name") {
+    // WHEN
+    execute("CREATE ROLE foo")
+    val exception = the[InvalidArgumentException] thrownBy execute("ALTER ROLE foo SET NAME reader")
+    exception.getMessage should startWith("Failed to rename to the specified role 'reader': Role already exists.")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles ++ Set(role("foo").map))
+  }
+
+  test("should not alter from reserved name") {
+    // WHEN
+    val exception = the[InvalidArgumentException] thrownBy execute("ALTER ROLE PUBLIC SET NAME PRIVATE")
+    exception.getMessage should startWith("Failed to alter the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles)
+  }
+
+  test("should not alter to reserved name") {
+    // WHEN
+    execute("CREATE ROLE foo")
+    val exception = the[InvalidArgumentException] thrownBy execute("ALTER ROLE foo SET NAME PUBLIC")
+    exception.getMessage should startWith("Failed to alter the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
   // Tests for dropping roles

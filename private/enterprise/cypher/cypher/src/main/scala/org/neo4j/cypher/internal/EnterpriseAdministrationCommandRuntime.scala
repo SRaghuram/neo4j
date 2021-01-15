@@ -10,6 +10,7 @@ import java.util.concurrent.ThreadLocalRandom
 import com.neo4j.causalclustering.core.consensus.RaftMachine
 import com.neo4j.causalclustering.discovery.TopologyService
 import com.neo4j.configuration.EnterpriseEditionSettings
+import com.neo4j.configuration.SecuritySettings
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.PrivilegeResolver
 import com.neo4j.server.security.enterprise.auth.Resource
@@ -69,6 +70,7 @@ import org.neo4j.cypher.internal.ast.UserQualifier
 import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.expressions.Parameter
+import org.neo4j.cypher.internal.logical.plans.AlterRole
 import org.neo4j.cypher.internal.logical.plans.AlterUser
 import org.neo4j.cypher.internal.logical.plans.AssertNotBlocked
 import org.neo4j.cypher.internal.logical.plans.CopyRolePrivileges
@@ -170,6 +172,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private val loopback_enabled = config.get(BoltConnectorInternalSettings.enable_loopback_auth)
   private val create_drop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_create_drop_database)
   private val start_stop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_start_stop_database)
+  private lazy val blockRename = {
+    val authentication_providers = config.get(SecuritySettings.authentication_providers)
+    val authorization_providers = config.get(SecuritySettings.authorization_providers)
+    !(authentication_providers.contains(SecuritySettings.NATIVE_REALM_NAME) && authentication_providers.size() == 1) ||
+      !(authorization_providers.contains(SecuritySettings.NATIVE_REALM_NAME) && authorization_providers.size() == 1)
+  }
 
   override def name: String = "enterprise administration-commands"
 
@@ -368,6 +376,42 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(Array(fromNameFields.nameKey, toNameFields.nameKey), Array(fromNameFields.nameValue, toNameFields.nameValue)),
         QueryHandler.handleError((e, p) => new IllegalStateException(s"Failed to create role '${runtimeValue(to, p)}' as copy of '${runtimeValue(from, p)}': Failed to copy privileges.", e)),
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context)),
+        parameterConverter = mapValueConverter
+      )
+
+    // ALTER ROLE foo SET NAME bar
+    case AlterRole(source, fromRoleName, toRoleName) => context =>
+      if (blockRename) {
+        throw new UnsupportedOperationException("Changing role name is not supported when using an authentication or authentication provider apart from native.")
+      }
+
+      val fromRoleNameFields = getNameFields("fromrolename", fromRoleName)
+      val toRoleNameFields = getNameFields("toRolename", toRoleName)
+      val mapValueConverter: (Transaction, MapValue) => MapValue = (tx, p) => toRoleNameFields.nameConverter(tx, fromRoleNameFields.nameConverter(tx, p))
+      UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
+        s"""MATCH (old:Role {name: $$`${fromRoleNameFields.nameKey}`})
+           |SET old.name = $$`${toRoleNameFields.nameKey}`
+           |RETURN old.name
+        """.stripMargin,
+        VirtualValues.map(Array(fromRoleNameFields.nameKey, toRoleNameFields.nameKey), Array(fromRoleNameFields.nameValue, toRoleNameFields.nameValue)),
+        QueryHandler
+          .handleNoResult(p => Some(new IllegalStateException(s"Failed to rename the specified role '${runtimeValue(fromRoleName, p)}' to '${runtimeValue(toRoleName, p)}': " +
+            s"The role '${runtimeValue(fromRoleName, p)}' does not exist.")))
+          .handleError((error, p) => (error, error.getCause) match {
+            case (_, _: UniquePropertyValueValidationException) =>
+              new InvalidArgumentException(s"Failed to rename to the specified role '${runtimeValue(toRoleName, p)}': Role already exists.", error)
+            case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
+              new DatabaseAdministrationOnFollowerException(s"Failed to rename the specified role '${runtimeValue(fromRoleName, p)}': $followerError", error)
+            case _ => new IllegalStateException(s"Failed to rename the specified role '${runtimeValue(fromRoleName, p)}' to '${runtimeValue(toRoleName, p)}'.", error)
+          }),
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context)),
+        initFunction = params => {
+          val toName = runtimeValue(toRoleName, params)
+          val fromName = runtimeValue(fromRoleName, params)
+          NameValidator.assertValidRoleName(toName)
+          NameValidator.assertUnreservedRoleName("alter", toName)
+          NameValidator.assertUnreservedRoleName("alter", fromName)
+        },
         parameterConverter = mapValueConverter
       )
 

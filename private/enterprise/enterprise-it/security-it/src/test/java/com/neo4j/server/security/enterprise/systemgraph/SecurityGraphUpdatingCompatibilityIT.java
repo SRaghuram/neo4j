@@ -125,7 +125,8 @@ class SecurityGraphUpdatingCompatibilityIT extends SecurityGraphCompatibilityTes
                     new PrivilegeCommand( "SHOW CONSTRAINT ON DATABASE *", GRANT_DENY_REVOKE )
             ),
             EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D4, Set.of(
-                    new PrivilegeCommand( "SET USER HOME DATABASE ON DBMS", GRANT_DENY_REVOKE )
+                    new PrivilegeCommand( "SET USER HOME DATABASE ON DBMS", GRANT_DENY_REVOKE ),
+                    new PrivilegeCommand( "ALTER ROLE ON DBMS", GRANT_DENY_REVOKE )
             )
     );
 

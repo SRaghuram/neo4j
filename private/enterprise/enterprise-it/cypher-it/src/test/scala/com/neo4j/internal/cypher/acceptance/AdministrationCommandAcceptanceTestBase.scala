@@ -65,6 +65,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val PERMISSION_DENIED_DROP_DATABASE: String = "Permission denied for DROP DATABASE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_CREATE_OR_DROP_DATABASE: String = "Permission denied for CREATE DATABASE and/or DROP DATABASE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_CREATE_ROLE: String = "Permission denied for CREATE ROLE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_ALTER_ROLE: String = "Permission denied for ALTER ROLE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_DROP_ROLE: String = "Permission denied for DROP ROLE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_CREATE_OR_DROP_ROLE: String = "Permission denied for CREATE ROLE and/or DROP ROLE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_CREATE_USER: String = "Permission denied for CREATE USER." + helpfulCheckUserPrivilegeErrorText
@@ -377,6 +378,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   val dbmsPrivileges: Map[String, Map[String, String]] = Map(
     "CREATE ROLE" -> adminAction("create_role"),
+    "ALTER ROLE" -> adminAction("alter_role"),
     "DROP ROLE" -> adminAction("drop_role"),
     "ASSIGN ROLE" -> adminAction("assign_role"),
     "REMOVE ROLE" -> adminAction("remove_role"),

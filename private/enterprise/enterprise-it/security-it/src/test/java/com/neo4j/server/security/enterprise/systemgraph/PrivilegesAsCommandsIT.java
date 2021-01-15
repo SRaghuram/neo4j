@@ -48,6 +48,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ALTER_ROLE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ALTER_USER;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ASSIGN_PRIVILEGE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ASSIGN_ROLE;
@@ -156,6 +157,7 @@ class PrivilegesAsCommandsIT
                 DROP_USER == action ||
                 SHOW_ROLE == action ||
                 CREATE_ROLE == action ||
+                ALTER_ROLE == action ||
                 DROP_ROLE == action ||
                 ASSIGN_ROLE == action ||
                 REMOVE_ROLE == action ||
