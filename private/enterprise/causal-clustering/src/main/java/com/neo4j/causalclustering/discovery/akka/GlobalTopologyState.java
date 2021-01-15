@@ -88,7 +88,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
             }
             coresByServerId = extractServerInfos( coreTopologiesByDatabase );
             topologyLogger.logChange( "core topology", newCoreTopology, currentCoreTopology );
-            notifyRaftListener( newCoreTopology );
+            notifyRaftListener( databaseId );
         }
 
         if ( hasNoMembers( newCoreTopology ) )
@@ -168,26 +168,21 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     public void onRaftMappingUpdate( ReplicatedRaftMapping mapping )
     {
         var changedDatabaseIds = raftMappingState.update( mapping );
-        changedDatabaseIds
-                .stream()
-                .map( this::getCoreTopologyOrWarn )
-                .filter( Objects::nonNull )
-                .forEach( this::notifyRaftListener );
+        changedDatabaseIds.forEach( this::notifyRaftListener );
     }
 
-    private DatabaseCoreTopology getCoreTopologyOrWarn( DatabaseId databaseId )
+    private void notifyRaftListener( DatabaseId databaseId )
     {
-        final DatabaseCoreTopology coreTopology = coreTopologiesByDatabase.get( databaseId );
-        if ( coreTopology == null )
+        synchronized ( raftListener )
         {
-            log.warn( "Could not get DatabaseCoreTopology for " + databaseId );
+            final DatabaseCoreTopology coreTopology = coreTopologiesByDatabase.get( databaseId );
+            if ( coreTopology == null )
+            {
+                log.warn( "Could not get DatabaseCoreTopology for " + databaseId );
+                return;
+            }
+            raftListener.accept( databaseId, coreTopology.resolve( resolveRaftMemberIdOrWarn() ) );
         }
-        return coreTopology;
-    }
-
-    private void notifyRaftListener( DatabaseCoreTopology coreDatabaseTopology )
-    {
-        raftListener.accept( coreDatabaseTopology.databaseId(), coreDatabaseTopology.resolve( resolveRaftMemberIdOrWarn() ) );
     }
 
     private BiFunction<DatabaseId,ServerId,RaftMemberId> resolveRaftMemberIdOrWarn()
