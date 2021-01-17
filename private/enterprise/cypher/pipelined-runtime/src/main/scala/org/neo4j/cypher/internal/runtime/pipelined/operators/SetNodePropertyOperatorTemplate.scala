@@ -11,36 +11,29 @@ import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.load
-import org.neo4j.codegen.api.IntermediateRepresentation.loadField
-import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_WRITE
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.LOCKS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getNodeIdFromSlot
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.internal.kernel.api.Token
-import org.neo4j.internal.kernel.api.Write
 import org.neo4j.kernel.api.StatementConstants
-import org.neo4j.values.AnyValue
 
 class SetNodePropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
                                       override val id: Id,
-                                      idName: String,
                                       slot: Slot,
                                       key: String,
-                                      value: () => IntermediateExpression)(protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+                                      value: () => IntermediateExpression,
+                                      needsExclusiveLock: Boolean)(protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   private var propertyValue: IntermediateExpression = _
 
@@ -58,16 +51,8 @@ class SetNodePropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
     val nodeId = getNodeIdFromSlot(slot, codeGen)
     block(
       declareAndAssign(typeRefOf[Long], entityId, nodeId),
-      condition(notEqual(load(entityId), constant(StatementConstants.NO_SUCH_NODE)))(
-        invokeStatic(
-          method[SetOperator, Unit, Long, String, AnyValue, Token, Write, MutableQueryStatistics]("setNodeProperty"),
-          load(entityId),
-          constant(key),
-          nullCheckIfRequired(propertyValue),
-          loadField(TOKEN),
-          loadField(DATA_WRITE),
-          QUERY_STATS_TRACKER
-        )),
+      condition(notEqual(load(entityId), constant(StatementConstants.NO_SUCH_NODE)))
+      (SetPropertyOperatorTemplate.setProperty(isNode = true, load(entityId), key, nullCheckIfRequired(propertyValue), codeGen, needsExclusiveLock)),
       inner.genOperateWithExpressions,
       conditionallyProfileRow(innerCannotContinue, id, doProfile),
     )
@@ -80,7 +65,7 @@ class SetNodePropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(QUERY_STATS_TRACKER_V)
 
-  override def genFields: Seq[Field] = Seq(DATA_WRITE, TOKEN)
+  override def genFields: Seq[Field] = Seq(DATA_WRITE, TOKEN, LOCKS)
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 

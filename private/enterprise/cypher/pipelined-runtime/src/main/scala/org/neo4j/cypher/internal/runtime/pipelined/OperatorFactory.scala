@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
+import org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
@@ -999,7 +1000,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             idName,
             LazyPropertyKey(propertyKey)(semanticTable),
             converters.toCommandExpression(id, propertyValue),
-          )))
+            needsExclusiveLock = internal.expressions.Expression.hasPropertyReadDependency(idName, propertyValue, propertyKey)
+    )))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)

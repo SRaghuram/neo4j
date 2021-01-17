@@ -47,6 +47,46 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.VirtualNodeValue
 import org.neo4j.values.virtual.VirtualRelationshipValue
 
+object SetPropertyOperatorTemplate {
+  def setProperty(isNode: Boolean,
+                  id: IntermediateRepresentation,
+                  propertyKey: String,
+                  propValue: IntermediateRepresentation,
+                  codeGen: OperatorExpressionCompiler,
+                  needsExclusiveLock: Boolean): IntermediateRepresentation = {
+    val setFunction = if (isNode) "setNodeProperty" else "setRelationshipProperty"
+    val setPropertyBlock = invokeStatic(
+      method[SetOperator, Unit, Long, String, AnyValue, Token, Write, MutableQueryStatistics](setFunction),
+      id,
+      constant(propertyKey),
+      propValue,
+      loadField(TOKEN),
+      loadField(DATA_WRITE),
+      QUERY_STATS_TRACKER,
+    )
+
+    if (needsExclusiveLock) {
+      val errorVar = codeGen.namer.nextVariableName("errorN")
+      val acquireLockFunction = if (isNode) "acquireExclusiveNodeLock" else "acquireExclusiveRelationshipLock"
+      val releaseLockFunction = if (isNode) "releaseExclusiveNodeLock" else "releaseExclusiveRelationshipLock"
+
+      block(
+        invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](acquireLockFunction), arrayOf[Long](id)),
+        IntermediateRepresentation.tryCatch[Exception](errorVar)
+          (block(
+            setPropertyBlock,
+            invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](releaseLockFunction), arrayOf[Long](id)),
+          ))
+          (block(
+            invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](releaseLockFunction), arrayOf[Long](id)),
+            fail(load(errorVar))
+          ))
+      )
+    } else {
+      setPropertyBlock
+    }
+  }
+}
 
 class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
                                   override val id: Id,
@@ -83,17 +123,23 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
     block(
       declareAndAssign(typeRefOf[AnyValue], entityValueVar, nullCheckIfRequired(entityValue)),
       ifElse(instanceOf[VirtualNodeValue](load[Long](entityValueVar)))(
-        setProperty(
+        SetPropertyOperatorTemplate.setProperty(
           isNode = true,
           invoke(cast[VirtualNodeValue](load[Long](entityValueVar)), method[VirtualNodeValue, Long]("id")),
-          nodeProp
+          key,
+          nodeProp,
+          codeGen,
+          needsExclusiveLock = false
         )
       )(ifElse(instanceOf[VirtualRelationshipValue](load[Long](entityValueVar)))
       (
-        setProperty(
+        SetPropertyOperatorTemplate.setProperty(
           isNode = false,
           invoke(cast[VirtualRelationshipValue](load[Long](entityValueVar)), method[VirtualRelationshipValue, Long]("id")),
-          relProp
+          key,
+          relProp,
+          codeGen,
+          needsExclusiveLock = false
         )
       )(
         block(
@@ -122,32 +168,4 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
   override protected def isHead: Boolean = false
-
-  private def setProperty(isNode: Boolean, id: IntermediateRepresentation, propValue: IntermediateRepresentation): IntermediateRepresentation = {
-    val errorVar = codeGen.namer.nextVariableName("errorN")
-    val acquireLockFunction = if (isNode) "acquireExclusiveNodeLock" else "acquireExclusiveRelationshipLock"
-    val releaseLockFunction = if (isNode) "releaseExclusiveNodeLock" else "releaseExclusiveRelationshipLock"
-    val setFunction = if (isNode) "setNodeProperty" else "setRelationshipProperty"
-
-    block(
-      invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](acquireLockFunction), arrayOf[Long](id)),
-      IntermediateRepresentation.tryCatch[Exception](errorVar)
-        (block(
-          invokeStatic(
-            method[SetOperator, Unit, Long, String, AnyValue, Token, Write, MutableQueryStatistics](setFunction),
-            id,
-            constant(key),
-            propValue,
-            loadField(TOKEN),
-            loadField(DATA_WRITE),
-            QUERY_STATS_TRACKER,
-          ),
-          invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](releaseLockFunction), arrayOf[Long](id)),
-        ))
-        (block(
-          invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](releaseLockFunction), arrayOf[Long](id)),
-          fail(load[Exception](errorVar))
-        ))
-    )
-  }
 }

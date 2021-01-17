@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
+import org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.LabelToken
 import org.neo4j.cypher.internal.expressions.ListLiteral
@@ -870,7 +871,8 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
 
         case plan@plans.SetNodeProperty(_, entity, propertyKey, value) =>
           ctx: TemplateContext =>
-            new SetNodePropertyOperatorTemplate(ctx.inner, plan.id, entity, ctx.slots(entity), propertyKey.name, ctx.compileExpression(value, plan.id))(ctx.expressionCompiler)
+            new SetNodePropertyOperatorTemplate(ctx.inner, plan.id, ctx.slots(entity), propertyKey.name, ctx.compileExpression(value, plan.id),
+              needsExclusiveLock = internal.expressions.Expression.hasPropertyReadDependency(entity, value, propertyKey))(ctx.expressionCompiler)
 
         case plan@plans.SetPropertiesFromMap(_, entity, expression, removeOtherProps) =>
           ctx: TemplateContext =>
