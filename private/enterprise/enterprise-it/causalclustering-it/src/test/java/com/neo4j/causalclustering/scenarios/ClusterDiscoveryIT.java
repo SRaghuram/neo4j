@@ -19,6 +19,8 @@ import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.util.List;
 import java.util.Map;
@@ -59,15 +61,7 @@ class ClusterDiscoveryIT
     @Test
     void shouldFindIntraClusterBoltAddress() throws Exception
     {
-
-        var config = clusterConfig()
-                .withNumberOfCoreMembers( 3 )
-                .withNumberOfReadReplicas( 2 )
-                .withSharedCoreParam( GraphDatabaseSettings.routing_enabled, "true" )
-                .withSharedReadReplicaParam( GraphDatabaseSettings.routing_enabled, "true" );
-
-        var cluster = clusterFactory.createCluster( config );
-        cluster.start();
+        var cluster = startCluster( ReadsOnFollowers.DENY, ServerSideRouting.ENABLED );
 
         var expected = cluster.allMembers().stream()
                               .map( ClusterMember::intraClusterBoltAdvertisedAddress )
@@ -75,53 +69,65 @@ class ClusterDiscoveryIT
 
         var topologyService = cluster.awaitLeader().resolveDependency( SYSTEM_DATABASE_NAME, TopologyService.class );
         assertEventually( () -> intraClusterAddresses( topologyService ), equalityCondition( expected ), 30, SECONDS );
+
+        cluster.shutdown();
+    }
+
+    @ParameterizedTest
+    @EnumSource()
+    void shouldFindReadWriteAndRouteServersWhenReadsOnFollowersAllowed( ServerSideRouting serverSideRouting ) throws Exception
+    {
+        var readsOnFollowers = ReadsOnFollowers.ALLOW;
+
+        var cluster = startCluster( readsOnFollowers, serverSideRouting );
+
+        testReadWriteAndRouteServersDiscovery( cluster, readsOnFollowers, serverSideRouting );
+
+        cluster.shutdown();
+    }
+
+    @ParameterizedTest
+    @EnumSource()
+    void shouldFindReadWriteAndRouteServersWhenReadsOnFollowersDisallowed( ServerSideRouting serverSideRouting ) throws Exception
+    {
+        var readsOnFollowers = ReadsOnFollowers.DENY;
+
+        var cluster = startCluster( readsOnFollowers, serverSideRouting );
+
+        testReadWriteAndRouteServersDiscovery( cluster, readsOnFollowers, serverSideRouting );
+
+        cluster.shutdown();
     }
 
     private Set<String> intraClusterAddresses( TopologyService topologyService )
     {
-        var serverInfos = Stream.concat( topologyService.allCoreServers().values().stream(), topologyService.allReadReplicas().values().stream() );
+        var serverInfos = Stream.concat(
+                topologyService.allCoreServers().values().stream(),
+                topologyService.allReadReplicas().values().stream()
+        );
         return serverInfos.flatMap( info -> info.connectors().intraClusterBoltAddress().stream() )
                           .map( SocketAddress::toString )
                           .collect( Collectors.toSet() );
     }
 
-    @Test
-    void shouldFindReadWriteAndRouteServersWhenReadsOnFollowersAllowed() throws Exception
-    {
-        var allowReadsOnFollowers = true;
-
-        var cluster = startCluster( allowReadsOnFollowers );
-
-        testReadWriteAndRouteServersDiscovery( cluster, allowReadsOnFollowers );
-    }
-
-    @Test
-    void shouldFindReadWriteAndRouteServersWhenReadsOnFollowersDisallowed() throws Exception
-    {
-        var allowReadsOnFollowers = false;
-
-        var cluster = startCluster( allowReadsOnFollowers );
-
-        testReadWriteAndRouteServersDiscovery( cluster, allowReadsOnFollowers );
-    }
-
-    private static void testReadWriteAndRouteServersDiscovery( Cluster cluster, boolean expectFollowersAsReadEndPoints ) throws Exception
+    private static void testReadWriteAndRouteServersDiscovery( Cluster cluster, ReadsOnFollowers readsOnFollowers, ServerSideRouting serverSideRouting )
+            throws Exception
     {
         for ( var coreMember : cluster.coreMembers() )
         {
-            verifyServersDiscovery( cluster, coreMember, expectFollowersAsReadEndPoints );
+            verifyServersDiscovery( cluster, coreMember, readsOnFollowers );
         }
 
         for ( var readReplica : cluster.readReplicas() )
         {
-            verifyServersDiscovery( readReplica );
+            verifyServersDiscovery( readReplica, serverSideRouting );
         }
     }
 
-    private static void verifyServersDiscovery( Cluster cluster, CoreClusterMember coreMember, boolean expectFollowersAsReadEndPoints ) throws Exception
+    private static void verifyServersDiscovery( Cluster cluster, CoreClusterMember coreMember, ReadsOnFollowers readsOnFollowers ) throws Exception
     {
         var expectedWriteEndpoints = expectedWriteEndpoints( cluster );
-        var expectedReadEndpoints = expectedReadEndpoints( cluster, expectFollowersAsReadEndPoints );
+        var expectedReadEndpoints = expectedReadEndpoints( cluster, readsOnFollowers );
         var expectedRouteEndpoints = expectedRouteEndpoints( cluster );
         var routingTableMatcher = new RoutingTableMatcher( expectedWriteEndpoints, expectedReadEndpoints, expectedRouteEndpoints );
 
@@ -134,13 +140,13 @@ class ClusterDiscoveryIT
         return singleton( leader.boltAdvertisedAddress() );
     }
 
-    private static Set<String> expectedReadEndpoints( Cluster cluster, boolean expectFollowersAsReadEndPoints ) throws TimeoutException
+    private static Set<String> expectedReadEndpoints( Cluster cluster, ReadsOnFollowers readsOnFollowers ) throws TimeoutException
     {
         var leader = cluster.awaitLeader();
         var cores = cluster.coreMembers().stream();
         var readReplicas = cluster.readReplicas().stream();
 
-        var members = expectFollowersAsReadEndPoints ? Stream.concat( cores, readReplicas ) : readReplicas;
+        var members = readsOnFollowers.equals( ReadsOnFollowers.ALLOW ) ? Stream.concat( cores, readReplicas ) : readReplicas;
 
         return members.filter( member -> !leader.equals( member ) )
                 .map( ClusterMember::boltAdvertisedAddress )
@@ -155,13 +161,22 @@ class ClusterDiscoveryIT
                 .collect( toSet() );
     }
 
-    private static void verifyServersDiscovery( ReadReplica readReplica )
+    private static void verifyServersDiscovery( ReadReplica readReplica, ServerSideRouting serverSideRouting )
     {
         var members = getMembers( readReplica.defaultDatabase() );
 
-        assertEquals( singleton( readReplica.boltAdvertisedAddress() ), addresses( members, READ ) );
-        assertEquals( singleton( readReplica.boltAdvertisedAddress() ), addresses( members, ROUTE ) );
-        assertEquals( emptySet(), addresses( members, WRITE ) );
+        Set<String> selfAddressOnly = singleton( readReplica.boltAdvertisedAddress() );
+        assertEquals( selfAddressOnly, addresses( members, READ ) );
+        assertEquals( selfAddressOnly, addresses( members, ROUTE ) );
+        if ( serverSideRouting.equals( ServerSideRouting.ENABLED ) )
+        {
+            assertEquals( selfAddressOnly, addresses( members, WRITE ) );
+        }
+        else
+        {
+            assertEquals( emptySet(), addresses( members, WRITE ) );
+        }
+
     }
 
     @SuppressWarnings( "unchecked" )
@@ -186,20 +201,22 @@ class ClusterDiscoveryIT
         }
     }
 
-    private Cluster startCluster( boolean allowReadsOnFollowers ) throws Exception
+    private Cluster startCluster( ReadsOnFollowers readsOnFollowers, ServerSideRouting serverSideRouting ) throws Exception
     {
-        var cluster = clusterFactory.createCluster( newClusterConfig( allowReadsOnFollowers ) );
+        var cluster = clusterFactory.createCluster( newClusterConfig( readsOnFollowers, serverSideRouting ) );
         cluster.start();
         return cluster;
     }
 
-    private static ClusterConfig newClusterConfig( boolean allowReadsOnFollowers )
+    private ClusterConfig newClusterConfig( ReadsOnFollowers readsOnFollowers, ServerSideRouting serverSideRouting )
     {
         return clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withSharedCoreParam( cluster_allow_reads_on_followers, Boolean.toString( allowReadsOnFollowers ) )
-                .withSharedReadReplicaParam( cluster_allow_reads_on_followers, Boolean.toString( allowReadsOnFollowers ) );
+                .withSharedCoreParams( readsOnFollowers.asConfig() )
+                .withSharedReadReplicaParams( readsOnFollowers.asConfig() )
+                .withSharedCoreParams( serverSideRouting.asConfig() )
+                .withSharedReadReplicaParams( serverSideRouting.asConfig() );
     }
 
     private static class RoutingTableMatcher extends TypeSafeMatcher<List<Map<String,Object>>>
@@ -229,6 +246,28 @@ class ClusterDiscoveryIT
             description.appendText( "write endpoints: " ).appendValue( expectedWriteEndpoints )
                     .appendText( "read endpoints: " ).appendValue( expectedReadEndpoints )
                     .appendText( "route endpoints: " ).appendValue( expectedRouteEndpoints );
+        }
+    }
+
+    private enum ReadsOnFollowers
+    {
+        ALLOW,
+        DENY;
+
+        Map<String,String> asConfig()
+        {
+            return Map.of( cluster_allow_reads_on_followers.name(), Boolean.toString( this.equals( ALLOW ) ) );
+        }
+    }
+
+    private enum ServerSideRouting
+    {
+        ENABLED,
+        DISABLED;
+
+        Map<String,String> asConfig()
+        {
+            return Map.of( GraphDatabaseSettings.routing_enabled.name(), Boolean.toString( this.equals( ENABLED ) ) );
         }
     }
 }

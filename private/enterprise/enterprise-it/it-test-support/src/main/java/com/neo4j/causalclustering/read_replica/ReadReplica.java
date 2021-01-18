@@ -220,6 +220,11 @@ public class ReadReplica implements ClusterMember
         return String.format( "bolt://%s", boltSocketAddress );
     }
 
+    public String neo4jURI()
+    {
+        return String.format( "neo4j://%s", boltSocketAddress );
+    }
+
     @Override
     public Path homePath()
     {

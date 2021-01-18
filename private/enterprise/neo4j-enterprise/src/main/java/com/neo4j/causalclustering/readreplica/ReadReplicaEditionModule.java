@@ -77,6 +77,7 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
+import org.neo4j.procedure.builtin.routing.SingleInstanceRoutingProcedureInstaller;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
@@ -203,7 +204,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
         Config config = globalModule.getGlobalConfig();
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
-        return new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, config, logProvider );
+        var routingEnabled = config.get( GraphDatabaseSettings.routing_enabled ).booleanValue();
+        return routingEnabled ? new SingleInstanceRoutingProcedureInstaller( databaseManager, portRegister, config, logProvider ) :
+               new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, config, logProvider );
     }
 
     @Override
