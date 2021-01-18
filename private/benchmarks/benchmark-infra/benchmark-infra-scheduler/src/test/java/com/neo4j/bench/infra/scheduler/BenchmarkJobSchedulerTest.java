@@ -135,7 +135,7 @@ public class BenchmarkJobSchedulerTest
         assertCreateJob( benchmarkJob, testRunId, actualCreateJob );
     }
 
-    @Test( timeout = 10_000 )
+    @Timeout( 10_000 )
     public void scheduleJobWithJobRequestConsumerAwaitFinishWhenSucceededAndReport() throws Exception
     {
         // given
