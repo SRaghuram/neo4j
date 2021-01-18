@@ -79,7 +79,7 @@ object SetPropertyOperatorTemplate {
           ))
           (block(
             invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](releaseLockFunction), arrayOf[Long](id)),
-            fail(load(errorVar))
+            fail(load[Exception](errorVar))
           ))
       )
     } else {
