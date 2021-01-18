@@ -748,7 +748,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |SET u.name = 'joe'
         |RETURN u.name, u.foo
         |ORDER BY u.name ASC, u.foo DESC""".stripMargin
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should be(List(
       Map("u.name" -> "joe", "u.foo" -> 1),
@@ -914,7 +914,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |""".stripMargin
 
     graph.createIndex("A", "age")
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.executionPlanDescription() should includeSomewhere.aPlan("Sort")
 

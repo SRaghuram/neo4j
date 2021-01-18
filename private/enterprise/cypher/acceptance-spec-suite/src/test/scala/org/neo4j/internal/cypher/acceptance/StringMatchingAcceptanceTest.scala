@@ -135,7 +135,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
     createLabeledNode("Label")
 
     // Property without escaping: 123`abc
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n:Label) SET n.`123``abc` = 2 RETURN n.`123``abc`")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:Label) SET n.`123``abc` = 2 RETURN n.`123``abc`")
    result.toList should be(List(Map("n.`123``abc`" -> 2)))
   }
 
@@ -143,7 +143,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
     createLabeledNode("Label")
 
     // Property without escaping: `123abc`
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n:Label) SET n.```123abc``` = 2 RETURN n.```123abc```")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:Label) SET n.```123abc``` = 2 RETURN n.```123abc```")
     result.toList should be(List(Map("n.```123abc```" -> 2)))
   }
 

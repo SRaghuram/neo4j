@@ -18,7 +18,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     relate(n1, n2, "R1")
 
     // only fails when returning distinct...
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """
         |MATCH (n1:L1)-[:R1]->(n2:L2)
         |OPTIONAL MATCH (n3)<-[r:R2]-(n2)
@@ -34,7 +34,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     createNode("prop" -> 1337)
 
     // when
-    executeWith(Configs.InterpretedAndSlotted, "MATCH (n) SET n.prop = tofloat(n.prop)")
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) SET n.prop = tofloat(n.prop)")
 
     executeWith(Configs.All, "MATCH (n) RETURN n.prop").head("n.prop") shouldBe a[java.lang.Double]
   }
@@ -54,7 +54,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val node = createNode()
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) SET n.property = ['foo','bar'] RETURN n.property")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) SET n.property = ['foo','bar'] RETURN n.property")
 
     // then
     assertStats(result, propertiesWritten = 1)
@@ -70,7 +70,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     createNode()
 
     // when
-    failWithError(Configs.InterpretedAndSlotted, "MATCH (n) SET n.property = [['foo'],['bar']] RETURN n.property",
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) SET n.property = [['foo'],['bar']] RETURN n.property",
       "Collections containing collections can not be stored in properties.")
   }
 
@@ -79,7 +79,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     createNode()
 
     // when
-    failWithError(Configs.InterpretedAndSlotted, "MATCH (n) SET n.property = [null,null] RETURN n.property",
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) SET n.property = [null,null] RETURN n.property",
       "Collections containing null values can not be stored in properties.")
 
   }
@@ -193,7 +193,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     // when
     val q = "MATCH p=(a)-->(b)-->(c) WHERE id(a) = 0 AND id(c) = 2 WITH p FOREACH(n IN nodes(p) | SET n.marked = true)"
 
-    executeWith(Configs.InterpretedAndSlotted, q)
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, q)
 
     // then
     a should haveProperty("marked").withValue(true)

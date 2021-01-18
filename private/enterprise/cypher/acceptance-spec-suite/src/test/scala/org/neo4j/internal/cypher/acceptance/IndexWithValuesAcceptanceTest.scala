@@ -257,7 +257,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("should plan index seek with GetValue when the property is part of a SET clause") {
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 SET n.anotherProp = n.prop1 RETURN n.anotherProp"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("SetProperty")
         .containingArgument("n.anotherProp = cache[n.prop1]")
         .onTopOf(aPlan("NodeIndexSeek")
@@ -326,7 +326,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should not pass cached properties through aggregations") {
-    val config = Configs.InterpretedAndSlotted
+    val config = Configs.InterpretedAndSlottedAndPipelined
     // SET is necessary to force runtime to invalidate cached properties, which would fail if we copy slots during allocation but do not copy values at runtime
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 40 WITH collect(n.prop1) AS ns MATCH (n:Awesome) SET n.prop1 = 0"
     val result = executeWith(config, query, executeBefore = createSomeNodes)
@@ -401,7 +401,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |RETURN n1.prop1, n2.prop1, n3.prop2, n.prop1
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexSeek")
@@ -582,7 +582,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("index-backed property values should be updated on property write") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 SET n.prop1 = 'newValue' RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("n.prop1" -> "newValue")))
   }
@@ -596,7 +596,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("index-backed property values should be removed on property remove") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 REMOVE n.prop1 RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("n.prop1" -> null)))
   }

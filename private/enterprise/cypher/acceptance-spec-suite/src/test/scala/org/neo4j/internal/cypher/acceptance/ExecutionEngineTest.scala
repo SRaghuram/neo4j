@@ -492,7 +492,7 @@ order by a.COL1""".format(a, b))
 
   test("with should not forget parameters2") {
     val id = createNode().getId
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where id(n) = $id with n set n.foo= $id return n", params = Map("id" -> id)).toList
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) where id(n) = $id with n set n.foo= $id return n", params = Map("id" -> id)).toList
 
     result should have size 1
     graph.withTx( tx => {
@@ -538,7 +538,7 @@ order by a.COL1""".format(a, b))
 
   test("can use variables created inside the foreach") {
     createNode()
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where id(n) = 0 foreach (x in [1,2,3] | create (a { name: 'foo'})  set a.id = x)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) where id(n) = 0 foreach (x in [1,2,3] | create (a { name: 'foo'})  set a.id = x)")
 
     result.toList shouldBe empty
   }

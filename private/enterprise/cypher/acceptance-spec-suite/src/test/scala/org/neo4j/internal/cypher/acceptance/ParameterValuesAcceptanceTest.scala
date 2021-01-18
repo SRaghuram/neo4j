@@ -50,7 +50,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       emptyBooleanArray, Array[String]()).foreach { array =>
 
       val q = "CREATE (n) SET n.prop = $param RETURN n.prop AS p"
-      val r = executeWith(Configs.InterpretedAndSlotted, q, params = Map("param" -> array))
+      val r = executeWith(Configs.InterpretedAndSlottedAndPipelined, q, params = Map("param" -> array))
 
       assertStats(r, nodesCreated = 1, propertiesWritten = 1)
       val returned = r.columnAs[Array[_]]("p").next()
@@ -65,7 +65,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       Array[Boolean](false, true), Array[String]("", " ")).foreach { array =>
 
       val q = "CREATE (n) SET n.prop = $param RETURN n.prop AS p"
-      val r = executeWith(Configs.InterpretedAndSlotted, q, params = Map("param" -> array))
+      val r = executeWith(Configs.InterpretedAndSlottedAndPipelined, q, params = Map("param" -> array))
 
       assertStats(r, nodesCreated = 1, propertiesWritten = 1)
       val returned = r.columnAs[Array[_]]("p").next()

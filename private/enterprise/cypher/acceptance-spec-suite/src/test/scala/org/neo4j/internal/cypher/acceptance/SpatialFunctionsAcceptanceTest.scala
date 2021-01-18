@@ -345,7 +345,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     createLabeledNode("Place")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78}) RETURN p.location as point",
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78}) RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     // Then
@@ -376,7 +376,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     createLabeledNode("Place")
 
     // When
-    val config = Configs.InterpretedAndSlotted
+    val config = Configs.InterpretedAndSlottedAndPipelined
     val result = executeWith(config, "MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
@@ -522,7 +522,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
         |MATCH (place:Place) SET place.location = points
         |RETURN points
       """.stripMargin
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     // Then
@@ -654,7 +654,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
       """.stripMargin
 
     // Then
-    failWithError(Configs.InterpretedAndSlotted, query, "Collections containing point values with different CRS can not be stored in properties.")
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, query, "Collections containing point values with different CRS can not be stored in properties.")
   }
 
   test("accessors on 2D cartesian points") {

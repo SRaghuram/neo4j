@@ -82,7 +82,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
         |WITH p, p_rel
         |RETURN p""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("post_id" -> 0))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("post_id" -> 0))
     result.toList should be(empty)
   }
 

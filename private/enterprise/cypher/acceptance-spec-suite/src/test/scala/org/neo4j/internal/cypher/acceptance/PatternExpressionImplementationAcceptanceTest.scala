@@ -419,7 +419,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
   test("solve pattern expressions in set node properties") {
     setup()
 
-    executeWith(Configs.InterpretedAndSlotted,
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n) SET n.friends = size((n)<--())",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }

@@ -95,7 +95,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   test("should cache a node property when used in SET clause") {
     createNode(Map("prop" -> 43))
 
-    val res = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n) WHERE n.prop > 42 SET n.anotherProp = n.prop RETURN n.anotherProp",
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n) WHERE n.prop > 42 SET n.anotherProp = n.prop RETURN n.anotherProp",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("SetProperty")
         .containingArgument("n.anotherProp = cache[n.prop]")

@@ -170,7 +170,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     executeSingle("CREATE CONSTRAINT ON (person:Person) ASSERT (person.name) IS NODE KEY".fixNewLines)
 
     failWithError(
-      Configs.InterpretedAndSlotted,
+      Configs.InterpretedAndSlottedAndPipelined,
       "CREATE (n:Person) SET n.name = 'A'",
       "Node(0) already exists with label `Person` and property `name` = 'A'"
     )
@@ -181,7 +181,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     executeSingle("CREATE CONSTRAINT ON (person:Person) ASSERT (person.name, person.surname) IS NODE KEY".fixNewLines)
 
     failWithError(
-      Configs.InterpretedAndSlotted,
+      Configs.InterpretedAndSlottedAndPipelined,
       "CREATE (n:Person) SET n.name = 'A', n.surname = 'B'",
       String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'")
     )
@@ -236,7 +236,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     executeSingle("CREATE CONSTRAINT ON (person:Person) ASSERT (person.name, person.surname) IS NODE KEY".fixNewLines)
 
     failWithError(
-      Configs.InterpretedAndSlotted,
+      Configs.InterpretedAndSlottedAndPipelined,
       "CREATE (n:Person) SET n.name = 'A', n.surname = 'B'",
       String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'")
     )
@@ -383,7 +383,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     val id = createLabeledNode(Map("firstname" -> "John", "surname" -> "Wood"), "Person").getId
 
     // Expect
-    failWithError(Configs.InterpretedAndSlotted,
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) REMOVE p.surname",
       s"Node($id) with label `Person` must have the properties (firstname, surname)")
 
@@ -394,7 +394,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname, n.surname) IS NODE KEY".fixNewLines)
     val node = createLabeledNode(Map("firstname" -> "John", "surname" -> "Wood", "foo" -> "bar"), "Person")
 
-    executeWith(Configs.InterpretedAndSlotted, "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) REMOVE p.foo".fixNewLines)
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) REMOVE p.foo".fixNewLines)
 
     // Then
     graph.withTx( tx => {
