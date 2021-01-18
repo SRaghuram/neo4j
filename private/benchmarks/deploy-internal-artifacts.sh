@@ -81,7 +81,7 @@ for module_dir in "${dirs[@]}"; do
       ${files:+-Dfiles=$files} \
       ${classifiers:+-Dclassifiers=$classifiers} \
       ${types:+-Dtypes=$types} \
-      -Dsources=${source_file} \
+      -Dsources="${source_file}" \
       -Durl="$url" -DrepositoryId="neo4j-internal-releases"
   )
 done
