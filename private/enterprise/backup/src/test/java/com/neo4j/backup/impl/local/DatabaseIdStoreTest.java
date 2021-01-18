@@ -7,26 +7,25 @@ package com.neo4j.backup.impl.local;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.database.DatabaseIdFactory;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.backup.impl.local.DatabaseIdStore.CHARSET;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @TestDirectoryExtension
 class DatabaseIdStoreTest
@@ -44,10 +43,7 @@ class DatabaseIdStoreTest
     void setUp()
     {
         databaseDir = testDirectory.directory( "myDb" );
-        LogProvider logProvider = Mockito.mock( LogProvider.class );
-        Log log = Mockito.mock( Log.class );
-        when( logProvider.getLog( DatabaseIdStore.class ) ).thenReturn( log );
-        databaseIdStore = new DatabaseIdStore( fs, logProvider );
+        databaseIdStore = new DatabaseIdStore( fs );
     }
 
     @Test
@@ -59,7 +55,7 @@ class DatabaseIdStoreTest
         databaseIdStore.writeDatabaseId( expected, databaseDir );
 
         //then
-        assertThat( expected ).isEqualTo( databaseIdStore.readDatabaseId( databaseDir ) );
+        assertThat( Optional.of( expected ) ).isEqualTo( databaseIdStore.readDatabaseId( databaseDir ) );
     }
 
     @Test
@@ -72,7 +68,7 @@ class DatabaseIdStoreTest
         databaseIdStore.writeDatabaseId( expected, databaseDir );
 
         //then
-        assertThat( expected ).isEqualTo( databaseIdStore.readDatabaseId( databaseDir ) );
+        assertThat( Optional.of( expected ) ).isEqualTo( databaseIdStore.readDatabaseId( databaseDir ) );
     }
 
     @Test
@@ -85,13 +81,13 @@ class DatabaseIdStoreTest
         databaseIdStore.writeDatabaseId( expected, databaseDir );
 
         //then
-        assertThat( expected ).isEqualTo( databaseIdStore.readDatabaseId( databaseDir ) );
+        assertThat( Optional.of( expected ) ).isEqualTo( databaseIdStore.readDatabaseId( databaseDir ) );
     }
 
     @Test
     void shouldReadEmptyDatabaseIdIfFileDoesntExist()
     {
-        assertThat( databaseIdStore.readDatabaseId( databaseDir ) ).isNull();
+        assertThat( databaseIdStore.readDatabaseId( databaseDir ) ).isEmpty();
     }
 
     @Test
@@ -99,7 +95,7 @@ class DatabaseIdStoreTest
     {
         writeToFile( DatabaseIdStore.getDatabaseFilePath( databaseDir ), "File is corrupted" );
 
-        assertThat( databaseIdStore.readDatabaseId( databaseDir ) ).isNull();
+        assertThrows( IllegalStateException.class, () -> databaseIdStore.readDatabaseId( databaseDir ) );
     }
 
     private void writeToFile( Path filePath, String value ) throws IOException

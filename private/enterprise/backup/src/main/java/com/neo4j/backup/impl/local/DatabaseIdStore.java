@@ -9,14 +9,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -27,12 +26,10 @@ public class DatabaseIdStore
     static final Charset CHARSET = UTF_8;
 
     private final FileSystemAbstraction fs;
-    private final Log log;
 
-    public DatabaseIdStore( FileSystemAbstraction fs, LogProvider logProvider )
+    public DatabaseIdStore( FileSystemAbstraction fs )
     {
         this.fs = fs;
-        this.log = logProvider.getLog( DatabaseIdStore.class );
     }
 
     public void writeDatabaseId( DatabaseId databaseId, Path folderPath ) throws IOException
@@ -49,9 +46,14 @@ public class DatabaseIdStore
         }
     }
 
-    public DatabaseId readDatabaseId( Path folderPath )
+    public Optional<DatabaseId> readDatabaseId( Path folderPath )
     {
         final var filePath = getDatabaseFilePath( folderPath );
+        if ( !fs.fileExists( filePath ) )
+        {
+            return Optional.empty();
+        }
+
         try ( StoreChannel channel = fs.read( filePath ) )
         {
             final var buffer = ByteBuffer.allocate( UUID_BYTE_LENGTH );
@@ -59,13 +61,12 @@ public class DatabaseIdStore
             byte[] bytes = new byte[UUID_BYTE_LENGTH];
             buffer.flip().get( bytes );
             final var uuid = UUID.fromString( new String( bytes, UTF_8 ) );
-            return DatabaseIdFactory.from( uuid );
+            return Optional.of( DatabaseIdFactory.from( uuid ) );
         }
         catch ( Exception exception )
         {
-            log.error( "Error in reading database id from path={}", filePath, exception );
+            throw new IllegalStateException( "Error in reading database id file " + folderPath, exception );
         }
-        return null;
     }
 
     public static Path getDatabaseFilePath( Path folderPath )

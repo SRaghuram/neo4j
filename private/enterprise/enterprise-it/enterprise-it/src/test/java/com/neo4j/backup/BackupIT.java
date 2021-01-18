@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -1079,7 +1080,7 @@ class BackupIT
 
         final var backupToolDir = Neo4jLayout.ofFlat( backupsDir.toAbsolutePath() ).databaseLayout( DEFAULT_DATABASE_NAME ).backupToolsFolder();
         //than change the value in datastore file
-        new DatabaseIdStore( fs, new Log4jLogProvider( System.out ) )
+        new DatabaseIdStore( fs )
                 .writeDatabaseId( DatabaseIdFactory.from( UUID.randomUUID() ), backupToolDir );
 
         // then add more data and execute incremental backup
@@ -1647,11 +1648,11 @@ class BackupIT
     private void checkDatabaseIdCorrectness( String databaseName )
     {
         final var backupToolsFolder = Neo4jLayout.ofFlat( backupsDir ).databaseLayout( databaseName ).backupToolsFolder();
-        var databaseId = new DatabaseIdStore( fs, new Log4jLogProvider( System.out ) )
+        var databaseId = new DatabaseIdStore( fs )
                 .readDatabaseId( backupToolsFolder );
         assertThat( databaseId ).isNotNull();
         var expectedDatabaseId = ((GraphDatabaseFacade) managementService.database( databaseName )).databaseId().databaseId();
-        assertEquals( expectedDatabaseId, databaseId );
+        assertEquals( Optional.of( expectedDatabaseId ), databaseId );
     }
 
     private static class BackupClientPausingMonitor extends StoreCopyClientMonitor.Adapter

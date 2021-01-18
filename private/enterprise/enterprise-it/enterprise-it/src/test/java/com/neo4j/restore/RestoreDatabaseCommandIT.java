@@ -5,8 +5,8 @@
  */
 package com.neo4j.restore;
 
-import com.neo4j.backup.impl.local.DatabaseIdStore;
 import com.neo4j.backup.impl.MetadataStore;
+import com.neo4j.backup.impl.local.DatabaseIdStore;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.internal.locker.DatabaseLocker;
 import org.neo4j.kernel.internal.locker.Locker;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
@@ -389,7 +388,7 @@ class RestoreDatabaseCommandIT
     {
         createDbAt( backupsDir1, 10 );
         final var backupToolsFolder = DatabaseLayout.ofFlat( backupsDir1 ).backupToolsFolder();
-        new DatabaseIdStore( fileSystem, mock( LogProvider.class ) )
+        new DatabaseIdStore( fileSystem )
                 .writeDatabaseId( DatabaseIdFactory.from( UUID.randomUUID() ), backupToolsFolder );
         DatabaseLayout toLayout = neo4jLayout.databaseLayout( "test" );
         Config config = configWith( neo4jLayout );

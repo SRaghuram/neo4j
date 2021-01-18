@@ -42,7 +42,7 @@ public class LocationManager
         storeFiles = new StoreFiles( fs, pageCache );
         log = logProvider.getLog( getClass() );
         this.logProvider = logProvider;
-        databaseIdStore = new DatabaseIdStore( fs, logProvider );
+        databaseIdStore = new DatabaseIdStore( fs );
         metadataStore = new MetadataStore( fs );
         fileManager = new FileManager( fs, 10 );
     }

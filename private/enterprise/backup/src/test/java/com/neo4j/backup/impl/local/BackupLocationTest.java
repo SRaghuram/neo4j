@@ -9,10 +9,10 @@ import com.neo4j.backup.impl.MetadataStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -23,20 +23,24 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.LogAssertions;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.extension.DbmsExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.backup.impl.local.DatabaseIdStore.getDatabaseFilePath;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.neo4j.logging.NullLogProvider.nullLogProvider;
+import static org.mockito.Mockito.when;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 
 @DbmsExtension
 @PageCacheExtension
@@ -68,10 +72,10 @@ class BackupLocationTest
         storeFiles = new StoreFiles( fileSystem, pageCache );
         emptyBackupDirectory = testDirectory.directory( "non-existent" );
         emptyBackupLocation = new BackupLocation( DatabaseLayout.ofFlat( emptyBackupDirectory ), new StoreFiles( fileSystem, pageCache ),
-                                                  new DatabaseIdStore( fileSystem, new Log4jLogProvider( System.out ) ), new MetadataStore( fileSystem ),
+                                                  new DatabaseIdStore( fileSystem ), new MetadataStore( fileSystem ),
                                                   new DefaultPageCacheTracer(), new FileManager( fileSystem ), NullLogProvider.getInstance() );
 
-        neo4jBackupLocation = new BackupLocation( databaseLayout, storeFiles, new DatabaseIdStore( fileSystem, new Log4jLogProvider( System.out ) ),
+        neo4jBackupLocation = new BackupLocation( databaseLayout, storeFiles, new DatabaseIdStore( fileSystem ),
                                                   new MetadataStore( fileSystem ), PageCacheTracer.NULL, new FileManager( fileSystem ),
                                                   NullLogProvider.getInstance() );
     }
@@ -113,7 +117,7 @@ class BackupLocationTest
     void backupLocationReactsToChangesInDatabaseIdStore() throws IOException
     {
         var randomDbId = DatabaseIdFactory.from( UUID.randomUUID() );
-        var databaseIdStore = new DatabaseIdStore( fileSystem, nullLogProvider() );
+        var databaseIdStore = new DatabaseIdStore( fileSystem );
         var expectedDbId = graphDatabaseAPI.databaseId().databaseId();
 
         assertThat( neo4jBackupLocation.databaseId() )
@@ -122,7 +126,7 @@ class BackupLocationTest
         neo4jBackupLocation.writeDatabaseId( expectedDbId );
 
         assertThat( databaseIdStore.readDatabaseId( databaseLayout.backupToolsFolder() ) )
-                .isEqualTo( expectedDbId );
+                .isEqualTo( Optional.of( expectedDbId ) );
 
         assertThat( neo4jBackupLocation.databaseId() )
                 .contains( expectedDbId );
@@ -136,9 +140,9 @@ class BackupLocationTest
     {
         // given:
 
-        var databaseIdStore = new DatabaseIdStore( fileSystem, nullLogProvider() );
+        var databaseIdStore = new DatabaseIdStore( fileSystem );
         var metadataStore = new MetadataStore( fileSystem );
-        var fileManager = Mockito.mock( FileManager.class );
+        var fileManager = mock( FileManager.class );
         var neo4jBackupLocation =
                 new BackupLocation( databaseLayout, storeFiles, databaseIdStore, metadataStore, PageCacheTracer.NULL,
                                     fileManager, NullLogProvider.getInstance() );
@@ -155,9 +159,9 @@ class BackupLocationTest
     void tryDeleteReturnsFalseOnFailure() throws IOException
     {
         // given:
-        var databaseIdStore = new DatabaseIdStore( fileSystem, nullLogProvider() );
+        var databaseIdStore = new DatabaseIdStore( fileSystem );
         var metadataStore = new MetadataStore( fileSystem );
-        var fileManager = Mockito.mock( FileManager.class );
+        var fileManager = mock( FileManager.class );
         var neo4jBackupLocation =
                 new BackupLocation( databaseLayout, storeFiles, databaseIdStore, metadataStore, PageCacheTracer.NULL,
                                     fileManager, NullLogProvider.getInstance() );
@@ -176,8 +180,8 @@ class BackupLocationTest
     void moveToCallsCopyDelete() throws IOException
     {
         // given:
-        var fileManager = Mockito.mock( FileManager.class );
-        var databaseIdStore = new DatabaseIdStore( fileSystem, new Log4jLogProvider( System.out ) );
+        var fileManager = mock( FileManager.class );
+        var databaseIdStore = new DatabaseIdStore( fileSystem );
         var metadataStore = new MetadataStore( fileSystem );
         var neo4jBackupLocation = new BackupLocation( databaseLayout, storeFiles, databaseIdStore, metadataStore, PageCacheTracer.NULL,
                                                       fileManager, NullLogProvider.getInstance() );
@@ -192,18 +196,41 @@ class BackupLocationTest
         //then:
         assertThat( newBackupLocation.databaseDirectory() ).isEqualTo( newDirectory );
         var backupLocation = neo4jBackupLocation.databaseDirectory();
-        Mockito.verify( fileManager, times( 1 ) ).copyDelete( eq( backupLocation ), eq( newDirectory ) );
+        verify( fileManager, times( 1 ) ).copyDelete( eq( backupLocation ), eq( newDirectory ) );
     }
 
     @Test
     void shouldIdentifyStoreCorrectly() throws IOException
     {
         // given:
-        var databaseIdStore = new DatabaseIdStore( fileSystem, new Log4jLogProvider( System.out ) );
+        var databaseIdStore = new DatabaseIdStore( fileSystem );
         var neo4jBackupLocation = new BackupLocation( databaseLayout, storeFiles, databaseIdStore, new MetadataStore( fileSystem ), PageCacheTracer.NULL,
                                                       new FileManager( fileSystem ), NullLogProvider.getInstance() );
         // then:
         assertThat( neo4jBackupLocation.hasSameStore( neo4jBackupLocation ) ).isTrue();
         assertThat( neo4jBackupLocation.hasSameStore( emptyBackupLocation ) ).isFalse();
+    }
+
+    @Test
+    void shouldLogExceptionInCaseDatabaseIdFail()
+    {
+        // given
+        final var databaseIdStore = mock( DatabaseIdStore.class );
+        final var exception = new IllegalStateException( "No rights to read" );
+        when( databaseIdStore.readDatabaseId( databaseLayout.backupToolsFolder() ) ).thenThrow( exception );
+
+        final var logProvider = new AssertableLogProvider();
+        var backupLocation = new BackupLocation( databaseLayout, storeFiles, databaseIdStore, new MetadataStore( fileSystem ), PageCacheTracer.NULL,
+                                                 new FileManager( fileSystem ), logProvider );
+
+        // when
+        final var databaseId = backupLocation.databaseId();
+
+        //then
+        assertThat( databaseId ).isEmpty();
+        LogAssertions.assertThat( logProvider )
+                     .forClass( BackupLocation.class )
+                     .forLevel( ERROR )
+                     .containsMessages( "Error in reading databaseId file " + getDatabaseFilePath( databaseLayout.backupToolsFolder() ) );
     }
 }

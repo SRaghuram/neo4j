@@ -20,6 +20,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
+import static com.neo4j.backup.impl.local.DatabaseIdStore.getDatabaseFilePath;
 import static java.lang.String.format;
 
 public class BackupLocation
@@ -169,7 +170,16 @@ public class BackupLocation
 
     public Optional<DatabaseId> databaseId()
     {
-        return Optional.ofNullable( databaseIdStore.readDatabaseId( databaseLayout.backupToolsFolder() ) );
+        final var path = databaseLayout.backupToolsFolder();
+        try
+        {
+            return databaseIdStore.readDatabaseId( path );
+        }
+        catch ( Exception exception )
+        {
+            log.error( "Error in reading databaseId file " + getDatabaseFilePath( path ), exception );
+            return Optional.empty();
+        }
     }
 
     public void writeDatabaseId( DatabaseId databaseId ) throws IOException
