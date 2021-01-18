@@ -381,4 +381,73 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     ascResult.toList should equal(expected)
     descResult.toList should equal(expected.reverse)
   }
+
+  test("Order of join column should be correctly recomputed after a NodeLeftOuterHashJoin") {
+    val as = for (aIndex <- 0 until 20) yield {
+      createLabeledNode(Map("prop" -> aIndex), "A")
+    }
+    for (bIndex <- 0 until 60) {
+      val b = createLabeledNode(Map("prop" -> bIndex), "B")
+      relate(as(0), b)
+    }
+
+    graph.createIndex("A", "prop")
+
+    val baseQuery =
+      """
+        |MATCH (a:A)
+        |OPTIONAL MATCH (a:A)-->(b)
+        |USING JOIN ON a
+        |WHERE a.prop IS NOT NULL
+        |RETURN a.prop ORDER BY a.prop
+        |""".stripMargin
+    val expressionInOrderByQuery =
+      """
+        |MATCH (a:A)
+        |OPTIONAL MATCH (a)-->(b:B)
+        |USING JOIN ON a
+        |WHERE b.prop IS NOT NULL
+        |RETURN a.prop ORDER BY a.prop + 0
+        |""".stripMargin
+    val aliasingQuery =
+      """
+        |MATCH (a:A)
+        |OPTIONAL MATCH (a)-->(b:B)
+        |USING JOIN ON a
+        |WHERE b.prop IS NOT NULL
+        |RETURN a.prop AS foo ORDER BY a.prop
+        |""".stripMargin
+    val expressionPlusAliasInReturnQuery =
+      """
+        |MATCH (a:A)
+        |OPTIONAL MATCH (a)-->(b:B)
+        |USING JOIN ON a
+        |WHERE b.prop IS NOT NULL
+        |RETURN a.prop + 0 AS foo ORDER BY a.prop
+        |""".stripMargin
+
+    Seq(
+      (baseQuery, "a.prop"),
+      (expressionInOrderByQuery, "a.prop"),
+      (aliasingQuery, "foo"),
+      (expressionPlusAliasInReturnQuery, "foo")
+    ).foreach {
+      case (query, returnColumnName) =>
+        withClue(query) {
+          val expected = for {
+            prop <- Seq.fill(60)(0) ++ (1 until 20)
+          } yield Map(returnColumnName -> prop)
+
+          // TODO run with executeWith when pipelined bug is fixed
+          val ascResult = executeSingle("CYPHER runtime=slotted " + query + " ASC")
+          val descResult = executeSingle("CYPHER runtime=slotted " + query + " DESC")
+
+          ascResult.executionPlanDescription() should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
+          descResult.executionPlanDescription() should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
+
+          ascResult.toList should equal(expected)
+          descResult.toList should equal(expected.reverse)
+        }
+    }
+  }
 }
