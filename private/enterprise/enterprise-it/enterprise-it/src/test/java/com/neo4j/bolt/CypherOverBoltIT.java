@@ -72,6 +72,20 @@ public class CypherOverBoltIT
     }
 
     @Test
+    public void shouldHandleReturningDeletedPath() throws InterruptedException
+    {
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            session.run( "CREATE (:Start)-[:SMELLS]->()-[:SMELLS]->()-[:SMELLS]->(:End)" ).consume();
+            Result result2 = session.run( "MATCH p=(:Start)-[*]->(:End) DETACH DELETE p RETURN p" );
+            org.neo4j.driver.types.Path p = result2.next().get( "p" ).asPath();
+
+            assertEquals( p.length(), 3 );
+        }
+    }
+
+    @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWork()
     {
 
