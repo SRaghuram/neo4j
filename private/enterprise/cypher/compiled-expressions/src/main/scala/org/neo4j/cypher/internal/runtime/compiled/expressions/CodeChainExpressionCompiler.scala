@@ -388,6 +388,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
       val reduceVariable = reduce.asInstanceOf[ExpressionVariable]
       val accumulatorVariable = accumulator.asInstanceOf[ExpressionVariable]
       val resultIRInfo = exprToIRInner(expression).extract(namer)
+      val returnVar = namer.nextVariableName("result")
 
       val code =
         Seq(
@@ -399,7 +400,8 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
             setExpressionVariable(reduceVariable, invoke(iter, method[java.util.Iterator[AnyValue], Object]("next"))),
             setExpressionVariable(accumulatorVariable, resultIRInfo.code),
           )),
-          loadExpressionVariable(accumulatorVariable)
+          declareAndAssign(typeRefOf[AnyValue], returnVar, loadExpressionVariable(accumulatorVariable)),
+          load(returnVar)
         )
 
       exprToIRInner(listAst)

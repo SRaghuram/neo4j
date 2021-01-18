@@ -2146,8 +2146,11 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val all = types()
     for {value <- all.keys
          typ <- all.values} {
-      if (all(value) == typ) coerce(value, typ) should equal(value)
-      else a [CypherTypeException] should be thrownBy coerce(value, typ)
+      if (all(value) == typ) {
+        coerce(value, typ) should equal(value)
+      } else {
+        a[CypherTypeException] should be thrownBy coerce(value, typ)
+      }
     }
   }
 
@@ -3528,6 +3531,31 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     key should equal(VirtualValues.list( rel, node))
     incoming.getLongAt(0) should equal(rel.id())
     incoming.getLongAt(1) should equal(node.id())
+  }
+
+   test("should compile grouping key with multiple reduce expressions") {
+    //given
+     val slots = SlotConfiguration.empty
+       .newReference("list1", nullable = true, symbols.CTAny)
+       .newReference("list2", nullable = true, symbols.CTAny)
+     val incoming = SlottedRow(slots)
+     val outgoing = SlottedRow(slots)
+     val accumulator = ExpressionVariable(0, "acc")
+     val variable = ExpressionVariable(1, "var")
+
+     val projections = Map(
+       "list1" -> reduce(accumulator, listOf(), variable, listOf(literalString("A"), literalString("B"), literalString("C")), add(accumulator, variable)),
+       "list2" -> reduce(accumulator, listOf(), variable, listOf(literalString("1"), literalString("2"), literalString("3")), add(accumulator, variable))
+     )
+
+     //when
+     val key = compileGroupingExpression(projections, slots).computeGroupingKey(incoming, query, Array.empty, cursors, new Array[AnyValue](2))
+
+     //then
+     key should equal(VirtualValues.list(
+       VirtualValues.list(stringValue("A"), stringValue("B"), stringValue("C")),
+       VirtualValues.list(stringValue("1"), stringValue("2"), stringValue("3")))
+     )
   }
 
   test("single outgoing path") {

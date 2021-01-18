@@ -313,4 +313,20 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     val expectedResult = nodes.map(n => Map("n" -> n, "x" -> n, "c" -> nodes.size)).toSet
     result.toSet shouldBe expectedResult
   }
+
+  test("should handle aggregation in reduce") {
+    val query =
+      """
+        |WITH
+        |     ['a','b','c','d'] AS list_1,
+        |     ['X', 'Y', 'Z'] AS list_2
+        |UNWIND list_2 as ul
+        |WITH
+        |     reduce(x=[], l1 IN list_1 | x + l1) as listOne,
+        |     reduce(x=[], l2 IN list_2 | x + l2) as listTwo,
+        |     reduce(cnt=0, x IN collect(ul) | cnt + 1) as cnt
+        |RETURN listOne, listTwo""".stripMargin
+
+    executeWith(Configs.All, query).toList should equal(List(Map("listOne" -> List("a", "b", "c", "d"), "listTwo" -> List("X", "Y", "Z"))))
+  }
 }

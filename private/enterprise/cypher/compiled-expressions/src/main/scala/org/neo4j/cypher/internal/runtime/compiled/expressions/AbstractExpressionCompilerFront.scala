@@ -849,6 +849,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
        */
       val accVar = ExpressionVariable.cast(scope.accumulator)
       val innerVar = ExpressionVariable.cast(scope.variable)
+      val returnVar = namer.nextVariableName("return")
 
       val iterVariable = namer.nextVariableName()
       for {collection <- compileExpression(collectionExpression, id)
@@ -880,7 +881,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             ): _*)
           },
           // return expressionVariables[accOffset];
-          loadExpressionVariable(accVar)
+          declareAndAssign(typeRefOf[AnyValue], returnVar, loadExpressionVariable(accVar)),
+          load(returnVar)
         )
         IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields ++ init.fields, collection.variables ++
           inner.variables ++ init.variables, collection.nullChecks)
