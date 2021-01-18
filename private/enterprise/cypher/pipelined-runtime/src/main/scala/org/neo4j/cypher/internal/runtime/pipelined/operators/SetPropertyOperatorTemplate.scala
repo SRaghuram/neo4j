@@ -82,22 +82,22 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
 
     block(
       declareAndAssign(typeRefOf[AnyValue], entityValueVar, nullCheckIfRequired(entityValue)),
-      ifElse(instanceOf[VirtualNodeValue](load(entityValueVar)))(
+      ifElse(instanceOf[VirtualNodeValue](load[Long](entityValueVar)))(
         setProperty(
           isNode = true,
-          invoke(cast[VirtualNodeValue](load(entityValueVar)), method[VirtualNodeValue, Long]("id")),
+          invoke(cast[VirtualNodeValue](load[Long](entityValueVar)), method[VirtualNodeValue, Long]("id")),
           nodeProp
         )
-      )(ifElse(instanceOf[VirtualRelationshipValue](load(entityValueVar)))
+      )(ifElse(instanceOf[VirtualRelationshipValue](load[Long](entityValueVar)))
       (
         setProperty(
           isNode = false,
-          invoke(cast[VirtualRelationshipValue](load(entityValueVar)), method[VirtualRelationshipValue, Long]("id")),
+          invoke(cast[VirtualRelationshipValue](load[Long](entityValueVar)), method[VirtualRelationshipValue, Long]("id")),
           relProp
         )
       )(
         block(
-          condition(notEqual(load(entityValueVar), noValue))(
+          condition(notEqual(load[Long](entityValueVar), noValue))(
             fail(newInstance(constructor[InvalidArgumentException, String], constant("Expected to set property on a node or a relationship.")))
           )
         )
@@ -146,7 +146,7 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
         ))
         (block(
           invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](releaseLockFunction), arrayOf[Long](id)),
-          fail(load(errorVar))
+          fail(load[Exception](errorVar))
         ))
     )
   }
