@@ -80,6 +80,7 @@ import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
 import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
 import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.condition;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @EphemeralTestDirectoryExtension
@@ -610,7 +611,8 @@ class PageCacheWarmerTest
 
                 long maxSize = pageCache.maxCachedPages();
                 assertThat( pagesLoadedReportedByWarmer ).isEqualTo( maxSize );
-                assertEventually( () -> cacheTracer.faults(), equalityCondition( maxSize ), 1, TimeUnit.MINUTES );
+                //The warmer is using PF_READ_AHEAD so we may see slightly more page faults than we actually touch
+                assertEventually( () -> cacheTracer.faults(), condition( faults -> faults >= maxSize ), 1, TimeUnit.SECONDS );
             }
         }
     }
