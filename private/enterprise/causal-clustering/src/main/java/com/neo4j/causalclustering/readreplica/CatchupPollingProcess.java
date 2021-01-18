@@ -142,6 +142,9 @@ public class CatchupPollingProcess extends LifecycleAdapter
                 case STORE_COPYING:
                     copyStore();
                     break;
+                case CANCELLED:
+                case PANIC:
+                    break;
                 default:
                     throw new IllegalStateException( "Tried to execute catchup but was in state " + state );
                 }
