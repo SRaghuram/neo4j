@@ -24,8 +24,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
   case class TestOrder(cypherToken: String,
                        expectedOrder: Seq[Map[String, Any]] => Seq[Map[String, Any]],
                        providedOrder: Expression => ProvidedOrder)
-  private val ASCENDING = TestOrder("ASC", x => x, ProvidedOrder.asc)
-  private val DESCENDING = TestOrder("DESC", x => x.reverse, ProvidedOrder.desc)
+  private val ASCENDING = TestOrder("ASC", x => x, ProvidedOrder.asc(_))
+  private val DESCENDING = TestOrder("DESC", x => x.reverse, ProvidedOrder.desc(_))
 
   override def beforeEach(): Unit = {
     super.beforeEach()
