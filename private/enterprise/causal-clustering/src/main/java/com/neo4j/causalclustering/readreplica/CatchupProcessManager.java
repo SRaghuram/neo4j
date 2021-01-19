@@ -44,7 +44,6 @@ public class CatchupProcessManager extends SafeLifecycle
     private final ReadReplicaDatabaseContext databaseContext;
     private final Log log;
     private final Panicker panicker;
-    private CatchupProcessComponents catchupProcessComponents;
     private volatile boolean isPanicked;
     private volatile boolean txPullingPaused;
     private Timer timer;
@@ -66,8 +65,6 @@ public class CatchupProcessManager extends SafeLifecycle
     public void start0()
     {
         log.info( "Starting " + this.getClass().getSimpleName() );
-        catchupProcessComponents = catchupProcessFactory.create( databaseContext );
-        catchupProcessComponents.start();
         initTimer();
         txPullingPaused = false;
     }
@@ -76,7 +73,6 @@ public class CatchupProcessManager extends SafeLifecycle
     public void stop0()
     {
         log.info( "Shutting down " + this.getClass().getSimpleName() );
-        catchupProcessComponents.shutdown();
         timer.kill( Timer.CancelMode.SYNC_WAIT );
         txPullingPaused = true;
     }
@@ -120,9 +116,11 @@ public class CatchupProcessManager extends SafeLifecycle
      */
     private void onTimeout()
     {
-        if ( !txPullingPaused )
+        var catchupProcessComponents = catchupProcessFactory.catchupProcessComponents();
+        if ( !txPullingPaused && catchupProcessComponents.isPresent() )
         {
-            catchupProcessComponents.catchupProcess().tick();
+            var catchupProcess = catchupProcessComponents.get().catchupProcess();
+            catchupProcess.tick();
         }
 
         if ( !isPanicked )
@@ -133,13 +131,16 @@ public class CatchupProcessManager extends SafeLifecycle
 
     private boolean isCatchupProcessAvailableForPausing()
     {
-        return catchupProcessComponents != null && !catchupProcessComponents.catchupProcess().isCopyingStore();
+        return catchupProcessFactory.catchupProcessComponents().map( components -> !components.catchupProcess().isCopyingStore() )
+                                    .orElse( false );
     }
 
     @VisibleForTesting
     public CatchupPollingProcess getCatchupProcess()
     {
-        return catchupProcessComponents.catchupProcess();
+        return catchupProcessFactory.catchupProcessComponents()
+                                    .map( CatchupProcessComponents::catchupProcess )
+                                    .orElse( null );
     }
 
     private void initTimer()
