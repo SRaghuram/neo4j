@@ -17,13 +17,14 @@ import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.internal.nativeimpl.AbsentNativeAccess;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.kernel.KernelVersion;
 import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryDetachedCheckpoint;
-import org.neo4j.kernel.impl.transaction.log.entry.TransactionLogVersionSelector;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryParserSets;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.RangeLogVersionVisitor;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesContext;
@@ -38,7 +39,6 @@ import org.neo4j.monitoring.PanicEventGenerator;
 
 import static org.apache.commons.compress.utils.FileNameUtils.getExtension;
 import static org.neo4j.kernel.impl.transaction.log.LogVersionBridge.NO_MORE_CHANNELS;
-import static org.neo4j.kernel.impl.transaction.log.entry.CheckpointLogVersionSelector.INSTANCE;
 import static org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper.CHECKPOINT_FILE_PREFIX;
 import static org.neo4j.storageengine.api.CommandReaderFactory.NO_COMMANDS;
 
@@ -73,7 +73,7 @@ public class CheckpointLogDump
         long lowestVersion = versionVisitor.getLowestVersion();
         long currentVersion = highestVersion;
 
-        var checkpointReader = new VersionAwareLogEntryReader( NO_COMMANDS, INSTANCE, true );
+        var checkpointReader = new VersionAwareLogEntryReader( NO_COMMANDS, LogEntryParserSets::checkpointParserSet, true );
         while ( currentVersion >= lowestVersion )
         {
             if ( Files.isRegularFile( checkpointLogs ) && !getExtension( checkpointLogs.getFileName().toString() ).equals( "" + currentVersion ) )
@@ -107,7 +107,7 @@ public class CheckpointLogDump
         return new TransactionLogFilesContext( new AtomicLong( 0 ), new AtomicBoolean(), null,
                 () -> -1, () -> -1, () -> LogPosition.UNSPECIFIED, null,
                 fileSystem, NullLogProvider.getInstance(), DatabaseTracers.EMPTY, null, new AbsentNativeAccess(), EmptyMemoryTracker.INSTANCE, new Monitors(),
-                false, new DatabaseHealth( PanicEventGenerator.NO_OP, NullLog.getInstance() ), TransactionLogVersionSelector.LATEST::version,
+                false, new DatabaseHealth( PanicEventGenerator.NO_OP, NullLog.getInstance() ), () -> KernelVersion.LATEST,
                 Clock.systemUTC(), Config.defaults() );
     }
 

@@ -25,6 +25,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.memory.HeapScopedBuffer;
+import org.neo4j.kernel.KernelVersion;
 import org.neo4j.kernel.database.DbmsLogEntryWriterFactory;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
@@ -61,7 +62,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
-import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryParserSetVersion.LogEntryV4_0;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 import static org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor.EMPTY_ACCESSOR;
@@ -892,7 +892,7 @@ class CheckTxLogsTest
             long offset = channel.size();
             channel.position( offset );
 
-            consumer.accept( new TransactionLogWriter( writableLogChannel, new DbmsLogEntryWriterFactory( () -> LogEntryV4_0 ) ) );
+            consumer.accept( new TransactionLogWriter( writableLogChannel, new DbmsLogEntryWriterFactory( () -> KernelVersion.V4_0 ) ) );
         }
     }
 

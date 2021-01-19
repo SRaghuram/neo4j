@@ -63,6 +63,7 @@ import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.KernelVersion;
 import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AnonymousContext;
@@ -80,7 +81,6 @@ import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PositionAwarePhysicalFlushableChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryParserSetV4_0;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryTypeCodes;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogVersions;
@@ -569,7 +569,7 @@ public class StoreUpgradeIT
                     try ( NativeScopedBuffer buffer = new NativeScopedBuffer( 100, EmptyMemoryTracker.INSTANCE ) )
                     {
                         var writableChannel = new PositionAwarePhysicalFlushableChecksumChannel( channel, buffer );
-                        var entryWriter = new LogEntryWriter( writableChannel, LogEntryParserSetV4_0.V4_0 );
+                        var entryWriter = new LogEntryWriter<>( writableChannel, KernelVersion.V4_0 );
                         entryWriter.writeLegacyCheckPointEntry( new LogPosition( version, channel.position() ) );
                         writableChannel.prepareForFlush().flush();
                     }

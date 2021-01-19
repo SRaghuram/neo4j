@@ -13,6 +13,7 @@ import java.io.IOException;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.KernelVersion;
 import org.neo4j.kernel.impl.transaction.SimpleMetaDataProvider;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
@@ -24,7 +25,6 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerImpl;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckpointAppender;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryParserSetVersion;
 import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
@@ -76,7 +76,7 @@ class EnterpriseCheckPointerImplTest
                 .withTransactionIdStore( metaDataProvider )
                 .withLogVersionRepository( metaDataProvider )
                 .withStoreId( new StoreId( 99 ) )
-                .withTransactionLogVersionProvider( () -> LogEntryParserSetVersion.LogEntryV4_0 )
+                .withKernelVersionProvider( () -> KernelVersion.V4_0 )
                 .build();
         Config config = Config.defaults( GraphDatabaseSettings.keep_logical_logs, "3 files" );
         NullLogProvider logProvider = NullLogProvider.getInstance();

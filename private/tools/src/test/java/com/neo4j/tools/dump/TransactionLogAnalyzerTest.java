@@ -24,6 +24,7 @@ import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.KernelVersion;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.SimpleLogVersionRepository;
 import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
@@ -35,7 +36,6 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryInlinedCheckPoint;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryParserSetVersion;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -92,7 +92,7 @@ class TransactionLogAnalyzerTest
                 .withRotationThreshold( ByteUnit.mebiBytes( 1 ) )
                 .withStoreId( StoreId.UNKNOWN )
                 .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
-                .withTransactionLogVersionProvider( () -> LogEntryParserSetVersion.LogEntryV4_0 )
+                .withKernelVersionProvider( () -> KernelVersion.V4_0 )
                 .build();
         life.add( logFiles );
         logFile = logFiles.getLogFile();
