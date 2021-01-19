@@ -90,6 +90,7 @@ case class foreachApplyRewriter(cardinalities: Cardinalities,
   private def newPlan(source: LogicalPlan, creator: LogicalPlan => LogicalPlan): LogicalPlan = {
     val plan = creator(source)
     cardinalities.copy(source.id, plan.id)
+    effectiveCardinalities.copy(source.id, plan.id)
     providedOrders.copy(source.id, plan.id)
     plan
   }
@@ -104,6 +105,7 @@ case class foreachApplyRewriter(cardinalities: Cardinalities,
         case _ => //general case
           val unwind = UnwindCollection(Argument()(idGen), variableName, listProjected)(idGen)
           cardinalities.copy(rhs.id, unwind.id)
+          effectiveCardinalities.copy(rhs.id, unwind.id)
           providedOrders.copy(rhs.id, unwind.id)
           val apply = newPlan(unwind, Apply(_, rhs)(idGen))
           apply

@@ -322,7 +322,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
 
     val argumentPLan = result.executionPlanDescription().cd("NodeByLabelScan")
     val estimatedRows = argumentPLan.arguments.collect { case n: EstimatedRows => n }.head
-    estimatedRows should equal(EstimatedRows(14.0))
+    estimatedRows should equal(EstimatedRows(14.0, Some(14.0)))
   }
 
   test("should consider cardinality input when planning in return") {
@@ -335,10 +335,10 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:A) RETURN (n)-[:HAS]->() as p",
       planComparisonStrategy = ComparePlansWithAssertion( planDescription => {
         planDescription.find("Argument") shouldNot be(empty)
-        planDescription.cd("Argument").arguments should contain(EstimatedRows(1))
+        planDescription.cd("Argument").arguments should contain(EstimatedRows(1, Some(1)))
         planDescription.find("Expand(All)") shouldNot be(empty)
         val expandArgs = planDescription.cd("Expand(All)").arguments.toSet
-        expandArgs should contain(EstimatedRows(0.05))
+        expandArgs should contain(EstimatedRows(0.05, Some(0.05)))
         expandArgs collect {
           case Details(List(details)) if details.prettifiedString.matches("""\(n\)\-\[anon_[0-9]*\:HAS]\-\>\(anon_[0-9]*\)""") => true
         } should not be empty

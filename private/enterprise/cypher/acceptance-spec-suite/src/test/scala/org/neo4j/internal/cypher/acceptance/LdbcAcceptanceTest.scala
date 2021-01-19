@@ -80,7 +80,7 @@ class LdbcAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
 
   private def collectEstimations(plan: InternalPlanDescription): Seq[Double] = {
     plan.arguments.collectFirst {
-      case EstimatedRows(estimate) => estimate
+      case EstimatedRows(effectiveCardinality, _) => effectiveCardinality
     }.get +:
       plan.children.toIndexedSeq.flatMap(collectEstimations)
   }

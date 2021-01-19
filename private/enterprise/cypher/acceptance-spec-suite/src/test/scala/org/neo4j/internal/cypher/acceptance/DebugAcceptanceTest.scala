@@ -6,10 +6,13 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.WindowsStringSafe
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class DebugAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
+
+  implicit val windowsSafe: WindowsStringSafe.type = WindowsStringSafe
 
   test("CYPHER DEBUG=rawCardinalities should output estimated rows with float precision") {
     graph.createIndex("Node", "prop")
