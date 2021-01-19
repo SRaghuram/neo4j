@@ -44,7 +44,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     relate(createNode(), createNode(), "prop" -> 1337)
 
     // when
-    executeWith(Configs.InterpretedAndSlotted, "MATCH ()-[r]->() SET r.prop = tofloat(r.prop)")
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH ()-[r]->() SET r.prop = tofloat(r.prop)")
 
     executeWith(Configs.All, "MATCH ()-[r]->() RETURN r.prop").head("r.prop") shouldBe a[java.lang.Double]
   }

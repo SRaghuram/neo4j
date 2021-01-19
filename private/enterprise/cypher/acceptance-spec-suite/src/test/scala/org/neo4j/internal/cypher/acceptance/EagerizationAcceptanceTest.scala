@@ -120,7 +120,7 @@ class EagerizationAcceptanceTest
       """.stripMargin
 
     val result = executeWith(
-      Configs.InterpretedAndSlotted,
+      Configs.InterpretedAndSlottedAndPipelined,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1),
       query = query)
 
@@ -141,7 +141,7 @@ class EagerizationAcceptanceTest
       """.stripMargin
 
     val result = executeWith(
-      Configs.InterpretedAndSlotted,
+      Configs.InterpretedAndSlottedAndPipelined,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1),
       query = query)
 
@@ -2031,7 +2031,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (n {prop : 5})-[r]-() SET r.prop = 6 RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     result.columnAs[Long]("count(*)").next shouldBe 1
@@ -2053,7 +2053,7 @@ class EagerizationAcceptanceTest
     relate(createNode(), createNode(), "prop" -> 3)
     val query = "MATCH ()-[r {prop : 3}]-() SET r.prop = 6 RETURN count(*) AS c"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     assertStats(result, propertiesWritten = 2)
@@ -2066,7 +2066,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH ()-[r {prop1 : 3}]-() SET r.prop2 = 6 RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     result.columnAs[Long]("count(*)").next shouldBe 2
@@ -2089,7 +2089,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH ()-[r]-() WHERE r.prop IS NOT NULL SET r.prop = 'foo' RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStats(result, propertiesWritten = 2)
@@ -2100,7 +2100,7 @@ class EagerizationAcceptanceTest
     relate(createNode(), createNode())
 
     val query = "MATCH ()-[r]-() WHERE r.prop IS NOT NULL SET r.prop = $null RETURN count(*)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("null" -> null),
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("null" -> null),
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     result.columnAs[Long]("count(*)").next shouldBe 2
@@ -2113,7 +2113,7 @@ class EagerizationAcceptanceTest
     relate(createNode(), createNode())
 
     val query = "MATCH ()-[r]-() WHERE r.prop IS NOT NULL REMOVE r.prop  RETURN count(*)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("null" -> null),
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("null" -> null),
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     result.columnAs[Long]("count(*)").next shouldBe 2
@@ -2127,7 +2127,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH ()-[r]-() WHERE r.prop = 42 SET r.prop = 'foo' RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     result.columnAs[Long]("count(*)").next shouldBe 2
@@ -2140,7 +2140,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH ()-[r]-() WHERE r.prop1 IS NOT NULL SET r.prop2 = 'foo'"
 
-    assertStats(executeWith(Configs.InterpretedAndSlotted, query,
+    assertStats(executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0)), propertiesWritten = 2)
   }
 
@@ -2152,7 +2152,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH ()-[r {prop: 42}]-(), (:L)-[r2]-() SET r2.prop = 42"
 
-    assertStats(executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = testEagerPlanComparisonStrategy(1)), propertiesWritten = 2)
+    assertStats(executeWith(Configs.InterpretedAndSlottedAndPipelined, query, planComparisonStrategy = testEagerPlanComparisonStrategy(1)), propertiesWritten = 2)
 
   }
 
@@ -2189,7 +2189,7 @@ class EagerizationAcceptanceTest
     relate(createNode(), createNode(), "prop" -> 42)
     val query = "MATCH ()-[r]->() CREATE ()-[:R]->() WITH * MATCH ()-[q {prop:42}]->() SET r.prop = 42 RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined  , query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(3))
     result.columnAs[Int]("count").next should equal(8)
     assertStats(result, propertiesWritten = 8, nodesCreated = 8, relationshipsCreated = 4)
@@ -3175,6 +3175,4 @@ class EagerizationAcceptanceTest
                                               optimalEagerCount: Int = -1): PlanComparisonStrategy = {
     ComparePlansWithAssertion(plan => plan should includeSomewhere.nTimes(expectedEagerCount, aPlan().withName(EagerRegEx)), expectPlansToFailPredicate)
   }
-
-
 }
