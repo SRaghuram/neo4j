@@ -37,7 +37,7 @@ import org.neo4j.storageengine.api.StoreId;
  */
 public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
 {
-    private static final String CLUSTERED_CONTEXT_STORE_ID_READER_TAG = "clusteredConstextStoreIdReader";
+    private static final String CLUSTERED_CONTEXT_STORE_ID_READER_TAG = "clusteredContextStoreIdReader";
     private final DatabaseLayout databaseLayout;
     private final StoreFiles storeFiles;
     private final Log log;
@@ -54,7 +54,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
 
     private volatile StoreId storeId;
 
-    private DefaultClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
+    protected DefaultClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
             CatchupComponentsFactory catchupComponentsFactory, ClusteredDatabase clusterDatabase, Monitors clusterDatabaseMonitors,
             LeaderLocator leaderLocator, PageCacheTracer cacheTracer )
     {

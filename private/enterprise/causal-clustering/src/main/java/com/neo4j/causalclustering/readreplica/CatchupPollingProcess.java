@@ -37,6 +37,7 @@ import org.neo4j.util.concurrent.BinaryLatch;
 import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.CATCHUP_FAILED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.CANCELLED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.PANIC;
+import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.PAUSED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
 import static org.neo4j.util.Preconditions.checkState;
@@ -52,7 +53,8 @@ public class CatchupPollingProcess extends LifecycleAdapter
         TX_PULLING,
         STORE_COPYING,
         PANIC,
-        CANCELLED
+        CANCELLED,
+        PAUSED
     }
 
     private final long maxQueueSize;
@@ -105,7 +107,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     }
 
     @Override
-    public void stop()
+    public synchronized void stop()
     {
         log.debug( "Stopping catchup polling process %s", this );
         state = CANCELLED;
@@ -140,6 +142,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
                 break;
             case CANCELLED:
             case PANIC:
+            case PAUSED:
                     break;
             default:
                 throw new IllegalStateException( "Tried to execute catchup but was in state " + state );
@@ -150,6 +153,43 @@ public class CatchupPollingProcess extends LifecycleAdapter
             log.error( "Polling process failed", e );
             panic( e );
         }
+    }
+
+    public synchronized boolean pause()
+    {
+        if ( state == CANCELLED ||
+             state == PANIC )
+        {
+            throw new IllegalStateException( "Catchup process can't be paused" );
+        }
+        if ( state == PAUSED )
+        {
+            return false;
+        }
+        state = PAUSED;
+        log.info( "Pausing transaction pulling" );
+        return true;
+    }
+
+    public synchronized boolean resume()
+    {
+        if ( state == CANCELLED ||
+             state == PANIC )
+        {
+            throw new IllegalStateException( "Catchup process can't be resumed" );
+        }
+        if ( state != PAUSED  )
+        {
+            return false;
+        }
+        state = TX_PULLING;
+        log.info( "Resuming transaction pulling" );
+        return true;
+    }
+
+    public boolean isPanicked()
+    {
+        return state == PANIC;
     }
 
     private synchronized void panic( Throwable e )
@@ -253,11 +293,19 @@ public class CatchupPollingProcess extends LifecycleAdapter
 
     private void transitionToStoreCopy()
     {
+        if ( state != TX_PULLING )
+        {
+            return;
+        }
         state = STORE_COPYING;
     }
 
     private void transitionToTxPulling()
     {
+        if ( state != STORE_COPYING )
+        {
+            return;
+        }
         state = TX_PULLING;
     }
 

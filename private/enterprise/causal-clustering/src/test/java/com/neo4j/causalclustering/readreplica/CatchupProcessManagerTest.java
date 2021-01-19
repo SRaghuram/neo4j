@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
+import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
@@ -13,9 +14,13 @@ import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.consensus.schedule.CountingTimerService;
 import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
+import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicReason;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.readreplica.CatchupProcessFactory.CatchupProcessComponents;
+import com.neo4j.causalclustering.readreplica.CatchupProcessFactory.CatchupProcessLifecycles;
+import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
+import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +33,7 @@ import java.util.concurrent.Semaphore;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -40,6 +46,7 @@ import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
+import static com.neo4j.dbms.ReplicatedDatabaseEventService.NO_EVENT_DISPATCH;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -70,6 +77,7 @@ class CatchupProcessManagerTest
     private final ReadReplicaDatabaseContext databaseContext = mock( ReadReplicaDatabaseContext.class );
     private final FakeClockJobScheduler scheduler = new FakeClockJobScheduler();
     private final CountingTimerService timerService = new CountingTimerService( scheduler, nullLogProvider() );
+    private final TopologyService topologyService = mock( TopologyService.class );
 
     @BeforeEach
     void before()
@@ -87,7 +95,7 @@ class CatchupProcessManagerTest
     private CatchupProcessManager createProcessManager( CatchupPollingProcess catchupProcess )
     {
         var catchupProcessFactory = mock( CatchupProcessFactory.class );
-        var catchupProcessComponents = new CatchupProcessComponents( catchupProcess );
+        var catchupProcessComponents = new CatchupProcessLifecycles( catchupProcess );
         when( catchupProcessFactory.create( any() ) ).thenReturn( catchupProcessComponents );
         var catchupProcessManager = new CatchupProcessManager(
                 databaseContext, panicker, timerService, nullLogProvider(), Config.defaults(), catchupProcessFactory );
@@ -110,12 +118,26 @@ class CatchupProcessManagerTest
                 .register();
     }
 
+    private CatchupProcessFactory createProcessManager()
+    {
+        var catchupClientFactory = mock( CatchupClientFactory.class );
+        var upstreamStrategySelector = mock( UpstreamDatabaseStrategySelector.class );
+        var commandIndexTracker = mock( CommandIndexTracker.class );
+        var asyncTxApplier = new AsyncTxApplier( scheduler, nullLogProvider() );
+
+        var manager = new CatchupProcessFactory( panicker, catchupComponents, topologyService, catchupClientFactory,
+                                                 upstreamStrategySelector, commandIndexTracker, nullLogProvider(), Config.defaults(),
+                                                 NO_EVENT_DISPATCH, PageCacheTracer.NULL,asyncTxApplier, databaseContext, timerService );
+        life.add( manager );
+        return manager;
+    }
+
     @Test
     void shouldTickCatchupProcessOnTimeout()
     {
         // given
         CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
-        createProcessManager( catchupProcess );
+        createProcessManager();
 
         // when
         timerService.invoke( TX_PULLER_TIMER );
@@ -195,7 +217,7 @@ class CatchupProcessManagerTest
         doAnswer( ignored -> cf.complete( null ) ).when( catchupProcess ).stop();
 
         var catchupProcessFactory = mock( CatchupProcessFactory.class );
-        when( catchupProcessFactory.create( any() ) ).thenReturn( new CatchupProcessComponents( catchupProcess ) );
+        when( catchupProcessFactory.create( any() ) ).thenReturn( new CatchupProcessLifecycles( catchupProcess ) );
 
         var scheduler = new CentralJobScheduler( Clocks.nanoClock() )
         {

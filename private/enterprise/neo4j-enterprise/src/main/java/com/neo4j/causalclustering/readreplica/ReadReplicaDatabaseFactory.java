@@ -99,7 +99,7 @@ class ReadReplicaDatabaseFactory
         var databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
         var catchupProcessFactory = new CatchupProcessFactory( panicker, catchupComponentsRepository, topologyService,
                 catchupClientFactory, upstreamDatabaseStrategySelector, commandIndexTracker, internalLogProvider, config, databaseEventDispatch,
-                pageCacheTracer, asyncTxApplier, databaseContext );
+                pageCacheTracer, asyncTxApplier, databaseContext, timerService );
         CatchupProcessManager catchupProcess = new CatchupProcessManager( databaseContext, panicker, timerService, internalLogProvider, config,
                 catchupProcessFactory );
         databaseContext.dependencies().satisfyDependency( catchupProcess );

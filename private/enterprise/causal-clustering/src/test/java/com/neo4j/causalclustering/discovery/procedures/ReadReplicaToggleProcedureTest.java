@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.discovery.procedures;
 
 import com.neo4j.causalclustering.common.StubClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
-import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
+import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +33,7 @@ import static org.neo4j.values.storable.Values.utf8Value;
 class ReadReplicaToggleProcedureTest
 {
 
-    final CatchupProcessManager manager = mock( CatchupProcessManager.class );
+    final CatchupPollingProcess catchupPollingProcess = mock( CatchupPollingProcess.class );
     final NamedDatabaseId namedDatabaseId = randomNamedDatabaseId();
     final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
     final ReadReplicaToggleProcedure procedure = new ReadReplicaToggleProcedure( databaseService );
@@ -47,7 +47,7 @@ class ReadReplicaToggleProcedureTest
                                                                 .withDependencies( dependencies )
                                                                 .register();
         databaseService.registerDatabase( namedDatabaseId, dbContext );
-        when( dependencies.resolveDependency( CatchupProcessManager.class ) ).thenReturn( manager );
+        when( dependencies.resolveDependency( CatchupPollingProcess.class ) ).thenReturn( catchupPollingProcess );
     }
 
     @Test
@@ -104,13 +104,13 @@ class ReadReplicaToggleProcedureTest
     public void shouldPauseCatchupProcessIfProcessIsRunning() throws Exception
     {
         AnyValue[] input = {utf8Value( namedDatabaseId.name() ), TRUE};
-        when( manager.pauseCatchupProcess() ).thenReturn( true );
+        when( catchupPollingProcess.pause() ).thenReturn( true );
 
         //when
         RawIterator<AnyValue[],ProcedureException> result = procedure.apply( mock( Context.class ), input, mock( ResourceTracker.class ) );
 
         //then
-        verify( manager ).pauseCatchupProcess();
+        verify( catchupPollingProcess ).pause();
         assertThat( asList( result ) ).contains( new AnyValue[]{utf8Value( "Catchup process is paused" )} );
     }
 
@@ -118,13 +118,13 @@ class ReadReplicaToggleProcedureTest
     public void shouldNotPauseCatchupProcessIfProcessIsPaused() throws Exception
     {
         AnyValue[] input = {utf8Value( namedDatabaseId.name() ), TRUE};
-        when( manager.pauseCatchupProcess() ).thenReturn( false );
+        when( catchupPollingProcess.pause() ).thenReturn( false );
 
         //when
         var result = procedure.apply( mock( Context.class ), input, mock( ResourceTracker.class ) );
 
         //then
-        verify( manager ).pauseCatchupProcess();
+        verify( catchupPollingProcess ).pause();
         assertThat( asList( result ) ).contains( new AnyValue[]{utf8Value( "Catchup process was already paused" )} );
     }
 
@@ -132,13 +132,13 @@ class ReadReplicaToggleProcedureTest
     public void shouldNotPauseCatchupProcessIfProcessIsStoryCopyState() throws Exception
     {
         AnyValue[] input = {utf8Value( namedDatabaseId.name() ), TRUE};
-        when( manager.pauseCatchupProcess() ).thenThrow( IllegalStateException.class );
+        when( catchupPollingProcess.pause() ).thenThrow( IllegalStateException.class );
 
         //when
         var result = procedure.apply( mock( Context.class ), input, mock( ResourceTracker.class ) );
 
         //then
-        verify( manager ).pauseCatchupProcess();
+        verify( catchupPollingProcess ).pause();
         assertThat( asList( result ) ).contains( new AnyValue[]{utf8Value( "Catchup process can't be paused" )} );
     }
 
@@ -146,13 +146,13 @@ class ReadReplicaToggleProcedureTest
     public void shouldResumeCatchupProcessIfProcessIsPaused() throws Exception
     {
         AnyValue[] input = {utf8Value( namedDatabaseId.name() ), FALSE};
-        when( manager.resumeCatchupProcess() ).thenReturn( true );
+        when( catchupPollingProcess.resume() ).thenReturn( true );
 
         //when
         var result = procedure.apply( mock( Context.class ), input, mock( ResourceTracker.class ) );
 
         //then
-        verify( manager ).resumeCatchupProcess();
+        verify( catchupPollingProcess ).resume();
         assertThat( asList( result ) ).contains( new AnyValue[]{utf8Value( "Catchup process is resumed" )} );
     }
 
@@ -160,13 +160,13 @@ class ReadReplicaToggleProcedureTest
     public void shouldNotResumeCatchupProcessIfProcessIsResumed() throws ProcedureException
     {
         AnyValue[] input = {utf8Value( namedDatabaseId.name() ), FALSE};
-        when( manager.resumeCatchupProcess() ).thenReturn( false );
+        when( catchupPollingProcess.resume() ).thenReturn( false );
 
         //when
         var result = procedure.apply( mock( Context.class ), input, mock( ResourceTracker.class ) );
 
         //then
-        verify( manager ).resumeCatchupProcess();
+        verify( catchupPollingProcess ).resume();
         assertThat( asList( result ) ).contains( new AnyValue[]{utf8Value( "Catchup process was already resumed" )} );
     }
 }

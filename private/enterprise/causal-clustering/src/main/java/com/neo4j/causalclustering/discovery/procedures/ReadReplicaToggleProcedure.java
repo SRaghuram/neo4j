@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.procedures;
 
-import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
+import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 
 import java.util.Arrays;
 import java.util.List;
@@ -59,8 +59,8 @@ public class ReadReplicaToggleProcedure extends CallableProcedure.BasicProcedure
         DatabaseContext dbContext = databaseManager
                 .getDatabaseContext( databaseId )
                 .orElseThrow( () -> new ProcedureException( DatabaseNotFound, "Unable to find database with name " + databaseId.name() ) );
-        CatchupProcessManager catchupProcessManager = dbContext.dependencies().resolveDependency( CatchupProcessManager.class );
-        String output = executeOperation( catchupProcessManager, pause );
+        var catchupPollingProcess = dbContext.dependencies().resolveDependency( CatchupPollingProcess.class );
+        String output = executeOperation( catchupPollingProcess, pause );
 
         return RawIterator.<AnyValue[],ProcedureException>of( new AnyValue[]{utf8Value( output )} );
     }
@@ -111,13 +111,13 @@ public class ReadReplicaToggleProcedure extends CallableProcedure.BasicProcedure
         }
     }
 
-    private String executeOperation( CatchupProcessManager catchupProcessManager, boolean pause )
+    private String executeOperation( CatchupPollingProcess catchupPollingProcess, boolean pause )
     {
         if ( pause )
         {
             try
             {
-                if ( catchupProcessManager.pauseCatchupProcess() )
+                if ( catchupPollingProcess.pause() )
                 {
                     return "Catchup process is paused";
                 }
@@ -133,7 +133,7 @@ public class ReadReplicaToggleProcedure extends CallableProcedure.BasicProcedure
         }
         else
         {
-            if ( catchupProcessManager.resumeCatchupProcess() )
+            if ( catchupPollingProcess.resume() )
             {
                 return "Catchup process is resumed";
             }

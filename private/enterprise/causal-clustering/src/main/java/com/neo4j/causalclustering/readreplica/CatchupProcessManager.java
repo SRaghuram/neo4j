@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
 import com.neo4j.causalclustering.error_handling.DatabasePanicReason;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.readreplica.CatchupProcessFactory.CatchupProcessComponents;
+import com.neo4j.causalclustering.readreplica.CatchupProcessFactory.CatchupProcessLifecycles;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.concurrent.TimeUnit;
@@ -139,7 +139,7 @@ public class CatchupProcessManager extends SafeLifecycle
     public CatchupPollingProcess getCatchupProcess()
     {
         return catchupProcessFactory.catchupProcessComponents()
-                                    .map( CatchupProcessComponents::catchupProcess )
+                                    .map( CatchupProcessLifecycles::catchupProcess )
                                     .orElse( null );
     }
 

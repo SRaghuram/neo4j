@@ -15,7 +15,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 /**
- * The components needed to perform store copy and catchup operations for databases in Neo4j.
+ * This repository class stores the components needed to perform store copy and catchup requests against upstream instances of Neo4j.
  *
  * For each database on this machine there is a {@link RemoteStore} and a {@link StoreCopyProcess}.
  *
