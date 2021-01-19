@@ -269,14 +269,15 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
                     read: Read,
                     predicates: Seq[IndexQuery],
                     needsValuesFromIndexSeek: Boolean): (NodeValueIndexCursor, Array[NodeValueIndexCursor]) = {
+    val pool = resources.cursorPools.nodeValueIndexCursorPool
     indexMode match {
       case _: ExactSeek |
            _: SeekByRange =>
-        val nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+        val nodeCursor = pool.allocateAndTrace()
         read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.constrained(indexOrder, needsValuesFromIndexSeek), predicates: _*)
         (nodeCursor, Array(nodeCursor))
       case LockingUniqueIndexSeek =>
-        val nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+        val nodeCursor = pool.allocateAndTrace()
         try {
           val ex = predicates.map(_.asInstanceOf[ExactPredicate])
           if (ex.exists(q => q.value() eq Values.NO_VALUE)) {
@@ -291,7 +292,7 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
             }
           }
         } finally {
-          nodeCursor.close()
+          pool.free(nodeCursor)
         }
     }
   }
