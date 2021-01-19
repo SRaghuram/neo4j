@@ -441,12 +441,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
-        // Get the same rhs but two different lhs
-        // for only InterpretedRuntime or only SlottedRuntime the Expand(all)-plan is chosen
-        // for InterpretedAndSlotted the chosen plan is
-        //    the plan with Cartesian product for interpreted
-        //    and Expand(all) for slotted
-        // for index and query on just :User(name) all runtime combinations get the Expand(all)-plan
         plan should (
           includeSomewhere.aPlan("AntiConditionalApply")
             .withRHS(
@@ -462,34 +456,15 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                 )
             )
             and (
-            includeSomewhere.aPlan("AntiConditionalApply")
-              .withLHS(
-                includeSomewhere.aPlan("Expand(Into)")
-                  .containingArgument("(n)-[:Knows]->(s)")
-                  .onTopOf(aPlan("CartesianProduct")
-                    .withLHS(aPlan("NodeUniqueIndexSeek(Locking)")
-                      .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true, caches = true)
-                      .withRows(0)
-                      .withExactVariables("n")
-                    )
-                    .withRHS(aPlan("NodeUniqueIndexSeek(Locking)")
-                      .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true, caches = true)
-                      .withRows(0)
-                      .withExactVariables("s")
-                    )
-                  )
-              )
+            includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)")
+              .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true, caches = true)
+              .withRows(0)
+              .withExactVariables("n")
               or
-              includeSomewhere.aPlan("AntiConditionalApply")
-                .withLHS(
-                  includeSomewhere.aPlan("Expand(All)")
-                    .onTopOf(
-                      includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)")
-                        .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true, caches = true)
-                        .withRows(0)
-                        .withExactVariables("n")
-                    )
-                )
+              includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)")
+                .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true, caches = true)
+                .withRows(0)
+                .withExactVariables("s")
             )
           )
       }))
