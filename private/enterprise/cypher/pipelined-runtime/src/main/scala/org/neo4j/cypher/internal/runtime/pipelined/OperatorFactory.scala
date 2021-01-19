@@ -223,9 +223,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.NodeIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
-        if (indexSeekMode == LockingUniqueIndexSeek) {
-          throw new CantCompileQueryException(s"$runtimeName does not yet support the plans including `NodeUniqueIndexSeek(Locking)`, use another runtime.")
-        }
 
         new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
@@ -239,6 +236,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.NodeUniqueIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         val indexSeekMode = IndexSeekModeFactory(unique = true, readOnly = readOnly).fromQueryExpression(valueExpr)
+        if (parallelExecution && indexSeekMode == LockingUniqueIndexSeek) {
+          throw new CantCompileQueryException(s"$runtimeName does not yet support the plans including `NodeUniqueIndexSeek(Locking)`, use another runtime.")
+        }
         new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           properties.map(SlottedIndexedProperty(column, _, slots)).toArray,

@@ -50,7 +50,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanWithOtherOperator
 import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
@@ -77,7 +76,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexContainsScanTestBas
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexEndsWithScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexPointDistanceSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexScanTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekRangeAndCompositeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandAllTestBase
@@ -172,12 +170,8 @@ class ParallelRuntimeLabelScanNoFusingStressTest extends LabelScanStressTestBase
 
 // INDEX SEEK
 class ParallelRuntimeNodeIndexSeekTest extends NodeIndexSeekTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
-                                       with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
-                                       with ArrayIndexSupport[EnterpriseRuntimeContext]
                                        with EnterpriseNodeIndexSeekTestBase[EnterpriseRuntimeContext]
 class ParallelRuntimeNodeIndexSeekNoFusingTest extends NodeIndexSeekTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
-                                               with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
-                                               with ArrayIndexSupport[EnterpriseRuntimeContext]
                                                with EnterpriseNodeIndexSeekTestBase[EnterpriseRuntimeContext]
 class ParallelRuntimeNodeIndexPointDistanceSeekTest extends NodeIndexPointDistanceSeekTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeNodeIndexPointDistanceSeekNoFusingTest extends NodeIndexPointDistanceSeekTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite

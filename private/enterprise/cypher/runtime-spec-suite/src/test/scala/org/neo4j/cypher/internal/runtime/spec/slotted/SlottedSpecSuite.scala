@@ -53,7 +53,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LockNodesTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.LockingUniqueNodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryDeallocationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
@@ -68,7 +67,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexContainsScanTestBas
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexEndsWithScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexPointDistanceSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexScanTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekRangeAndCompositeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeLockingUniqueIndexSeekTestBase
@@ -151,10 +149,8 @@ class SlottedNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE.DEFAULT,
 class SlottedNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexEndsWithScanTest extends NodeIndexEndsWithScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
-                               with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
                                with NodeLockingUniqueIndexSeekTestBase[EnterpriseRuntimeContext]
                                with EnterpriseNodeIndexSeekTestBase[EnterpriseRuntimeContext]
-class SlottedLockingUniqueNodeIndexSeekTest extends LockingUniqueNodeIndexSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexStartsWithSeekTest extends NodeIndexStartsWithSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexPointDistanceSeekTest extends NodeIndexPointDistanceSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedInputTest extends InputTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
