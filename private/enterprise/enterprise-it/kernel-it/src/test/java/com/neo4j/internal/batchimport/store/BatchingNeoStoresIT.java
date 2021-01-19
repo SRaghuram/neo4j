@@ -107,9 +107,9 @@ class BatchingNeoStoresIT
             batchingNeoStores.createNew();
         }
 
-        assertThat( pageCacheTracer.pins() ).isEqualTo( 388 );
-        assertThat( pageCacheTracer.unpins() ).isEqualTo( 388 );
-        assertThat( pageCacheTracer.hits() ).isEqualTo( 369 );
+        assertThat( pageCacheTracer.pins() ).isEqualTo( 389 );
+        assertThat( pageCacheTracer.unpins() ).isEqualTo( 389 );
+        assertThat( pageCacheTracer.hits() ).isEqualTo( 370 );
         assertThat( pageCacheTracer.faults() ).isEqualTo( 19 );
     }
 
