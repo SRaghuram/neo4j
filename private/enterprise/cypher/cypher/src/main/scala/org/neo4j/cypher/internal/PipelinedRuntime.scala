@@ -221,13 +221,10 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       return ExecutionGraphVisualizer.getExecutionPlan(executionGraphDefinition)
     }
 
-    // Currently only interpreted pipes can do writes. Ask the policy if it is allowed.
-    val readOnly = query.readOnly
-
     val maybePipeMapper = if (context.interpretedPipesFallback != CypherInterpretedPipesFallbackOption.disabled) Some(pipeMapper) else None
     val operatorFactory = new OperatorFactory(executionGraphDefinition,
       converters,
-      readOnly = readOnly,
+      readOnly = query.readOnly,
       queryIndexRegistrator,
       query.semanticTable,
       interpretedPipesFallbackPolicy,
