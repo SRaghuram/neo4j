@@ -279,6 +279,7 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
       case LockingUniqueIndexSeek =>
         val nodeCursor = pool.allocateAndTrace()
         try {
+          //We know from IndexModeFactory that we will only get here if predicates are exact predicates
           val ex = predicates.map(_.asInstanceOf[ExactPredicate])
           if (ex.exists(q => q.value() eq Values.NO_VALUE)) {
             (NodeValueHit.EMPTY, Array.empty)
