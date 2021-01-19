@@ -632,15 +632,15 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val result = executeSingle(s"CYPHER runtime=slotted MATCH (a:A) WHERE (a)-[{x: 1}]->(:B) RETURN a LIMIT 5")
 
     result.executionPlanDescription() should includeSomewhere
-      // original: 7, fraction: 5/7
+      // original: 7.5, fraction: 5/7.5
       .aPlan("SemiApply").withEstimatedRows(5)
-      // -- per row: original=10, fraction=5/7*1/7, effective=10*5/7*1/7~=1 -- reported: 1*7
+      // -- per row: original=10, fraction=5/7.5*1/7.5, effective=10*5/7.5*1/7.5~=0.8 -- reported: round(0.8*7.5)=7
       .withRHS(aPlan("Filter").withEstimatedRows(7)
-        // -- per row: original=100, fraction=5/7*1/7, effective=100*5/7*1/7~=10 -- reported: 10*7
+        // -- per row: original=100, fraction=5/7.5*1/7.5, effective=100*5/7.5*1/7.5~=8.8 -- reported: round(8.8*7.5)=67
         .withLHS(aPlan("Expand(Into)").withEstimatedRows(67)
-          // -- per row: original=12, fraction=5/7*1/7, effective=12*5/7*1/7~=1.2 -- reported: 1.2*7
+          // -- per row: original=12, fraction=5/7.5*1/7.5, effective=12*5/7.5*1/7.5~=1.1 -- reported: round(1.1*7.5)=8
           .withLHS(aPlan("NodeByLabelScan").withEstimatedRows(8))))
-      // original: 10, fraction: 5/7
+      // original: 10, fraction: 5/7.5
       .withLHS(aPlan("NodeByLabelScan").withEstimatedRows(7))
   }
 
