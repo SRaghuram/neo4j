@@ -767,51 +767,6 @@ public class StoreUpgradeIT
     }
 
     @RunWith( Parameterized.class )
-    public static class StoreUpgradeNotRequiredTest
-    {
-        @Rule
-        public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-        @Rule
-        public TestDirectory testDir = TestDirectory.testDirectory();
-
-        @Parameterized.Parameter( 0 )
-        public Store store;
-
-        @Parameterized.Parameters( name = "{0}" )
-        public static Collection<Store[]> stores()
-        {
-            return Iterables.asCollection( Iterables.concat( STORES40 ) );
-        }
-
-        @Test
-        public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
-        {
-            var layout = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            store.prepareDirectory( layout.databaseDirectory() );
-
-            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
-            builder.setConfig( allow_upgrade, false );
-            builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directory( "logs" ).toAbsolutePath());
-            DatabaseManagementService managementService = builder.build();
-            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
-            DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
-            try
-            {
-                checkInstance( store, (GraphDatabaseAPI) db );
-            }
-            finally
-            {
-                managementService.shutdown();
-            }
-
-            assertConsistentStore( databaseLayout );
-            assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".a" ) ) );
-            assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".b" ) ) );
-        }
-    }
-
-    @RunWith( Parameterized.class )
     public static class StoreUpgradeFailingTest
     {
         @Rule
