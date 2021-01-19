@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
 import org.neo4j.cypher.internal.logical.plans.UnwindCollection
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.util.FreshIdNameGenerator
 import org.neo4j.cypher.internal.util.InputPosition
@@ -73,6 +74,7 @@ import org.neo4j.cypher.internal.util.bottomUp
  *}}}
  */
 case class foreachApplyRewriter(cardinalities: Cardinalities,
+                                effectiveCardinalities: EffectiveCardinalities,
                                 providedOrders: ProvidedOrders,
                                 idGen: IdGen,
                                 stopper: AnyRef => Boolean) extends Rewriter {

@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.logical.plans.UserFunctionSignature
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -33,6 +34,10 @@ import scala.collection.mutable.ArrayBuffer
 class BenchmarkSetupPlanBuilder(wholePlan: Boolean = true, resolver: Resolver = new LogicalPlanResolver) extends AbstractLogicalPlanBuilder[TestSetup, BenchmarkSetupPlanBuilder](resolver, wholePlan) {
 
   val cardinalities: Cardinalities = new Cardinalities with Default[LogicalPlan, Cardinality] {
+    override protected def defaultValue: Cardinality = Cardinality.SINGLE
+  }
+
+  val effectiveCardinalities: EffectiveCardinalities = new EffectiveCardinalities with Default[LogicalPlan, Cardinality] {
     override protected def defaultValue: Cardinality = Cardinality.SINGLE
   }
 
@@ -57,7 +62,7 @@ class BenchmarkSetupPlanBuilder(wholePlan: Boolean = true, resolver: Resolver = 
   def getSemanticTable: SemanticTable = semanticTable
 
   def withCardinality(x: Double): BenchmarkSetupPlanBuilder = {
-    cardinalities.set(idOfLastPlan, Cardinality(x))
+    effectiveCardinalities.set(idOfLastPlan, Cardinality(x))
     this
   }
 
@@ -84,6 +89,7 @@ class BenchmarkSetupPlanBuilder(wholePlan: Boolean = true, resolver: Resolver = 
       plan.asInstanceOf[ProduceResult].columns.toList,
       new LeveragedOrders,
       cardinalities,
+      effectiveCardinalities,
       providedOrders,
       idGen
     )

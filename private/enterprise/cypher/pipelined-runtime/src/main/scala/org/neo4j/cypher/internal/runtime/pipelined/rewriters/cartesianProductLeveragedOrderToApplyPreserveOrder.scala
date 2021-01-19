@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.PreserveOrder
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.util.Rewriter
@@ -21,6 +22,7 @@ import org.neo4j.cypher.internal.util.bottomUp
  * Rewrites CartesianProduct with leveraged order into a combination of Apply and PreserveOrder.
  */
 case class cartesianProductLeveragedOrderToApplyPreserveOrder(cardinalities: Cardinalities,
+                                                              effectiveCardinalities: EffectiveCardinalities,
                                                               providedOrders: ProvidedOrders,
                                                               leveragedOrders: LeveragedOrders,
                                                               parallelExecution: Boolean,
@@ -37,6 +39,7 @@ case class cartesianProductLeveragedOrderToApplyPreserveOrder(cardinalities: Car
     if (parallelExecution) {
       val preserveOrder = PreserveOrder(rhs)(idGen)
       cardinalities.copy(rhs.id, preserveOrder.id)
+      effectiveCardinalities.copy(rhs.id, preserveOrder.id)
       providedOrders.copy(rhs.id, preserveOrder.id)
       preserveOrder
     } else {

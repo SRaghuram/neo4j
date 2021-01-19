@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
 import org.neo4j.cypher.internal.physicalplanning.ast.IsEmpty
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.Rewriter
@@ -56,6 +57,7 @@ import org.neo4j.cypher.internal.util.bottomUp
  *    LHS
  */
 case class letAntiSemiApplyVariantsToAggregationLimitApply(cardinalities: Cardinalities,
+                                                           effectiveCardinalities: EffectiveCardinalities,
                                                            providedOrders: ProvidedOrders,
                                                            idGen: IdGen,
                                                            stopper: AnyRef => Boolean) extends Rewriter {
@@ -67,6 +69,7 @@ case class letAntiSemiApplyVariantsToAggregationLimitApply(cardinalities: Cardin
 
       val proj = Projection(lhs, Map(idName -> True()(InputPosition.NONE)))(idGen)
       cardinalities.copy(lhs.id, proj.id)
+      effectiveCardinalities.copy(lhs.id, proj.id)
       providedOrders.copy(lhs.id, proj.id)
 
       SelectOrSemiApply(proj, aggregation, expr)(SameId(o.id))
@@ -79,6 +82,8 @@ case class letAntiSemiApplyVariantsToAggregationLimitApply(cardinalities: Cardin
     val aggregation = Aggregation(limit, Map.empty, Map(idName -> IsEmpty))(idGen)
     cardinalities.copy(lhs.id, limit.id)
     cardinalities.copy(lhs.id, aggregation.id)
+    effectiveCardinalities.copy(lhs.id, limit.id)
+    effectiveCardinalities.copy(lhs.id, aggregation.id)
     providedOrders.copy(rhs.id, limit.id)
     providedOrders.copy(rhs.id, aggregation.id)
     aggregation

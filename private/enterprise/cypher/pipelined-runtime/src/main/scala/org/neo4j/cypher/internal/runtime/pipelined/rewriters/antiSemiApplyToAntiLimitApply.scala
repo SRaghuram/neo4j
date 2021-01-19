@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.Rewriter
@@ -24,6 +25,7 @@ import org.neo4j.cypher.internal.util.bottomUp
  * Rewrites AntiSemiApply into a combination of Anti, Limit and Apply, which are supported by the runtime.
  */
 case class antiSemiApplyToAntiLimitApply(cardinalities: Cardinalities,
+                                         effectiveCardinalities: EffectiveCardinalities,
                                          providedOrders: ProvidedOrders,
                                          idGen: IdGen,
                                          stopper: AnyRef => Boolean) extends Rewriter {
@@ -41,8 +43,10 @@ case class antiSemiApplyToAntiLimitApply(cardinalities: Cardinalities,
     val limit = planLimitOnTopOf(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE))(idGen)
     val anti = Anti(limit)(idGen)
     val lhsCardinality = cardinalities.get(lhs.id)
+    val lhsEffectiveCardinality = effectiveCardinalities.get(lhs.id)
     def updateAttributes(newPlan: LogicalPlan): Unit = {
       cardinalities.set(newPlan.id, lhsCardinality)
+      effectiveCardinalities.set(newPlan.id, lhsEffectiveCardinality)
       providedOrders.copy(rhs.id, newPlan.id)
     }
     updateAttributes(limit)

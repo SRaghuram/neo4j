@@ -159,7 +159,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           queryIndexRegistrator: QueryIndexRegistrator,
                           warnings: Set[InternalNotification]): ExecutionPlan = {
     val batchSize = Batched(context.config.pipelinedBatchSizeSmall, context.config.pipelinedBatchSizeBig)
-      .selectBatchSize(query.logicalPlan, query.cardinalities)
+      .selectBatchSize(query.logicalPlan, query.effectiveCardinalities)
 
     val logicalPlan = pipelinedPrePhysicalPlanRewriter(query, parallelExecution)
 

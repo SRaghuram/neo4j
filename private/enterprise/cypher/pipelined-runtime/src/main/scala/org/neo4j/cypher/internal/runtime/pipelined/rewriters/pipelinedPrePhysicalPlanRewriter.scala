@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.util.attribution.IdGen
@@ -24,28 +25,29 @@ case object pipelinedPrePhysicalPlanRewriter {
   def description: String = "optimize logical plans for pipelined execution using heuristic rewriting"
 
   def rewrite(cardinalities: Cardinalities,
+              effectiveCardinalities: EffectiveCardinalities,
               providedOrders: ProvidedOrders,
               leveragedOrders: LeveragedOrders,
               parallelExecution: Boolean,
               idGen: IdGen): AnyRef => AnyRef = {
     inSequence(
       fixedPoint(
-        combineCartesianProductOfMultipleIndexSeeks(cardinalities, leveragedOrders, stopper = stopper)
+        combineCartesianProductOfMultipleIndexSeeks(effectiveCardinalities, leveragedOrders, stopper = stopper)
       ),
       fixedPoint(
         assertSameNodeNodeRewriter(stopper = stopper)
       ),
-      cartesianProductLeveragedOrderToApplyPreserveOrder(cardinalities, providedOrders, leveragedOrders, parallelExecution, idGen, stopper),
+      cartesianProductLeveragedOrderToApplyPreserveOrder(cardinalities, effectiveCardinalities, providedOrders, leveragedOrders, parallelExecution, idGen, stopper),
 
       // Temporarily disabled to win some time to handle a regression https://trello.com/c/R6Yc26LB/2349-regression-in-ldbcldbcsnbinteractive-write-summary-for-version-430-drop020
-      //foreachApplyRewriter(cardinalities, providedOrders, idGen, stopper),//foreach rewrites to selectOrSemiApply so must come before semiApplyToLimitApply
+      //foreachApplyRewriter(cardinalities, effectiveCardinalities, providedOrders, idGen, stopper),//foreach rewrites to selectOrSemiApply so must come before semiApplyToLimitApply
 
-      semiApplyToLimitApply(cardinalities, providedOrders, idGen, stopper),
-      antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen, stopper),
-      rollupApplyToAggregationApply(cardinalities, providedOrders, idGen, stopper),
-      letAntiSemiApplyVariantsToAggregationLimitApply(cardinalities, providedOrders, idGen, stopper),
-      letSemiApplyVariantsToAggregationLimitApply(cardinalities, providedOrders, idGen, stopper),
-      triadicSelectionToBuildApplyFilter(cardinalities, providedOrders, idGen, stopper),
+      semiApplyToLimitApply(cardinalities, effectiveCardinalities, providedOrders, idGen, stopper),
+      antiSemiApplyToAntiLimitApply(cardinalities, effectiveCardinalities, providedOrders, idGen, stopper),
+      rollupApplyToAggregationApply(cardinalities, effectiveCardinalities, providedOrders, idGen, stopper),
+      letAntiSemiApplyVariantsToAggregationLimitApply(cardinalities, effectiveCardinalities, providedOrders, idGen, stopper),
+      letSemiApplyVariantsToAggregationLimitApply(cardinalities, effectiveCardinalities, providedOrders, idGen, stopper),
+      triadicSelectionToBuildApplyFilter(cardinalities, effectiveCardinalities, providedOrders, idGen, stopper),
     )
   }
 
@@ -56,7 +58,7 @@ case object pipelinedPrePhysicalPlanRewriter {
 
   def apply(query: LogicalQuery, parallelExecution: Boolean): LogicalPlan = {
     val inputPlan = query.logicalPlan
-    val rewrittenPlan = inputPlan.endoRewrite(rewrite(query.cardinalities, query.providedOrders, query.leveragedOrders, parallelExecution, query.idGen))
+    val rewrittenPlan = inputPlan.endoRewrite(rewrite(query.cardinalities, query.effectiveCardinalities, query.providedOrders, query.leveragedOrders, parallelExecution, query.idGen))
     rewrittenPlan
   }
 }

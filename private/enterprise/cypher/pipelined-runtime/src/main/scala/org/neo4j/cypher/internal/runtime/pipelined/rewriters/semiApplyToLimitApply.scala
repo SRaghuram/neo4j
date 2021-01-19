@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
 import org.neo4j.cypher.internal.logical.plans.SemiApply
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.Rewriter
@@ -23,6 +24,7 @@ import org.neo4j.cypher.internal.util.bottomUp
  * Rewrites SemiApply into a combination of Limit and Apply, which are supported by the runtime.
  */
 case class semiApplyToLimitApply(cardinalities: Cardinalities,
+                                 effectiveCardinalities: EffectiveCardinalities,
                                  providedOrders: ProvidedOrders,
                                  idGen: IdGen,
                                  stopper: AnyRef => Boolean) extends Rewriter {
@@ -38,6 +40,7 @@ case class semiApplyToLimitApply(cardinalities: Cardinalities,
   private def newRhs(lhs: LogicalPlan, rhs: LogicalPlan) = {
     val limit = planLimitOnTopOf(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE))(idGen)
     cardinalities.set(limit.id, cardinalities.get(lhs.id))
+    effectiveCardinalities.set(limit.id, effectiveCardinalities.get(lhs.id))
     providedOrders.copy(rhs.id, limit.id)
     limit
   }

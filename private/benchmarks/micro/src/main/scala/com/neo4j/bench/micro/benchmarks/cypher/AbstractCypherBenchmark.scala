@@ -32,6 +32,7 @@ import org.neo4j.cypher.internal.planner.spi.InstrumentedGraphStatistics
 import org.neo4j.cypher.internal.planner.spi.MutableGraphStatisticsSnapshot
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.runtime.NoInput
@@ -47,6 +48,7 @@ import org.neo4j.cypher.internal.util.Cardinality
 import org.neo4j.cypher.internal.util.LabelId
 import org.neo4j.cypher.internal.util.RelTypeId
 import org.neo4j.cypher.internal.util.Selectivity
+import org.neo4j.cypher.internal.util.attribution.Attribute
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.util.devNullLogger
@@ -91,6 +93,7 @@ case class TestSetup(
   resultColumns: List[String],
   leveragedOrders: LeveragedOrders = new LeveragedOrders,
   cardinalities: Cardinalities = new Cardinalities,
+  effectiveCardinalities: EffectiveCardinalities = new EffectiveCardinalities,
   providedOrders: ProvidedOrders = new ProvidedOrders,
   idGen: IdGen = Plans.IdGen
 )
@@ -208,7 +211,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   def beginInternalTransaction(loginContext: LoginContext): InternalTransaction =
     new GraphDatabaseCypherService(db).beginTransaction(Type.EXPLICIT, loginContext)
 
-  private def updateCardinalities(logicalPlan: LogicalPlan, cardinalities: Cardinalities) {
+  private def updateCardinalities(logicalPlan: LogicalPlan, cardinalities: Attribute[LogicalPlan, Cardinality]) {
     if (!cardinalities.isDefinedAt(logicalPlan.id)) {
       cardinalities.set(logicalPlan.id, 0.0)
     }
@@ -238,6 +241,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, lifeSupport, workerManager)
       val testSetup = setup(planContext)
       updateCardinalities(testSetup.logicalPlan, testSetup.cardinalities)
+      updateCardinalities(testSetup.logicalPlan, testSetup.effectiveCardinalities)
       val compilationStateBefore = getLogicalQuery(testSetup)
       val runtime = EnterpriseRuntimeFactory.getRuntime(cypherRuntimeOption(cypherRuntime), disallowFallback = true)
       val executionPlan = runtime.compileToExecutable(compilationStateBefore, runtimeContext)
@@ -298,6 +302,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       testSetup.resultColumns.toArray,
       testSetup.semanticTable,
       testSetup.cardinalities,
+      testSetup.effectiveCardinalities,
       testSetup.providedOrders,
       testSetup.leveragedOrders,
       hasLoadCSV = false,
