@@ -98,6 +98,7 @@ class ClusterRoutingIT extends ClusterTestSupport
     void beforeEach() throws TimeoutException
     {
         super.beforeEach( routingContext, cluster, new ArrayList<>( coreDrivers.values() ), readReplicaDriver );
+        cluster.awaitLeader( "foo" );
     }
 
     @AfterAll

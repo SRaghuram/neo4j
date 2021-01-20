@@ -113,14 +113,16 @@ class ClusterCatalogManager(
   }
 
   private def noLeaderAddressFailure(dbName: String): Nothing =
+    // Driver expects NotALeader here because that triggers a routing table refresh
     throw new FabricException(
-      Status.Cluster.Routing,
+      Status.Cluster.NotALeader,
       "Unable to get bolt address of LEADER for database '%s'",
       dbName)
 
   private def noDatabaseIdFailure(dbName: String): Nothing =
+    // Using NotALeader here too to trigger a routing table refresh
     throw new FabricException(
-      Status.Cluster.Routing,
+      Status.Cluster.NotALeader,
       "Unable to get database id for database '%s'",
       dbName)
 }

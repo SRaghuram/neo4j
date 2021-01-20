@@ -29,10 +29,12 @@ import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.when;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
@@ -112,6 +114,7 @@ class ClusterRoutingDisabledIT extends ClusterTestSupport
         assertThatExceptionOfType( ClientException.class )
                 .isThrownBy( () -> run( fooFollowerDriver, "neo4j", AccessMode.WRITE,
                                         session -> session.writeTransaction( tx -> tx.run( createQuery ).list() ) ) )
+                .satisfies( err -> assertThat( err.code() ).isEqualTo( Status.Cluster.NotALeader.code().serialize() ) )
                 .withMessage( "Unable to route write operation to leader for database 'foo'. Server-side routing is disabled.\n" +
                               "Either connect to the database directly using the driver (or interactively with the :use command),\n" +
                               "or enable server-side routing by setting `dbms.routing.enabled=true`" );
@@ -129,6 +132,7 @@ class ClusterRoutingDisabledIT extends ClusterTestSupport
         assertThatExceptionOfType( ClientException.class )
                 .isThrownBy( () -> run( systemFollowerDriver, "neo4j", AccessMode.WRITE,
                                         session -> session.writeTransaction( tx -> tx.run( createQuery ).list() ) ) )
+                .satisfies( err -> assertThat( err.code() ).isEqualTo( Status.Cluster.NotALeader.code().serialize() ) )
                 .withMessage( "Unable to route write operation to leader for database 'system'. Server-side routing is disabled.\n" +
                               "Either connect to the database directly using the driver (or interactively with the :use command),\n" +
                               "or enable server-side routing by setting `dbms.routing.enabled=true`" );
