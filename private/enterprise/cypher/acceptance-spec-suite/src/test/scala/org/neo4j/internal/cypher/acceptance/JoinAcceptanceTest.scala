@@ -404,25 +404,25 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     val expressionInOrderByQuery =
       """
         |MATCH (a:A)
-        |OPTIONAL MATCH (a)-->(b:B)
+        |OPTIONAL MATCH (a:A)-->(b)
         |USING JOIN ON a
-        |WHERE b.prop IS NOT NULL
+        |WHERE a.prop IS NOT NULL
         |RETURN a.prop ORDER BY a.prop + 0
         |""".stripMargin
     val aliasingQuery =
       """
         |MATCH (a:A)
-        |OPTIONAL MATCH (a)-->(b:B)
+        |OPTIONAL MATCH (a:A)-->(b)
         |USING JOIN ON a
-        |WHERE b.prop IS NOT NULL
+        |WHERE a.prop IS NOT NULL
         |RETURN a.prop AS foo ORDER BY a.prop
         |""".stripMargin
     val expressionPlusAliasInReturnQuery =
       """
         |MATCH (a:A)
-        |OPTIONAL MATCH (a)-->(b:B)
+        |OPTIONAL MATCH (a:A)-->(b)
         |USING JOIN ON a
-        |WHERE b.prop IS NOT NULL
+        |WHERE a.prop IS NOT NULL
         |RETURN a.prop + 0 AS foo ORDER BY a.prop
         |""".stripMargin
 
