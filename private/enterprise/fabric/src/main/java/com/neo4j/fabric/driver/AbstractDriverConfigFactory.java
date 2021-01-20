@@ -17,6 +17,7 @@ import javax.net.ssl.SSLContext;
 import org.neo4j.configuration.ssl.SslPolicyScope;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Logging;
+import org.neo4j.driver.internal.RevocationStrategy;
 import org.neo4j.driver.internal.security.SecurityPlan;
 import org.neo4j.logging.Level;
 import org.neo4j.ssl.SslPolicy;
@@ -203,6 +204,14 @@ public abstract class AbstractDriverConfigFactory implements DriverConfigFactory
         public boolean requiresHostnameVerification()
         {
             return requiresHostnameVerification;
+        }
+
+        @Override
+        public RevocationStrategy revocationStrategy()
+        {
+            // OCSP revocation checks are not currently suuported for
+            // in-cluster and cluster-2-cluster communication
+            return RevocationStrategy.NO_CHECKS;
         }
     }
 }
