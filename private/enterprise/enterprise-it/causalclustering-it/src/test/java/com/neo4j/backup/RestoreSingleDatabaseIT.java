@@ -12,6 +12,8 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.restore.RestoreDatabaseCommand;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -23,8 +25,10 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.driver.Driver;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -37,16 +41,19 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
-import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.dropDatabase;
 import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static com.neo4j.configuration.OnlineBackupSettings.online_backup_listen_address;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static com.neo4j.test.driver.DriverTestHelper.dropDatabaseWait;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @TestDirectoryExtension
 @ClusterExtension
+@DriverExtension
 @ResourceLock( Resources.SYSTEM_OUT )
 @ExtendWith( SuppressOutputExtension.class )
 public class RestoreSingleDatabaseIT
@@ -60,8 +67,12 @@ public class RestoreSingleDatabaseIT
     @Inject
     private static TestDirectory testDirectory;
 
+    @Inject
+    private static DriverFactory driverFactory;
+
     private static Path backupsDirectory;
     private static Cluster cluster;
+    private static Driver driver;
 
     @BeforeAll
     static void before() throws IOException, ExecutionException, InterruptedException
@@ -69,6 +80,7 @@ public class RestoreSingleDatabaseIT
         backupsDirectory = testDirectory.cleanDirectory( "backups" );
         cluster = clusterFactory.createCluster( clusterConfig() );
         cluster.start();
+        driver = driverFactory.graphDatabaseDriver( cluster );
     }
 
     @ParameterizedTest( name = "databaseName = {0}" )
@@ -102,7 +114,7 @@ public class RestoreSingleDatabaseIT
         assertEquals( 0, exitCode );
 
         // and the database has been dropped
-        dropDatabase( databaseName, cluster );
+        dropDatabaseWait( driver, databaseName );
         assertDatabaseEventuallyDoesNotExist( databaseName, cluster );
 
         // when: restoring the database backup to every instance (neo4j-admin restore)
@@ -131,6 +143,6 @@ public class RestoreSingleDatabaseIT
         final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
         final var databaseLayout = Neo4jLayout.of( restoreCommandConfig ).databaseLayout( databaseName );
         new RestoreDatabaseCommand( fs, new PrintStream( System.out ), backupLocation.resolve( databaseName ), databaseLayout, raftGroupDirectory,
-                true, false ).execute();
+                                    true, false ).execute();
     }
 }
