@@ -401,7 +401,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
             setExpressionVariable(accumulatorVariable, resultIRInfo.code),
           )),
           declareAndAssign(typeRefOf[AnyValue], returnVar, loadExpressionVariable(accumulatorVariable)),
-          load(returnVar)
+          load[AnyValue](returnVar)
         )
 
       exprToIRInner(listAst)

@@ -882,7 +882,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           },
           // return expressionVariables[accOffset];
           declareAndAssign(typeRefOf[AnyValue], returnVar, loadExpressionVariable(accVar)),
-          load(returnVar)
+          load[AnyValue](returnVar)
         )
         IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields ++ init.fields, collection.variables ++
           inner.variables ++ init.variables, collection.nullChecks)
@@ -1299,13 +1299,13 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           //}
           //return returnValue == null ? default : returnValue
           val default = maybeDefault.get
-          val retunrVariable = variable[AnyValue](namer.nextVariableName(), constant(null))
-          val ops = caseExpression(retunrVariable, checks.map(nullCheckIfRequired(_)), loads.map(nullCheckIfRequired(_)), nullCheckIfRequired(default),
+          val returnVariable = variable[AnyValue](namer.nextVariableName(), constant(null))
+          val ops = caseExpression(returnVariable, checks.map(nullCheckIfRequired(_)), loads.map(nullCheckIfRequired(_)), nullCheckIfRequired(default),
             toCheck => invoke(nullCheckIfRequired(inner), method[AnyValue, Boolean, AnyRef]("equals"), toCheck))
           IntermediateExpression(ops,
             inner.fields ++ checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
-            inner.variables ++ checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default.variables :+ retunrVariable,
-            Set(block(equal(load(retunrVariable), noValue))))
+            inner.variables ++ checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default.variables :+ returnVariable,
+            Set(block(equal(load(returnVariable), noValue))))
         }
       }
 
@@ -1988,8 +1988,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
               assign(tempVariable, expression.ir)
             }
         }
-        val repr = block(loop(args.toList),
-          load(local))
+        val repr = block(loop(args.toList), load(local))
 
         Some(IntermediateExpression(repr, args.foldLeft(Seq.empty[Field])((a, b) => a ++ b.fields),
           args.foldLeft(Seq.empty[LocalVariable])((a, b) => a ++ b.variables) :+ local,

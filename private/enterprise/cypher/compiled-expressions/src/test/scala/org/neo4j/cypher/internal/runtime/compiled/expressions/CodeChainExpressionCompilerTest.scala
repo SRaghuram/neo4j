@@ -1102,7 +1102,7 @@ retVal1
             )
           ),
           declareAndAssign(typeRefOf[AnyValue], "result", loadExpressionVariable(accumulatorVariable)),
-          load("result")
+          load[AnyValue]("result")
         ))
         ),
         loadReturnValue
