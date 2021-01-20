@@ -24,7 +24,6 @@ import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryDetachedCheckpoint;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryParserSets;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.RangeLogVersionVisitor;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesContext;
@@ -73,7 +72,7 @@ public class CheckpointLogDump
         long lowestVersion = versionVisitor.getLowestVersion();
         long currentVersion = highestVersion;
 
-        var checkpointReader = new VersionAwareLogEntryReader( NO_COMMANDS, LogEntryParserSets::checkpointParserSet, true );
+        var checkpointReader = new VersionAwareLogEntryReader( NO_COMMANDS, true );
         while ( currentVersion >= lowestVersion )
         {
             if ( Files.isRegularFile( checkpointLogs ) && !getExtension( checkpointLogs.getFileName().toString() ).equals( "" + currentVersion ) )
