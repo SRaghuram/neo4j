@@ -28,10 +28,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import org.neo4j.configuration.connectors.BoltConnector;
-
 import static java.lang.ProcessBuilder.Redirect;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.connectors.BoltConnector.DEFAULT_PORT;
 
 public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
 {
@@ -235,11 +233,10 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
             Redirect outputRedirect = Redirect.to( forkDirectory.pathFor( "neo4j-out.log" ).toFile() );
             Redirect errorRedirect = Redirect.to( forkDirectory.pathFor( "neo4j-error.log" ).toFile() );
             Neo4jConfigBuilder.fromFile( neo4jConfigFile )
-                              .withSetting( BoltConnector.enabled, TRUE )
                               .addJvmArgs( additionalJvmArgs )
                               .writeToFile( neo4jConfigFile );
             Path copyLogsToOnClose = Paths.get( forkDirectory.toAbsolutePath() );
-            return ServerDatabase.startServer( jvm, neo4jDir, store, neo4jConfigFile, outputRedirect, errorRedirect, copyLogsToOnClose );
+            return ServerDatabase.startServer( jvm, neo4jDir, store, neo4jConfigFile, outputRedirect, errorRedirect, copyLogsToOnClose, DEFAULT_PORT );
         }
 
         @Override

@@ -21,6 +21,8 @@ import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
@@ -34,6 +36,7 @@ import org.neo4j.driver.Transaction;
 
 import static java.lang.ProcessBuilder.Redirect;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class ServerDatabase implements Database
 {
@@ -43,12 +46,15 @@ public class ServerDatabase implements Database
                                               Path neo4jConfigFile,
                                               Redirect outputRedirect,
                                               Redirect errorRedirect,
-                                              Path copyLogsToOnClose )
+                                              Path copyLogsToOnClose,
+                                              int port )
     {
         DatabaseName databaseName = store.databaseName();
 
         Neo4jConfigBuilder.fromFile( neo4jConfigFile )
-                          .setBoltUri( generateBoltUriString() )
+                          .withSetting( BoltConnector.enabled, TRUE )
+                          .withSetting( BoltConnector.listen_address, ":" + port )
+                          .withSetting( HttpConnector.enabled, FALSE )
                           .withSetting( GraphDatabaseSettings.auth_enabled, FALSE )
                           .withSetting( GraphDatabaseInternalSettings.databases_root_path,
                                         store.topLevelDirectory().resolve( "data" ).resolve( "databases" ).toString() )
@@ -61,12 +67,6 @@ public class ServerDatabase implements Database
         neo4jServer.clearLogs();
         Neo4jServerConnection connection = neo4jServer.start( jvm, neo4jConfigFile, outputRedirect, errorRedirect );
         return new ServerDatabase( neo4jServer, connection.boltUri(), databaseName, connection.pid(), copyLogsToOnClose );
-    }
-
-    private static String generateBoltUriString()
-    {
-        // NOTE: need to find smarter solution
-        return "127.0.0.1:7687";
     }
 
     public static ServerDatabase connectClient( URI boltUri, DatabaseName databaseName, Pid pid )

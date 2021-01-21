@@ -19,6 +19,7 @@ import java.util.List;
 
 import org.neo4j.configuration.ExternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.server.configuration.ServerSettings;
@@ -30,8 +31,6 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class Neo4jConfigBuilder
 {
-
-    private static final String BOLT_ADDRESS_SETTING = "dbms.connector.bolt.listen_address";
 
     public static Neo4jConfigBuilder withDefaults()
     {
@@ -151,8 +150,7 @@ public class Neo4jConfigBuilder
 
     public Neo4jConfigBuilder setBoltUri( String boltUri )
     {
-        neo4jConfig = neo4jConfig.withSetting( BOLT_ADDRESS_SETTING, boltUri );
-        return this;
+        return withSetting( BoltConnector.listen_address, boltUri );
     }
 
     public Neo4jConfigBuilder addJvmArgs( List<String> additionalJvmArgs )

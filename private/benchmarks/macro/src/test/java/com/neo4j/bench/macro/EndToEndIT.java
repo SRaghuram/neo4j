@@ -28,6 +28,7 @@ import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.test.BaseEndToEndIT;
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +39,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -440,9 +442,18 @@ class EndToEndIT extends BaseEndToEndIT
         return Paths.get( "target/macro.jar" );
     }
 
-    private static String getNeo4jDir()
+    private String neo4jDirPathString;
+
+    private String getNeo4jDir() throws IOException
     {
-        return System.getenv( "NEO4J_DIR" );
+        if ( neo4jDirPathString == null )
+        {
+            Path neo4jDir = Paths.get( System.getenv( "NEO4J_DIR" ) );
+            Path tempNeo4jDir = temporaryFolder.resolve( format( "neo4jDir-%s", UUID.randomUUID().toString() ) );
+            FileUtils.copyDirectory( neo4jDir.toFile(), tempNeo4jDir.toFile() );
+            neo4jDirPathString = tempNeo4jDir.toAbsolutePath().toString();
+        }
+        return neo4jDirPathString;
     }
 
     private List<String> processArgs( Resources resources,
