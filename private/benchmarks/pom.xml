@@ -19,7 +19,7 @@
     <properties>
         <moduleName>com.neo4j.bench</moduleName>
         <license-text.header>build/license-header.txt</license-text.header>
-        <neo4j-java-driver.version>4.0.0</neo4j-java-driver.version>
+        <neo4j-java-driver.version>4.2.0</neo4j-java-driver.version>
         <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <airline.version>2.7.1</airline.version>
