@@ -11,20 +11,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.scheduler.ActiveGroup;
-import org.neo4j.scheduler.Group;
-import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -36,6 +37,7 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseInternalSettings.index_population_parallelism;
 import static org.neo4j.configuration.GraphDatabaseInternalSettings.index_population_workers;
+import static org.neo4j.test.DoubleLatch.awaitLatch;
 import static org.neo4j.test.TestLabels.LABEL_ONE;
 import static org.neo4j.test.TestLabels.LABEL_THREE;
 import static org.neo4j.test.TestLabels.LABEL_TWO;
@@ -48,20 +50,30 @@ class EnterpriseIndexPopulationIT
     private TestDirectory directory;
     @Inject
     private RandomRule random;
-    private int nbrOfPopulationMainThreads;
-    private int nbrOfPopulationWorkerThreads;
 
     @Test
-    void shouldPopulateMultipleIndexesOnMultipleDbsConcurrentlyWithFewIndexPopulationThreads() throws ExecutionException, InterruptedException
+    void shouldPopulateMultipleIndexesOnMultipleDbsConcurrentlyWithFewIndexPopulationThreads() throws ExecutionException
     {
-        nbrOfPopulationMainThreads = random.nextInt( 1, 2 );
-        nbrOfPopulationWorkerThreads = random.nextInt( 1, 2 );
+        int nbrOfPopulationMainThreads = random.nextInt( 2, 3 );
+        int nbrOfPopulationWorkerThreads = random.nextInt( 1, 2 );
         DatabaseManagementService dbms = newDbmsBuilder()
                 .setConfig( index_population_parallelism, nbrOfPopulationMainThreads )
                 .setConfig( index_population_workers, nbrOfPopulationWorkerThreads )
                 .build();
         int nbrOfDbs = 4;
         ExecutorService executorService = newFixedThreadPool( nbrOfDbs );
+        CountDownLatch latch = new CountDownLatch( nbrOfPopulationMainThreads );
+        Set<Thread> seenThreads = ConcurrentHashMap.newKeySet();
+        IndexingService.Monitor populationMonitor = new IndexingService.MonitorAdapter()
+        {
+            @Override
+            public void indexPopulationScanComplete()
+            {
+                seenThreads.add( Thread.currentThread() );
+                latch.countDown();
+                awaitLatch( latch );
+            }
+        };
         try
         {
             List<GraphDatabaseService> dbs = new ArrayList<>();
@@ -69,12 +81,13 @@ class EnterpriseIndexPopulationIT
             {
                 String dbName = "db" + i;
                 dbms.createDatabase( dbName );
-                GraphDatabaseService db = dbms.database( dbName );
+                GraphDatabaseAPI db = (GraphDatabaseAPI) dbms.database( dbName );
+                db.getDependencyResolver().resolveDependency( Monitors.class ).addMonitorListener( populationMonitor );
                 dbs.add( db );
             }
             createDataOnDbs( executorService, dbs );
             createIndexesOnDbs( executorService, dbs );
-            assertThreadCount( dbs );
+            assertThat( seenThreads.size() ).isEqualTo( nbrOfPopulationMainThreads );
         }
         finally
         {
@@ -83,37 +96,8 @@ class EnterpriseIndexPopulationIT
         }
     }
 
-    private void assertThreadCount( List<GraphDatabaseService> dbs )
-    {
-        JobScheduler globalJobScheduler = null;
-        for ( GraphDatabaseService db : dbs )
-        {
-            JobScheduler jobScheduler = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( JobScheduler.class );
-            if ( globalJobScheduler == null )
-            {
-                globalJobScheduler = jobScheduler;
-                List<ActiveGroup> activeGroups = jobScheduler.activeGroups().collect( Collectors.toList() );
-                for ( ActiveGroup activeGroup : activeGroups )
-                {
-                    if ( Group.INDEX_POPULATION.equals( activeGroup.group ) )
-                    {
-                        assertThat( activeGroup.threads ).isLessThanOrEqualTo( nbrOfPopulationMainThreads );
-                    }
-                    if ( Group.INDEX_POPULATION_WORK.equals( activeGroup.group ) )
-                    {
-                        assertThat( activeGroup.threads ).isLessThanOrEqualTo( nbrOfPopulationWorkerThreads );
-                    }
-                }
-            }
-            else
-            {
-                assertThat( jobScheduler ).isSameAs( globalJobScheduler );
-            }
-        }
-    }
-
     private void createIndexesOnDbs( ExecutorService executorService, List<GraphDatabaseService> dbs )
-            throws InterruptedException, ExecutionException
+            throws ExecutionException
     {
         List<Future<?>> indexCreate = new ArrayList<>();
         for ( GraphDatabaseService db : dbs )
@@ -137,7 +121,7 @@ class EnterpriseIndexPopulationIT
     }
 
     private void createDataOnDbs( ExecutorService executorService, List<GraphDatabaseService> dbs )
-            throws InterruptedException, ExecutionException
+            throws ExecutionException
     {
         List<Future<?>> dataCreate = new ArrayList<>();
         for ( GraphDatabaseService db : dbs )
