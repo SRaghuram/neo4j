@@ -149,7 +149,7 @@ public abstract class ClusterTestSupport
     {
         awaitDbExists( cluster, databaseName );
         boolean availableEverywhere = cluster.allMembers().stream()
-                                             .allMatch( member -> member.managementService().database( databaseName ).isAvailable( 60_000 ) );
+                                             .allMatch( member -> member.managementService().database( databaseName ).isAvailable( 600_000 ) );
         assertTrue( availableEverywhere );
     }
 
