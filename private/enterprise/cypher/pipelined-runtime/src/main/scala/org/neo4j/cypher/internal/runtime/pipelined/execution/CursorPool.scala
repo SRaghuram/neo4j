@@ -22,6 +22,7 @@ import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor
 import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor
 import org.neo4j.io.IOUtils
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
+import org.neo4j.kernel.impl.newapi.Cursors.EmptyTraversalCursor
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
@@ -35,7 +36,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
   // or even better, let the compiler tell us which pools will be needed and how big they need to be.
   private[this] val _nodeCursorPool: CursorPool[NodeCursor] = CursorPool[NodeCursor](
     () => cursorFactory.allocateNodeCursor(pageCursorTracer), scopedMemoryTracker)
-  private[this] val _relationshipTraversalCursorPool: CursorPool[RelationshipTraversalCursor] = CursorPool[RelationshipTraversalCursor](
+  private[this] val _relationshipTraversalCursorPool: CursorPool[RelationshipTraversalCursor] = CursorPool.relationshipTraversalPool(
     () => cursorFactory.allocateRelationshipTraversalCursor(pageCursorTracer), scopedMemoryTracker)
   private[this] val _relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = CursorPool[RelationshipScanCursor](
     () => cursorFactory.allocateRelationshipScanCursor(pageCursorTracer), scopedMemoryTracker)
@@ -198,7 +199,7 @@ class TrackingBoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURS
   }
 }
 
-abstract class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoCloseable {
+trait CursorPool[CURSOR <: Cursor] extends AutoCloseable {
 
   def setKernelTracer(tracer: KernelReadTracer): Unit
 
@@ -220,7 +221,7 @@ abstract class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends
   def getLiveCount: Long
 }
 
-class BoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR, private[this] val size: Int) extends CursorPool[CURSOR](cursorFactory) {
+class BoundedArrayCursorPool[CURSOR <: Cursor](private[this] val cursorFactory: () => CURSOR, private[this] val size: Int) extends CursorPool[CURSOR] {
   private[this] var cached: Array[Cursor] = new Array[Cursor](size)
   private[this] var index: Int = 0
   private[this] var tracer: KernelReadTracer = _
@@ -284,18 +285,60 @@ class BoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR, priv
   def getLiveCount: Long = throw new UnsupportedOperationException("use TrackingCursorPool")
 }
 
+class RelationshipTraversalCursorPool(
+  cursorFactory: () => RelationshipTraversalCursor,
+  size: Int
+) extends BoundedArrayCursorPool(cursorFactory, size) {
+  override def free(cursor: RelationshipTraversalCursor): Unit = {
+    if (!cursor.isInstanceOf[EmptyTraversalCursor]) {
+      super.free(cursor)
+    } else {
+      // EmptyTraversalCursors are not re-usable and cause bugs if they end up in the cursor pool
+      DebugSupport.CURSORS.log("Warning, tried to free EmptyTraversalCursor")
+    }
+  }
+}
+
+class TrackingRelationshipTraversalCursorPool(
+  cursorFactory: () => RelationshipTraversalCursor,
+  size: Int
+) extends TrackingBoundedArrayCursorPool(cursorFactory, size) {
+  override def free(cursor: RelationshipTraversalCursor): Unit = {
+    if (!cursor.isInstanceOf[EmptyTraversalCursor]) {
+      super.free(cursor)
+    } else {
+      // EmptyTraversalCursors are not re-usable and cause bugs if they end up in the cursor pool
+      DebugSupport.CURSORS.log("Warning, tried to free EmptyTraversalCursor")
+    }
+  }
+}
+
 object CursorPool {
 
   final val DEFAULT_POOL_SIZE = 128
   private final val TRACKING_POOL_SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[TrackingBoundedArrayCursorPool[_]])
   private final val POOL_SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[BoundedArrayCursorPool[_]])
+  private final val RT_TRACKING_POOL_SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[TrackingRelationshipTraversalCursorPool])
+  private final val RT_POOL_SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[RelationshipTraversalCursorPool])
 
   def apply[CURSOR <: Cursor](cursorFactory: () => CURSOR, memoryTracker: MemoryTracker): CursorPool[CURSOR] =
     if (AssertionRunner.ASSERTIONS_ENABLED) {
-      memoryTracker.allocateHeap(TRACKING_POOL_SHALLOW_SIZE + HeapEstimator.shallowSizeOfObjectArray(DEFAULT_POOL_SIZE))
+      memoryTracker.allocateHeap(TRACKING_POOL_SHALLOW_SIZE + poolArrayHeap(DEFAULT_POOL_SIZE))
       new TrackingBoundedArrayCursorPool[CURSOR](cursorFactory, DEFAULT_POOL_SIZE)
     } else {
-      memoryTracker.allocateHeap(POOL_SHALLOW_SIZE + HeapEstimator.shallowSizeOfObjectArray(DEFAULT_POOL_SIZE))
+      memoryTracker.allocateHeap(POOL_SHALLOW_SIZE + poolArrayHeap(DEFAULT_POOL_SIZE))
       new BoundedArrayCursorPool(cursorFactory, DEFAULT_POOL_SIZE)
     }
+
+  def relationshipTraversalPool(cursorFactory: () => RelationshipTraversalCursor, memoryTracker: MemoryTracker): CursorPool[RelationshipTraversalCursor] = {
+    if (AssertionRunner.ASSERTIONS_ENABLED) {
+      memoryTracker.allocateHeap(RT_TRACKING_POOL_SHALLOW_SIZE + poolArrayHeap(DEFAULT_POOL_SIZE))
+      new TrackingRelationshipTraversalCursorPool(cursorFactory, DEFAULT_POOL_SIZE)
+    } else {
+      memoryTracker.allocateHeap(RT_POOL_SHALLOW_SIZE + poolArrayHeap(DEFAULT_POOL_SIZE))
+      new RelationshipTraversalCursorPool(cursorFactory, DEFAULT_POOL_SIZE)
+    }
+  }
+
+  private def poolArrayHeap(size: Int): Long = HeapEstimator.shallowSizeOfObjectArray(size)
 }

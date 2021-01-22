@@ -16,6 +16,7 @@ import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor
 import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
+import org.neo4j.kernel.impl.newapi.Cursors
 import org.neo4j.memory.LocalMemoryTracker
 import org.neo4j.memory.MemoryTracker
 
@@ -124,7 +125,19 @@ class CursorPoolTest extends CypherFunSuite {
       factory.propertyCursorCount shouldEqual expected
       closeAndAssertAllReleased(pools)
     }
+  }
 
+  test("should not put EmptyTraversalCursor in pool") {
+    // given
+    val (pools, _) = setupCursorPools
+    val emptyCursor = Cursors.emptyTraversalCursor(null)
+
+    // when
+    pools.relationshipTraversalCursorPool.getLiveCount shouldBe 0
+    pools.relationshipTraversalCursorPool.free(emptyCursor)
+
+    // then
+    pools.relationshipTraversalCursorPool.getLiveCount shouldBe 0
   }
 
   private def setupCursorPools: (CursorPools, TestCursorFactory) = {
