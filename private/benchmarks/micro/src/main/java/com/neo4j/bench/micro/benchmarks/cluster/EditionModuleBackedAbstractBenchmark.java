@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Stack;
+import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -84,8 +85,10 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
                                    Neo4jConfig neo4jConfig,
                                    ForkDirectory forkDirectory ) throws Throwable
     {
-        var tempDirectory = forkDirectory == null ? Path.of( "." ) : Paths.get( forkDirectory.toAbsolutePath() );
-        tempDirectory = tempDirectory.resolve( "temp-db" ).toAbsolutePath().normalize();
+        var tempDirectory = forkDirectory == null ?
+                Path.of( ".", UUID.randomUUID().toString() ) :
+                Paths.get( forkDirectory.toAbsolutePath() ).resolve( "temp-db" );
+        tempDirectory = tempDirectory.toAbsolutePath().normalize();
         FileUtils.deleteDirectory( tempDirectory.toFile() );
         config = createConfig( tempDirectory );
         managementService = new DatabaseManagementServiceFactory( DbmsInfo.COMMUNITY, this::saveModule )

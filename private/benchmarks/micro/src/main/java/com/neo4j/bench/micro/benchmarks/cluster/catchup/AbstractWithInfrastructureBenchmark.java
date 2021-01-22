@@ -42,9 +42,9 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.configuration.CausalClusteringInternalSettings.experimental_catchup_protocol;
 import static com.neo4j.configuration.CausalClusteringSettings.catchup_implementations;
 
 abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAbstractBenchmark
@@ -90,7 +90,7 @@ abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAb
     @Override
     public void setUp() throws Throwable
     {
-        var socketAddress = new SocketAddress( "localhost", 46871 );
+        var socketAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
         catchupServer = createCatchupServer( socketAddress );
         catchupServer.start();
         catchupClientFactory = createCatchupClientFactory();
