@@ -13,6 +13,7 @@ import scala.collection.JavaConverters;
 import scala.collection.Seq;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -28,12 +29,14 @@ import org.neo4j.cypher.internal.plandescription.InternalPlanDescription;
 import org.neo4j.cypher.internal.plandescription.NoChildren$;
 import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl;
 import org.neo4j.cypher.internal.plandescription.PrettyString;
+import org.neo4j.cypher.internal.plandescription.PrettyString$;
 import org.neo4j.cypher.internal.plandescription.SingleChild;
 import org.neo4j.cypher.internal.plandescription.TwoChildren;
 import org.neo4j.cypher.internal.plandescription.renderAsTreeTable;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
 public class PlannerDescription
 {
@@ -63,7 +66,13 @@ public class PlannerDescription
         javaArguments.add( Arguments.EstimatedRows$.MODULE$.apply( plan.estimatedRows().doubleValue() ) );
         plan.rows().ifPresent( rowsValue -> javaArguments.add( Arguments.Rows$.MODULE$.apply( rowsValue ) ) );
 
-        Seq<Argument> arguments = JavaConverters.asScalaIteratorConverter( javaArguments.iterator() ).asScala().toSeq();
+        List<PrettyString> prettyStrings = plan.detailStrings().stream()
+                                               .map( PrettyString$.MODULE$::apply )
+                                               .collect( toList() );
+        Arguments.Details details = Arguments.Details$.MODULE$.apply( JavaConverters.iterableAsScalaIterable( prettyStrings ).toSeq() );
+        javaArguments.add( details );
+
+        Seq<Argument> arguments = JavaConverters.iterableAsScalaIterable( javaArguments ).toSeq();
 
         scala.collection.immutable.Set<PrettyString> variables = JavaConverters.asScalaSetConverter( Collections.<String>emptySet() ).asScala().toSet();
 
@@ -248,6 +257,8 @@ public class PlannerDescription
 
         protected abstract List<String> getIdentifiers( PLAN plan );
 
+        protected abstract List<String> getDetails( PLAN plan );
+
         PlanOperator toPlanOperator( PLAN root )
         {
             Map<HashCodePlanWrapper<PLAN>,HashCodePlanWrapper<PLAN>> inputPlanParentMap = new HashMap<>();
@@ -301,9 +312,11 @@ public class PlannerDescription
 
             List<String> identifiers = getIdentifiers( inputPlan );
 
+            List<String> detailStrings = getDetails( inputPlan );
+
             int id = getId( inputPlan );
 
-            return new PlanOperator( id, operatorType, estimatedRows, dbHits.orElse( null ), rows.orElse( null ), identifiers, children );
+            return new PlanOperator( id, operatorType, estimatedRows, dbHits.orElse( null ), rows.orElse( null ), identifiers, children, detailStrings );
         }
     }
 
@@ -365,6 +378,18 @@ public class PlannerDescription
         {
             return Lists.newArrayList( executionPlanDescription.getIdentifiers() );
         }
+
+        @Override
+        protected List<String> getDetails( ExecutionPlanDescription executionPlanDescription )
+        {
+            return JavaConverters.asJavaCollection( ((InternalPlanDescription) executionPlanDescription).arguments() )
+                                 .stream()
+                                 .filter( argument -> argument instanceof Arguments.Details )
+                                 .map( argument -> (Arguments.Details) argument )
+                                 .flatMap( details -> JavaConverters.asJavaCollection( details.info() ).stream() )
+                                 .map( PrettyString::prettifiedString )
+                                 .collect( toList() );
+        }
     }
 
     private static class DriverPlanExtractor extends PlanExtractor<org.neo4j.driver.summary.Plan>
@@ -413,6 +438,14 @@ public class PlannerDescription
         protected List<String> getIdentifiers( org.neo4j.driver.summary.Plan plan )
         {
             return Lists.newArrayList( plan.identifiers() );
+        }
+
+        @Override
+        protected List<String> getDetails( org.neo4j.driver.summary.Plan plan )
+        {
+            return plan.arguments().containsKey( "Details" )
+                   ? Arrays.asList( plan.arguments().get( "Details" ).asString() )
+                   : Collections.emptyList();
         }
     }
 

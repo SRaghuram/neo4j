@@ -35,6 +35,7 @@ public class PlanOperator
 
     private final List<String> identifiers;
     private final List<PlanOperator> children;
+    private final List<String> detailStrings;
 
     /**
      * WARNING: Never call this explicitly.
@@ -52,7 +53,7 @@ public class PlanOperator
             Long dbHits,
             Long rows )
     {
-        this( id, operatorType, estimatedRows, dbHits, rows, new ArrayList<>(), new ArrayList<>() );
+        this( id, operatorType, estimatedRows, dbHits, rows, new ArrayList<>(), new ArrayList<>(), new ArrayList<>() );
     }
 
     public PlanOperator(
@@ -62,7 +63,8 @@ public class PlanOperator
             Long dbHits,
             Long rows,
             List<String> identifiers,
-            List<PlanOperator> children )
+            List<PlanOperator> children,
+            List<String> detailStrings )
     {
         this.id = id;
         this.operatorType = operatorType;
@@ -71,6 +73,7 @@ public class PlanOperator
         this.rows = rows;
         this.identifiers = identifiers;
         this.children = children;
+        this.detailStrings = detailStrings;
     }
 
     /**
@@ -147,6 +150,11 @@ public class PlanOperator
     public List<PlanOperator> children()
     {
         return children;
+    }
+
+    public List<String> detailStrings()
+    {
+        return detailStrings;
     }
 
     public Map<String,Object> asMap()

@@ -161,6 +161,6 @@ public class CardinalityMeasurementTest
 
     private PlanOperator plan( long estimate, long actual, PlanOperator... children )
     {
-        return new PlanOperator( 1, "operatorType", estimate, 0L, actual, emptyList(), Arrays.asList( children ) );
+        return new PlanOperator( 1, "operatorType", estimate, 0L, actual, emptyList(), Arrays.asList( children ), emptyList() );
     }
 }

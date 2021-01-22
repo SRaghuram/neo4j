@@ -396,7 +396,8 @@ public class SerializationTest
         PlanOperator before = new PlanOperator( 0, "operator type1", 1L, 2L, 3L,
                                                 emptyList(),
                                                 Lists.newArrayList(
-                                                        new PlanOperator( 1, "operator type2", 4L, 5L, 6L, emptyList(), emptyList() ) ) );
+                                                        new PlanOperator( 1, "operator type2", 4L, 5L, 6L, emptyList(), emptyList(), emptyList() ) ),
+                                                emptyList() );
         // then
         shouldSerializeAndDeserialize( before );
     }
