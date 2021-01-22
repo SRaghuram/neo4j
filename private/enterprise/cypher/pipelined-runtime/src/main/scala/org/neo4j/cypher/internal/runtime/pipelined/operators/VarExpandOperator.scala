@@ -331,7 +331,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                 load[Long](fromNode))),
             equal(trueValue, nullCheckIfRequired(pred)))
         }
-      val predicateOnFromNode = fromNodePredicate.foldLeft(notEqual(load[Long](fromNode), constant(-1L))) {
+      val predicateOnFromNode = fromNodePredicate.foldLeft(notEqual(fromNode, constant(-1L))) {
         case (acc, current) => and(acc, current)
       }
       val predicate =
@@ -466,7 +466,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
       block(
         oneTime(arraySet(EXPRESSION_VARIABLES, tempNodeOffset, invoke(DB_ACCESS,
           method[DbAccess, NodeValue, Long]("nodeById"),
-          invoke(load[RelationshipTraversalCursor]("selectionCursor"),
+          invoke("selectionCursor",
             method[RelationshipTraversalCursor, Long](
               "otherNodeReference"))))),
         equal(trueValue, nullCheckIfRequired(pred)))

@@ -67,7 +67,7 @@ class BinaryOperatorExpressionCompiler(slots: SlotConfiguration,
        */
       private def initializeFromContextOrStore: IntermediateRepresentation = {
         block(
-          condition(notEqual(load[Int](maybeOffsetInInputName), constant(-1))) {
+          condition(notEqual(maybeOffsetInInputName, constant(-1))) {
             assign(local, getCachedPropertyFromExecutionContextWithDynamicOffset(load[Int](maybeOffsetInInputName), INPUT_CURSOR))
           },
           condition(isNull(load[AnyValue](local)))(initializeFromStore)

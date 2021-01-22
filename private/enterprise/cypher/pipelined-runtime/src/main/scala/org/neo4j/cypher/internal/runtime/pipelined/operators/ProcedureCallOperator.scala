@@ -188,7 +188,8 @@ trait ProcedureCaller {
                     argExpression: Array[IntermediateExpression],
                     isSideEffect: Boolean = false): IntermediateRepresentation = {
     val invoker: (IntermediateRepresentation, Method, Seq[IntermediateRepresentation]) => IntermediateRepresentation =
-      if (isSideEffect) invokeSideEffect else invoke
+      if (isSideEffect) (o: IntermediateRepresentation, m: Method, params: Seq[IntermediateRepresentation]) => invokeSideEffect(o, m, params:_*)
+      else (o: IntermediateRepresentation, m: Method, params: Seq[IntermediateRepresentation]) => invoke(o, m, params:_*)
     invoker(
       getStatic(callModeField),
       method[ProcedureCallMode, Iterator[Array[AnyValue]], QueryContext, Int, Array[AnyValue], ProcedureCallContext]("callProcedure"),

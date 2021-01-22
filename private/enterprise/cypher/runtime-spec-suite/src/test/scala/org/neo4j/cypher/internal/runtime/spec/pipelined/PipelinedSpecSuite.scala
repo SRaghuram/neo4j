@@ -137,10 +137,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.VarLengthExpandTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.WriteOperatorsDbHitsTestBase
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.result.OperatorProfile
-import org.neo4j.internal.helpers.collection.Iterables
 import org.scalatest.Outcome
-
-import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 object PipelinedSpecSuite {
   val SIZE_HINT = 1000
@@ -497,25 +494,7 @@ class PipelinedAssertSameNodeTest extends AssertSameNodeTestBase(FUSING, PIPELIN
 class PipelinedAssertSameNodeNoFusingTest extends AssertSameNodeTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 //CREATE
-class PipelinedCreateTest extends CreateTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite {
-  test("should create nodes with labels") {
-    // given an empty data base
-
-    // when
-    val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("n")
-      .create(createNode("n", "A", "B", "C"), createNode("n", "D", "B"))
-      .argument()
-      .build(readOnly = false)
-
-    // then
-    val runtimeResult: RecordingRuntimeResult = execute(logicalQuery, runtime)
-    consume(runtimeResult)
-    val node = Iterables.single(tx.getAllNodes)
-    runtimeResult should beColumns("n").withSingleRow(node).withStatistics(nodesCreated = 1, labelsAdded = 3)
-    node.getLabels.asScala.map(_.name()).toList should equal(List("A", "B", "C"))
-  }
-}
+class PipelinedCreateTest extends CreateTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedCreateNoFusingTest extends CreateTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedLenientCreateRelationshipNoFusingTest extends LenientCreateRelationshipTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite

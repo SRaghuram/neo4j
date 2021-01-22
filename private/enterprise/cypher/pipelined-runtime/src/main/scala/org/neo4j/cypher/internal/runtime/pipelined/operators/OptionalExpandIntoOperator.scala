@@ -228,7 +228,7 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       declareAndAssign(fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
       declareAndAssign(toNode, getNodeIdFromSlot(toSlot, codeGen)),
       setField(hasWritten, constant(false)),
-      ifElse(and(notEqual(load[Long](fromNode), constant(-1L)), notEqual(load[Long](toNode), constant(-1L)))) {
+      ifElse(and(notEqual(fromNode, constant(-1L)), notEqual(load[Long](toNode), constant(-1L)))) {
         block(
           setUpCursors(fromNode,toNode),
           setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField)))

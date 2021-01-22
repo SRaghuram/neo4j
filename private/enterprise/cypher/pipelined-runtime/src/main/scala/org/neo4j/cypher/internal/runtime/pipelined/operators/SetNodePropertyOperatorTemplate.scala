@@ -50,7 +50,7 @@ class SetNodePropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
     val nodeId = getNodeIdFromSlot(slot, codeGen)
     block(
       declareAndAssign(entityId, nodeId),
-      condition(notEqual(load[Long](entityId), constant(StatementConstants.NO_SUCH_NODE)))
+      condition(notEqual(entityId, constant(StatementConstants.NO_SUCH_NODE)))
       (SetPropertyOperatorTemplate.setProperty(isNode = true, load[Long](entityId), key, nullCheckIfRequired(propertyValue), codeGen, needsExclusiveLock)),
       inner.genOperateWithExpressions,
       conditionallyProfileRow(innerCannotContinue, id, doProfile),

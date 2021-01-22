@@ -105,12 +105,12 @@ class SetPropertiesFromMapOperatorTemplate(override val inner: OperatorTaskTempl
         )
       )(
         block(
-          condition(notEqual(load(entityValueVar), noValue))(
+          condition(notEqual(entityValueVar, noValue))(
             fail(newInstance(constructor[InvalidArgumentException, String],
               invoke(
                 constant(s"The expression $entityExpression should have been a node or a relationship, but got "),
                 method[String, String, String]("concat"),
-                invoke(load(entityValueVar), method[AnyValue, String]("toString")))))
+                invoke(entityValueVar, method[AnyValue, String]("toString")))))
           )
         )
       )),

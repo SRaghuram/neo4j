@@ -307,11 +307,11 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
   override def genOperate: IntermediateRepresentation = {
     block(
       beginOperate,
-      condition(not(equal(load[Long](argumentVarName(argumentStateMapId)), load[Long](localArgument)))) {
+      condition(not(equal(load[Long](argumentVarName(argumentStateMapId)), localArgument))) {
         block(
           // the first time we come here 'state' will be null
           condition(isNotNull(load[SerialCountingState](state))) {
-            invoke(load[SerialCountingState](state), method[SerialCountingState, Unit, Int]("update"),
+            invoke(state, method[SerialCountingState, Unit, Int]("update"),
               subtract(load(reservedVar), load(countLeftVar)))
           },
           assign(localArgument, load[Long](argumentVarName(argumentStateMapId))),
@@ -325,7 +325,7 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
   override def genOperateExit: IntermediateRepresentation = {
     block(
       condition(isNotNull(load[SerialCountingState](state))) {
-        invoke(load[SerialCountingState](state), method[SerialCountingState, Unit, Int]("update"),
+        invoke(state, method[SerialCountingState, Unit, Int]("update"),
           subtract(load(reservedVar), load(countLeftVar)))
       },
       inner.genOperateExit)
@@ -341,10 +341,10 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
 
   private def newState: IntermediateRepresentation = block(
     assign(state, cast[SerialCountingState](fetchState(loadField(argumentMaps), argumentStateMapId))),
-    condition(invoke(load[SerialCountingState](state), method[SerialCountingState, Boolean]("isUninitialized")))(
-      invoke(load[SerialCountingState](state), method[SerialCountingState, Unit, Long]("initialize"), load[Long](expressionVariable))
+    condition(invoke(state, method[SerialCountingState, Boolean]("isUninitialized")))(
+      invoke(state, method[SerialCountingState, Unit, Long]("initialize"), load[Long](expressionVariable))
     ),
-    assign(reservedVar, invoke(load[SerialCountingState](state), method[SerialCountingState, Int, Int]("reserve"), constant(Int.MaxValue))),
+    assign(reservedVar, invoke(state, method[SerialCountingState, Int, Int]("reserve"), constant(Int.MaxValue))),
     assign(countLeftVar, load(reservedVar))
   )
   }

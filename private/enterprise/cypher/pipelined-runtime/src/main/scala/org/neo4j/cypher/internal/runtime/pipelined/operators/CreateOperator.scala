@@ -203,12 +203,12 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
           declareAndAssign(startNodeVar, getNodeIdFromSlot(startSlot, codeGen)),
           declareAndAssign(endNodeVar, getNodeIdFromSlot(endSlot, codeGen)),
           declare[Long](relVar),
-          ifElse(or(equal(load[Long](startNodeVar), constant(NO_SUCH_NODE)), equal(load[Long](endNodeVar), constant(NO_SUCH_NODE)))) {
+          ifElse(or(equal(startNodeVar, constant(NO_SUCH_NODE)), equal(load[Long](endNodeVar), constant(NO_SUCH_NODE)))) {
             if (lenientCreateRelationship) {
               assign(relVar, constant(NO_SUCH_RELATIONSHIP))
             } else {
               assign(relVar,
-                ternary(equal(load[Long](startNodeVar), constant(NO_SUCH_NODE)),
+                ternary(equal(startNodeVar, constant(NO_SUCH_NODE)),
                   invokeStatic(method[CreateOperator, Long, String, String]("failOnMissingNode"), constant(relName), constant(startName)),
                   invokeStatic(method[CreateOperator, Long, String, String]("failOnMissingNode"), constant(relName), constant(endName))
                 )

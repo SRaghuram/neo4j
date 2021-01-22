@@ -142,7 +142,7 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
         )
       )(
         block(
-          condition(notEqual(load[Long](entityValueVar), noValue))(
+          condition(notEqual(entityValueVar, noValue))(
             fail(newInstance(constructor[InvalidArgumentException, String], constant("Expected to set property on a node or a relationship.")))
           )
         )

@@ -24,6 +24,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.isNaN
 import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
+import org.neo4j.codegen.api.IntermediateRepresentation.lessThan
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
@@ -594,7 +595,7 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
       condition(isNotNull(loadField(nodeCursorsToCloseField))){
         block(
           declareAndAssign(typeRefOf[Int], i, constant(0)),
-          loop(IntermediateRepresentation.lessThan(load[Int](i), arrayLength(loadField(nodeCursorsToCloseField)))) {
+          loop(lessThan(i, arrayLength(loadField(nodeCursorsToCloseField)))) {
             block(
               freeCursor[NodeValueIndexCursor](getCursorToFree(arrayLoad(loadField(nodeCursorsToCloseField), load[Int](i))), NodeValueIndexCursorPool),
               ++(i)

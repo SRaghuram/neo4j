@@ -292,19 +292,19 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
         declareAndAssign(lhsName, lhsIRInfo.code),
         exprToPredicate(lhs, load[AnyValue](lhsName), lhsCodeLink.isNullable, exceptionName1),
         // Only evaluate rhs if lhs isn't true value
-        condition(notEqual(load[AnyValue](returnValue), trueValue))(
+        condition(notEqual(returnValue, trueValue))(
           block(
             declareAndAssign(rhsName, rhsIRInfo.code),
             exprToPredicate(rhs, load[AnyValue](rhsName), rhsCodeLink.isNullable, exceptionName2)
           )
         ),
         if (!PredicateHelper.isPredicate(lhs) || !PredicateHelper.isPredicate(rhs)) {
-          condition(and(notEqual(load[AnyValue](returnValue), trueValue), notEqual(load[RuntimeException](error), Constant(null))))(block(fail(load[RuntimeException](error))))
+          condition(and(notEqual(returnValue, trueValue), notEqual(load[RuntimeException](error), Constant(null))))(block(fail(load[RuntimeException](error))))
         } else {
           noop()
         },
         ternary(
-          equal(load[AnyValue](returnValue), trueValue),
+          equal(returnValue, trueValue),
           trueValue,
           ternary(
             load[Boolean](seenNull),
@@ -322,7 +322,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
       START
         .withCode(isNullable = true, irInfo)
         .assignTo(typeRefOf[AnyValue], varName)
-        .withCode(isNullable = false, ternary(notEqual(load[AnyValue](varName), noValue), trueValue, falseValue))
+        .withCode(isNullable = false, ternary(notEqual(varName, noValue), trueValue, falseValue))
 
     case f: FunctionInvocation =>
       f.function match {

@@ -553,10 +553,10 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
           invokeStatic(asIdMethod, cast[AnyValue](
             invoke(loadField(idCursor),
               method[IteratorCursor, AnyValue]("value"))))),
-        condition(greaterThanOrEqual(load[Long](idVariable), constant(0L))) {
+        condition(greaterThanOrEqual(idVariable, constant(0L))) {
           singleRelationship(load[Long](idVariable), loadField(cursor)) },
 
-        condition(and(greaterThanOrEqual(load[Long](idVariable), constant(0L)), cursorNext[RelationshipScanCursor](loadField(cursor))))(
+        condition(and(greaterThanOrEqual(idVariable, constant(0L)), cursorNext[RelationshipScanCursor](loadField(cursor))))(
           block(
             codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
             codeGen.setLongAt(relationshipOffset, load[Long](idVariable)),
@@ -627,9 +627,9 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
               invoke(loadField(idCursor),
                 method[IteratorCursor, AnyValue]("value")))),
             invoke(loadField(cursor), method[RelationshipScanCursor, Long]("relationshipReference")))),
-        condition(greaterThanOrEqual(load[Long](idVariable), constant(0L))) {
+        condition(greaterThanOrEqual(idVariable, constant(0L))) {
           singleRelationship(load[Long](idVariable), loadField(cursor)) },
-        condition(and(greaterThanOrEqual(load[Long](idVariable), constant(0L)),
+        condition(and(greaterThanOrEqual(idVariable, constant(0L)),
          cursorNext[RelationshipScanCursor](loadField(cursor))))(
           block(
             codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),

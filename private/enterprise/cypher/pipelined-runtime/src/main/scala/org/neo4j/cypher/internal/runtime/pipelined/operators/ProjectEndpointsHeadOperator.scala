@@ -442,16 +442,16 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
         if (!startInScope && !endInScope) identity
         else if (!endInScope) {
           //start is in scope, end is not
-          condition(equal(codeGen.getLongAt(startOffset), load[Long](startVar)))
+          condition(equal(codeGen.getLongAt(startOffset), startVar))
         } else if (!startInScope) {
           //end is in scope, start is not
-          condition(equal(codeGen.getLongAt(endOffset), load[Long](endVar)))
+          condition(equal(codeGen.getLongAt(endOffset), endVar))
         } else {
           //both are in scope,
           condition(
             and(
-              equal(codeGen.getLongAt(startOffset), load[Long](startVar)),
-              equal(codeGen.getLongAt(endOffset), load[Long](endVar))
+              equal(codeGen.getLongAt(startOffset), startVar),
+              equal(codeGen.getLongAt(endOffset), endVar)
             )
           )
         }
@@ -463,13 +463,13 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
         if (!startInScope && !endInScope) throw new IllegalStateException()
         else if (!endInScope) {
           //start is in scope, end is not
-          ifElse(equal(codeGen.getLongAt(startOffset), load[Long](startVar))) {
+          ifElse(equal(codeGen.getLongAt(startOffset), startVar)) {
             block(
               assign(newStart, load[Long](startVar)),
               assign(newEnd, load[Long](endVar))
             )
           } { //else
-            condition(equal(codeGen.getLongAt(startOffset), load[Long](endVar))) {
+            condition(equal(codeGen.getLongAt(startOffset), endVar)) {
               block(
                 assign(newStart, load[Long](endVar)),
                 assign(newEnd, load[Long](startVar))
@@ -478,13 +478,13 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
           }
         } else if (!startInScope) {
           //end is in scope, start is not
-          ifElse(equal(codeGen.getLongAt(endOffset), load[Long](endVar))) {
+          ifElse(equal(codeGen.getLongAt(endOffset), endVar)) {
             block(
               assign(newStart, load[Long](startVar)),
               assign(newEnd, load[Long](endVar))
             )
           } { //else
-            condition(equal(codeGen.getLongAt(endOffset), load[Long](startVar))) {
+            condition(equal(codeGen.getLongAt(endOffset), startVar)) {
               block(
                 assign(newStart, load[Long](endVar)),
                 assign(newEnd, load[Long](startVar))
@@ -494,8 +494,8 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
         } else {
           ifElse(
             and(
-              equal(codeGen.getLongAt(startOffset), load[Long](startVar)),
-              equal(codeGen.getLongAt(endOffset), load[Long](endVar))
+              equal(codeGen.getLongAt(startOffset), startVar),
+              equal(codeGen.getLongAt(endOffset), endVar)
             )
           ) {
             block(
@@ -505,8 +505,8 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
           } { //else
             condition(
               and(
-                equal(codeGen.getLongAt(startOffset), load[Long](endVar)),
-                equal(codeGen.getLongAt(endOffset), load[Long](startVar))
+                equal(codeGen.getLongAt(startOffset), endVar),
+                equal(codeGen.getLongAt(endOffset), startVar)
               )
             ) {
               block(
@@ -521,7 +521,7 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
         declareAndAssign(newStart, constant(-1L)),
         declareAndAssign(newEnd, constant(-1L)),
         init,
-        condition(notEqual(load[Long](newStart), constant(-1L)))(write(load[Long](newStart), load[Long](newEnd)))
+        condition(notEqual(newStart, constant(-1L)))(write(load[Long](newStart), load[Long](newEnd)))
       )
     }
   }
@@ -563,7 +563,7 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
         //do a read.singleRelationship(id, cursor) and read start and end from the cursor
         block(
           declareAndAssign(relIdVar, getRelationshipIdFromSlot(relSlot, codeGen)),
-          condition(notEqual(load[Long](relIdVar), constant(-1L))) {
+          condition(notEqual(relIdVar, constant(-1L))) {
             block(
               singleRelationship(load[Long](relIdVar), RELATIONSHIP_CURSOR),
               condition(cursorNext[RelationshipScanCursor](RELATIONSHIP_CURSOR)) {
@@ -771,7 +771,7 @@ class UndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplate,
         block(
           declareAndAssign(relIdVar, getRelationshipIdFromSlot(relSlot, codeGen)),
           setField(canContinue, constant(false)),
-          condition(notEqual(load[Long](relIdVar), constant(-1L))) {
+          condition(notEqual(relIdVar, constant(-1L))) {
             block(
               singleRelationship(load[Long](relIdVar), RELATIONSHIP_CURSOR),
               condition(cursorNext[RelationshipScanCursor](RELATIONSHIP_CURSOR)) {
