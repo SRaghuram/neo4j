@@ -99,10 +99,7 @@ class ReadReplicaDatabaseFactory
         var databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
         var catchupProcessFactory = new CatchupProcessFactory( panicker, catchupComponentsRepository, topologyService,
                 catchupClientFactory, upstreamDatabaseStrategySelector, commandIndexTracker, internalLogProvider, config, databaseEventDispatch,
-                pageCacheTracer, asyncTxApplier, databaseContext, timerService );
-        CatchupProcessManager catchupProcess = new CatchupProcessManager( databaseContext, panicker, timerService, internalLogProvider, config,
-                catchupProcessFactory );
-        databaseContext.dependencies().satisfyDependency( catchupProcess );
+                pageCacheTracer,asyncTxApplier, databaseContext, timerService );
 
         var raftIdStorage = clusterStateFactory.createRaftGroupIdStorage( databaseContext.databaseId().name(), internalLogProvider );
 
@@ -121,8 +118,7 @@ class ReadReplicaDatabaseFactory
 
         var panicHandler = new ReadReplicaPanicHandlers( panicService, kernelDatabase, clusterInternalOperator );
 
-        return new ReadReplicaDatabase( catchupProcessFactory, catchupProcess, kernelDatabase, clusterComponents,
-                                        bootstrap, panicHandler, raftIdCheck, topologyNotifier );
+        return new ReadReplicaDatabase( catchupProcessFactory, kernelDatabase, clusterComponents, bootstrap, panicHandler, raftIdCheck, topologyNotifier );
     }
 
     private UpstreamDatabaseSelectionStrategy createDefaultStrategy( DatabaseLogProvider internalLogProvider )

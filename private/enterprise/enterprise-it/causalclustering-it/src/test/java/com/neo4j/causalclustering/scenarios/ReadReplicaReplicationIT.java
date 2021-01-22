@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
+import com.neo4j.causalclustering.readreplica.CatchupProcessFactory;
 import com.neo4j.causalclustering.readreplica.ReadReplicaDatabaseManager;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
@@ -354,8 +354,9 @@ class ReadReplicaReplicationIT
 
         var readReplica = cluster.findAnyReadReplica();
         var readReplicaGraphDatabase = readReplica.defaultDatabase();
-        var catchupProcessManager = readReplicaGraphDatabase.getDependencyResolver().resolveDependency( CatchupProcessManager.class );
-        catchupProcessManager.stop();
+        var catchupProcessFactory = readReplicaGraphDatabase.getDependencyResolver()
+                                                            .resolveDependency( CatchupProcessFactory.class );
+        catchupProcessFactory.stop();
 
         cluster.coreTx( ( coreGraphDatabase, transaction ) ->
         {
@@ -372,7 +373,7 @@ class ReadReplicaReplicationIT
                 () -> transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) ) );
 
         // when the poller is resumed, it does make it to the read replica
-        catchupProcessManager.start();
+        catchupProcessFactory.start();
         transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) );
     }
 
@@ -384,8 +385,10 @@ class ReadReplicaReplicationIT
 
         var readReplica = cluster.findAnyReadReplica();
         var readReplicaGraphDatabase = readReplica.defaultDatabase();
-        var catchupProcessManager = readReplicaGraphDatabase.getDependencyResolver().resolveDependency( CatchupProcessManager.class );
-        catchupProcessManager.pauseCatchupProcess();
+        var catchupProcessFactory = readReplicaGraphDatabase.getDependencyResolver()
+                                                            .resolveDependency( CatchupProcessFactory.class );
+        catchupProcessFactory.catchupProcessComponents()
+                             .ifPresent( c -> c.catchupProcess().pause() );
 
         var leader = cluster.coreTx( ( coreGraphDatabase, transaction ) ->
                                                               {
@@ -401,7 +404,8 @@ class ReadReplicaReplicationIT
                       () -> transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) ) );
 
         // when the poller is resumed, it does make it to the read replica
-        catchupProcessManager.resumeCatchupProcess();
+        catchupProcessFactory.catchupProcessComponents()
+                             .ifPresent( c -> c.catchupProcess().resume() );
         transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) );
     }
 

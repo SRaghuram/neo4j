@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
+import com.neo4j.causalclustering.readreplica.CatchupProcessFactory;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -334,16 +334,16 @@ class BoltCausalClusteringIT
         void shouldUseBookmarkFromAWriteSessionInAReadSession() throws Throwable
         {
             // given
-            ReadReplica readReplica = cluster.getReadReplicaByIndex( 0 );
+            var readReplica = cluster.getReadReplicaByIndex( 0 );
 
-            CatchupProcessManager catchupProcessManager = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessManager.class );
-            catchupProcessManager.stop();
+            var catchupProcessFactory = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessFactory.class );
+            catchupProcessFactory.stop();
 
-            try ( Driver driver1 = makeDriver( cluster ) )
+            try ( var driver1 = makeDriver( cluster ) )
             {
-                Bookmark bookmark = inExpirableSession( driver1, Driver::session, session ->
+                var bookmark = inExpirableSession( driver1, Driver::session, session ->
                 {
-                    try ( Transaction tx = session.beginTransaction() )
+                    try ( var tx = session.beginTransaction() )
                     {
                         tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Jim" ) );
                         tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Alistair" ) );
@@ -356,15 +356,15 @@ class BoltCausalClusteringIT
                 } );
 
                 assertNotNull( bookmark );
-                catchupProcessManager.start();
+                catchupProcessFactory.start();
 
-                try ( Driver driver2 = makeDriver( readReplica.directURI() ) )
+                try ( var driver2 = makeDriver( readReplica.directURI() ) )
                 {
-                    try ( Session session = driver2.session( builder().withDefaultAccessMode( READ ).withBookmarks( bookmark ).build() ) )
+                    try ( var session = driver2.session( builder().withDefaultAccessMode( READ ).withBookmarks( bookmark ).build() ) )
                     {
-                        try ( Transaction tx = session.beginTransaction() )
+                        try ( var tx = session.beginTransaction() )
                         {
-                            Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
+                            var record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
                             assertEquals( 4, record.get( "count" ).asInt() );
                             tx.commit();
                         }
@@ -529,10 +529,10 @@ class BoltCausalClusteringIT
 
                 ReadReplica replica = cluster.findAnyReadReplica();
 
-                CatchupProcessManager catchupProcessManager = replica.defaultDatabase().getDependencyResolver()
-                        .resolveDependency( CatchupProcessManager.class );
+                CatchupProcessFactory catchupProcessFactory = replica.defaultDatabase().getDependencyResolver()
+                                                                     .resolveDependency( CatchupProcessFactory.class );
 
-                catchupProcessManager.stop();
+                catchupProcessFactory.stop();
 
                 Bookmark lastBookmark = null;
                 int iterations = 5;
@@ -558,9 +558,14 @@ class BoltCausalClusteringIT
                 }
 
                 // when the poller is resumed, it does make it to the read replica
-                catchupProcessManager.start();
+                catchupProcessFactory.start();
 
-                catchupProcessManager.getCatchupProcess().upToDateFuture().get();
+                var uptoDateFuture = catchupProcessFactory.catchupProcessComponents()
+                                                          .map( c -> c.catchupProcess().upToDateFuture() );
+                if ( uptoDateFuture.isPresent() )
+                {
+                    uptoDateFuture.get().get();
+                }
 
                 happyCount = 0;
                 numberOfRequests = 1_000;

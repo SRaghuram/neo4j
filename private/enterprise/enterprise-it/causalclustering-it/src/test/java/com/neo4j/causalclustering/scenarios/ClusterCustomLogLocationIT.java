@@ -6,16 +6,13 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
+import com.neo4j.causalclustering.readreplica.CatchupProcessFactory;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.Collection;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -58,24 +55,30 @@ class ClusterCustomLogLocationIT
             } );
         }
 
-        Collection<CoreClusterMember> coreClusterMembers = cluster.coreMembers();
-        for ( CoreClusterMember coreClusterMember : coreClusterMembers )
+        var coreClusterMembers = cluster.coreMembers();
+        for ( var coreClusterMember : coreClusterMembers )
         {
-            DependencyResolver dependencyResolver = coreClusterMember.defaultDatabase().getDependencyResolver();
-            LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
+            var dependencyResolver = coreClusterMember.defaultDatabase().getDependencyResolver();
+            var logFiles = dependencyResolver.resolveDependency( LogFiles.class );
             assertEquals( logFiles.logFilesDirectory().getFileName().toString(), coreClusterMember.defaultDatabase().databaseName() );
             assertTrue( logFiles.getLogFile().hasAnyEntries( 0 ) );
 
             logFileInStoreDirectoryDoesNotExist( coreClusterMember.databaseLayout(), dependencyResolver );
         }
 
-        Collection<ReadReplica> readReplicas = cluster.readReplicas();
-        for ( ReadReplica readReplica : readReplicas )
+        var readReplicas = cluster.readReplicas();
+        for ( var readReplica : readReplicas )
         {
-            CatchupProcessManager catchupProcessManager = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessManager.class );
-            catchupProcessManager.getCatchupProcess().upToDateFuture().get();
-            DependencyResolver dependencyResolver = readReplica.defaultDatabase().getDependencyResolver();
-            LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
+            var catchupProcessFactory = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessFactory.class );
+            var uptoDateFuture = catchupProcessFactory.catchupProcessComponents()
+                                                      .map( c -> c.catchupProcess().upToDateFuture() );
+            if ( uptoDateFuture.isPresent() )
+            {
+                uptoDateFuture.get().get();
+            }
+
+            var dependencyResolver = readReplica.defaultDatabase().getDependencyResolver();
+            var logFiles = dependencyResolver.resolveDependency( LogFiles.class );
             assertEquals( logFiles.logFilesDirectory().getFileName().toString(), readReplica.defaultDatabase().databaseName() );
             assertTrue( logFiles.getLogFile().hasAnyEntries( 0 ) );
 

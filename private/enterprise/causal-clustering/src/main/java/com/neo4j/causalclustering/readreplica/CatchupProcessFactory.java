@@ -187,7 +187,7 @@ public class CatchupProcessFactory extends SafeLifecycle
         }
     }
 
-    static class CatchupProcessLifecycles extends LifeSupport
+    public static class CatchupProcessLifecycles extends LifeSupport
     {
         private final CatchupPollingProcess catchupProcess;
 
@@ -198,7 +198,7 @@ public class CatchupProcessFactory extends SafeLifecycle
             add( catchupProcess );
         }
 
-        CatchupPollingProcess catchupProcess()
+        public CatchupPollingProcess catchupProcess()
         {
             return catchupProcess;
         }

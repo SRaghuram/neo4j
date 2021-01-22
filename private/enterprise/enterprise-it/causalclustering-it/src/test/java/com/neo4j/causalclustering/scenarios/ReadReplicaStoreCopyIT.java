@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
+import com.neo4j.causalclustering.readreplica.CatchupProcessFactory;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.DatabaseShutdownException;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceTxLogRotationAndCheckpoint;
@@ -60,19 +59,19 @@ class ReadReplicaStoreCopyIT
     @Timeout( 240 )
     void shouldNotBePossibleToStartTransactionsWhenReadReplicaCopiesStore() throws Throwable
     {
-        ReadReplica readReplica = cluster.findAnyReadReplica();
+        var readReplica = cluster.findAnyReadReplica();
 
-        CatchupProcessManager catchupProcessManager = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessManager.class );
-        catchupProcessManager.stop();
+        var catchupProcessFactory = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessFactory.class );
+        catchupProcessFactory.stop();
 
         writeSomeDataAndForceLogRotations( cluster );
-        Semaphore storeCopyBlockingSemaphore = addStoreCopyBlockingMonitor( readReplica );
+        var storeCopyBlockingSemaphore = addStoreCopyBlockingMonitor( readReplica );
         try
         {
-            catchupProcessManager.start();
+            catchupProcessFactory.start();
             waitForStoreCopyToStartAndBlock( storeCopyBlockingSemaphore );
 
-            GraphDatabaseFacade replicaGraphDatabase = readReplica.defaultDatabase();
+            var replicaGraphDatabase = readReplica.defaultDatabase();
             assertThrows( DatabaseShutdownException.class, replicaGraphDatabase::beginTx );
         }
         finally
