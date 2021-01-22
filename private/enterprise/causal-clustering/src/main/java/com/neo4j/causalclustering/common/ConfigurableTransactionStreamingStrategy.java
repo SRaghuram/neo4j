@@ -13,17 +13,16 @@ import java.util.function.Supplier;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.SettingChangeListener;
 
-public class TransactionStreamingStrategyProvider
-        implements SettingChangeListener<TransactionStreamingStrategy>, Supplier<TransactionStreamingStrategy>
+public class ConfigurableTransactionStreamingStrategy implements SettingChangeListener<TransactionStreamingStrategy>, Supplier<TransactionStreamingStrategy>
 {
     private volatile TransactionStreamingStrategy currentStrategy;
 
-    public static TransactionStreamingStrategyProvider register( Config config )
+    public static ConfigurableTransactionStreamingStrategy create( Config config )
     {
-        return new TransactionStreamingStrategyProvider( config );
+        return new ConfigurableTransactionStreamingStrategy( config );
     }
 
-    private TransactionStreamingStrategyProvider( Config config )
+    private ConfigurableTransactionStreamingStrategy( Config config )
     {
         currentStrategy = config.get( OnlineBackupSettings.incremental_backup_strategy );
         config.addListener( OnlineBackupSettings.incremental_backup_strategy, this );
