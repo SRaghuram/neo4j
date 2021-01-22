@@ -836,7 +836,8 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
           ctx: TemplateContext =>
             new EmptyResultOperatorTemplate(ctx.inner, plan.id)(ctx.expressionCompiler)
 
-        case plan@plans.Create(_, nodes, relationships) if !parallelExecution =>
+          //For really long create patterns it is no longer beneficial to fuse the create
+        case plan@plans.Create(_, nodes, relationships) if !parallelExecution && (nodes.length + relationships.length < 32)=>
           ctx: TemplateContext =>
             val nodeCommands = nodes.map(n =>
               CreateNodeFusedCommand(
