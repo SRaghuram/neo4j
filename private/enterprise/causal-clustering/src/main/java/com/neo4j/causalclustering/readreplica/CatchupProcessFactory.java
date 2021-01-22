@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider.UpstreamStrategyBasedAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.core.consensus.schedule.Timer;
@@ -37,6 +37,7 @@ import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.storageengine.api.StorageEngine;
+import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.fixedTimeout;
 import static com.neo4j.causalclustering.readreplica.CatchupProcessFactory.Timers.TX_PULLER_TIMER;
@@ -56,9 +57,8 @@ public class CatchupProcessFactory extends SafeLifecycle
         TX_PULLER_TIMER
     }
 
-    private final TopologyService topologyService;
     private final CatchupClientFactory catchupClient;
-    private final UpstreamDatabaseStrategySelector selectionStrategyPipeline;
+    private final UpstreamStrategyBasedAddressProvider upstreamAddressProvider;
     private final CommandIndexTracker commandIndexTracker;
     private final Panicker panicker;
     private final LogProvider logProvider;
@@ -70,33 +70,53 @@ public class CatchupProcessFactory extends SafeLifecycle
     private final ReadReplicaDatabaseContext databaseContext;
     private final TimerService timerService;
     private final long txPullIntervalMillis;
+    private final CatchupProcessLifecyclesFactory lifecyclesFactory;
     private Timer timer;
     private CatchupProcessLifecycles wrapped;
 
     CatchupProcessFactory( Panicker panicker, CatchupComponentsRepository catchupComponents, TopologyService topologyService,
             CatchupClientFactory catchUpClient, UpstreamDatabaseStrategySelector selectionStrategyPipeline, CommandIndexTracker commandIndexTracker,
             LogProvider logProvider, Config config, ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer,
-           AsyncTxApplier asyncTxApplier, ReadReplicaDatabaseContext databaseContext, TimerService timerService )
+            AsyncTxApplier asyncTxApplier, ReadReplicaDatabaseContext databaseContext, TimerService timerService )
+    {
+        this( panicker, catchupComponents, topologyService, catchUpClient, selectionStrategyPipeline, commandIndexTracker, logProvider,
+                config, databaseEventDispatch, pageCacheTracer, databaseContext, timerService, CatchupProcessFactory::create, asyncTxApplier );
+    }
+
+    @VisibleForTesting
+    CatchupProcessFactory( Panicker panicker, CatchupComponentsRepository catchupComponents, TopologyService topologyService,
+            CatchupClientFactory catchUpClient, UpstreamDatabaseStrategySelector selectionStrategyPipeline, CommandIndexTracker commandIndexTracker,
+            LogProvider logProvider, Config config, ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer,
+            ReadReplicaDatabaseContext databaseContext, TimerService timerService, CatchupProcessLifecyclesFactory lifecyclesFactory, AsyncTxApplier asyncTxApplier )
     {
         this.panicker = panicker;
         this.logProvider = logProvider;
         this.config = config;
         this.commandIndexTracker = commandIndexTracker;
         this.catchupComponents = catchupComponents;
-        this.topologyService = topologyService;
         this.catchupClient = catchUpClient;
-        this.selectionStrategyPipeline = selectionStrategyPipeline;
         this.databaseEventDispatch = databaseEventDispatch;
         this.pageCacheTracer = pageCacheTracer;
         this.asyncTxApplier = asyncTxApplier;
         this.databaseContext = databaseContext;
         this.timerService = timerService;
         this.txPullIntervalMillis = config.get( CausalClusteringSettings.pull_interval ).toMillis();
+        this.lifecyclesFactory = lifecyclesFactory;
+        this.upstreamAddressProvider = new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline );
     }
 
     CatchupProcessLifecycles create( ReadReplicaDatabaseContext databaseContext )
     {
-         var dbCatchupComponents = catchupComponents.componentsFor( databaseContext.databaseId() ).orElseThrow(
+        return lifecyclesFactory.create( catchupComponents, commandIndexTracker, databaseEventDispatch, pageCacheTracer, executor, catchupClient,
+                panicker, upstreamAddressProvider, logProvider, config, databaseContext );
+    }
+
+    private static CatchupProcessLifecycles create( CatchupComponentsRepository catchupComponents, CommandIndexTracker commandIndexTracker,
+            ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer, Executor executor,
+            CatchupClientFactory catchupClient, Panicker panicker, UpstreamStrategyBasedAddressProvider upstreamProvider,
+            LogProvider logProvider, Config config, ReadReplicaDatabaseContext databaseContext )
+    {
+        var dbCatchupComponents = catchupComponents.componentsFor( databaseContext.databaseId() ).orElseThrow(
                 () -> new IllegalArgumentException( String.format( "No StoreCopyProcess instance exists for database %s.", databaseContext.databaseId() ) ) );
 
         // TODO: We can do better than this. Core already exposes its commit process. Why not RR.
@@ -112,13 +132,11 @@ public class CatchupProcessFactory extends SafeLifecycle
 
         CatchupPollingProcess catchupProcess =
                 new CatchupPollingProcess( maxQueueSize, applyBatchSize, databaseContext, catchupClient, batchingTxApplierFactory, databaseEventDispatch,
-                        dbCatchupComponents.storeCopyProcess(), logProvider, this.panicker,
-                        new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
+                        dbCatchupComponents.storeCopyProcess(), logProvider, panicker, upstreamProvider );
 
         databaseContext.dependencies().satisfyDependency( catchupProcess ); //For ReadReplicaToggleProcedure
 
-        wrapped = new CatchupProcessLifecycles( catchupProcess );
-        return wrapped;
+        return new CatchupProcessLifecycles( catchupProcess );
     }
 
     @Override
@@ -137,6 +155,7 @@ public class CatchupProcessFactory extends SafeLifecycle
     public void stop0()
     {
         wrapped.shutdown();
+        timer.kill( Timer.CancelMode.SYNC_WAIT );
     }
 
     public Optional<CatchupProcessLifecycles> catchupProcessComponents()
@@ -183,5 +202,14 @@ public class CatchupProcessFactory extends SafeLifecycle
         {
             return catchupProcess;
         }
+    }
+
+    @FunctionalInterface
+    interface CatchupProcessLifecyclesFactory
+    {
+        CatchupProcessLifecycles create( CatchupComponentsRepository catchupComponents, CommandIndexTracker commandIndexTracker,
+                ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer, Executor executor,
+                CatchupClientFactory catchupClient, Panicker panicker, UpstreamStrategyBasedAddressProvider upstreamProvider,
+                LogProvider logProvider, Config config, ReadReplicaDatabaseContext databaseContext );
     }
 }

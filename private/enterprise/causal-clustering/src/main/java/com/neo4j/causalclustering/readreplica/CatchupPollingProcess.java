@@ -158,7 +158,8 @@ public class CatchupPollingProcess extends LifecycleAdapter
     public synchronized boolean pause()
     {
         if ( state == CANCELLED ||
-             state == PANIC )
+             state == PANIC ||
+             state == STORE_COPYING )
         {
             throw new IllegalStateException( "Catchup process can't be paused" );
         }

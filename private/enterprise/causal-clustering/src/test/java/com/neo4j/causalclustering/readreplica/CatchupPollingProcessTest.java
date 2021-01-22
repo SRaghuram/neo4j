@@ -35,6 +35,8 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
@@ -44,10 +46,13 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.CATCHUP_FAILED;
+import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.PAUSED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -63,6 +68,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 class CatchupPollingProcessTest
@@ -116,6 +122,80 @@ class CatchupPollingProcessTest
         when( batchingTxApplierFactory.create() ).thenReturn( txApplier );
         txPuller = new CatchupPollingProcess( 100, 10, databaseContext, catchupClientFactory, batchingTxApplierFactory, databaseEventDispatch,
                 storeCopy, nullLogProvider(), panicker, catchupAddressProvider );
+    }
+
+    @Test
+    void pauseCatchupProcessShouldBeIdempotent()
+    {
+        assertTrue( txPuller.pause() );
+        assertSame( txPuller.state(), PAUSED );
+        assertFalse( txPuller.pause() );
+        assertSame( txPuller.state(), PAUSED );
+    }
+
+    @Test
+    void resumeCatchupProcessShouldBeIdempotent()
+    {
+        // given
+        txPuller.pause();
+        assertSame( txPuller.state(), PAUSED );
+
+        // when/then
+        assertTrue( txPuller.resume() );
+        assertSame( txPuller.state(), TX_PULLING );
+        assertFalse( txPuller.resume() );
+        assertSame( txPuller.state(), TX_PULLING );
+    }
+
+    @Test
+    void shouldFailToPauseCatchupPollingIfCatchupPollingHasStoryCopyState() throws Exception
+    {
+        // given
+        when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        txPuller.start();
+
+        // when
+        txPuller.tick();
+
+        // then
+        assertEquals( STORE_COPYING, txPuller.state() );
+
+        // when
+        assertThrows( IllegalStateException.class, txPuller::pause );
+    }
+
+    //TODO
+    @Test
+    void shouldAbortOnStopWhilstPulling() throws Exception
+    {
+//        var catchupProcess = mock( CatchupPollingProcess.class );
+//        CompletableFuture<Void> cf = new CompletableFuture<>();
+//        Semaphore onTick = new Semaphore( 0 );
+//        doAnswer( ignored ->
+//        {
+//            onTick.release();
+//            return cf;
+//        } ).when( catchupProcess ).tick();
+//        doAnswer( ignored -> cf.complete( null ) ).when( catchupProcess ).stop();
+//
+//        var executor = Executors.newSingleThreadExecutor();
+//
+//        life.add( LifecycleAdapter.onShutdown( executor::shutdown ) );
+//        life.add( createProcessManager( catchupProcess, executor ) );
+//
+//        // when: onTimeout() should block on the CompletableFuture above
+//        onTick.acquire();
+//
+//        // then: on shutdown() we should not be blocked, because our custom CatchupProcess completes the CompletableFuture
+//        life.shutdown();
+    }
+
+    private CommittedTransactionRepresentation tx( int txId )
+    {
+        var tx = mock( CommittedTransactionRepresentation.class );
+        when( tx.getCommitEntry() ).thenReturn( new LogEntryCommit( txId, 0, BASE_TX_CHECKSUM ) );
+        return tx;
     }
 
     @Test

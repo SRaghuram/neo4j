@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
+import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
@@ -25,6 +26,7 @@ import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -266,6 +268,7 @@ public class MockCatchupClient implements VersionedCatchupClients
         private Supplier<CoreSnapshot> coreSnapshot;
         private Function<GetStoreIdRequest,StoreId> storeId;
         private Function<TxPullRequest,TxStreamFinishedResponse> txPullResponse;
+        private Function<TxPullRequest,TxPullResponse> ongoingTxPullResponses;
         private Function<PrepareStoreCopyRequest,PrepareStoreCopyResponse> prepareStoreCopyResponse;
         private Function<GetStoreFileRequest,StoreCopyFinishedResponse> storeFiles;
         private GetAllDatabaseIdsResponse allDatabaseIdsResponse;
@@ -304,6 +307,12 @@ public class MockCatchupClient implements VersionedCatchupClients
         public MockClientResponses withTxPullResponse( Function<TxPullRequest,TxStreamFinishedResponse> txPullResponse )
         {
             this.txPullResponse = txPullResponse;
+            return this;
+        }
+
+        public MockClientResponses withOngoingTxPullResponses( Function<TxPullRequest,TxPullResponse> ongoingTxPullResponses )
+        {
+            this.ongoingTxPullResponses = ongoingTxPullResponses;
             return this;
         }
 
