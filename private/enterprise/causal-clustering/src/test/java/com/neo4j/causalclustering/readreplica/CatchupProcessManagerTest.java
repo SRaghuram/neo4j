@@ -21,8 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.concurrent.Executor;
-
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -80,9 +78,9 @@ class CatchupProcessManagerTest
     private CatchupProcessFactory.CatchupProcessLifecyclesFactory createFactory( CatchupPollingProcess catchupProcess )
     {
         return ( CatchupComponentsRepository catchupComponents, CommandIndexTracker commandIndexTracker,
-                ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer, Executor executor,
+                ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer,
                 CatchupClientFactory catchupClient, Panicker panicker, UpstreamStrategyBasedAddressProvider upstreamProvider,
-                LogProvider logProvider, Config config, ReadReplicaDatabaseContext databaseContext ) ->
+                LogProvider logProvider, Config config, ReadReplicaDatabaseContext databaseContext, AsyncTxApplier asyncTxApplier ) ->
                 new CatchupProcessLifecycles( catchupProcess );
     }
 

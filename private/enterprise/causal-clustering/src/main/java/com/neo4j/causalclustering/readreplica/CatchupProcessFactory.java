@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
 import com.neo4j.causalclustering.readreplica.tx.BatchinTxApplierFactory;
+import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplier;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -107,14 +108,14 @@ public class CatchupProcessFactory extends SafeLifecycle
 
     CatchupProcessLifecycles create( ReadReplicaDatabaseContext databaseContext )
     {
-        return lifecyclesFactory.create( catchupComponents, commandIndexTracker, databaseEventDispatch, pageCacheTracer, executor, catchupClient,
-                panicker, upstreamAddressProvider, logProvider, config, databaseContext );
+        return lifecyclesFactory.create( catchupComponents, commandIndexTracker, databaseEventDispatch, pageCacheTracer, catchupClient,
+                panicker, upstreamAddressProvider, logProvider, config, databaseContext, asyncTxApplier );
     }
 
     private static CatchupProcessLifecycles create( CatchupComponentsRepository catchupComponents, CommandIndexTracker commandIndexTracker,
-            ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer, Executor executor,
+            ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer,
             CatchupClientFactory catchupClient, Panicker panicker, UpstreamStrategyBasedAddressProvider upstreamProvider,
-            LogProvider logProvider, Config config, ReadReplicaDatabaseContext databaseContext )
+            LogProvider logProvider, Config config, ReadReplicaDatabaseContext databaseContext, AsyncTxApplier asyncTxApplier )
     {
         var dbCatchupComponents = catchupComponents.componentsFor( databaseContext.databaseId() ).orElseThrow(
                 () -> new IllegalArgumentException( String.format( "No StoreCopyProcess instance exists for database %s.", databaseContext.databaseId() ) ) );
@@ -172,7 +173,7 @@ public class CatchupProcessFactory extends SafeLifecycle
     /**
      * Time to catchup, thrusters to maximum!
      */
-    private void onTimeout() throws Exception
+    private void onTimeout()
     {
         if ( wrapped == null )
         {
@@ -208,8 +209,8 @@ public class CatchupProcessFactory extends SafeLifecycle
     interface CatchupProcessLifecyclesFactory
     {
         CatchupProcessLifecycles create( CatchupComponentsRepository catchupComponents, CommandIndexTracker commandIndexTracker,
-                ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer, Executor executor,
+                ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer,
                 CatchupClientFactory catchupClient, Panicker panicker, UpstreamStrategyBasedAddressProvider upstreamProvider,
-                LogProvider logProvider, Config config, ReadReplicaDatabaseContext databaseContext );
+                LogProvider logProvider, Config config, ReadReplicaDatabaseContext databaseContext, AsyncTxApplier asyncTxApplier );
     }
 }
