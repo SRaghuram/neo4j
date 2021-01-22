@@ -17,7 +17,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -147,7 +146,7 @@ class SerialExhaustiveLimitOnRhsOfApplyOperatorTaskTemplate(inner: OperatorTaskT
   extends SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(inner, id, argumentStateMapId, generateCountExpression, codeGen) {
 
   override protected def beginOperate: IntermediateRepresentation =
-    declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId))
+    declareAndAssign(argumentVarName(argumentStateMapId), getArgument(argumentStateMapId))
 
   override protected def innerOperate: IntermediateRepresentation = {
     block(

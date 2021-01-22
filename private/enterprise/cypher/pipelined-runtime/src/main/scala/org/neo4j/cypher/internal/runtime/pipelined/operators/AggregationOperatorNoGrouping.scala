@@ -21,7 +21,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
@@ -377,7 +376,7 @@ abstract class BaseAggregationMapperOperatorNoGroupingTaskTemplate(val inner: Op
        *   updaters = aggregatedRows.peek(arg).aggregatorRow.updaters(workerId)
        * }
        */
-      declareAndAssign(typeRefOf[Long], currentArg, codeGen.getArgumentAt(argumentSlotOffset)),
+      declareAndAssign(currentArg, codeGen.getArgumentAt(argumentSlotOffset)),
       condition(notEqual(load[Long](currentArg), load(argVar)))(
         block(
           assign(argVar, load[Long](currentArg)),

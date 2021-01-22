@@ -16,7 +16,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.Load
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.values.AnyValue
@@ -250,7 +249,7 @@ case class NullCheckLink(check: IntermediateRepresentation)(override val inner: 
     val code = if(elseCode.isInstanceOf[Block]) {
       val retName = namer.nextVariableName("retVal")
       block(
-        declareAndAssign(typeRefOf[AnyValue], retName, noValue),
+        declareAndAssign(retName, noValue),
         condition(IntermediateRepresentation.not(check))(IntermediateRepresentation.assign(retName, elseCode)),
         load[AnyValue](retName),
       )

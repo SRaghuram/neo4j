@@ -26,7 +26,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.collection.trackable.HeapTrackingCollections
 import org.neo4j.collection.trackable.HeapTrackingLongHashSet
@@ -256,7 +255,7 @@ abstract class BaseDistinctSinglePrimitiveOperatorTaskTemplate(val inner: Operat
      */
     block(
       beginOperate,
-      declareAndAssign(typeRefOf[Long], keyVar, codeGen.getLongAt(offset)),
+      declareAndAssign(keyVar, codeGen.getLongAt(offset)),
       condition(or(innerCanContinue, seen(loadField(distinctStateField), load[Long](keyVar)))) {
         block(
           computeProjection,
@@ -325,7 +324,7 @@ class SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(inner: Opera
   override def genMoreFields: Seq[Field] = Seq(argumentMaps, field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
   override def genOperateEnter: IntermediateRepresentation = {
     block(
-      declareAndAssign(typeRefOf[Long], localArgument, constant(-1L)),
+      declareAndAssign(localArgument, constant(-1L)),
       inner.genOperateEnter
     )
   }
@@ -333,7 +332,7 @@ class SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(inner: Opera
   override protected def initializeState: IntermediateRepresentation = constant(null)
   override protected def beginOperate: IntermediateRepresentation =
     block(
-      declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
+      declareAndAssign(argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
       condition(not(equal(load[Long](argumentVarName(argumentStateMapId)), load[Long](localArgument)))) {
         block(
           condition(IntermediateRepresentation.isNotNull(loadField(distinctStateField))){

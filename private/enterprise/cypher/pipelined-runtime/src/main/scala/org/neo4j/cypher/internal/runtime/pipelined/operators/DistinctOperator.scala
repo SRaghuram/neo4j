@@ -26,7 +26,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
@@ -263,7 +262,7 @@ abstract class BaseDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
      */
     block(
       beginOperate,
-      declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
+      declareAndAssign(keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
       condition(or(innerCanContinue, seen(loadField(distinctStateField), load[AnyValue](keyVar)))) {
         block(
           nullCheckIfRequired(groupingExpression.projectKey),
@@ -314,14 +313,14 @@ class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: Operato
 
   override def genOperateEnter: IntermediateRepresentation = {
     block(
-      declareAndAssign(typeRefOf[Long], localArgument, constant(-1L)),
+      declareAndAssign(localArgument, constant(-1L)),
       inner.genOperateEnter
     )
   }
   override protected def initializeState: IntermediateRepresentation = constant(null)
   override protected def beginOperate: IntermediateRepresentation =
     block(
-      declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
+      declareAndAssign(argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
       condition(not(equal(load[Long](argumentVarName(argumentStateMapId)), load[Long](localArgument)))) {
         block(
           condition(IntermediateRepresentation.isNotNull(loadField(distinctStateField))){

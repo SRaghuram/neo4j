@@ -283,11 +283,11 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
       countExpression = generateCountExpression()
     }
     block(
-      declareAndAssign(typeRefOf[Long], expressionVariable,
+      declareAndAssign(expressionVariable,
         invokeStatic(method[CountingState, Long, AnyValue]("evaluateCountValue"),
           nullCheckIfRequired(countExpression))),
       declareAndAssign(typeRefOf[SerialCountingState], state, constant(null)),
-      declareAndAssign(typeRefOf[Long], localArgument, constant(-1L)),
+      declareAndAssign(localArgument, constant(-1L)),
       inner.genOperateEnter
     )
   }

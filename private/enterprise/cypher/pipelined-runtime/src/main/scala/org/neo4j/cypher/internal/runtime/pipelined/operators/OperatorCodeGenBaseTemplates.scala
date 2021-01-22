@@ -1169,7 +1169,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   }
 
   override def genOperateEnter: IntermediateRepresentation = block(
-    limits.map(argumentStateMapId => declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), constant(-1L))): _*
+    limits.map(argumentStateMapId => declareAndAssign(argumentVarName(argumentStateMapId), constant(-1L))): _*
   )
 
   /**

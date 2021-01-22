@@ -518,8 +518,8 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
         }
 
       block(
-        declareAndAssign(typeRefOf[Long], newStart, constant(-1L)),
-        declareAndAssign(typeRefOf[Long], newEnd, constant(-1L)),
+        declareAndAssign(newStart, constant(-1L)),
+        declareAndAssign(newEnd, constant(-1L)),
         init,
         condition(notEqual(load[Long](newStart), constant(-1L)))(write(load[Long](newStart), load[Long](newEnd)))
       )
@@ -553,8 +553,8 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
         //we have a cursor available for getting the start and end node
         onValidType(cursor.relationshipType, typesField, types.isEmpty) {
           block(
-            declareAndAssign(typeRefOf[Long], startVar, cursor.sourceNode),
-            declareAndAssign(typeRefOf[Long], endVar, cursor.targetNode),
+            declareAndAssign(startVar, cursor.sourceNode),
+            declareAndAssign(endVar, cursor.targetNode),
             writeOps(startVar, endVar)
           )
         }
@@ -562,15 +562,15 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
         //we don't have a cursor available for getting the start and end node
         //do a read.singleRelationship(id, cursor) and read start and end from the cursor
         block(
-          declareAndAssign(typeRefOf[Long], relIdVar, getRelationshipIdFromSlot(relSlot, codeGen)),
+          declareAndAssign(relIdVar, getRelationshipIdFromSlot(relSlot, codeGen)),
           condition(notEqual(load[Long](relIdVar), constant(-1L))) {
             block(
               singleRelationship(load[Long](relIdVar), RELATIONSHIP_CURSOR),
               condition(cursorNext[RelationshipScanCursor](RELATIONSHIP_CURSOR)) {
                 onValidType(invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Int]("type")), typesField, types.isEmpty) {
                   block(
-                    declareAndAssign(typeRefOf[Long], startVar, invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Long]("sourceNodeReference"))),
-                    declareAndAssign(typeRefOf[Long], endVar, invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Long]("targetNodeReference"))),
+                    declareAndAssign(startVar, invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Long]("sourceNodeReference"))),
+                    declareAndAssign(endVar, invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Long]("targetNodeReference"))),
                     writeOps(startVar, endVar)
                   )
                 }
@@ -654,8 +654,8 @@ class VarLengthProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplat
         ),
       condition(IntermediateRepresentation.isNotNull(load[Array[Long]](startEnd))) {
         block(
-          declareAndAssign(typeRefOf[Long], startVar, arrayLoad(load[Array[Long]](startEnd), 0)),
-          declareAndAssign(typeRefOf[Long], endVar, arrayLoad(load[Array[Long]](startEnd), 1)),
+          declareAndAssign(startVar, arrayLoad(load[Array[Long]](startEnd), 0)),
+          declareAndAssign(endVar, arrayLoad(load[Array[Long]](startEnd), 1)),
           writeOps(startVar, endVar)
         )
       }
@@ -769,7 +769,7 @@ class UndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplate,
       case None =>
         val relIdVar = codeGen.namer.nextVariableName()
         block(
-          declareAndAssign(typeRefOf[Long], relIdVar, getRelationshipIdFromSlot(relSlot, codeGen)),
+          declareAndAssign(relIdVar, getRelationshipIdFromSlot(relSlot, codeGen)),
           setField(canContinue, constant(false)),
           condition(notEqual(load[Long](relIdVar), constant(-1L))) {
             block(

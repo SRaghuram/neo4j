@@ -25,7 +25,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.NODE_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
@@ -88,7 +87,7 @@ class SetPropertiesFromMapOperatorTemplate(override val inner: OperatorTaskTempl
     val relProps = nullCheckIfRequired(relationshipPropertiesMap)
 
     block(
-      declareAndAssign(typeRefOf[AnyValue], entityValueVar, nullCheckIfRequired(entityValue)),
+      declareAndAssign(entityValueVar, nullCheckIfRequired(entityValue)),
       ifElse(instanceOf[VirtualNodeValue](load(entityValueVar)))(
         setPropertyFromMap(
           isNode = true,

@@ -32,7 +32,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.Method
@@ -550,7 +549,7 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
      */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        declareAndAssign(typeRefOf[Long], idVariable,
+        declareAndAssign(idVariable,
           invokeStatic(asIdMethod, cast[AnyValue](
             invoke(loadField(idCursor),
               method[IteratorCursor, AnyValue]("value"))))),
@@ -622,7 +621,7 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
      */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        declareAndAssign(typeRefOf[Long], idVariable,
+        declareAndAssign(idVariable,
           ternary(loadField(forwardDirection),
             invokeStatic(asIdMethod, cast[AnyValue](
               invoke(loadField(idCursor),

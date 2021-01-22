@@ -210,7 +210,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val fromNode = codeGen.namer.nextVariableName("fromNode")
     block(
-      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
+      declareAndAssign(fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
       setField(hasWritten, constant(false)),
       ifElse(notEqual(load[Long](fromNode), constant(-1L))) {
         block(

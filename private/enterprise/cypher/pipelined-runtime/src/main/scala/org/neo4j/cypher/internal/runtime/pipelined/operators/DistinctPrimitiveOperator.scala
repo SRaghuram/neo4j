@@ -64,7 +64,6 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedPrimitiveP
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.memory.MemoryTracker
-import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
 
@@ -160,7 +159,7 @@ abstract class BaseDistinctPrimitiveOperatorTaskTemplate(val inner: OperatorTask
       condition(or(innerCanContinue,
         seen(loadField(distinctStateField), load[LongArray](groupingKeyAsArrayVar)))) {
         block(
-          declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
+          declareAndAssign(keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
           nullCheckIfRequired(groupingExpression.projectKey),
           inner.genOperateWithExpressions,
           conditionallyProfileRow(innerCannotContinue, id, doProfile)
@@ -223,7 +222,7 @@ class SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate(inner: OperatorTas
   override protected def initializeState: IntermediateRepresentation = constant(null)
   override protected def beginOperate: IntermediateRepresentation =
     block(
-      declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
+      declareAndAssign(argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
       condition(not(equal(load[Long](argumentVarName(argumentStateMapId)), load[Long](localArgument)))) {
         block(
           condition(IntermediateRepresentation.isNotNull(loadField(distinctStateField))){
@@ -238,7 +237,7 @@ class SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate(inner: OperatorTas
 
   override def genOperateEnter: IntermediateRepresentation = {
     block(
-      declareAndAssign(typeRefOf[Long], localArgument, constant(-1L)),
+      declareAndAssign(localArgument, constant(-1L)),
       inner.genOperateEnter
     )
   }

@@ -449,7 +449,7 @@ abstract class BaseAggregationMapperOperatorTaskTemplate(val inner: OperatorTask
        *   argumentRowId = arg
        * }
        */
-      declareAndAssign(typeRefOf[Long], currentArg, codeGen.getArgumentAt(argumentSlotOffset)),
+      declareAndAssign(currentArg, codeGen.getArgumentAt(argumentSlotOffset)),
       condition(notEqual(load[Long](currentArg), load(argVar)))(
         block(
           assign(argVar, load[Long](currentArg)),

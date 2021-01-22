@@ -12,7 +12,6 @@ import java.util.regex
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
-import org.neo4j.codegen.api.IntermediateRepresentation.add
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
@@ -577,7 +576,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
               declare[Value](isMatch),
               assign(isMatch, nullCheckIfRequired(coercedPredicate)),
               condition(equal(load[Value](isMatch), trueValue))(
-                assign(matches, add(load[Int](matches), constant(1)))
+                ++(matches)
+                )
               ),
               // if (isMatch == Values.NO_VALUE)
               // {
@@ -1002,7 +1002,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         for (e <- compileExpression(lhs, id)) yield {
           val f = field[regex.Pattern](namer.nextVariableName())
           val regexVar = namer.nextVariableName("regex")
-          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], regexVar, nullCheckIfRequired(e)))
+          val lazySet = oneTime(declareAndAssign(regexVar, nullCheckIfRequired(e)))
           val ops = block(
             lazySet,
             //if (f == null) { f = Pattern.compile(...) }
@@ -1019,7 +1019,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
              r <- compileExpression(rhs, id)
         } yield {
           val regexVar = namer.nextVariableName("regex")
-          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], regexVar, nullCheckIfRequired(l)))
+          val lazySet = oneTime(declareAndAssign(regexVar, nullCheckIfRequired(l)))
           IntermediateExpression(
             block(
               lazySet,
@@ -1035,8 +1035,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
            r <- compileExpression(rhs, id)} yield {
         val leftVariableName = namer.nextVariableName()
         val rightVariableName = namer.nextVariableName()
-        val lazyLeft = oneTime(declareAndAssign(typeRefOf[AnyValue], leftVariableName, nullCheckIfRequired(l)))
-        val lazyRight = oneTime(declareAndAssign(typeRefOf[AnyValue], rightVariableName, nullCheckIfRequired(r)))
+        val lazyLeft = oneTime(declareAndAssign(leftVariableName, nullCheckIfRequired(l)))
+        val lazyRight = oneTime(declareAndAssign(rightVariableName, nullCheckIfRequired(r)))
 
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
@@ -1052,8 +1052,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
            r <- compileExpression(rhs, id)} yield {
         val leftVariableName = namer.nextVariableName()
         val rightVariableName = namer.nextVariableName()
-        val lazyLeft = oneTime(declareAndAssign(typeRefOf[AnyValue], leftVariableName, nullCheckIfRequired(l)))
-        val lazyRight = oneTime(declareAndAssign(typeRefOf[AnyValue], rightVariableName, nullCheckIfRequired(r)))
+        val lazyLeft = oneTime(declareAndAssign(leftVariableName, nullCheckIfRequired(l)))
+        val lazyRight = oneTime(declareAndAssign(rightVariableName, nullCheckIfRequired(r)))
 
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
@@ -1069,8 +1069,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
            r <- compileExpression(rhs, id)} yield {
         val leftVariableName = namer.nextVariableName()
         val rightVariableName = namer.nextVariableName()
-        val lazyLeft = oneTime(declareAndAssign(typeRefOf[AnyValue], leftVariableName, nullCheckIfRequired(l)))
-        val lazyRight = oneTime(declareAndAssign(typeRefOf[AnyValue], rightVariableName, nullCheckIfRequired(r)))
+        val lazyLeft = oneTime(declareAndAssign(leftVariableName, nullCheckIfRequired(l)))
+        val lazyRight = oneTime(declareAndAssign(rightVariableName, nullCheckIfRequired(r)))
 
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
@@ -1356,7 +1356,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val variableName = namer.nextVariableName()
         val propertyGet = getProperty(key, nullCheckIfRequired(map))
         val call = noValueOr(map)(propertyGet)
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, call))
+        val lazySet = oneTime(declareAndAssign(variableName, call))
         val ops = block(lazySet, load[AnyValue](variableName))
         val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
         IntermediateExpression(ops, map.fields, map.variables ++ vCURSORS , Set(nullChecks), requireNullCheck = false)
@@ -1624,19 +1624,19 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case HasDegreeGreaterThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
-     checkDegree(offset, typ, dir, maxDegreeExpression, greaterThan, d => add(d, constant(1)), id)
+     checkDegree(offset, typ, dir, maxDegreeExpression, greaterThan, d => d + 1, id)
 
     case HasDegreeGreaterThanOrEqualPrimitive(offset, typ, dir, maxDegreeExpression) =>
       checkDegree(offset, typ, dir, maxDegreeExpression, greaterThanOrEqual, identity, id)
 
     case HasDegreePrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, equal, d => add(d, constant(1)), id)
+      checkDegree(offset, typ, dir, maxDegreeExpression, equal, d => d + 1, id)
 
     case HasDegreeLessThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
       checkDegree(offset, typ, dir, maxDegreeExpression, lessThan, identity, id)
 
     case HasDegreeLessThanOrEqualPrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, lessThanOrEqual, d => add(d, constant(1)), id)
+      checkDegree(offset, typ, dir, maxDegreeExpression, lessThanOrEqual, d => d + 1, id)
 
     case f@ResolvedFunctionInvocation(name, Some(signature), args) if !f.isAggregate =>
       val inputArgs = args.map(Some(_))
@@ -1654,7 +1654,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val allowed = staticConstant[Array[String]](namer.nextVariableName(), signature.allowed)
         val fields = inputArgs.flatMap(_.fields) :+ allowed
         val variables = inputArgs.flatMap(_.variables)
-        val ops = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, invoke(
+        val ops = oneTime(declareAndAssign(variableName, invoke(
           DB_ACCESS,
           method[DbAccess, AnyValue, Int, Array[AnyValue], Array[String]]("callFunction"),
           constant(signature.id),
@@ -1780,7 +1780,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     typ match {
       case None =>
         for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
-          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
+          val lazySet = oneTime(declareAndAssign(localDegree, nullCheckIfRequired(maxDegree)))
           val nullCheck = Set(block(lazySet, equal(load[AnyValue](localDegree), noValue)))
           IntermediateExpression(
             block(
@@ -1797,7 +1797,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         }
       case Some(Left(typeId)) =>
         for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
-          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
+          val lazySet = oneTime(declareAndAssign(localDegree, nullCheckIfRequired(maxDegree)))
           val nullCheck = Set(block(lazySet, equal(load[AnyValue](localDegree), noValue)))
           IntermediateExpression(
             block(
@@ -1815,7 +1815,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       case Some(Right(typeName)) =>
         val f = field[Int](namer.nextVariableName(), constant(-1))
         for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
-          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
+          val lazySet = oneTime(declareAndAssign(localDegree, nullCheckIfRequired(maxDegree)))
           val nullCheck = Set(block(lazySet, equal(load[AnyValue](localDegree), noValue)))
           IntermediateExpression(
             block(
@@ -2000,7 +2000,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
            p2 <- compileExpression(c.args(1), id)
       } yield {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
+        val lazySet = oneTime(declareAndAssign(variableName,
                                        invokeStatic(method[CypherFunctions, Value, AnyValue, AnyValue]("distance"), p1.ir, p2.ir)))
         val ops = block(lazySet, load[AnyValue](variableName))
         val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
@@ -2047,7 +2047,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case functions.Head =>
       compileExpression(c.args.head, id).map(in => {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
+        val lazySet = oneTime(declareAndAssign(variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("head"), in.ir))))
 
         val ops = block(lazySet, load[AnyValue](variableName))
@@ -2074,7 +2074,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case functions.Last =>
       compileExpression(c.args.head, id).map(in => {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
+        val lazySet = oneTime(declareAndAssign(variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("last"), in.ir))))
 
         val ops = block(lazySet, load[AnyValue](variableName))
@@ -2232,7 +2232,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case functions.ToBoolean =>
       for (in <- compileExpression(c.args.head, id)) yield {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
+        val lazySet = oneTime(declareAndAssign(variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toBoolean"), in.ir))))
 
         val ops = block(lazySet, load[AnyValue](variableName))
@@ -2244,7 +2244,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case functions.ToFloat =>
       for (in <- compileExpression(c.args.head, id)) yield {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
+        val lazySet = oneTime(declareAndAssign(variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toFloat"), in.ir))))
 
         val ops = block(lazySet, load[AnyValue](variableName))
@@ -2256,7 +2256,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case functions.ToInteger =>
       for (in <- compileExpression(c.args.head, id)) yield {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
+        val lazySet = oneTime(declareAndAssign(variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toInteger"), in.ir))))
 
         val ops = block(lazySet, load[AnyValue](variableName))
@@ -2273,7 +2273,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case functions.Properties =>
       for (in <- compileExpression(c.args.head, id)) yield {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(in)(invokeStatic(
+        val lazySet = oneTime(declareAndAssign(variableName, noValueOr(in)(invokeStatic(
           method[CypherFunctions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("properties"),
           in.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR))))
 
@@ -2759,7 +2759,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
       case _ =>
         val varName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], varName, invoke(outputRow,
+        val lazySet = oneTime(declareAndAssign(varName, invoke(outputRow,
           method[ReadableRow, AnyValue, String]("getByName"), constant(name))))
         computeRepresentation(ir = block(lazySet, load[AnyValue](varName)),
                               nullCheck = Some(block(lazySet, equal(load[AnyValue](varName), noValue))), nullable = true)
@@ -2866,13 +2866,13 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         // ListValue list = [evaluate collection expression];
         // ArrayList<AnyValue> extracted = new ArrayList<>();
         declare[ListValue](listVar),
-        declareAndAssign(typeRefOf[AnyValue], returnVar, nullCheckIfRequired(collection)),
+        declareAndAssign(returnVar, nullCheckIfRequired(collection)),
         assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), load[AnyValue](returnVar))),
         condition(notEqual(load[AnyValue](returnVar), noValue)) {
           block(
             declare[java.util.ArrayList[AnyValue]](extractedVars),
             assign(extractedVars, newInstance(constructor[java.util.ArrayList[AnyValue]])),
-            declareAndAssign(typeRefOf[Long], payloadVar, constant(0L)),
+            declareAndAssign(payloadVar, constant(0L)),
             // Iterator<AnyValue> iter = list.iterator();
             // while (iter.hasNext) {
             //   AnyValue currentValue = iter.next();
@@ -2886,8 +2886,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                 // expressionVariables[innerVarOffset] = currentValue;
                 setExpressionVariable(innerVariable, load[AnyValue](currentValue)),
                 // extracted.add([result from inner expression]);
-                declareAndAssign(typeRefOf[AnyValue], innerVar, nullCheckIfRequired(inner)),
-                assign(payloadVar, add(load[Long](payloadVar), invoke(load[AnyValue](innerVar), method[AnyValue, Long]("estimatedHeapUsage")))),
+                declareAndAssign(innerVar, nullCheckIfRequired(inner)),
+                assign(payloadVar, load[Long](payloadVar) + invoke(load[AnyValue](innerVar), method[AnyValue, Long]("estimatedHeapUsage"))),
                 invokeSideEffect(load[java.util.ArrayList[AnyValue]](extractedVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
                   load[AnyValue](innerVar))): _*)
             },
@@ -2966,7 +2966,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     for ((nodeOps, relOps) <- compileSteps(steps) ) yield {
       val variableName = namer.nextVariableName()
-      val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
+      val lazySet = oneTime(declareAndAssign(variableName,
                                              noValueOr(nodeOps ++ relOps: _*)(
                                      invokeStatic(
                                        method[VirtualValues, PathValue, Array[NodeValue], Array[RelationshipValue]](
@@ -3098,7 +3098,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           Seq(
             declare[PathValueBuilder](builderVar),
             assign(builderVar, newInstance(constructor[PathValueBuilder, DbAccess, RelationshipScanCursor], DB_ACCESS, RELATIONSHIP_CURSOR)))
-            ++ pathOps.map(_.ir) :+ declareAndAssign(typeRefOf[AnyValue], variableName, invoke(load[PathValueBuilder](builderVar), method[PathValueBuilder, AnyValue]("build"))): _*))
+            ++ pathOps.map(_.ir) :+ declareAndAssign(variableName, invoke(load[PathValueBuilder](builderVar), method[PathValueBuilder, AnyValue]("build"))): _*))
 
 
       val ops = block(lazySet, load[AnyValue](variableName))
@@ -3137,7 +3137,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           NodeCursor, RelationshipScanCursor, PropertyCursor]("containerIndex"),
           c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)
       }
-      val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(c, idx)(invocation)))
+      val lazySet = oneTime(declareAndAssign(variableName, noValueOr(c, idx)(invocation)))
       val ops = block(lazySet, load[AnyValue](variableName))
       val nullChecks = block(lazySet, equal(load[AnyValue](variableName), noValue))
       IntermediateExpression(ops, c.fields ++ idx.fields, c.variables ++ idx.variables ++ vCURSORS, Set(nullChecks), requireNullCheck = false)
@@ -3293,7 +3293,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
       val nullChecked = if (nullable) ternary(equal(getRefAt(offset), noValue), constant(-1L), getId) else getId
       block(
-        oneTime(declareAndAssign(typeRefOf[Long], entityVar, nullChecked)),
+        oneTime(declareAndAssign(entityVar, nullChecked)),
         load[Long](entityVar))
     }
   }

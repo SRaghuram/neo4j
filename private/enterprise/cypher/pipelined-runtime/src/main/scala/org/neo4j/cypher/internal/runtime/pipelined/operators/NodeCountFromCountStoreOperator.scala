@@ -23,7 +23,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.multiply
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -222,14 +221,14 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
       val wildCardCount = codeGen.namer.nextVariableName()
       val ops = block((1 to wildCards).map(_ => assign(countVar, multiply(load[Long](countVar), load[Long](wildCardCount)))) :_*)
       block(
-        declareAndAssign(typeRefOf[Long], wildCardCount, invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(NameId.WILDCARD))),
+        declareAndAssign(wildCardCount, invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(NameId.WILDCARD))),
         dbHit(loadField(executionEventField)),
         ops
       )
     } else noop()
 
     block(
-      declareAndAssign(typeRefOf[Long], countVar, constant(1L)),
+      declareAndAssign(countVar, constant(1L)),
       unknownLabelOps,
       knownLabelOps,
       wildCardOps,

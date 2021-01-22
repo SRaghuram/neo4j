@@ -273,8 +273,8 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       declareAndAssign(typeRefOf[Boolean], resultBoolean, constant(false)),
       setField(canContinue, constant(false)),
-      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
-      declareAndAssign(typeRefOf[Long], toNode, getNodeIdFromSlot(toSlot, codeGen)),
+      declareAndAssign(fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
+      declareAndAssign(toNode, getNodeIdFromSlot(toSlot, codeGen)),
       condition(and(notEqual(load[Long](fromNode), constant(-1L)), notEqual(load[Long](toNode), constant(-1L)))){
         block(
           setUpCursors(fromNode, toNode),

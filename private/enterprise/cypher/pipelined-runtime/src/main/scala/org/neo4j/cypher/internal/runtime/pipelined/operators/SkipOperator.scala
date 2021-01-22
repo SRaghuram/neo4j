@@ -14,7 +14,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -170,7 +169,7 @@ class SerialSkipOnRhsOfApplyOperatorTaskTemplate(inner: OperatorTaskTemplate,
   extends SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(inner, id, argumentStateMapId, generateCountExpression, codeGen) {
 
   override protected def beginOperate: IntermediateRepresentation =
-    declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId))
+    declareAndAssign(argumentVarName(argumentStateMapId), getArgument(argumentStateMapId))
 
   override protected def innerOperate: IntermediateRepresentation = {
     ifElse(equal(load(countLeftVar), constant(0)))(

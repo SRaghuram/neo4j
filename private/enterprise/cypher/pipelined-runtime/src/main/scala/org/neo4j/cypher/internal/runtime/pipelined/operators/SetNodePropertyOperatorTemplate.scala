@@ -13,7 +13,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
@@ -50,7 +49,7 @@ class SetNodePropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
 
     val nodeId = getNodeIdFromSlot(slot, codeGen)
     block(
-      declareAndAssign(typeRefOf[Long], entityId, nodeId),
+      declareAndAssign(entityId, nodeId),
       condition(notEqual(load[Long](entityId), constant(StatementConstants.NO_SUCH_NODE)))
       (SetPropertyOperatorTemplate.setProperty(isNode = true, load[Long](entityId), key, nullCheckIfRequired(propertyValue), codeGen, needsExclusiveLock)),
       inner.genOperateWithExpressions,

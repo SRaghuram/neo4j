@@ -343,8 +343,8 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
       setField(canContinue, constant(false)),
-      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot)),
-      declareAndAssign(typeRefOf[Long], toNode, if (shouldExpandAll) constant(-1L) else getNodeIdFromSlot(toSlot)),
+      declareAndAssign(fromNode, getNodeIdFromSlot(fromSlot)),
+      declareAndAssign(toNode, if (shouldExpandAll) constant(-1L) else getNodeIdFromSlot(toSlot)),
       condition(generateStartNodePredicate()){
         block(
           loadTypes,
@@ -509,13 +509,13 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         val tmp = codeGen.namer.nextVariableName()
         if (!fromSlot.isLongSlot && offset == fromSlot.offset) {
           block(
-            oneTime(declareAndAssign(typeRefOf[AnyValue], tmp,
+            oneTime(declareAndAssign(tmp,
               invokeStatic(method[CompiledHelpers, AnyValue, DbAccess, Long]("nodeOrNoValue"),
                 DB_ACCESS, invoke(self[VarExpandCursor], method[VarExpandCursor, Long]("fromNode"))))),
             load[AnyValue](tmp))
         } else if (!toSlot.isLongSlot && offset == toSlot.offset) {
           block(
-            oneTime(declareAndAssign(typeRefOf[AnyValue], tmp,
+            oneTime(declareAndAssign(tmp,
               invokeStatic(method[CompiledHelpers, AnyValue, DbAccess, Long]("nodeOrNoValue"),
                 DB_ACCESS, invoke(self[VarExpandCursor], method[VarExpandCursor, Long]("targetToNode"))))),
             load[AnyValue](tmp))

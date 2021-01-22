@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
-import org.neo4j.codegen.api.IntermediateRepresentation.add
+import org.neo4j.codegen.api.IntermediateRepresentation.++
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLength
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
@@ -597,7 +597,7 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
           loop(IntermediateRepresentation.lessThan(load[Int](i), arrayLength(loadField(nodeCursorsToCloseField)))) {
             block(
               freeCursor[NodeValueIndexCursor](getCursorToFree(arrayLoad(loadField(nodeCursorsToCloseField), load[Int](i))), NodeValueIndexCursorPool),
-              assign(i, add(load[Int](i), constant(1)))
+              ++(i)
             )
           },
           setField(nodeCursorsToCloseField, constant(null))

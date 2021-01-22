@@ -25,7 +25,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.Method
@@ -256,7 +255,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
      */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        declareAndAssign(typeRefOf[Long], idVariable,
+        declareAndAssign(idVariable,
           invokeStatic(asIdMethod,
             invoke(loadField(idCursor),
               method[IteratorCursor, AnyValue]("value")))),

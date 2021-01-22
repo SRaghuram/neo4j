@@ -27,7 +27,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
@@ -178,7 +177,7 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
       case CreateNodeFusedCommand(offset, _, properties) =>
         val nodeVar = codeGen.namer.nextVariableName("node")
         block(
-          declareAndAssign(typeRefOf[Long], nodeVar,
+          declareAndAssign(nodeVar,
             invokeStatic(
               method[CreateOperator, Long, Array[Int], Write, MutableQueryStatistics]("createNode"),
               loadField(labelFields(offset)), loadField(DATA_WRITE), QUERY_STATS_TRACKER)),
@@ -201,8 +200,8 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
         val endNodeVar = codeGen.namer.nextVariableName("end")
 
         block(
-          declareAndAssign(typeRefOf[Long], startNodeVar, getNodeIdFromSlot(startSlot, codeGen)),
-          declareAndAssign(typeRefOf[Long], endNodeVar, getNodeIdFromSlot(endSlot, codeGen)),
+          declareAndAssign(startNodeVar, getNodeIdFromSlot(startSlot, codeGen)),
+          declareAndAssign(endNodeVar, getNodeIdFromSlot(endSlot, codeGen)),
           declare[Long](relVar),
           ifElse(or(equal(load[Long](startNodeVar), constant(NO_SUCH_NODE)), equal(load[Long](endNodeVar), constant(NO_SUCH_NODE)))) {
             if (lenientCreateRelationship) {

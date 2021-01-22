@@ -275,7 +275,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       declareAndAssign(typeRefOf[Boolean], resultBoolean, constant(false)),
       setField(canContinue, constant(false)),
-      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
+      declareAndAssign(fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
       condition(notEqual(load[Long](fromNode), constant(-1L))){
         block(
           assign(resultBoolean, constant(true)),

@@ -863,7 +863,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                 r.properties.map(p => ctx.compileExpression(p, plan.id))
               )
             ).toIndexedSeq
-            new CreateOperatorTemplate(ctx.inner, plan.id, nodeCommands, relCommands, ctx.lenientCreateRelationship)(ctx.expressionCompiler)
+               new CreateOperatorTemplate(ctx.inner, plan.id, nodeCommands, relCommands, ctx.lenientCreateRelationship)(ctx.expressionCompiler)
 
         case plan@plans.SetProperty(_, entity, propertyKey, value) =>
           ctx: TemplateContext =>

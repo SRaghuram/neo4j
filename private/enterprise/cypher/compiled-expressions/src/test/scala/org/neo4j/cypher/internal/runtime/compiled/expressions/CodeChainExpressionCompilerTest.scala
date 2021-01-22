@@ -73,7 +73,7 @@ import org.scalatest.matchers.Matcher
 
 class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructionTestSupport {
   private val context = load[ReadableRow]("row")
-  private val declareReturnValue = declareAndAssign(typeRefOf[AnyValue], "retVal", noValue)
+  private val declareReturnValue = declareAndAssign("retVal", noValue)
   private val loadReturnValue = load[AnyValue]("retVal")
   private val id = Id.INVALID_ID
 
@@ -136,7 +136,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
     val offset = slots.getReferenceOffsetFor(x)
     val ref = getRefAt(offset)
-    val assignedX = declareAndAssign(typeRefOf[AnyValue], "sinInput", ref)
+    val assignedX = declareAndAssign("sinInput", ref)
     val expectedResult = block(
       assignedX,
       invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("sin"), load[AnyValue]("sinInput"))
@@ -158,7 +158,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
     val offset = slots.getReferenceOffsetFor(x)
     val ref = getRefAt(offset)
-    val assignedX = declareAndAssign(typeRefOf[AnyValue], "sinInput", ref)
+    val assignedX = declareAndAssign("sinInput", ref)
     val expectedResult = block(
       assignedX,
       ternary(
@@ -185,10 +185,10 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
     // expected IR
     val ref = getRefAt(offset)
-    val sinInput = declareAndAssign(typeRefOf[AnyValue], "sinInput", ref)
+    val sinInput = declareAndAssign("sinInput", ref)
     val expectedResult = block(
       sinInput,
-      declareAndAssign(typeRefOf[AnyValue], "retVal", noValue),
+      declareAndAssign("retVal", noValue),
       condition(IntermediateRepresentation.not(Eq(load[AnyValue]("sinInput"), noValue)))
         (assignReturnValue(block(
         declareAndAssign(
@@ -228,11 +228,11 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign(typeRefOf[AnyValue], "addLhs", getRefAt(xOffset)),
+        declareAndAssign("addLhs", getRefAt(xOffset)),
         declareReturnValue,
         condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addLhs"), noValue)))
         (assignReturnValue(block(
-          declareAndAssign(typeRefOf[AnyValue], "addRhs", getRefAt(yOffset)),
+          declareAndAssign("addRhs", getRefAt(yOffset)),
           ternary(Eq(load[AnyValue]("addRhs"), noValue), noValue,
             invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))
           )
@@ -265,11 +265,11 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign(typeRefOf[AnyValue], "addLhs", getRefAt(xOffset)),
+        declareAndAssign("addLhs", getRefAt(xOffset)),
         declareReturnValue,
         condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addLhs"), noValue)))
         (assignReturnValue(block(
-          declareAndAssign(typeRefOf[AnyValue], "addRhs", getRefAt(yOffset)),
+          declareAndAssign("addRhs", getRefAt(yOffset)),
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))
           ))),
         loadReturnValue
@@ -300,11 +300,11 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign(typeRefOf[AnyValue], "addRhs", getRefAt(yOffset)),
+        declareAndAssign("addRhs", getRefAt(yOffset)),
         declareReturnValue,
         condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addRhs"), noValue)))
         (assignReturnValue(block(
-          declareAndAssign(typeRefOf[AnyValue], "addLhs", getRefAt(xOffset)),
+          declareAndAssign("addLhs", getRefAt(xOffset)),
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))
           ))),
         loadReturnValue
@@ -331,8 +331,8 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign(typeRefOf[AnyValue], "addRhs", getRefAt(yOffset)),
-        declareAndAssign(typeRefOf[AnyValue], "addLhs", getRefAt(xOffset)),
+        declareAndAssign("addRhs", getRefAt(yOffset)),
+        declareAndAssign("addLhs", getRefAt(xOffset)),
         invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))
       )
     )
@@ -367,16 +367,16 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign(typeRefOf[AnyValue], "addLhs", getRefAt(xOffset)),
+        declareAndAssign("addLhs", getRefAt(xOffset)),
         declareReturnValue,
         condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addLhs"), noValue)))
         (assignReturnValue(block(
-          declareAndAssign(typeRefOf[AnyValue], "addRhs", getRefAt(yOffset)),
+          declareAndAssign("addRhs", getRefAt(yOffset)),
           declareReturnValue,
           condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addRhs"), noValue)))
           (assignReturnValue(block(
-            declareAndAssign(typeRefOf[AnyValue], "cosInput", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
-            declareAndAssign(typeRefOf[AnyValue], "sinInput", invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("cos"), load[AnyValue]("cosInput"))),
+            declareAndAssign("cosInput", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
+            declareAndAssign("sinInput", invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("cos"), load[AnyValue]("cosInput"))),
             invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("sin"), load[AnyValue]("sinInput"))
             ))),
           loadReturnValue
@@ -424,20 +424,20 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign(typeRefOf[AnyValue], "addLhs", getRefAt(xOffset)),
+        declareAndAssign("addLhs", getRefAt(xOffset)),
         declareReturnValue,
         condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addLhs"), noValue)))
         (assignReturnValue(block(
-          declareAndAssign(typeRefOf[AnyValue], "addRhs", getRefAt(yOffset)),
+          declareAndAssign("addRhs", getRefAt(yOffset)),
           declareReturnValue,
           condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addRhs"), noValue)))
           (assignReturnValue(block(
-            declareAndAssign(typeRefOf[AnyValue], "sinInput", getRefAt(zOffset)),
+            declareAndAssign("sinInput", getRefAt(zOffset)),
             declareReturnValue,
             condition(IntermediateRepresentation.not(Eq(load[AnyValue]("sinInput"), noValue)))
             (assignReturnValue(block(
-              declareAndAssign(typeRefOf[AnyValue], "subRhs", invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("sin"), load[AnyValue]("sinInput"))),
-              declareAndAssign(typeRefOf[AnyValue], "subLhs", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
+              declareAndAssign("subRhs", invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("sin"), load[AnyValue]("sinInput"))),
+              declareAndAssign("subLhs", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
               invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("subtract"), load[AnyValue]("subLhs"), load[AnyValue]("subRhs"))
             )
             )
@@ -486,19 +486,19 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign(typeRefOf[AnyValue], "addLhs", getNodeProperty(getLongAt(nOffset), nOffset, 10)),
+        declareAndAssign("addLhs", getNodeProperty(getLongAt(nOffset), nOffset, 10)),
         declareReturnValue,
         condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addLhs"), noValue)))
         (assignReturnValue(block(
-          declareAndAssign(typeRefOf[AnyValue], "addRhs", getNodeProperty(getLongAt(nOffset), nOffset, 11)),
+          declareAndAssign("addRhs", getNodeProperty(getLongAt(nOffset), nOffset, 11)),
           declareReturnValue,
           condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addRhs"), noValue)))
           (assignReturnValue(block(
-            declareAndAssign(typeRefOf[AnyValue], "subRhs", getNodeProperty(getLongAt(nOffset), nOffset, 12)),
+            declareAndAssign("subRhs", getNodeProperty(getLongAt(nOffset), nOffset, 12)),
             declareReturnValue,
             condition(IntermediateRepresentation.not(Eq(load[AnyValue]("subRhs"), noValue)))
             (assignReturnValue(block(
-              declareAndAssign(typeRefOf[AnyValue], "subLhs", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
+              declareAndAssign("subLhs", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
               invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("subtract"), load[AnyValue]("subLhs"), load[AnyValue]("subRhs"))
             ))),
             loadReturnValue
@@ -529,7 +529,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign(typeRefOf[AnyValue], "isNotNullInput",
+        declareAndAssign("isNotNullInput",
           getNodeProperty(getLongAt(nOffset), nOffset, 8)
         ),
         ternary(notEqual(load[AnyValue]("isNotNullInput"), noValue), trueValue, falseValue)
@@ -586,10 +586,10 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     assertCompilesTo(testCompiler, ast, slots,
       block(
         // declare all temporary variables
-        declareAndAssign(typeRefOf[AnyValue], "orReturn", noValue),
+        declareAndAssign("orReturn", noValue),
         declareAndAssign(typeRefOf[RuntimeException], "orError", constant(null)),
         declareAndAssign(typeRefOf[Boolean], "seenNull", constant(false)),
-        declareAndAssign(typeRefOf[AnyValue], "orLhs", getRefAt(xOffset)),
+        declareAndAssign("orLhs", getRefAt(xOffset)),
 
         // check lhs
         ifElse(Eq(load[AnyValue]("orLhs"), noValue))
@@ -602,7 +602,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
         // only evaluate rhs if lhs isn't trueValue
         condition(notEqual(load[AnyValue]("orReturn"), trueValue))(block(
-          declareAndAssign(typeRefOf[AnyValue], "orRhs", getRefAt(yOffset)),
+          declareAndAssign("orRhs", getRefAt(yOffset)),
           ifElse(Eq(load[AnyValue]("orRhs"), noValue))
           (block(assign("seenNull", constant(true))))
           (block(
@@ -671,10 +671,10 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     assertCompilesTo(testCompiler, ast, slots,
       block(
         // declare all temporary variables
-        declareAndAssign(typeRefOf[AnyValue], "orReturn", noValue),
+        declareAndAssign("orReturn", noValue),
         declareAndAssign(typeRefOf[RuntimeException], "orError", constant(null)),
         declareAndAssign(typeRefOf[Boolean], "seenNull", constant(false)),
-        declareAndAssign(typeRefOf[AnyValue], "orLhs", getNodeProperty(getLongAt(xOffset), xOffset, 0)),
+        declareAndAssign("orLhs", getNodeProperty(getLongAt(xOffset), xOffset, 0)),
 
         // check lhs
         ifElse(Eq(load[AnyValue]("orLhs"), noValue))
@@ -687,7 +687,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
         // only evaluate rhs if lhs isn't trueValue
         condition(notEqual(load[AnyValue]("orReturn"), trueValue))(block(
-          declareAndAssign(typeRefOf[AnyValue], "orRhs", getNodeProperty(getLongAt(xOffset), xOffset, 0)),
+          declareAndAssign("orRhs", getNodeProperty(getLongAt(xOffset), xOffset, 0)),
           ifElse(Eq(load[AnyValue]("orRhs"), noValue))
           (block(assign("seenNull", constant(true))))
           (block(
@@ -754,10 +754,10 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     assertCompilesTo(testCompiler, ast, slots,
       block(
         // declare all temporary variables
-        declareAndAssign(typeRefOf[AnyValue], "orReturn", noValue),
+        declareAndAssign("orReturn", noValue),
         declareAndAssign(typeRefOf[RuntimeException], "orError", constant(null)),
         declareAndAssign(typeRefOf[Boolean], "seenNull", constant(false)),
-        declareAndAssign(typeRefOf[AnyValue], "orLhs", getRefAt(xOffset)),
+        declareAndAssign("orLhs", getRefAt(xOffset)),
 
         // check lhs
         tryCatch[RuntimeException]("orException1")
@@ -766,7 +766,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
         // only evaluate rhs if lhs isn't trueValue
         condition(notEqual(load[AnyValue]("orReturn"), trueValue))(block(
-          declareAndAssign(typeRefOf[AnyValue], "orRhs", getRefAt(yOffset)),
+          declareAndAssign("orRhs", getRefAt(yOffset)),
             tryCatch[RuntimeException]("orException2")
               (assign("orReturn", invokeStatic(method[CypherBoolean, Value, AnyValue]("coerceToBoolean"), load[AnyValue]("orRhs"))))
               (assign("orError", load[RuntimeException]("orException2")))
@@ -829,10 +829,10 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     assertCompilesTo(testCompiler, ast, slots,
       block(
         // declare all temporary variables
-        declareAndAssign(typeRefOf[AnyValue], "orReturn", noValue),
+        declareAndAssign("orReturn", noValue),
         declareAndAssign(typeRefOf[RuntimeException], "orError", constant(null)),
         declareAndAssign(typeRefOf[Boolean], "seenNull", constant(false)),
-        declareAndAssign(typeRefOf[AnyValue], "orLhs", getNodeProperty(getLongAt(nOffset), nOffset, 4)),
+        declareAndAssign("orLhs", getNodeProperty(getLongAt(nOffset), nOffset, 4)),
 
         // check lhs
         ifElse(Eq(load[AnyValue]("orLhs"), noValue))
@@ -845,7 +845,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
         // only evaluate rhs if lhs isn't trueValue
         condition(notEqual(load[AnyValue]("orReturn"), trueValue))(block(
-          declareAndAssign(typeRefOf[AnyValue], "orRhs", getNodeProperty(getLongAt(nOffset), nOffset, 3)),
+          declareAndAssign("orRhs", getNodeProperty(getLongAt(nOffset), nOffset, 3)),
           ifElse(Eq(load[AnyValue]("orRhs"), noValue))
           (block(assign("seenNull", constant(true))))
           (block(
@@ -914,11 +914,11 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     assertCompilesTo(testCompiler, ast, slots,
       block(
         // declare all temporary variables
-        declareAndAssign(typeRefOf[AnyValue], "orReturn", noValue),
+        declareAndAssign("orReturn", noValue),
         declareAndAssign(typeRefOf[RuntimeException], "orError", constant(null)),
         declareAndAssign(typeRefOf[Boolean], "seenNull", constant(false)),
-        declareAndAssign(typeRefOf[AnyValue], "orLhs", block(
-          declareAndAssign(typeRefOf[AnyValue], "isNotNullInput", getRefAt(xOffset)),
+        declareAndAssign("orLhs", block(
+          declareAndAssign("isNotNullInput", getRefAt(xOffset)),
             ternary(notEqual(load[AnyValue]("isNotNullInput"), noValue), trueValue, falseValue)
           ),
         ),
@@ -928,7 +928,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
         // only evaluate rhs if lhs isn't trueValue
         condition(notEqual(load[AnyValue]("orReturn"), trueValue))(block(
-          declareAndAssign(typeRefOf[AnyValue], "orRhs", getRefAt(yOffset)),
+          declareAndAssign("orRhs", getRefAt(yOffset)),
           ifElse(Eq(load[AnyValue]("orRhs"), noValue))
           (block(assign("seenNull", constant(true))))
           (block(
@@ -989,7 +989,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign(typeRefOf[AnyValue], "maybeList", getRefAt(asOffset)),
+        declareAndAssign("maybeList", getRefAt(asOffset)),
         declareReturnValue,
         condition(IntermediateRepresentation.not(Eq(load[AnyValue]("maybeList"), noValue)))
         (assignReturnValue(block(
@@ -998,7 +998,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
             "list",
             invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), load[AnyValue]("maybeList"))),
           declareAndAssign(typeRefOf[util.ArrayList[AnyValue]], "extracted", newInstance(constructor[java.util.ArrayList[AnyValue]])),
-          declareAndAssign(typeRefOf[Long], "heapUsage", constant(0L)),
+          declareAndAssign("heapUsage", constant(0L)),
           declareAndAssign(typeRefOf[java.util.Iterator[AnyValue]], "iter", invoke(load[ListValue]("list"), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
           loop(invoke(load[java.util.Iterator[AnyValue]]("iter"), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))(
             block(
@@ -1006,11 +1006,11 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
               declareAndAssign(
                 typeRefOf[AnyValue],
                 "result", block(
-                  declareAndAssign(typeRefOf[AnyValue], "addLhs", loadExpressionVariable(exprVariable)),
+                  declareAndAssign("addLhs", loadExpressionVariable(exprVariable)),
                   declareReturnValue,
                   condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addLhs"), noValue)))
                   (assignReturnValue(block(
-                    declareAndAssign(typeRefOf[AnyValue], "addRhs", getStatic[LongValue]("INTLIT")),
+                    declareAndAssign("addRhs", getStatic[LongValue]("INTLIT")),
                     invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs")),
                   ))),
                   loadReturnValue
@@ -1073,7 +1073,7 @@ retVal1
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign(typeRefOf[AnyValue], "maybeList", getRefAt(asOffset)),
+        declareAndAssign("maybeList", getRefAt(asOffset)),
         declareReturnValue,
         condition(IntermediateRepresentation.not(Eq(load[AnyValue]("maybeList"), noValue)))
         (assignReturnValue(block(
@@ -1087,11 +1087,11 @@ retVal1
             block(
               setExpressionVariable(reduceVariable, invoke(load[java.util.Iterator[AnyValue]]("iter"), method[java.util.Iterator[AnyValue], Object]("next"))),
               setExpressionVariable(accumulatorVariable, block(
-                declareAndAssign(typeRefOf[AnyValue], "addLhs", loadExpressionVariable(accumulatorVariable)),
+                declareAndAssign("addLhs", loadExpressionVariable(accumulatorVariable)),
                 declareReturnValue,
                 condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addLhs"), noValue)))
                 (assignReturnValue(block(
-                  declareAndAssign(typeRefOf[AnyValue], "addRhs", loadExpressionVariable(reduceVariable)),
+                  declareAndAssign("addRhs", loadExpressionVariable(reduceVariable)),
                   ternary(
                     Eq(load[AnyValue]("addRhs"), noValue),
                     noValue,
@@ -1111,8 +1111,8 @@ retVal1
   }
 
   test("commonPrefix - empty prefix") {
-    val assignedX = declareAndAssign(typeRefOf[AnyValue], "x", getRefAt(0))
-    val assignedY = declareAndAssign(typeRefOf[AnyValue], "y", getRefAt(1))
+    val assignedX = declareAndAssign("x", getRefAt(0))
+    val assignedY = declareAndAssign("y", getRefAt(1))
     val a = CodeLink(Seq(assignedX), isNullable = true, Set.empty, Set.empty)(NullCheckLink(IntermediateRepresentation.equal(assignedX, assignedY))(START))
     val b = CodeLink(Seq(assignedY), isNullable = false, Set.empty, Set.empty)(START)
     val (pre, aSuf, bSuf) = CodeChainExpressionCompiler.extractCommonPrefix(a, b)
@@ -1122,8 +1122,8 @@ retVal1
   }
 
   test("commonPrefix - non empty prefix") {
-    val assignedX = declareAndAssign(typeRefOf[AnyValue], "x", getRefAt(0))
-    val assignedY = declareAndAssign(typeRefOf[AnyValue], "y", getRefAt(1))
+    val assignedX = declareAndAssign("x", getRefAt(0))
+    val assignedY = declareAndAssign("y", getRefAt(1))
     val prefix = CodeLink(Seq(assignedX), isNullable = true, Set.empty, Set.empty)(START)
     val a = CodeLink(Seq(assignedX), isNullable = true, Set.empty, Set.empty)(_)
     val b = CodeLink(Seq(assignedY), isNullable = true, Set.empty, Set.empty)(_)
@@ -1134,7 +1134,7 @@ retVal1
   }
 
   test("commonPrefix - subExpression") {
-    val assignedX = declareAndAssign(typeRefOf[AnyValue], "x", getRefAt(0))
+    val assignedX = declareAndAssign("x", getRefAt(0))
     val prefix = CodeLink(Seq(assignedX), isNullable = true, Set.empty, Set.empty)(START)
     val a = CodeLink(Seq(assignedX), isNullable = true, Set.empty, Set.empty)(_)
 
@@ -1150,7 +1150,7 @@ retVal1
   }
 
   test("commonPrefix - equal expressions") {
-    val assignedX = declareAndAssign(typeRefOf[AnyValue], "x", getRefAt(0))
+    val assignedX = declareAndAssign("x", getRefAt(0))
     val prefix = CodeLink(Seq(assignedX), isNullable = true, Set.empty, Set.empty)(START)
     val (pre2, aSuf2, bSuf2) = CodeChainExpressionCompiler.extractCommonPrefix(prefix, prefix)
     assert(pre2.deepEq(prefix))

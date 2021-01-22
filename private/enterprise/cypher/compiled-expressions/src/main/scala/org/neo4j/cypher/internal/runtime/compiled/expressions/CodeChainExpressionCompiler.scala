@@ -11,7 +11,6 @@ import org.neo4j.codegen.TypeReference
 import org.neo4j.codegen.api.Constant
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
-import org.neo4j.codegen.api.IntermediateRepresentation.add
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
@@ -287,15 +286,15 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
       }
 
       START.withCode(lhsCodeLink.isNullable || rhsCodeLink.isNullable, Seq(
-        declareAndAssign(typeRefOf[AnyValue], returnValue, noValue),
+        declareAndAssign(returnValue, noValue),
         declareAndAssign(typeRefOf[RuntimeException], error, Constant(null)),
         declareAndAssign(typeRefOf[Boolean], seenNull, Constant(false)),
-        declareAndAssign(typeRefOf[AnyValue], lhsName, lhsIRInfo.code),
+        declareAndAssign(lhsName, lhsIRInfo.code),
         exprToPredicate(lhs, load[AnyValue](lhsName), lhsCodeLink.isNullable, exceptionName1),
         // Only evaluate rhs if lhs isn't true value
         condition(notEqual(load[AnyValue](returnValue), trueValue))(
           block(
-            declareAndAssign(typeRefOf[AnyValue], rhsName, rhsIRInfo.code),
+            declareAndAssign(rhsName, rhsIRInfo.code),
             exprToPredicate(rhs, load[AnyValue](rhsName), rhsCodeLink.isNullable, exceptionName2)
           )
         ),
@@ -361,15 +360,14 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
 
       val code =
         Seq(
-          declareAndAssign(typeRefOf[ListValue], list, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), maybeList)),
-          declareAndAssign(typeRefOf[util.ArrayList[AnyValue]], extracted, newInstance(constructor[java.util.ArrayList[AnyValue]])),
-          declareAndAssign(typeRefOf[Long], heapUsage, constant(0L)),
-          declareAndAssign(typeRefOf[java.util.Iterator[AnyValue]], iter.variable,
-            invoke(list, method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
+          declareAndAssign(list, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), maybeList)),
+          declareAndAssign(extracted, newInstance(constructor[java.util.ArrayList[AnyValue]])),
+          declareAndAssign(heapUsage, constant(0L)),
+          declareAndAssign(iter, invoke(list, method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
           loop(invoke(iter, method[java.util.Iterator[AnyValue], Boolean]("hasNext")))(block(
             setExpressionVariable(expressionVariable, invoke(iter, method[java.util.Iterator[AnyValue], Object]("next"))),
-            declareAndAssign(typeRefOf[AnyValue], result, irInfo.code),
-            assign(heapUsage.variable, ternary(equal(result, noValue), heapUsage, add(heapUsage, invoke(result, method[AnyValue, Long]("estimatedHeapUsage"))))),
+            declareAndAssign(result, irInfo.code),
+            assign(heapUsage.variable, ternary(equal(result, noValue), heapUsage, heapUsage + invoke(result, method[AnyValue, Long]("estimatedHeapUsage")))),
             invokeSideEffect(extracted, method[java.util.ArrayList[_], Boolean, Object]("add"), result)
           )),
           invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue], Long]("fromList"), extracted, heapUsage)
@@ -392,7 +390,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
 
       val code =
         Seq(
-          declareAndAssign(typeRefOf[ListValue], list, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), maybeList)),
+          declareAndAssign(list, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), maybeList)),
           setExpressionVariable(accumulatorVariable, initIRInfo.code),
           declareAndAssign(typeRefOf[java.util.Iterator[AnyValue]], iter.variable,
             invoke(list, method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),

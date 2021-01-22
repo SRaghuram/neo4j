@@ -225,8 +225,8 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
     val toNode = codeGen.namer.nextVariableName() + "toNode"
     block(
       setField(canContinue, constant(false)),
-      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
-      declareAndAssign(typeRefOf[Long], toNode, getNodeIdFromSlot(toSlot, codeGen)),
+      declareAndAssign(fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
+      declareAndAssign(toNode, getNodeIdFromSlot(toSlot, codeGen)),
       setField(hasWritten, constant(false)),
       ifElse(and(notEqual(load[Long](fromNode), constant(-1L)), notEqual(load[Long](toNode), constant(-1L)))) {
         block(
