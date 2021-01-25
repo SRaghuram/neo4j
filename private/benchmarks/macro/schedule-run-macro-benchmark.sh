@@ -13,6 +13,7 @@ branch_owner=
 workload=accesscontrol
 profilers="GC"
 db_name=$workload
+dataset_base_uri=
 # get neo4j version from POM
 neo4j_version=
 neo4j_branch=
@@ -61,6 +62,10 @@ while (("$#")); do
     ;;
   --neo4j-branch)
     neo4j_branch=$2
+    shift 2
+    ;;
+  --dataset-base-uri)
+    dataset_base_uri=$2
     shift 2
     ;;
   --) # end of argument parsing
@@ -162,4 +167,5 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
   --job-definition \
   "$job_definition" \
   --batch-stack \
-  "$batch_stack"
+  "$batch_stack" \
+  ${dataset_base_uri:+--dataset-base-uri $dataset_base_uri}

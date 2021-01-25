@@ -202,6 +202,6 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     private static String createDatasetKey( URI dataSetBaseUri, String neo4jVersion, String dataset )
     {
         String path = StringUtils.removeEnd( dataSetBaseUri.getPath(), "/" );
-        return StringUtils.removeStart(  format( "%s/%s-enterprise-datasets/%s.tgz", path, neo4jVersion, dataset ),"/" );
+        return StringUtils.removeStart( format( "%s/%s-enterprise-datasets/%s.tgz", path, neo4jVersion, dataset ), "/" );
     }
 }
