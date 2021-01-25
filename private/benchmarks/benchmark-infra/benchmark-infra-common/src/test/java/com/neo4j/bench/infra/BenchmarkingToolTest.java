@@ -23,6 +23,7 @@ import com.neo4j.bench.model.util.JsonUtil;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.net.URI;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Collections;
@@ -66,7 +67,8 @@ public class BenchmarkingToolTest
                                                                                                       1L,
                                                                                                       0L,
                                                                                                       "neo4j" ),
-                                                                          "storeName" ) );
+                                                                          "storeName",
+                                                                          URI.create( "s3://dataSetBaseUri/" ) ) );
 
         String json = JsonUtil.serializeJson( benchmarkingTool );
         BenchmarkingTool actualBenchmarkingTool = JsonUtil.deserializeJson( json, BenchmarkingTool.class );

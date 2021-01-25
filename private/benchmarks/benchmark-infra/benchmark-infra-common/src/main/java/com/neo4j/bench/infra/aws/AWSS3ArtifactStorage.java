@@ -25,6 +25,7 @@ import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.Workspace;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,8 +48,6 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
 {
 
     private static final Logger LOG = LoggerFactory.getLogger( AWSS3ArtifactStorage.class );
-
-    static final String BENCHMARKING_BUCKET_NAME = "benchmarking.neo4j.com";
 
     public static AWSS3ArtifactStorage create( AWSCredentials awsCredentials )
     {
@@ -186,11 +185,12 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     }
 
     @Override
-    public Dataset downloadDataset( String neo4jVersion, String dataset )
+    public Dataset downloadDataset( URI dataSetBaseUri, String neo4jVersion, String dataset )
     {
-        String key = createDatasetKey( neo4jVersion, dataset );
-        LOG.info( "downloading dataset {} for version {} from bucket {} at key {}", dataset, neo4jVersion, BENCHMARKING_BUCKET_NAME, key );
-        S3Object s3Object = amazonS3.getObject( BENCHMARKING_BUCKET_NAME, key );
+        String key = createDatasetKey( dataSetBaseUri, neo4jVersion, dataset );
+        String bucketName = dataSetBaseUri.getAuthority();
+        LOG.info( "downloading dataset {} for version {} from bucket {} at key {}", dataset, neo4jVersion, bucketName, key );
+        S3Object s3Object = amazonS3.getObject( bucketName, key );
         return new S3ObjectDataset( s3Object );
     }
 
@@ -199,8 +199,9 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         return appendIfMissing( removeStart( fullPath, "/" ), "/" );
     }
 
-    private static String createDatasetKey( String neo4jVersion, String dataset )
+    private static String createDatasetKey( URI dataSetBaseUri, String neo4jVersion, String dataset )
     {
-        return format( "datasets/macro/%s-enterprise-datasets/%s.tgz", neo4jVersion, dataset );
+        String path = StringUtils.removeEnd( dataSetBaseUri.getPath(), "/" );
+        return StringUtils.removeStart(  format( "%s/%s-enterprise-datasets/%s.tgz", path, neo4jVersion, dataset ),"/" );
     }
 }

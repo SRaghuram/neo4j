@@ -42,6 +42,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class AWSS3ArtifactStorageTest
 {
 
+    private static final String BENCHMARKING_BUCKET_NAME = "benchmarking.neo4j.com";
+
     private S3Mock api;
     private Path s3Dir;
     private EndpointConfiguration endpointConfiguration;
@@ -60,7 +62,7 @@ public class AWSS3ArtifactStorageTest
                                  .withEndpointConfiguration( endpointConfiguration )
                                  .withPathStyleAccessEnabled( true )
                                  .build();
-        amazonS3.createBucket( AWSS3ArtifactStorage.BENCHMARKING_BUCKET_NAME );
+        amazonS3.createBucket( BENCHMARKING_BUCKET_NAME );
     }
 
     @AfterEach
@@ -122,7 +124,7 @@ public class AWSS3ArtifactStorageTest
         // when
         String neo4jVersion = "3.3.0";
         String datasetName = "dataset";
-        Dataset dataset = artifactStorage.downloadDataset( neo4jVersion, datasetName );
+        Dataset dataset = artifactStorage.downloadDataset( URI.create( "s3://benchmarking.neo4j.com/datasets/macro" ), neo4jVersion, datasetName );
         Path tempFile = Files.createTempFile( tempDir, "dataset", ".tar.gz" );
         dataset.copyInto( Files.newOutputStream( tempFile ) );
 
@@ -142,7 +144,7 @@ public class AWSS3ArtifactStorageTest
         // when
         String neo4jVersion = "3.3.0";
         String datasetName = "dataset";
-        Dataset dataset = artifactStorage.downloadDataset( neo4jVersion, datasetName );
+        Dataset dataset = artifactStorage.downloadDataset( URI.create( "s3://benchmarking.neo4j.com/datasets/macro" ), neo4jVersion, datasetName );
         Path dir = Files.createTempDirectory( tempDir, "dataset" );
         dataset.extractInto( dir );
 

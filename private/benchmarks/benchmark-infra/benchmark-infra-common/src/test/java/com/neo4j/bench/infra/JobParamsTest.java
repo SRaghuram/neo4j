@@ -81,7 +81,8 @@ public class JobParamsTest
                                                                     123456L,
                                                                     123455L,
                                                                     "triggeredBy" ),
-                                        "storeName" ) ),
+                                        "storeName",
+                                        URI.create( "s3://dataSetBaseUri/" ) ) ),
                         UUID.randomUUID().toString() ) );
         // when
         JobParams<?> actual = JsonUtil.deserializeJson( JsonUtil.serializeJson( jobParams ), JobParams.class );
@@ -132,8 +133,9 @@ public class JobParamsTest
                                                                     "neo4jBranchOwner",
                                                                     123456L,
                                                                     123455L,
-                                                                    "triggeredBy" )
-                                        , "storeName" ) ),
+                                                                    "triggeredBy" ),
+                                        "storeName",
+                                        URI.create( "s3://dataSetBaseUri/" ) ) ),
                         UUID.randomUUID().toString() ) );
         // when
 

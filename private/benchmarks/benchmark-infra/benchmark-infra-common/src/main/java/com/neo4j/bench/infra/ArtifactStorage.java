@@ -52,9 +52,10 @@ public interface ArtifactStorage
 
     /**
      * Downloads data set for specific Neo4j version
+     * @param dataSetBaseUri base uri to bucket + prefix where to look for dataset
      * @param neo4jVersion Neo4j version
      * @param dataset a name of dataset
      * @return downloaded data set
      */
-    Dataset downloadDataset( String neo4jVersion, String dataset );
+    Dataset downloadDataset( URI dataSetBaseUri,String neo4jVersion, String dataset );
 }

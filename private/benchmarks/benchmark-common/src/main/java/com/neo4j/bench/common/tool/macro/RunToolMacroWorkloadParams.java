@@ -10,21 +10,24 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
-import java.util.Objects;
+import java.net.URI;
+
+import static java.util.Objects.requireNonNull;
 
 public class RunToolMacroWorkloadParams
 {
     private final RunMacroWorkloadParams runMacroWorkloadParams;
     private final String storeName;
+    private final URI dataSetBaseUri;
 
     @JsonCreator
     public RunToolMacroWorkloadParams( @JsonProperty( "runMacroWorkloadParams" ) RunMacroWorkloadParams runMacroWorkloadParams,
-                                       @JsonProperty( "storeName" ) String storeName )
+                                       @JsonProperty( "storeName" ) String storeName,
+                                       @JsonProperty( "dataSetBaseUri" ) URI dataSetBaseUri )
     {
-        Objects.requireNonNull( runMacroWorkloadParams );
-        Objects.requireNonNull( storeName );
-        this.runMacroWorkloadParams = runMacroWorkloadParams;
-        this.storeName = storeName;
+        this.runMacroWorkloadParams = requireNonNull( runMacroWorkloadParams );
+        this.storeName = requireNonNull( storeName );
+        this.dataSetBaseUri = requireNonNull( dataSetBaseUri );
     }
 
     public RunMacroWorkloadParams runMacroWorkloadParams()
@@ -35,6 +38,11 @@ public class RunToolMacroWorkloadParams
     public String storeName()
     {
         return storeName;
+    }
+
+    public URI dataSetBaseUri()
+    {
+        return dataSetBaseUri;
     }
 
     @Override

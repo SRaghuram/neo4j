@@ -59,7 +59,9 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
 
         // download & extract dataset
         Version neo4jVersion = runMacroWorkloadParams.neo4jVersion();
-        Dataset dataset = artifactStorage.downloadDataset( neo4jVersion.minorVersion(), runToolMacroWorkloadParams.storeName() );
+        Dataset dataset = artifactStorage.downloadDataset( runToolMacroWorkloadParams.dataSetBaseUri(),
+                                                           neo4jVersion.minorVersion(),
+                                                           runToolMacroWorkloadParams.storeName() );
         dataset.extractInto( macroDir );
 
         Files.setPosixFilePermissions( artifactsWorkspace.get( Workspace.RUN_SCRIPT ), PosixFilePermissions.fromString( "r-xr-xr-x" ) );

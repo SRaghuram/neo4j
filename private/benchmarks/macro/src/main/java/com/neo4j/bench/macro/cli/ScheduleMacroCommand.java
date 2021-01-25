@@ -158,6 +158,13 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             title = "Infrastructure capabilities" )
     private String infrastructureCapabilities;
 
+    private static final String CMD_DATASET_BASE_URI = "--dataset-base-uri";
+    @Option( type = OptionType.COMMAND,
+            name = CMD_DATASET_BASE_URI,
+            description = "S3 base uri to location with macro datasets",
+            title = "Dataset base S3 URI" )
+    private String dataSetBaseUri = "s3://benchmarking.neo4j.com/datasets/macro/";
+
     private static String getJobName( String tool, String benchmark, String version, String triggered )
     {
         return format( "%s-%s-%s-%s", tool, benchmark, version, triggered );
@@ -224,7 +231,8 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                                  new BenchmarkingTool( MacroToolRunner.class,
                                                                                        new RunToolMacroWorkloadParams(
                                                                                                runMacroWorkloadParams.setQueryNames( queryNames ),
-                                                                                               storeName ) ),
+                                                                                               storeName,
+                                                                                               URI.create( dataSetBaseUri ) ) ),
                                                                  testRunId ) );
 
                     workspace.assertArtifactsExist();
