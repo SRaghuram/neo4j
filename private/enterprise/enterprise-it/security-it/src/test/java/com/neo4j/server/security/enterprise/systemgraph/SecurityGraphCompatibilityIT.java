@@ -35,24 +35,24 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_36;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D4;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D6;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D7;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42P1;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D1;
 
 class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 {
-    private static final String[] SUPPORTED_VERSIONS = {VERSION_40, VERSION_41D1, VERSION_41,
-                                                        VERSION_42D4, VERSION_42D6, VERSION_42D7, VERSION_42P1, VERSION_43D1};
+    private static final EnterpriseSecurityGraphComponentVersion[] SUPPORTED_VERSIONS =
+            {
+                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40,
+                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1,
+                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41,
+                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4,
+                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6,
+                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7,
+                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1,
+                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1
+            };
 
     @ParameterizedTest
     @MethodSource( "supportedVersions" )
-    void shouldAuthenticate( String version ) throws Exception
+    void shouldAuthenticate( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initEnterprise( version );
         LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
@@ -62,7 +62,7 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
     @Test
     void shouldNotAuthorizeOn36() throws Exception
     {
-        initEnterprise( VERSION_36 );
+        initEnterprise( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36 );
         LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
         loginContext.subject().setPasswordChangeNoLongerRequired();
         assertThat( loginContext.subject().getAuthenticationResult() ).isEqualTo( AuthenticationResult.SUCCESS );
@@ -80,7 +80,7 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 
     @ParameterizedTest
     @MethodSource( "supportedVersions" )
-    void shouldAuthorize( String version ) throws Exception
+    void shouldAuthorize( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initEnterprise( version );
         LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
@@ -98,7 +98,7 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 
     @ParameterizedTest
     @MethodSource( "supportedVersions" )
-    void shouldMakeSchemaChanges( String version ) throws Exception
+    void shouldMakeSchemaChanges( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initEnterprise( version );
         LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
@@ -135,7 +135,7 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 
     @ParameterizedTest
     @MethodSource( "versionsAndShowCommands" )
-    void showPrivilegesShouldSucceedOnOldGraph( String version, String query, String schemaAction ) throws Exception
+    void showPrivilegesShouldSucceedOnOldGraph( EnterpriseSecurityGraphComponentVersion version, String query, String schemaAction ) throws Exception
     {
         initEnterprise( version );
         LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
@@ -152,7 +152,7 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 
     @ParameterizedTest
     @MethodSource( "supportedVersions" )
-    void shouldHaveExecutePrivilegeByDefault( String version ) throws Exception
+    void shouldHaveExecutePrivilegeByDefault( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initEnterprise( version );
         LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
@@ -166,7 +166,8 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 
     private static Stream<Arguments> versionsAndShowCommands()
     {
-        Function<String,String> actFor = version -> version.equals( VERSION_40 ) ? "schema" : "index";
+        Function<EnterpriseSecurityGraphComponentVersion,String> actFor =
+                version -> version.equals( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40 ) ? "schema" : "index";
         String[] queries = {"SHOW PRIVILEGES", "SHOW USER neo4j PRIVILEGES", "SHOW ROLE admin PRIVILEGES"};
         return Arrays.stream( SUPPORTED_VERSIONS )
                      .flatMap( version -> Arrays.stream( queries ).map( query -> Arguments.of( version, query, actFor.apply( version ) ) ) );

@@ -42,6 +42,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static org.mockito.Mockito.mock;
@@ -49,10 +50,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_single_automatic_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_35;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_36;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1;
 
 @EphemeralTestDirectoryExtension
 abstract class SecurityGraphCompatibilityTestBase
@@ -113,12 +110,12 @@ abstract class SecurityGraphCompatibilityTestBase
         }
     }
 
-    void initEnterprise( String version ) throws Exception
+    void initEnterprise( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         List<String> roles;
         switch ( version )
         {
-        case VERSION_35:
+        case ENTERPRISE_SECURITY_35:
             // Version 3.5 does not have roles in the system graph, we must assign all the default roles to a user in order for them to be migrated
             roleRepository.create( new RoleRecord( ADMIN, INITIAL_USER_NAME ) );
             roleRepository.create( new RoleRecord( ARCHITECT, INITIAL_USER_NAME ) );
@@ -126,8 +123,8 @@ abstract class SecurityGraphCompatibilityTestBase
             roleRepository.create( new RoleRecord( EDITOR, INITIAL_USER_NAME ) );
             roleRepository.create( new RoleRecord( READER, INITIAL_USER_NAME ) );
             return;
-        case VERSION_36:
-        case VERSION_40:
+        case ENTERPRISE_SECURITY_36:
+        case ENTERPRISE_SECURITY_40:
             // Versions older than 41 drop 01 should not have PUBLIC role
             roles = List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER );
             break;
@@ -137,9 +134,9 @@ abstract class SecurityGraphCompatibilityTestBase
         initEnterprise( version, roles );
     }
 
-    private void initEnterprise( String version, List<String> roles ) throws Exception
+    private void initEnterprise( EnterpriseSecurityGraphComponentVersion version, List<String> roles ) throws Exception
     {
-        KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version );
+        KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version.getDescription() );
         try ( Transaction tx = system.beginTx() )
         {
             enterpriseComponent.initializeSystemGraphConstraints( tx );
@@ -148,15 +145,8 @@ abstract class SecurityGraphCompatibilityTestBase
         try ( Transaction tx = system.beginTx() )
         {
             builder.initializePrivileges( tx, roles, Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) ) );
-            switch ( version )
-            {
-            case VERSION_36:
-            case VERSION_40:
-            case VERSION_41D1:
-                // Versions older than 41 drop 01 should not have a version set
-                break;
-            default:
-                // have to manually set the version property
+            // Versions older than 41 drop 01 should not have a version set
+            if (version.compareTo( ENTERPRISE_SECURITY_41D1 ) > 0 ) {
                 builder.setVersionProperty( tx, builder.version );
             }
             tx.commit();

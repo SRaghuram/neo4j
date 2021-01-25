@@ -48,22 +48,12 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRANSACTION_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_35;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_36;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D4;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D6;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D7;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42P1;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D1;
 
 class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTestBase
 {
     @ParameterizedTest
     @MethodSource( "allVersions" )
-    void shouldUpgrade( String version ) throws Exception
+    void shouldUpgrade( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         // GIVEN
         initEnterprise( version );
@@ -85,7 +75,7 @@ class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTes
 
     @ParameterizedTest
     @MethodSource( "versionsAffectedByPublicBug" )
-    void shouldRecreateMissingPublicRole( String version ) throws Exception
+    void shouldRecreateMissingPublicRole( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         // GIVEN
         initEnterprise( version );
@@ -116,16 +106,16 @@ class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTes
         }
     }
 
-    private void assertPrivilegesForRole( Transaction tx, String role, String fromVersion ) throws InvalidArgumentsException
+    private void assertPrivilegesForRole( Transaction tx, String role, EnterpriseSecurityGraphComponentVersion fromVersion ) throws InvalidArgumentsException
     {
         Node roleNode = tx.findNode( ROLE_LABEL, "name", role );
         assertThat( roleNode ).withFailMessage( "Expected role %s to exist", role ).isNotNull();
         List<ResourcePrivilege> readPrivileges = new ArrayList<>();
         switch ( fromVersion )
         {
-        case VERSION_35:
-        case VERSION_36:
-        case VERSION_40:
+        case ENTERPRISE_SECURITY_35:
+        case ENTERPRISE_SECURITY_36:
+        case ENTERPRISE_SECURITY_40:
             ResourcePrivilege readNodePrivilege =
                     new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, ResourcePrivilege.SpecialDatabase.ALL );
             ResourcePrivilege readRelPrivilege =
@@ -222,7 +212,9 @@ class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTes
             expected.addAll( readPrivileges );
             break;
         case PredefinedRoles.PUBLIC:
-            if ( !fromVersion.equals( VERSION_35 ) && !fromVersion.equals( VERSION_36 ) && !fromVersion.equals( VERSION_40 ) )
+            if ( !fromVersion.equals(  EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_35 ) &&
+                 !fromVersion.equals( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36 ) &&
+                 !fromVersion.equals( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40 ) )
             {
                 expected.add( defaultAccessPrivilege );
             }
@@ -237,15 +229,32 @@ class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTes
 
     private static Stream<Arguments> allVersions()
     {
-        return Arrays.stream( new String[] {VERSION_35, VERSION_36, VERSION_40, VERSION_41D1, VERSION_41,
-                                            VERSION_42D4, VERSION_42D6, VERSION_42D7, VERSION_42P1, VERSION_43D1} )
-                     .map( Arguments::of );
+        return Arrays.stream( new EnterpriseSecurityGraphComponentVersion[]{
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_35,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D2
+        } ).map( Arguments::of );
     }
 
     private static Stream<Arguments> versionsAffectedByPublicBug()
     {
-        return Arrays.stream( new String[] {VERSION_35, VERSION_36, VERSION_40, VERSION_41D1, VERSION_41,
-                                            VERSION_42D4, VERSION_42D6, VERSION_42D7} )
-                     .map( Arguments::of );
+        return Arrays.stream( new EnterpriseSecurityGraphComponentVersion[]{
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_35,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6,
+                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7
+        } ).map( Arguments::of );
     }
 }

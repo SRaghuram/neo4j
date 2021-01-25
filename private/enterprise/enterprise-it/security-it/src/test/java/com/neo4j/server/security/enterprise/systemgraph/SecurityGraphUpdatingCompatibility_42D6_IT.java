@@ -18,14 +18,13 @@ import org.neo4j.kernel.api.KernelTransaction;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D6;
 
 class SecurityGraphUpdatingCompatibility_42D6_IT extends SecurityGraphCompatibilityTestBase
 {
     @Override
     void initEnterprise() throws Exception
     {
-        initEnterprise( VERSION_42D6 );
+        initEnterprise( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6 );
     }
 
     @ParameterizedTest
@@ -52,7 +51,8 @@ class SecurityGraphUpdatingCompatibility_42D6_IT extends SecurityGraphCompatibil
             {
                 var exception = assertThrows( UnsupportedOperationException.class, () -> tx.execute( query ), query );
                 assertThat( exception.getMessage() )
-                        .contains( "This operation is not supported while running in compatibility mode with version " + VERSION_42D6 );
+                        .contains( "This operation is not supported while running in compatibility mode with version " +
+                                   EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6.getDescription() );
             }
         }
     }
