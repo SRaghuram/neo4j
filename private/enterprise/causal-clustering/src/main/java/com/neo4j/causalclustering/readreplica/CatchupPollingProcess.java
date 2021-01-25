@@ -193,6 +193,11 @@ public class CatchupPollingProcess extends LifecycleAdapter
         return state == PANIC;
     }
 
+    public boolean isCancelled()
+    {
+        return state == CANCELLED;
+    }
+
     private synchronized void panic( Throwable e )
     {
         upToDateFuture.completeExceptionally( e );
@@ -245,7 +250,8 @@ public class CatchupPollingProcess extends LifecycleAdapter
 
     private void pullAndApplyTransactions( SocketAddress address, StoreId localStoreId )
     {
-        long lastQueuedTxId = applier.lastQueuedTxId();
+        var lastQueuedTxId = applier.lastQueuedTxId();
+        var responseHandler = new TxPullResponseHandler( this, log );
         pullRequestMonitor.txPullRequest( lastQueuedTxId );
         log.debug( "Pull transactions from %s where tx id > %d", address, lastQueuedTxId );
 

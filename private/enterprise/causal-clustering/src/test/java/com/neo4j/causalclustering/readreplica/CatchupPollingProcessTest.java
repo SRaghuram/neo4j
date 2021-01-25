@@ -165,30 +165,10 @@ class CatchupPollingProcessTest
         assertThrows( IllegalStateException.class, txPuller::pause );
     }
 
-    //TODO
     @Test
-    void shouldAbortOnStopWhilstPulling() throws Exception
+    void shouldBeCancelledWhenStopped()
     {
-//        var catchupProcess = mock( CatchupPollingProcess.class );
-//        CompletableFuture<Void> cf = new CompletableFuture<>();
-//        Semaphore onTick = new Semaphore( 0 );
-//        doAnswer( ignored ->
-//        {
-//            onTick.release();
-//            return cf;
-//        } ).when( catchupProcess ).tick();
-//        doAnswer( ignored -> cf.complete( null ) ).when( catchupProcess ).stop();
-//
-//        var executor = Executors.newSingleThreadExecutor();
-//
-//        life.add( LifecycleAdapter.onShutdown( executor::shutdown ) );
-//        life.add( createProcessManager( catchupProcess, executor ) );
-//
-//        // when: onTimeout() should block on the CompletableFuture above
-//        onTick.acquire();
-//
-//        // then: on shutdown() we should not be blocked, because our custom CatchupProcess completes the CompletableFuture
-//        life.shutdown();
+        //
     }
 
     private CommittedTransactionRepresentation tx( int txId )
