@@ -481,7 +481,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ).foreach(privilege => execute(s"REVOKE $privilege ON DATABASE foo FROM custom"))
 
     // Then
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(granted(allDatabasePrivilege).database("foo").role("custom").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(granted(adminAction("database_actions")).database("foo").role("custom").map))
   }
 
   withAllSystemGraphVersions(allSupported) {

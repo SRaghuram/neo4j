@@ -158,7 +158,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     granted(startDatabase).role("admin").map,
     granted(stopDatabase).role("admin").map,
     granted(transaction("*")).role("admin").map,
-    granted(allDbmsPrivilege).role("admin").map,
+    granted(adminAction("dbms_actions")).role("admin").map,
   )
 
   def defaultRolePrivilegesFor(role: String, replace: String): Set[Map[String, AnyRef]] = {
@@ -184,7 +184,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     granted(startDatabase).role("admin").user(defaultUsername).map,
     granted(stopDatabase).role("admin").user(defaultUsername).map,
     granted(transaction("*")).role("admin").user(defaultUsername).map,
-    granted(allDbmsPrivilege).role("admin").user(defaultUsername).map,
+    granted(adminAction("dbms_actions")).role("admin").user(defaultUsername).map,
   )
 
   def asPrivilegesResult(row: Result.ResultRow): Map[String, AnyRef] =
@@ -336,25 +336,25 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val executeFunction: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "execute", "segment" -> "FUNCTION(*)")
   val executeBoostedFunction: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "execute_boosted", "segment" -> "FUNCTION(*)")
 
-  val startDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "start_database")
-  val stopDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "stop_database")
+  val startDatabase: Map[String, String] = adminAction("start_database")
+  val stopDatabase: Map[String, String] = adminAction("stop_database")
 
-  val createIndex: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_index")
-  val dropIndex: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "drop_index")
-  val showIndex: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "show_index")
-  val indexManagement: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "index")
+  val createIndex: Map[String, String] = adminAction("create_index")
+  val dropIndex: Map[String, String] = adminAction("drop_index")
+  val showIndex: Map[String, String] = adminAction("show_index")
+  val indexManagement: Map[String, String] = adminAction("index")
 
-  val createConstraint: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_constraint")
-  val dropConstraint: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "drop_constraint")
-  val showConstraint: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "show_constraint")
-  val constraintManagement: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "constraint")
+  val createConstraint: Map[String, String] = adminAction("create_constraint")
+  val dropConstraint: Map[String, String] = adminAction("drop_constraint")
+  val showConstraint: Map[String, String] = adminAction("show_constraint")
+  val constraintManagement: Map[String, String] = adminAction("constraint")
 
-  val createNodeLabel: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_label")
-  val createRelationshipType: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_reltype")
-  val createPropertyKey: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_propertykey")
-  val nameManagement: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "token")
+  val createNodeLabel: Map[String, String] = adminAction("create_label")
+  val createRelationshipType: Map[String, String] = adminAction("create_reltype")
+  val createPropertyKey: Map[String, String] = adminAction("create_propertykey")
+  val nameManagement: Map[String, String] = adminAction("token")
 
-  val access: Map[String, String] = baseMap + ("resource" -> "database", "action" ->"access")
+  val access: Map[String, String] = adminAction("access")
   val traverse: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "traverse")
   val read: Map[String, String] = baseMap + ("resource" -> "all_properties", "action" -> "read")
   val matchPrivilege: Map[String, String] = baseMap + ("resource" -> "all_properties", "action" -> "match")
@@ -366,9 +366,6 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val setLabel: Map[String, String] = baseMap + ("action" -> "set_label", "segment" -> "NODE(*)")
   val removeLabel: Map[String, String] = baseMap + ("action" -> "remove_label", "segment" -> "NODE(*)")
   val allGraphPrivileges: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "graph_actions")
-
-  val allDbmsPrivilege: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "dbms_actions")
-  val allDatabasePrivilege: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "database_actions")
 
   def showTransaction(username: String): Map[String, String] =
     baseMap + ("resource" -> "database", "segment" -> s"USER($username)", "action" -> "show_transaction")
@@ -401,7 +398,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "ASSIGN PRIVILEGE" -> adminAction("assign_privilege"),
     "REMOVE PRIVILEGE" -> adminAction("remove_privilege"),
     "PRIVILEGE MANAGEMENT" -> adminAction("privilege_management"),
-    "ALL DBMS PRIVILEGES" -> allDbmsPrivilege,
+    "ALL DBMS PRIVILEGES" -> adminAction("dbms_actions"),
     "EXECUTE ADMIN PROCEDURES" -> adminAction("execute_admin")
   )
   val dbmsCommands: Iterable[String] = dbmsPrivileges.keys
@@ -439,7 +436,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "CREATE NEW RELATIONSHIP TYPE" -> createRelationshipType,
     "CREATE NEW PROPERTY NAME" -> createPropertyKey,
     "NAME MANAGEMENT" -> nameManagement,
-    "ALL DATABASE PRIVILEGES" -> allDatabasePrivilege
+    "ALL DATABASE PRIVILEGES" -> adminAction("database_actions")
   )
 
   val transactionPrivileges: Map[String, Map[String, String]] = Map(
