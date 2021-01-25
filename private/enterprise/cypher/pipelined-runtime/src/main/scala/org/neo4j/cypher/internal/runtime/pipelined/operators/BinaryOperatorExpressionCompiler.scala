@@ -44,9 +44,9 @@ class BinaryOperatorExpressionCompiler(slots: SlotConfiguration,
   override def getPropertyCacherAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): PropertyCacher =
     new PropertyCacher(property, getFromStore) {
       // Does the LHS have a slot for this cached property and if so, what is the offset
-      private val maybeCachedPropertyOffsetInLHS = lhsSlotConfiguration.getCachedPropertySlot(property).map(_.offset).getOrElse(-1)
+      private val maybeCachedPropertyOffsetInLHS = lhsSlotConfiguration.getCachedPropertySlot(property.runtimeKey).map(_.offset).getOrElse(-1)
       // Does the RHS have a slot for this cached property and if so, what is the offset
-      private val maybeCachedPropertyOffsetInRHS = rhsSlotConfiguration.getCachedPropertySlot(property).map(_.offset).getOrElse(-1)
+      private val maybeCachedPropertyOffsetInRHS = rhsSlotConfiguration.getCachedPropertySlot(property.runtimeKey).map(_.offset).getOrElse(-1)
       // The offset (or -1) depending on whether we currently read a morsel from the LHS or from the RHS
       private val maybeOffsetInInputName = namer.nextVariableName("maybeCachedPropertyOffsetInInput")
 

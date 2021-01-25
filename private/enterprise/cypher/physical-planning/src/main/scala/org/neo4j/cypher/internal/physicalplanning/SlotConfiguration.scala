@@ -37,7 +37,7 @@ object SlotConfiguration {
 
   sealed trait SlotKey
   case class VariableSlotKey(name: String) extends SlotKey
-  case class CachedPropertySlotKey(property: ASTCachedProperty) extends SlotKey
+  case class CachedPropertySlotKey(property: ASTCachedProperty.RuntimeKey) extends SlotKey
   case class ApplyPlanSlotKey(applyPlanId: Id) extends SlotKey
 
   case class SlotWithKeyAndAliases(key: SlotKey, slot: Slot, aliases: collection.Set[String])
@@ -204,7 +204,7 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
     this
   }
 
-  def newCachedProperty(key: ASTCachedProperty, shouldDuplicate: Boolean = false): SlotConfiguration = {
+  def newCachedProperty(key: ASTCachedProperty.RuntimeKey, shouldDuplicate: Boolean = false): SlotConfiguration = {
     val slotKey = CachedPropertySlotKey(key)
     slots.get(slotKey) match {
       case Some(_) =>
@@ -252,7 +252,9 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
     }
   }
 
-  def getCachedPropertyOffsetFor(key: ASTCachedProperty): Int = slots(CachedPropertySlotKey(key)).offset
+  def getCachedPropertyOffsetFor(prop: ASTCachedProperty): Int = slots(CachedPropertySlotKey(prop.runtimeKey)).offset
+
+  def getCachedPropertyOffsetFor(key: ASTCachedProperty.RuntimeKey): Int = slots(CachedPropertySlotKey(key)).offset
 
   def updateAccessorFunctions(key: String,
                               getter: CypherRow => AnyValue,
@@ -380,7 +382,7 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
     }, skipFirst)
   }
 
-  def foreachCachedSlot[U](onCachedProperty: ((ASTCachedProperty, RefSlot)) => Unit): Unit = {
+  def foreachCachedSlot[U](onCachedProperty: ((ASTCachedProperty.RuntimeKey, RefSlot)) => Unit): Unit = {
     slots.iterator.foreach {
       case (CachedPropertySlotKey(key), slot: RefSlot) => onCachedProperty(key -> slot)
       case _ => // do nothing
@@ -405,9 +407,9 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
 
   override def toString = s"SlotConfiguration(longs=$numberOfLongs, refs=$numberOfReferences, slots=$slots)"
 
-  def hasCachedPropertySlot(key: ASTCachedProperty): Boolean = slots.contains(CachedPropertySlotKey(key))
+  def hasCachedPropertySlot(key: ASTCachedProperty.RuntimeKey): Boolean = slots.contains(CachedPropertySlotKey(key))
 
-  def getCachedPropertySlot(key: ASTCachedProperty): Option[RefSlot] = slots.get(CachedPropertySlotKey(key)).asInstanceOf[Option[RefSlot]]
+  def getCachedPropertySlot(key: ASTCachedProperty.RuntimeKey): Option[RefSlot] = slots.get(CachedPropertySlotKey(key)).asInstanceOf[Option[RefSlot]]
 
   def hasArgumentSlot(applyPlanId: Id): Boolean = slots.contains(ApplyPlanSlotKey(applyPlanId))
 

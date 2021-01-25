@@ -648,7 +648,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
    */
   def getPropertyCacherAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): PropertyCacher =
     new PropertyCacher(property, getFromStore) {
-      private val maybeCachedPropertyOffset = inputSlotConfiguration.getCachedPropertySlot(property).map(_.offset)
+      private val maybeCachedPropertyOffset = inputSlotConfiguration.getCachedPropertySlot(property.runtimeKey).map(_.offset)
 
       override def assignLocalVariables: IntermediateRepresentation = noop()
 

@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
+import org.neo4j.cypher.internal.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.expressions.CachedProperty
 import org.neo4j.cypher.internal.expressions.NODE_TYPE
 import org.neo4j.cypher.internal.expressions.PropertyKeyName
@@ -83,7 +84,7 @@ class SlottedRowTest extends CypherFunSuite {
     lhsCtx.mergeWith(rhsCtx, null)
 
     // then
-    def cachedPropAt(key: CachedProperty, ctx: CypherRow) =
+    def cachedPropAt(key: ASTCachedProperty.RuntimeKey, ctx: CypherRow) =
       ctx.getCachedPropertyAt(offsetFor(key, slots))
 
     cachedPropAt(prop("n", "name"), lhsCtx) should be(stringValue("b"))
@@ -122,7 +123,7 @@ class SlottedRowTest extends CypherFunSuite {
     result.mergeWith(arg, null)
 
     // then
-    def cachedPropAt(key: CachedProperty) =
+    def cachedPropAt(key: ASTCachedProperty.RuntimeKey) =
       result.getCachedPropertyAt(resultSlots.getCachedPropertyOffsetFor(key))
 
     cachedPropAt(prop("a", "name")) should be(stringValue("initial"))
@@ -133,7 +134,7 @@ class SlottedRowTest extends CypherFunSuite {
   }
 
   private def prop(node: String, prop: String) =
-    CachedProperty(node, Variable(node)(InputPosition.NONE), PropertyKeyName(prop)(InputPosition.NONE), NODE_TYPE)(InputPosition.NONE)
+    CachedProperty(node, Variable(node)(InputPosition.NONE), PropertyKeyName(prop)(InputPosition.NONE), NODE_TYPE)(InputPosition.NONE).runtimeKey
 
   private def mutatingLeftDoesNotAffectRight(left: CypherRow, right: CypherRow, extraCachedOffset: Int): Unit = {
     // given
@@ -149,5 +150,5 @@ class SlottedRowTest extends CypherFunSuite {
     right.getCachedPropertyAt(extraCachedOffset) should equal(null)
   }
 
-  private def offsetFor(key: CachedProperty, slots: SlotConfiguration) = slots.getCachedPropertyOffsetFor(key)
+  private def offsetFor(key: ASTCachedProperty.RuntimeKey, slots: SlotConfiguration) = slots.getCachedPropertyOffsetFor(key)
 }

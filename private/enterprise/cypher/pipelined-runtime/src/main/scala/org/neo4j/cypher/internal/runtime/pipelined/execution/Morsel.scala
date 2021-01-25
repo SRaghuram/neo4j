@@ -549,11 +549,11 @@ trait MorselIndexedSeq {
 
     override def shallowInstanceHeapUsage: Long = SHALLOW_SIZE
 
-    override def getCachedProperty(key: ASTCachedProperty): Value = morselCursor.getCachedProperty(key)
+    override def getCachedProperty(key: ASTCachedProperty.RuntimeKey): Value = morselCursor.getCachedProperty(key)
 
     override def getCachedPropertyAt(offset: Int): Value = morselCursor.getCachedPropertyAt(offset)
 
-    override def setCachedProperty(key: ASTCachedProperty, value: Value): Unit = morselCursor.setCachedProperty(key, value)
+    override def setCachedProperty(key: ASTCachedProperty.RuntimeKey, value: Value): Unit = morselCursor.setCachedProperty(key, value)
 
     override def setCachedPropertyAt(offset: Int, value: Value): Unit = morselCursor.setCachedPropertyAt(offset, value)
 

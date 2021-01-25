@@ -444,7 +444,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           } else {
             e match {
               case c: CachedProperty =>
-                slots.newCachedProperty(c)
+                slots.newCachedProperty(c.runtimeKey)
               case _ => // Do nothing
             }
             TraverseChildren(acc)
@@ -487,7 +487,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
       case leaf: IndexLeafPlan =>
         slots.newLong(leaf.idName, nullable, CTNode)
-        leaf.cachedProperties.foreach(slots.newCachedProperty(_))
+        leaf.cachedProperties.foreach(cp => slots.newCachedProperty(cp.runtimeKey))
 
       case leaf: NodeLogicalLeafPlan =>
         slots.newLong(leaf.idName, nullable, CTNode)

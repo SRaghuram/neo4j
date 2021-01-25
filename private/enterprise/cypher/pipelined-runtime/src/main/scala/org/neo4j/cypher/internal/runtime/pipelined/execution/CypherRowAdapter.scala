@@ -98,7 +98,7 @@ class CypherRowAdapter extends CypherRow {
     * or NO_VALUE if the entity does not have the property,
     * or null     if this cached value has been invalidated, or the property value has not been cached.
     */
-  override def getCachedProperty(key: ASTCachedProperty): Value = ???
+  override def getCachedProperty(key: ASTCachedProperty.RuntimeKey): Value = ???
 
   /**
     * Returns the cached property value
@@ -107,7 +107,7 @@ class CypherRowAdapter extends CypherRow {
     */
   override def getCachedPropertyAt(offset: Int): Value = ???
 
-  override def setCachedProperty(key: ASTCachedProperty, value: Value): Unit = ???
+  override def setCachedProperty(key: ASTCachedProperty.RuntimeKey, value: Value): Unit = ???
 
   override def setCachedPropertyAt(offset: Int, value: Value): Unit = ???
 }

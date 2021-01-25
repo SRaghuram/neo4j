@@ -208,11 +208,11 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     slots.newReference("c", nullable = false, CTNode)
     slots.newReference("d", nullable = false, CTNode)
     val dCP = CachedProperty("d", varFor("d"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
-    slots.newCachedProperty(dCP)
+    slots.newCachedProperty(dCP.runtimeKey)
     slots.newReference("e", nullable = false, CTNode)
     slots.addAlias("ee", "e")
     val eCP = CachedProperty("e", varFor("e"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
-    slots.newCachedProperty(eCP)
+    slots.newCachedProperty(eCP.runtimeKey)
 
     val acc = new SlotAccumulator
 
@@ -225,9 +225,9 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
       OnApplyPlanId(Id(1))
     ), Seq(
       OnRefVar("d", RefSlot(1, nullable = false, CTNode), Set.empty),
-      OnCachedProp(dCP),
+      OnCachedProp(dCP.runtimeKey),
       OnRefVar("e", RefSlot(3, nullable = false, CTNode), Set("ee")),
-      OnCachedProp(eCP)
+      OnCachedProp(eCP.runtimeKey)
     ))
   }
 
@@ -245,11 +245,11 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     slots.newReference("c", nullable = false, CTNode)
     slots.newReference("d", nullable = false, CTNode)
     val dCP = CachedProperty("d", varFor("d"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
-    slots.newCachedProperty(dCP)
+    slots.newCachedProperty(dCP.runtimeKey)
     slots.newReference("e", nullable = false, CTNode)
     slots.addAlias("ee", "e")
     val eCP = CachedProperty("e", varFor("e"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
-    slots.newCachedProperty(eCP)
+    slots.newCachedProperty(eCP.runtimeKey)
 
     val acc = new SlotAccumulator
 
@@ -265,9 +265,9 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     ), Seq(
       OnRefVar("c", RefSlot(0, nullable = false, CTNode), Set.empty),
       OnRefVar("d", RefSlot(1, nullable = false, CTNode), Set.empty),
-      OnCachedProp(dCP),
+      OnCachedProp(dCP.runtimeKey),
       OnRefVar("e", RefSlot(3, nullable = false, CTNode), Set("ee")),
-      OnCachedProp(eCP)
+      OnCachedProp(eCP.runtimeKey)
     ))
   }
 
@@ -285,11 +285,11 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     slots.newReference("c", nullable = false, CTNode)
     slots.newReference("d", nullable = false, CTNode)
     val dCP = CachedProperty("d", varFor("d"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
-    slots.newCachedProperty(dCP)
+    slots.newCachedProperty(dCP.runtimeKey)
     slots.newReference("e", nullable = false, CTNode)
     slots.addAlias("ee", "e")
     val eCP = CachedProperty("e", varFor("e"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
-    slots.newCachedProperty(eCP)
+    slots.newCachedProperty(eCP.runtimeKey)
 
     val acc = new SlotAccumulator
 
@@ -305,9 +305,9 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     ), Seq(
       OnRefVar("c", RefSlot(0, nullable = false, CTNode), Set.empty),
       OnRefVar("d", RefSlot(1, nullable = false, CTNode), Set.empty),
-      OnCachedProp(dCP),
+      OnCachedProp(dCP.runtimeKey),
       OnRefVar("e", RefSlot(3, nullable = false, CTNode), Set.empty),
-      OnCachedProp(eCP)
+      OnCachedProp(eCP.runtimeKey)
     ))
   }
 
@@ -324,11 +324,11 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     slots.newReference("c", nullable = false, CTNode) // skipped
     slots.newReference("d", nullable = false, CTNode)
     val dCP = CachedProperty("d", varFor("d"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
-    slots.newCachedProperty(dCP)
+    slots.newCachedProperty(dCP.runtimeKey)
     slots.newReference("e", nullable = false, CTNode)
     slots.addAlias("ee", "e")
     val eCP = CachedProperty("e", varFor("e"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
-    slots.newCachedProperty(eCP)
+    slots.newCachedProperty(eCP.runtimeKey)
 
     // ... which are added to result
     val result = SlotConfiguration.empty
@@ -339,7 +339,7 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     result.newLong("x", nullable = false, CTNode)
     result.addAlias("xx", "x")
     val xCP = CachedProperty("x", varFor("x"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
-    result.newCachedProperty(xCP)
+    result.newCachedProperty(xCP.runtimeKey)
 
     // when
     slots.addAllSlotsInOrderTo(result, skipFirst = SlotConfiguration.Size(nLongs = 2, nReferences = 1))
@@ -372,7 +372,7 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
   case class OnApplyPlanId(id: Id) extends LongEvent
   sealed trait RefEvent
   case class OnRefVar(string: String, slot: Slot, aliases: collection.Set[String]) extends RefEvent with HasSlot
-  case class OnCachedProp(cp: ASTCachedProperty) extends RefEvent
+  case class OnCachedProp(cp: ASTCachedProperty.RuntimeKey) extends RefEvent
 
 
   class SlotAccumulator {

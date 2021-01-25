@@ -197,12 +197,12 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
     }
   }
 
-  override def setCachedProperty(key: ASTCachedProperty, value: Value): Unit =
+  override def setCachedProperty(key: ASTCachedProperty.RuntimeKey, value: Value): Unit =
     setCachedPropertyAt(slots.getCachedPropertyOffsetFor(key), value)
 
   override def getCachedPropertyAt(offset: Int): Value = refs(offset).asInstanceOf[Value]
 
-  override def getCachedProperty(key: ASTCachedProperty): Value = fail()
+  override def getCachedProperty(key: ASTCachedProperty.RuntimeKey): Value = fail()
 
   override def estimatedHeapUsage: Long = {
     var usage = SlottedRow.INSTANCE_SIZE + HeapEstimator.sizeOf(longs) + HeapEstimator.shallowSizeOf(refs.asInstanceOf[Array[Object]])

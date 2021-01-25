@@ -645,7 +645,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
     val slots = SlotConfiguration.empty
       .newReference("n", nullable = true, CTAny)
-      .newCachedProperty(property)
+      .newCachedProperty(property.runtimeKey)
     val tokenContext = mock[TokenContext]
     val tokenId = 666
     when(tokenContext.getOptPropertyKeyId("prop")).thenReturn(Some(tokenId))

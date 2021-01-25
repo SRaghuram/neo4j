@@ -105,9 +105,9 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
   test("should map cached ref slot to local - get from input context") {
     // Given
     val slots = aSlotConfiguration.copy()
-      .newCachedProperty(cachedProperties(0))
-      .newCachedProperty(cachedProperties(1))
-      .newCachedProperty(cachedProperties(2))
+      .newCachedProperty(cachedProperties(0).runtimeKey)
+      .newCachedProperty(cachedProperties(1).runtimeKey)
+      .newCachedProperty(cachedProperties(2).runtimeKey)
 
     val oec = createOperatorExpressionCompiler(slots)
 
@@ -139,9 +139,9 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
   test("should map cached ref slot to local - get from store") {
     // Given
     val slots = aSlotConfiguration.copy()
-      .newCachedProperty(cachedProperties(0))
-      .newCachedProperty(cachedProperties(1))
-      .newCachedProperty(cachedProperties(2))
+      .newCachedProperty(cachedProperties(0).runtimeKey)
+      .newCachedProperty(cachedProperties(1).runtimeKey)
+      .newCachedProperty(cachedProperties(2).runtimeKey)
 
     // Input slot configuration does not have cached properties
     val oec = createOperatorExpressionCompiler(slots, Some(aSlotConfiguration))
@@ -405,7 +405,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
 
   test("should handle merge in nested scopes with cached property") {
     // Given
-    val slots = aSlotConfiguration.copy().newCachedProperty(cachedProperties(2))
+    val slots = aSlotConfiguration.copy().newCachedProperty(cachedProperties(2).runtimeKey)
     val oec = createOperatorExpressionCompiler(slots)
 
     val long0 = longSlotLocal(0)
@@ -512,7 +512,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       .newReference("r6", nullable = false, CTInteger)
       .newReference("r7", nullable = false, CTString)
       .newReference("r8", nullable = true, CTAny)
-      .newCachedProperty(cachedProp9)
+      .newCachedProperty(cachedProp9.runtimeKey)
 
     val oec = createOperatorExpressionCompiler(slots)
 
@@ -634,13 +634,13 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       .newReference("r0", nullable = false, CTInteger)
       .newReference("r1", nullable = false, CTString)
       .newReference("r2", nullable = true, CTAny)
-      .newCachedProperty(cachedProp3)
+      .newCachedProperty(cachedProp3.runtimeKey)
       .newReference("r4", nullable = false, CTString)
       .newReference("r5", nullable = true, CTAny)
       .newReference("r6", nullable = false, CTInteger)
       .newReference("r7", nullable = false, CTString)
       .newReference("r8", nullable = true, CTAny)
-      .newCachedProperty(cachedProp9)
+      .newCachedProperty(cachedProp9.runtimeKey)
   }
 
   test("should handle writeLocalsToSlots with overlapping input slot ranges - below range copy threshold") {

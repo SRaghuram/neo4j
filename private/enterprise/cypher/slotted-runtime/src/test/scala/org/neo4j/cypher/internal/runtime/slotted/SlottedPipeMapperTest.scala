@@ -789,8 +789,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       .addAlias("bb", "b")
       .newLong("x", false, CTNode)
       .newReference("y", false, CTAny)
-      .newCachedProperty(aProp)
-      .newCachedProperty(xProp)
+      .newCachedProperty(aProp.runtimeKey)
+      .newCachedProperty(xProp.runtimeKey)
 
     val inRow = SlottedRow(in)
     inRow.setLongAt(0, 1) // a
@@ -803,7 +803,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val out = SlotConfiguration.empty
       .newLong("a", false, CTNode)
       .newReference("b", true, CTAny)
-      .newCachedProperty(aProp)
+      .newCachedProperty(aProp.runtimeKey)
 
     val mapping = SlottedPipeMapper.computeUnionRowMapping(in, out)
 
@@ -856,7 +856,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       .addAlias("aa", "a")
       .newReference("b", true, CTAny)
       .addAlias("bb", "b")
-      .newCachedProperty(aProp)
+      .newCachedProperty(aProp.runtimeKey)
 
     val inRow = SlottedRow(in)
     inRow.setLongAt(0, 1) // a
@@ -868,7 +868,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val out = SlotConfiguration.empty
       .newLong("aa", false, CTNode)
       .newReference("bb", true, CTAny)
-      .newCachedProperty(aaProp)
+      .newCachedProperty(aaProp.runtimeKey)
 
     val mapping = SlottedPipeMapper.computeUnionRowMapping(in, out)
 
@@ -914,9 +914,9 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       .newLong("c", false, CTRelationship)
       .newReference("arg3", false, CTRelationship)
       .newReference("k", false, CTNode)
-      .newCachedProperty(cachedNodeProp("k", "prop1"))
+      .newCachedProperty(cachedNodeProp("k", "prop1").runtimeKey)
       .newReference("m", false, CTRelationship)
-      .newCachedProperty(cachedNodeProp("k", "prop2"))
+      .newCachedProperty(cachedNodeProp("k", "prop2").runtimeKey)
       .newReference("d", false, CTRelationship)
 
     val to = SlotConfiguration.empty
@@ -930,8 +930,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       .newReference("arg3", false, CTRelationship)
       .newReference("k", false, CTNode)
       .newReference("m", false, CTRelationship)
-      .newCachedProperty(cachedNodeProp("k", "prop1"))
-      .newCachedProperty(cachedNodeProp("k", "prop2"))
+      .newCachedProperty(cachedNodeProp("k", "prop1").runtimeKey)
+      .newCachedProperty(cachedNodeProp("k", "prop2").runtimeKey)
 
     val mappings = SlottedPipeMapper.computeSlotMappings(from, Size.apply(2, 1), to)
 
