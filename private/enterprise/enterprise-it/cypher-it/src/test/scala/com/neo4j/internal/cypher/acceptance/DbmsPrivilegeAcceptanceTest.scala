@@ -5,9 +5,8 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40
-import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
@@ -62,7 +61,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     }
   }
 
-  Seq((VERSION_40, dbmsPrivilegesNotIn40()), (VERSION_41D1, dbmsPrivilegesNotIn41d01())).foreach {
+  Seq((EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40, dbmsPrivilegesNotIn40()),
+    (EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1, dbmsPrivilegesNotIn41d01())).foreach {
     case (version, dbmsPrivileges) =>
       withVersion(version) {
 

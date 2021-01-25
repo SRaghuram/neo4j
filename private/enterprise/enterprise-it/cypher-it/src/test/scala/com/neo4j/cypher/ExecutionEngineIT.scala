@@ -11,9 +11,7 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.collection.RawIterator
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.GraphIcing
-import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
-import org.neo4j.graphdb.ExecutionPlanDescription
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
 import org.neo4j.internal.kernel.api.procs.FieldSignature
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
@@ -22,7 +20,6 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName
 import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.CallableProcedure
 import org.neo4j.kernel.api.procedure.Context
-import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.procedure.Mode
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values

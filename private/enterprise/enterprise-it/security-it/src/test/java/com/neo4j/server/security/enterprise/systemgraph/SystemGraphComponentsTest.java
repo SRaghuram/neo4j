@@ -23,8 +23,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,15 +72,6 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.dbms.database.ComponentVersion.DBMS_RUNTIME_COMPONENT;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_36;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D4;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D6;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D7;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42P1;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D1;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.CURRENT;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE;
@@ -153,18 +144,24 @@ class SystemGraphComponentsTest
 
     @ParameterizedTest
     @MethodSource( "versionAndStatusProvider" )
-    void shouldInitializeAndUpgradeSystemGraph( String version, SystemGraphComponent.Status initialStatus ) throws Exception
+    void shouldInitializeAndUpgradeSystemGraph( EnterpriseSecurityGraphComponentVersion version, SystemGraphComponent.Status initialStatus ) throws Exception
     {
         initializeLatestSystemAndUsers();
         initEnterprise( version );
         assertCanUpgradeThisVersionAndThenUpgradeIt( initialStatus );
     }
 
+    private static Stream<Arguments> FailUpgradeWhen_PUBLIC_RoleExistsVersions() {
+        final EnterpriseSecurityGraphComponentVersion[] list = {EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36,
+                                                                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40};
+        return Arrays.stream( list ).map( Arguments::of );
+    }
+
     @ParameterizedTest
-    @ValueSource( strings = {VERSION_36, VERSION_40} )
-    void shouldFailUpgradeWhen_PUBLIC_RoleExists( String version ) throws Exception
+    @MethodSource( "FailUpgradeWhen_PUBLIC_RoleExistsVersions" )
+    void shouldFailUpgradeWhen_PUBLIC_RoleExists( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
-        SystemGraphComponent.Status initialStatus = version.equals( VERSION_36 ) ? UNSUPPORTED_BUT_CAN_UPGRADE : REQUIRES_UPGRADE;
+        SystemGraphComponent.Status initialStatus = version.equals( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36 ) ? UNSUPPORTED_BUT_CAN_UPGRADE : REQUIRES_UPGRADE;
         initializeLatestSystemAndUsers();
         initEnterprise( version, List.of( ADMIN, PUBLIC ) );
 
@@ -181,9 +178,18 @@ class SystemGraphComponentsTest
         ) );
     }
 
+
+    private static Stream<Arguments> GrantExecuteProcedurePrivilegeToPublicOnUpgradeVersions() {
+        final EnterpriseSecurityGraphComponentVersion[] list = {EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36,
+                                                                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40,
+                                                                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1,
+                                                                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41};
+        return Arrays.stream( list ).map( Arguments::of );
+    }
+
     @ParameterizedTest
-    @ValueSource( strings = {VERSION_36, VERSION_40, VERSION_41D1, VERSION_41} )
-    void shouldGrantExecuteProcedurePrivilegeToPublicOnUpgrade( String version ) throws Exception
+    @MethodSource("GrantExecuteProcedurePrivilegeToPublicOnUpgradeVersions")
+    void shouldGrantExecuteProcedurePrivilegeToPublicOnUpgrade( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initializeLatestSystemAndUsers();
         initEnterprise( version );
@@ -206,9 +212,18 @@ class SystemGraphComponentsTest
         } );
     }
 
+    private static Stream<Arguments> GrantExecuteFunctionPrivilegeToPublicOnUpgradeVersions() {
+        final EnterpriseSecurityGraphComponentVersion[] list = {EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36,
+                                                                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40,
+                                                                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1,
+                                                                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41,
+                                                                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4};
+        return Arrays.stream( list ).map( Arguments::of );
+    }
+
     @ParameterizedTest
-    @ValueSource( strings = {VERSION_36, VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D4} )
-    void shouldGrantExecuteFunctionPrivilegeToPublicOnUpgrade( String version ) throws Exception
+    @MethodSource("GrantExecuteFunctionPrivilegeToPublicOnUpgradeVersions")
+    void shouldGrantExecuteFunctionPrivilegeToPublicOnUpgrade( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initializeLatestSystemAndUsers();
         initEnterprise( version );
@@ -248,15 +263,15 @@ class SystemGraphComponentsTest
     static Stream<Arguments> versionAndStatusProvider()
     {
         return Stream.of(
-                Arguments.arguments( VERSION_36, UNSUPPORTED_BUT_CAN_UPGRADE ),
-                Arguments.arguments( VERSION_40, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_41D1, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_41, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_42D4, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_42D6, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_42D7, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_42P1, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_43D1, CURRENT )
+                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36, UNSUPPORTED_BUT_CAN_UPGRADE ),
+                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40, REQUIRES_UPGRADE ),
+                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1, REQUIRES_UPGRADE ),
+                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41, REQUIRES_UPGRADE ),
+                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4, REQUIRES_UPGRADE ),
+                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6, REQUIRES_UPGRADE ),
+                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7, REQUIRES_UPGRADE ),
+                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1, REQUIRES_UPGRADE ),
+                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1, CURRENT )
         );
     }
 
@@ -302,13 +317,13 @@ class SystemGraphComponentsTest
         }
     }
 
-    private void initEnterprise( String version ) throws Exception
+    private void initEnterprise( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         List<String> roles;
         switch ( version )
         {
-        case VERSION_36:
-        case VERSION_40:
+        case ENTERPRISE_SECURITY_36:
+        case ENTERPRISE_SECURITY_40:
             // Versions older than 41 drop 01 should not have PUBLIC role
             roles = List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER );
             break;
@@ -318,9 +333,9 @@ class SystemGraphComponentsTest
         initEnterprise( version, roles );
     }
 
-    private void initEnterprise( String version, List<String> roles ) throws Exception
+    private void initEnterprise( EnterpriseSecurityGraphComponentVersion version, List<String> roles ) throws Exception
     {
-        KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version );
+        KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version.getDescription() );
         inTx( tx -> enterpriseComponent.initializeSystemGraphConstraints( tx ) );
         inTx( tx -> builder.initializePrivileges( tx, roles, Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) ) ) );
     }

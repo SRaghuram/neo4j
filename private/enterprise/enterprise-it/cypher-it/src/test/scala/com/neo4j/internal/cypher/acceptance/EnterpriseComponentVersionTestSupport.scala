@@ -12,6 +12,7 @@ import com.neo4j.dbms.EnterpriseSystemGraphComponent
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.collection.Dependencies
 import org.neo4j.configuration.Config
@@ -21,14 +22,6 @@ import org.neo4j.dbms.database.SystemGraphComponent
 import org.neo4j.dbms.database.SystemGraphComponents
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.InMemoryUserRepository
-import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40
-import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41
-import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1
-import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D4
-import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D6
-import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D7
-import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42P1
-import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D1
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.scalactic.source
@@ -39,31 +32,41 @@ import org.scalatest.mockito.MockitoSugar
 trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLike {
   self: AdministrationCommandAcceptanceTestBase =>
 
-  val CURRENT_VERSION: String = VERSION_43D1
-  val allSystemGraphVersions: Array[String] = Array(VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D4, VERSION_42D6, VERSION_42D7, VERSION_42P1,
-    VERSION_43D1)
+  val CURRENT_VERSION: EnterpriseSecurityGraphComponentVersion = EnterpriseSecurityGraphComponentVersion.
+    values()(EnterpriseSecurityGraphComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION)
+  val allSystemGraphVersions: Array[EnterpriseSecurityGraphComponentVersion] = Array(
+    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40,
+    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1,
+    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41,
+    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4,
+    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6,
+    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7,
+    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1,
+    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1)
   var _configSupplier: () => Config = () => Config.defaults()
-  var _version: Option[String] = None
+  var _version: Option[EnterpriseSecurityGraphComponentVersion] = None
   var _expectToFailWith: Option[Class[_]] = None
   var _verbose: Boolean = false
 
-  private def setVersion(version: Option[String], expectToFailWith: Option[Class[_]] = None, verbose: Boolean = false): Unit = {
+  private def setVersion(version: Option[EnterpriseSecurityGraphComponentVersion], expectToFailWith: Option[Class[_]] = None, verbose: Boolean = false): Unit = {
     _version = version
     _expectToFailWith = expectToFailWith
     _verbose = verbose
   }
 
-  def withVersion(version: String)(block: => Any): Unit = {
+  def withVersion(version: EnterpriseSecurityGraphComponentVersion)(block: => Any): Unit = {
     setVersion(Some(version))
     block
     setVersion(None)
   }
 
-  def unsupportedBefore41(version: String): Option[Class[_]] = if (version == VERSION_40 || version == VERSION_41D1) Some(classOf[UnsupportedOperationException]) else None
+  def unsupportedBefore41(version: EnterpriseSecurityGraphComponentVersion): Option[Class[_]] = if (version == EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40 ||
+                                                                   version == EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1)
+    Some(classOf[UnsupportedOperationException]) else None
 
-  val allSupported: String => Option[Class[_]] = _ => None
+  val allSupported: EnterpriseSecurityGraphComponentVersion => Option[Class[_]] = _ => None
 
-  def withVersions(versions: String*)(expectToFail: String => Option[Class[_]])(block: => Any): Unit = {
+  def withVersions(versions: EnterpriseSecurityGraphComponentVersion*)(expectToFail: EnterpriseSecurityGraphComponentVersion => Option[Class[_]])(block: => Any): Unit = {
     versions.foreach { version =>
       setVersion(Some(version), expectToFail(version))
       block
@@ -71,11 +74,11 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
     }
   }
 
-  def withAllSystemGraphVersions(expectToFail: String => Option[Class[_]])(block: => Any): Unit = withVersions(allSystemGraphVersions: _*)(expectToFail)(block)
+  def withAllSystemGraphVersions(expectToFail: EnterpriseSecurityGraphComponentVersion => Option[Class[_]])(block: => Any): Unit = withVersions(allSystemGraphVersions: _*)(expectToFail)(block)
 
-  def defaultAdminPrivilegesFor(replace: String, version: String): Set[Map[String, AnyRef]] = {
+  def defaultAdminPrivilegesFor(replace: String, version: EnterpriseSecurityGraphComponentVersion): Set[Map[String, AnyRef]] = {
     val adminPrivileges = version match {
-      case VERSION_40 => Set(
+      case EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40 => Set(
         granted(access).role("admin").map,
         granted(read).role("admin").node("*").map,
         granted(traverse).role("admin").node("*").map,
@@ -87,7 +90,9 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
         granted(adminAction("schema")).role("admin").map,
         granted(adminAction("admin")).role("admin").map
       )
-      case VERSION_41D1 | VERSION_41 | VERSION_42D4 | VERSION_42D6 | VERSION_42D7 | VERSION_42P1 => Set(
+      case EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1 | EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41 |
+           EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4 | EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6 |
+           EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7 | EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1 => Set(
         granted(access).role("admin").map,
         granted(matchPrivilege).role("admin").node("*").map,
         granted(matchPrivilege).role("admin").relationship("*").map,
@@ -98,7 +103,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
         granted(constraintManagement).role("admin").map,
         granted(adminAction("admin")).role("admin").map
       )
-      case VERSION_43D1 => defaultRolePrivileges
+      case EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1 => defaultRolePrivileges
       case _            => throw new IllegalArgumentException(s"Unsupported version: $version")
     }
     adminPrivileges.foldLeft(Set.empty[Map[String, AnyRef]]) {
@@ -175,18 +180,18 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
     // Disable normal setup so each test can initialize with different versions
   }
 
-  def initializeEnterpriseSecurityGraphComponent(config: Config, version: String, verbose: Boolean): Unit = {
+  def initializeEnterpriseSecurityGraphComponent(config: Config, version: EnterpriseSecurityGraphComponentVersion, verbose: Boolean): Unit = {
     doInitializeEnterpriseSecurityGraphComponent(config, version, verbose)
   }
 
-  def doInitializeEnterpriseSecurityGraphComponent(config: Config, version: String, verbose: Boolean): Unit = {
+  def doInitializeEnterpriseSecurityGraphComponent(config: Config, version: EnterpriseSecurityGraphComponentVersion, verbose: Boolean): Unit = {
     if (verbose) println("Initializing version: " + version)
     config.set(GraphDatabaseSettings.allow_single_automatic_upgrade, java.lang.Boolean.FALSE)
     val userRepository = new InMemoryUserRepository
     val roleRepository = new InMemoryRoleRepository
     val enterpriseComponent = new EnterpriseSecurityGraphComponent(mock[Log], roleRepository, userRepository, config)
     initializeSystemGraphConstraints(enterpriseComponent)
-    val builder = enterpriseComponent.findSecurityGraphComponentVersion(version)
+    val builder = enterpriseComponent.findSecurityGraphComponentVersion(version.getDescription)
     val tx = graphOps.beginTx
     try {
       val users = new util.HashSet[String]()
