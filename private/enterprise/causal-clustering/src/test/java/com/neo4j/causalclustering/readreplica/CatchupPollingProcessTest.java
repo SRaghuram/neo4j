@@ -46,6 +46,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.CATCHUP_FAILED;
+import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.CANCELLED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.PAUSED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
@@ -166,9 +167,23 @@ class CatchupPollingProcessTest
     }
 
     @Test
-    void shouldBeCancelledWhenStopped()
+    void shouldBeCancelledWhenStopped() throws Exception
     {
-        //
+        // given
+        txPuller.start();
+
+        // when
+        txPuller.tick();
+
+        // then
+        assertEquals( TX_PULLING, txPuller.state() );
+
+        // when
+        txPuller.stop();
+
+        // then
+        assertEquals( CANCELLED, txPuller.state() );
+        assertTrue( txPuller.isCancelled() );
     }
 
     private CommittedTransactionRepresentation tx( int txId )

@@ -27,7 +27,6 @@ import static org.neo4j.logging.LogAssertions.assertThat;
 
 class TxPullResponseHandlerTest
 {
-
     @Test
     void shouldNotSignalCompleteOnTxPullResponse()
     {
