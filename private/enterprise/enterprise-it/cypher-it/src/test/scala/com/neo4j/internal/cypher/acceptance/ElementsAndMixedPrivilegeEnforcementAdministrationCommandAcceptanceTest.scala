@@ -30,17 +30,17 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ {name} ON GRAPH * ELEMENTS A (*) TO custom")
+    execute(s"GRANT READ {name} ON GRAPH * ELEMENTS A (*) TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault(username, password, query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * ELEMENTS A (*) TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * ELEMENTS A (*) TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, _) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(("n1", "r", "n2"))
     }) should be(1)
   }
@@ -56,37 +56,37 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     val query = "MATCH (n1)-[r]->(n2) RETURN n1.name, r.name, n2.name ORDER BY n1.name, r.name"
 
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDBMSDefault("joe", "soap", query)
+      executeOnDBMSDefault(username, password, query)
     }
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT ACCESS ON DATABASE * TO custom")
+    execute(s"GRANT ACCESS ON DATABASE * TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault(username, password, query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * ELEMENTS A TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * ELEMENTS A TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, _) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be((null, null, null))
     }) should be(1)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ {name} ON GRAPH * ELEMENTS A, B TO custom")
+    execute(s"GRANT READ {name} ON GRAPH * ELEMENTS A, B TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, _) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(("a1", "ra1", "a2"))
     }) should be(1)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH {name} ON GRAPH * ELEMENTS B TO custom")
+    execute(s"GRANT MATCH {name} ON GRAPH * ELEMENTS B TO $roleName")
 
     // THEN
     val expected1 = Seq(
@@ -95,13 +95,13 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
       ("b1", "ra2", "b2"),
       ("b3", "rb2", "b4")
     )
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, index) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(expected1(index))
     }) should be(4)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE READ {name} ON GRAPH * ELEMENTS A FROM custom")
+    execute(s"REVOKE READ {name} ON GRAPH * ELEMENTS A FROM $roleName")
 
     // THEN
     val expected2 = Seq(
@@ -110,39 +110,39 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
       (null, "rb1", null),
       (null, null, null)
     )
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, index) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(expected2(index))
     }) should be(4)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE MATCH {name} ON GRAPH * ELEMENTS B FROM custom")
+    execute(s"REVOKE MATCH {name} ON GRAPH * ELEMENTS B FROM $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, _) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be((null, null, null))
     }) should be(1)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE TRAVERSE ON GRAPH * ELEMENTS A FROM custom")
+    execute(s"REVOKE TRAVERSE ON GRAPH * ELEMENTS A FROM $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault(username, password, query) should be(0)
   }
 
   test("should rollback transaction") {
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+    execute(s"CREATE ROLE $roleName")
     val tx = graph.beginTransaction(Type.EXPLICIT, LoginContext.AUTH_DISABLED)
     try {
-      val result: Result = tx.execute("GRANT TRAVERSE ON GRAPH * NODES A,B TO custom")
+      val result: Result = tx.execute(s"GRANT TRAVERSE ON GRAPH * NODES A,B TO $roleName")
       result.accept(_ => true)
       tx.rollback()
     } finally {
       tx.close()
     }
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+    execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should get correct result from propertyKeys procedure depending on read privileges") {
@@ -160,90 +160,89 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("MATCH ()<-[x:X]-() SET x.prop6 = 6")
     execute("MATCH ()<-[x:Y]-() SET x.prop7 = 7")
     execute("MATCH (n:A) REMOVE n.prop2") // -> unused prop2
+    val all = List("prop1", "prop2", "prop3", "prop4", "prop5", "prop6", "prop7")
 
     val query = "CALL db.propertyKeys() YIELD propertyKey RETURN propertyKey ORDER BY propertyKey"
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT EXECUTE PROCEDURE db.propertyKeys ON DBMS TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES ignore TO custom")
+    execute(s"GRANT EXECUTE PROCEDURE db.propertyKeys ON DBMS TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES ignore TO $roleName")
 
     // THEN
-    val all = List("prop1", "prop2", "prop3", "prop4", "prop5", "prop6", "prop7")
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (_, _) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (_, _) => {
       fail("Should be empty because no properties are whitelisted")
     }) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ {*} ON GRAPH * NODES A TO custom")
+    execute(s"GRANT READ {*} ON GRAPH * NODES A TO $roleName")
 
     // THEN
-    // expect no change
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(all(index))
     }) should be(all.size)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ {prop3} ON GRAPH * NODES B TO custom")
+    execute(s"DENY READ {prop3} ON GRAPH * NODES B TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(all(index))
     }) should be(all.size)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ {*} ON GRAPH * NODES C TO custom")
+    execute(s"DENY READ {*} ON GRAPH * NODES C TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(all(index))
     }) should be(all.size)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ {prop5} ON GRAPH * NODES * TO custom")
+    execute(s"DENY READ {prop5} ON GRAPH * NODES * TO $roleName")
 
     // THEN
     val withoutFive = all.filter(_ != "prop5")
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(withoutFive(index))
     }) should be(withoutFive.size)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ {prop5} ON GRAPH * RELATIONSHIPS * TO custom")
+    execute(s"DENY READ {prop5} ON GRAPH * RELATIONSHIPS * TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(withoutFive(index))
     }) should be(withoutFive.size)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ {*} ON GRAPH * NODES * TO custom")
+    execute(s"DENY READ {*} ON GRAPH * NODES * TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (_, _) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (_, _) => {
       fail("Should be empty because all properties are denied on nodes and not whitelisted on relationships")
     }) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+    execute(s"GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(withoutFive(index))
     }) should be(withoutFive.size)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+    execute(s"DENY READ {*} ON GRAPH * RELATIONSHIPS * TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", query, resultHandler = (_, _) => {
+    executeOnDBMSDefault(username, password, query, resultHandler = (_, _) => {
       fail("Should be empty because all properties are denied on everything")
     }) should be(0)
   }
@@ -251,13 +250,13 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
   test("should see label and type but not properties when returning path with only full traverse privilege") {
     // Given
     setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:Person {name: 'Alice'})-[:KNOWS {since: '2019'}]->(:Person {name: 'Bob'})")
 
     // When
-    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -276,14 +275,14 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
   test("should see label, type and properties when returning path with full traverse and read privileges") {
     // Given
     setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * TO custom")
-    execute("GRANT READ {*} ON GRAPH * TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
+    execute(s"GRANT READ {*} ON GRAPH * TO $roleName")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:Person {name: 'Alice'})-[:KNOWS {since: '2019'}]->(:Person {name: 'Bob'})")
 
     // When
-    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -302,8 +301,8 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
   test("should see allowed label and type but not properties when returning path with only traverse privilege") {
     // Given
     setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * NODES Person, Dog TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP KNOWS TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES Person, Dog TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIP KNOWS TO $roleName")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute(
@@ -313,7 +312,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
         |""".stripMargin)
 
     // When
-    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -332,10 +331,10 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
   test("should see allowed label, type and properties when returning path with traverse and read privileges") {
     // Given
     setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * NODES Person, Dog TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP KNOWS TO custom")
-    execute("GRANT READ {name} ON GRAPH * NODES Person, Dog TO custom")
-    execute("GRANT READ {*} ON GRAPH * RELATIONSHIP KNOWS TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES Person, Dog TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIP KNOWS TO $roleName")
+    execute(s"GRANT READ {name} ON GRAPH * NODES Person, Dog TO $roleName")
+    execute(s"GRANT READ {*} ON GRAPH * RELATIONSHIP KNOWS TO $roleName")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute(
@@ -345,7 +344,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
         |""".stripMargin)
 
     // When
-    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -361,12 +360,12 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     }) should be(1)
   }
 
-  test("should see not denied label and type but not properties when returning path with only traverse privilege") {
+  test("should see not denied label and type and no properties when returning path with only traverse privilege") {
     // Given
     setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * TO custom")
-    execute("DENY TRAVERSE ON GRAPH * NODES Friend TO custom")
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP HAS_PET TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
+    execute(s"DENY TRAVERSE ON GRAPH * NODES Friend TO $roleName")
+    execute(s"DENY TRAVERSE ON GRAPH * RELATIONSHIP HAS_PET TO $roleName")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute(
@@ -376,7 +375,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
         |""".stripMargin)
 
     // When
-    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -395,13 +394,13 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
   test("should see not denied label, type and properties when returning path with traverse and read privileges") {
     // Given
     setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * TO custom")
-    execute("DENY TRAVERSE ON GRAPH * NODES Friend TO custom")
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP HAS_PET TO custom")
-    execute("GRANT READ {*} ON GRAPH * TO custom")
-    execute("DENY READ {age} ON GRAPH * NODES Person TO custom")
-    execute("DENY READ {met_at} ON GRAPH * RELATIONSHIP KNOWS TO custom")
-    execute("DENY READ {*} ON GRAPH * RELATIONSHIP HAS_PET TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
+    execute(s"DENY TRAVERSE ON GRAPH * NODES Friend TO $roleName")
+    execute(s"DENY TRAVERSE ON GRAPH * RELATIONSHIP HAS_PET TO $roleName")
+    execute(s"GRANT READ {*} ON GRAPH * TO $roleName")
+    execute(s"DENY READ {age} ON GRAPH * NODES Person TO $roleName")
+    execute(s"DENY READ {met_at} ON GRAPH * RELATIONSHIP KNOWS TO $roleName")
+    execute(s"DENY READ {*} ON GRAPH * RELATIONSHIP HAS_PET TO $roleName")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute(
@@ -411,7 +410,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
         |""".stripMargin)
 
     // When
-    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -430,20 +429,20 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
   test("should see labels and types but not properties for nodes with only traverse privilege when returning path") {
     // Given
     setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * TO custom")
-    execute("GRANT READ {*} ON GRAPH * NODES Dog TO custom")
-    execute("GRANT READ {name} ON GRAPH * NODES Friend TO custom")
-    execute("GRANT READ {*} ON GRAPH * RELATIONSHIP HAS_PET TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
+    execute(s"GRANT READ {*} ON GRAPH * NODES Dog TO $roleName")
+    execute(s"GRANT READ {name} ON GRAPH * NODES Friend TO $roleName")
+    execute(s"GRANT READ {*} ON GRAPH * RELATIONSHIP HAS_PET TO $roleName")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute(// Alice knows Bob, Bob knows Charlie, Charlie has pet Dennis
+    execute( // Alice knows Bob, Bob knows Charlie, Charlie has pet Dennis
       """CREATE (:Person {name: 'Alice', age: 28})-[:KNOWS {since: '2019', met_at: 'library'}]->(b:Person {name: 'Bob', age: 25}),
         |(b)-[:KNOWS {since: '2010'}]->(c:Person:Friend {name: 'Charlie', age: 27}),
         |(c)-[:HAS_PET {since: '2018'}]->(:Dog {name: 'Dennis', age: 5})
         |""".stripMargin)
 
     // When
-    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[*3]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH p=()-[*3]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val nodes = path.nodes().asScala
       val relationships = path.relationships().asScala
@@ -466,20 +465,20 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
   test("should see labels and types but not properties for nodes with traverse and denied read privilege when returning path") {
     // Given
     setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * TO custom")
-    execute("DENY READ {*} ON GRAPH * NODES Person TO custom")
-    execute("DENY READ {age} ON GRAPH * NODES Friend TO custom")
-    execute("DENY READ {since} ON GRAPH * RELATIONSHIP KNOWS TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * TO $roleName")
+    execute(s"DENY READ {*} ON GRAPH * NODES Person TO $roleName")
+    execute(s"DENY READ {age} ON GRAPH * NODES Friend TO $roleName")
+    execute(s"DENY READ {since} ON GRAPH * RELATIONSHIP KNOWS TO $roleName")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute(// Alice knows Bob, Bob knows Charlie, Charlie has pet Dennis
+    execute( // Alice knows Bob, Bob knows Charlie, Charlie has pet Dennis
       """CREATE (:Person {name: 'Alice', age: 28})-[:KNOWS {since: '2019', met_at: 'library'}]->(b:Person {name: 'Bob', age: 25}),
         |(b)-[:KNOWS {since: '2010'}]->(c:Person:Friend {name: 'Charlie', age: 27}),
         |(c)-[:HAS_PET {since: '2018'}]->(:Dog {name: 'Dennis', age: 5})
         |""".stripMargin)
 
     // When
-    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[*3]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH p=()-[*3]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val nodes = path.nodes().asScala
       val relationships = path.relationships().asScala

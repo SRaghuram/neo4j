@@ -13,38 +13,38 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
 
   test("should not revoke other database management privileges when revoking database management") {
     // GIVEN
-    execute("CREATE ROLE custom")
-    execute("GRANT CREATE DATABASE ON DBMS TO custom")
-    execute("GRANT DROP DATABASE ON DBMS TO custom")
-    execute("GRANT DATABASE MANAGEMENT ON DBMS TO custom")
+    execute(s"CREATE ROLE $roleName")
+    execute(s"GRANT CREATE DATABASE ON DBMS TO $roleName")
+    execute(s"GRANT DROP DATABASE ON DBMS TO $roleName")
+    execute(s"GRANT DATABASE MANAGEMENT ON DBMS TO $roleName")
 
     // WHEN
-    execute("REVOKE DATABASE MANAGEMENT ON DBMS FROM custom")
+    execute(s"REVOKE DATABASE MANAGEMENT ON DBMS FROM $roleName")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminAction("create_database")).role("custom").map,
-      granted(adminAction("drop_database")).role("custom").map
+    execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
+      granted(adminAction("create_database")).role(roleName).map,
+      granted(adminAction("drop_database")).role(roleName).map
     ))
   }
 
   test("Should revoke sub-privilege even if database management exists") {
     // Given
-    execute("CREATE ROLE custom")
-    execute("GRANT CREATE DATABASE ON DBMS TO custom")
-    execute("GRANT DROP DATABASE ON DBMS TO custom")
-    execute("GRANT DATABASE MANAGEMENT ON DBMS TO custom")
+    execute(s"CREATE ROLE $roleName")
+    execute(s"GRANT CREATE DATABASE ON DBMS TO $roleName")
+    execute(s"GRANT DROP DATABASE ON DBMS TO $roleName")
+    execute(s"GRANT DATABASE MANAGEMENT ON DBMS TO $roleName")
 
     // When
     // Now revoke each sub-privilege in turn
     Seq(
       "CREATE DATABASE",
       "DROP DATABASE"
-    ).foreach(privilege => execute(s"REVOKE $privilege ON DBMS FROM custom"))
+    ).foreach(privilege => execute(s"REVOKE $privilege ON DBMS FROM $roleName"))
 
     // Then
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminAction("database_management")).role("custom").map
+    execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
+      granted(adminAction("database_management")).role(roleName).map
     ))
   }
 
@@ -54,91 +54,91 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
 
   test("should enforce create database privilege") {
     // GIVEN
-    setupUserWithCustomRole("foo", "bar")
+    setupUserWithCustomRole()
 
     // WHEN
-    execute("GRANT CREATE DATABASE ON DBMS TO custom")
+    execute(s"GRANT CREATE DATABASE ON DBMS TO $roleName")
 
     // THEN
-    executeOnSystem("foo", "bar", "CREATE DATABASE baz")
-    execute("SHOW DATABASE baz").toSet should be(Set(db("baz")))
+    executeOnSystem(username, password, s"CREATE DATABASE $databaseString")
+    execute(s"SHOW DATABASE $databaseString").toSet should be(Set(db(databaseString)))
 
     // WHEN
-    execute("DROP DATABASE baz")
-    execute("REVOKE CREATE DATABASE ON DBMS FROM custom")
+    execute(s"DROP DATABASE $databaseString")
+    execute(s"REVOKE CREATE DATABASE ON DBMS FROM $roleName")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE DATABASE baz")
+      executeOnSystem(username, password, s"CREATE DATABASE $databaseString")
     } should have message PERMISSION_DENIED_CREATE_DATABASE
 
-    execute("SHOW DATABASE baz").toSet should be(Set.empty)
+    execute(s"SHOW DATABASE $databaseString").toSet should be(Set.empty)
   }
 
-  test("should fail when creating database when denied database user privilege") {
+  test("should fail when creating database when denied create database privilege") {
     // GIVEN
-    setupUserWithCustomAdminRole("foo", "bar")
+    setupUserWithCustomAdminRole()
 
     // WHEN
-    execute("DENY CREATE DATABASE ON DBMS TO custom")
+    execute(s"DENY CREATE DATABASE ON DBMS TO $roleName")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE DATABASE baz")
+      executeOnSystem(username, password, s"CREATE DATABASE $databaseString")
     } should have message PERMISSION_DENIED_CREATE_DATABASE
 
-    execute("SHOW DATABASE baz").toSet should be(Set.empty)
+    execute(s"SHOW DATABASE $databaseString").toSet should be(Set.empty)
   }
 
   test("should fail when replacing database with denied create database privilege") {
     // GIVEN
-    setupUserWithCustomAdminRole("foo", "bar")
+    setupUserWithCustomAdminRole()
 
     // WHEN
-    execute("DENY CREATE DATABASE ON DBMS TO custom")
+    execute(s"DENY CREATE DATABASE ON DBMS TO $roleName")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE OR REPLACE DATABASE myDb")
+      executeOnSystem(username, password, s"CREATE OR REPLACE DATABASE $databaseString")
     } should have message PERMISSION_DENIED_CREATE_OR_DROP_DATABASE
   }
 
   test("should fail when replacing database with denied drop database privilege") {
     // GIVEN
-    setupUserWithCustomAdminRole("foo", "bar")
+    setupUserWithCustomAdminRole()
 
     // WHEN
-    execute("DENY DROP DATABASE ON DBMS TO custom")
+    execute(s"DENY DROP DATABASE ON DBMS TO $roleName")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE OR REPLACE DATABASE myDb")
+      executeOnSystem(username, password, s"CREATE OR REPLACE DATABASE $databaseString")
     } should have message PERMISSION_DENIED_CREATE_OR_DROP_DATABASE
   }
 
   test("should fail when replacing database without create database privilege") {
     // GIVEN
-    setupUserWithCustomRole("foo", "bar")
+    setupUserWithCustomRole()
 
     // WHEN
-    execute("GRANT DROP DATABASE ON DBMS TO custom")
+    execute(s"GRANT DROP DATABASE ON DBMS TO $roleName")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE OR REPLACE DATABASE myDb")
+      executeOnSystem(username, password, s"CREATE OR REPLACE DATABASE $databaseString")
     } should have message PERMISSION_DENIED_CREATE_OR_DROP_DATABASE
   }
 
   test("should fail when replacing database without drop database privilege") {
     // GIVEN
-    setupUserWithCustomRole("foo", "bar")
+    setupUserWithCustomRole()
 
     // WHEN
-    execute("GRANT CREATE DATABASE ON DBMS TO custom")
+    execute(s"GRANT CREATE DATABASE ON DBMS TO $roleName")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE OR REPLACE DATABASE myDb")
+      executeOnSystem(username, password, s"CREATE OR REPLACE DATABASE $databaseString")
     } should have message PERMISSION_DENIED_CREATE_OR_DROP_DATABASE
   }
 
@@ -146,87 +146,87 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
 
   test("should enforce drop database privilege") {
     // GIVEN
-    setupUserWithCustomRole("foo", "bar")
+    setupUserWithCustomRole()
 
     // WHEN
-    execute("CREATE DATABASE baz")
-    execute("GRANT DROP DATABASE ON DBMS TO custom")
+    execute(s"CREATE DATABASE $databaseString")
+    execute(s"GRANT DROP DATABASE ON DBMS TO $roleName")
 
     // THEN
-    executeOnSystem("foo", "bar", "DROP DATABASE baz")
-    execute("SHOW DATABASE baz").toSet should be(Set.empty)
+    executeOnSystem(username, password, s"DROP DATABASE $databaseString")
+    execute(s"SHOW DATABASE $databaseString").toSet should be(Set.empty)
 
     // WHEN
-    execute("CREATE DATABASE baz")
-    execute("REVOKE DROP DATABASE ON DBMS FROM custom")
+    execute(s"CREATE DATABASE $databaseString")
+    execute(s"REVOKE DROP DATABASE ON DBMS FROM $roleName")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "DROP DATABASE baz")
+      executeOnSystem(username, password, s"DROP DATABASE $databaseString")
     } should have message PERMISSION_DENIED_DROP_DATABASE
 
-    execute("SHOW DATABASE baz").toSet should be(Set(db("baz")))
+    execute(s"SHOW DATABASE $databaseString").toSet should be(Set(db(databaseString)))
   }
 
   test("should fail when dropping database when denied drop database privilege") {
     // GIVEN
-    setupUserWithCustomAdminRole("foo", "bar")
+    setupUserWithCustomAdminRole()
 
     // WHEN
-    execute("CREATE DATABASE baz")
-    execute("DENY DROP DATABASE ON DBMS TO custom")
+    execute(s"CREATE DATABASE $databaseString")
+    execute(s"DENY DROP DATABASE ON DBMS TO $roleName")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "DROP DATABASE baz")
+      executeOnSystem(username, password, s"DROP DATABASE $databaseString")
     } should have message PERMISSION_DENIED_DROP_DATABASE
 
-    execute("SHOW DATABASE baz").toSet should be(Set(db("baz")))
+    execute(s"SHOW DATABASE $databaseString").toSet should be(Set(db(databaseString)))
   }
 
   // DATABASE MANAGEMENT
 
   test("should enforce database management privilege") {
     // GIVEN
-    setupUserWithCustomRole("foo", "bar")
+    setupUserWithCustomRole()
 
     // WHEN
-    execute("GRANT DATABASE MANAGEMENT ON DBMS TO custom")
+    execute(s"GRANT DATABASE MANAGEMENT ON DBMS TO $roleName")
 
     // THEN
-    executeOnSystem("foo", "bar", "CREATE DATABASE baz")
-    executeOnSystem("foo", "bar", "DROP DATABASE baz")
+    executeOnSystem(username, password, s"CREATE DATABASE $databaseString")
+    executeOnSystem(username, password, s"DROP DATABASE $databaseString")
 
     // WHEN
-    execute("REVOKE DATABASE MANAGEMENT ON DBMS FROM custom")
-    execute("CREATE DATABASE baz")
+    execute(s"REVOKE DATABASE MANAGEMENT ON DBMS FROM $roleName")
+    execute(s"CREATE DATABASE $databaseString2")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE DATABASE userDb")
+      executeOnSystem(username, password, s"CREATE DATABASE $databaseString")
     } should have message PERMISSION_DENIED_CREATE_DATABASE
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "DROP DATABASE baz")
+      executeOnSystem(username, password, s"DROP DATABASE $databaseString2")
     } should have message PERMISSION_DENIED_DROP_DATABASE
   }
 
   test("should fail database management when denied database management privilege") {
     // GIVEN
-    setupUserWithCustomAdminRole("foo", "bar")
+    setupUserWithCustomAdminRole()
 
     // WHEN
-    execute("GRANT CREATE DATABASE ON DBMS TO custom")
-    execute("GRANT DROP DATABASE ON DBMS TO custom")
-    execute("DENY DATABASE MANAGEMENT ON DBMS TO custom")
+    execute(s"GRANT CREATE DATABASE ON DBMS TO $roleName")
+    execute(s"GRANT DROP DATABASE ON DBMS TO $roleName")
+    execute(s"DENY DATABASE MANAGEMENT ON DBMS TO $roleName")
 
-    execute("CREATE DATABASE baz")
+    execute(s"CREATE DATABASE $databaseString2")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE DATABASE userDb")
+      executeOnSystem(username, password, s"CREATE DATABASE $databaseString")
     } should have message PERMISSION_DENIED_CREATE_DATABASE
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "DROP DATABASE baz")
+      executeOnSystem(username, password, s"DROP DATABASE $databaseString2")
     } should have message PERMISSION_DENIED_DROP_DATABASE
   }
 }

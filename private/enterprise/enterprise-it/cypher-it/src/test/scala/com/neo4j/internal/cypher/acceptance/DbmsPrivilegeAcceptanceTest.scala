@@ -6,9 +6,9 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40
 import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1
+import org.neo4j.graphdb.security.AuthorizationViolationException
 
 class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
 
@@ -16,48 +16,48 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should grant dbms privileges") {
     // GIVEN
-    execute("CREATE ROLE custom")
+    execute(s"CREATE ROLE $roleName")
 
     dbmsPrivileges.foreach {
       case (command, action) =>
         withClue(s"$command: \n") {
           // WHEN
-          execute(s"GRANT $command ON DBMS TO custom")
+          execute(s"GRANT $command ON DBMS TO $roleName")
 
           // THEN
-          execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            granted(action).role("custom").map
+          execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
+            granted(action).role(roleName).map
           ))
 
           // WHEN
-          execute(s"REVOKE GRANT $command ON DBMS FROM custom")
+          execute(s"REVOKE GRANT $command ON DBMS FROM $roleName")
 
           // THEN
-          execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+          execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set.empty)
         }
     }
   }
 
   test("should deny dbms privileges") {
     // GIVEN
-    execute("CREATE ROLE custom")
+    execute(s"CREATE ROLE $roleName")
 
     dbmsPrivileges.foreach {
       case (command, action) =>
         withClue(s"$command: \n") {
           // WHEN
-          execute(s"DENY $command ON DBMS TO custom")
+          execute(s"DENY $command ON DBMS TO $roleName")
 
           // THEN
-          execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            denied(action).role("custom").map
+          execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
+            denied(action).role(roleName).map
           ))
 
           // WHEN
-          execute(s"REVOKE DENY $command ON DBMS FROM custom")
+          execute(s"REVOKE DENY $command ON DBMS FROM $roleName")
 
           // THEN
-          execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+          execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set.empty)
         }
     }
   }
@@ -68,12 +68,12 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
         test("should fail to grant dbms privileges") {
           // GIVEN
-          execute("CREATE ROLE custom")
+          execute(s"CREATE ROLE $roleName")
 
           dbmsPrivileges.foreach { command =>
             withClue(s"$command: \n") {
               an[UnsupportedOperationException] should be thrownBy {
-                execute(s"GRANT $command ON DBMS TO custom")
+                execute(s"GRANT $command ON DBMS TO $roleName")
               }
             }
           }
@@ -81,12 +81,12 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
         test("should fail to deny dbms privileges") {
           // GIVEN
-          execute("CREATE ROLE custom")
+          execute(s"CREATE ROLE $roleName")
 
           dbmsPrivileges.foreach { command =>
             withClue(s"$command: \n") {
               an[UnsupportedOperationException] should be thrownBy {
-                execute(s"DENY $command ON DBMS TO custom")
+                execute(s"DENY $command ON DBMS TO $roleName")
               }
             }
           }
@@ -104,42 +104,42 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should not revoke other dbms privileges when revoking all dbms privileges") {
     // GIVEN
-    execute("CREATE ROLE custom")
+    execute(s"CREATE ROLE $roleName")
     allDbmsPrivileges("GRANT", includingCompound = true)
 
     // WHEN
-    execute("REVOKE ALL DBMS PRIVILEGES ON DBMS FROM $role", Map("role" -> "custom"))
+    execute("REVOKE ALL DBMS PRIVILEGES ON DBMS FROM $role", Map("role" -> roleName))
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminAction("create_role")).role("custom").map,
-      granted(adminAction("drop_role")).role("custom").map,
-      granted(adminAction("assign_role")).role("custom").map,
-      granted(adminAction("remove_role")).role("custom").map,
-      granted(adminAction("show_role")).role("custom").map,
-      granted(adminAction("role_management")).role("custom").map,
-      granted(adminAction("create_user")).role("custom").map,
-      granted(adminAction("drop_user")).role("custom").map,
-      granted(adminAction("set_user_status")).role("custom").map,
-      granted(adminAction("set_user_default_database")).role("custom").map,
-      granted(adminAction("set_passwords")).role("custom").map,
-      granted(adminAction("alter_user")).role("custom").map,
-      granted(adminAction("show_user")).role("custom").map,
-      granted(adminAction("user_management")).role("custom").map,
-      granted(adminAction("create_database")).role("custom").map,
-      granted(adminAction("drop_database")).role("custom").map,
-      granted(adminAction("database_management")).role("custom").map,
-      granted(adminAction("show_privilege")).role("custom").map,
-      granted(adminAction("assign_privilege")).role("custom").map,
-      granted(adminAction("remove_privilege")).role("custom").map,
-      granted(adminAction("privilege_management")).role("custom").map,
-      granted(adminAction("execute_admin")).role("custom").map
+    execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
+      granted(adminAction("create_role")).role(roleName).map,
+      granted(adminAction("drop_role")).role(roleName).map,
+      granted(adminAction("assign_role")).role(roleName).map,
+      granted(adminAction("remove_role")).role(roleName).map,
+      granted(adminAction("show_role")).role(roleName).map,
+      granted(adminAction("role_management")).role(roleName).map,
+      granted(adminAction("create_user")).role(roleName).map,
+      granted(adminAction("drop_user")).role(roleName).map,
+      granted(adminAction("set_user_status")).role(roleName).map,
+      granted(adminAction("set_user_default_database")).role(roleName).map,
+      granted(adminAction("set_passwords")).role(roleName).map,
+      granted(adminAction("alter_user")).role(roleName).map,
+      granted(adminAction("show_user")).role(roleName).map,
+      granted(adminAction("user_management")).role(roleName).map,
+      granted(adminAction("create_database")).role(roleName).map,
+      granted(adminAction("drop_database")).role(roleName).map,
+      granted(adminAction("database_management")).role(roleName).map,
+      granted(adminAction("show_privilege")).role(roleName).map,
+      granted(adminAction("assign_privilege")).role(roleName).map,
+      granted(adminAction("remove_privilege")).role(roleName).map,
+      granted(adminAction("privilege_management")).role(roleName).map,
+      granted(adminAction("execute_admin")).role(roleName).map
     ))
   }
 
   test("Should revoke sub-privilege even if all dbms privilege exists") {
     // Given
-    execute("CREATE ROLE custom")
+    execute(s"CREATE ROLE $roleName")
     allDbmsPrivileges("GRANT", includingCompound = true)
 
     // When
@@ -147,9 +147,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     allDbmsPrivileges("REVOKE", includingCompound = false)
 
     // Then
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(allDbmsPrivilege).role("custom").map,
-      granted(adminAction("dbms_actions")).role("custom").map
+    execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
+      granted(adminAction("dbms_actions")).role(roleName).map
     ))
   }
 
@@ -158,102 +157,107 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
   test("should enforce all dbms privileges privilege") {
     // GIVEN
     clearPublicRole()
-    setupUserWithCustomRole("foo", "bar")
+    setupUserWithCustomRole()
 
     // WHEN
-    execute("GRANT ALL DBMS PRIVILEGES ON DBMS TO custom")
+    execute(s"GRANT ALL DBMS PRIVILEGES ON DBMS TO $roleName")
 
     // THEN
 
     // Should be able to do role management
-    executeOnSystem("foo", "bar", "CREATE ROLE otherRole")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("custom").map, role("otherRole").map))
+    executeOnSystem(username, password, s"CREATE ROLE $roleName2")
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role(roleName).map, role(roleName2).map))
 
     // Should be able to do user management
-    executeOnSystem("foo", "bar", "DROP USER neo4j")
-    execute("SHOW USERS").toSet should be(Set(user("foo", Seq("custom"), passwordChangeRequired = false)))
+    executeOnSystem(username, password, s"DROP USER $defaultUsername")
+    execute("SHOW USERS").toSet should be(Set(user(username, Seq(roleName), passwordChangeRequired = false)))
 
     // Should be able to do database management
-    executeOnSystem("foo", "bar", "CREATE DATABASE baz")
-    execute("SHOW DATABASE baz").toSet should be(Set(db("baz")))
+    executeOnSystem(username, password, s"CREATE DATABASE $databaseString")
+    execute(s"SHOW DATABASE $databaseString").toSet should be(Set(db(databaseString)))
 
     // Should be able to do privilege management
-    executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES A TO otherRole")
-    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").graph("*").map))
+    executeOnSystem(username, password, s"GRANT TRAVERSE ON GRAPH * NODES A TO $roleName2")
+    execute(s"SHOW ROLE $roleName2 PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role(roleName2).graph("*").map))
 
     // Should be able to execute @admin procedure
-    executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.default_database')") should be(1)
+    executeOnDBMSDefault(username, password, "CALL dbms.listConfig('dbms.default_database')") should be(1)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE ALL DBMS PRIVILEGES ON DBMS FROM custom")
+    execute(s"REVOKE ALL DBMS PRIVILEGES ON DBMS FROM $roleName")
 
     // THEN
 
     // Should not be able to do role management
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE ROLE role")
-    } should have message PERMISSION_DENIED_CREATE_ROLE
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("custom").map, role("otherRole").map))
+      executeOnSystem(username, password, s"DROP ROLE $roleName2")
+    } should have message PERMISSION_DENIED_DROP_ROLE
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role(roleName).map, role(roleName2).map))
 
     // Should not be able to do user management
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE USER alice SET PASSWORD 'secret'")
+      executeOnSystem(username, password, "CREATE USER alice SET PASSWORD 'secret'")
     } should have message PERMISSION_DENIED_CREATE_USER
-    execute("SHOW USERS").toSet should be(Set(user("foo", Seq("custom"), passwordChangeRequired = false)))
+    execute("SHOW USERS").toSet should be(Set(user(username, Seq(roleName), passwordChangeRequired = false)))
 
     // Should not be able to do database management
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "DROP DATABASE baz")
+      executeOnSystem(username, password, s"DROP DATABASE $databaseString")
     } should have message PERMISSION_DENIED_DROP_DATABASE
-    execute("SHOW DATABASE baz").toSet should be(Set(db("baz")))
+    execute(s"SHOW DATABASE $databaseString").toSet should be(Set(db(databaseString)))
 
     // Should not be able to do privilege management
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
+      executeOnSystem(username, password, s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName2")
     } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
-    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").graph("*").map))
+    execute(s"SHOW ROLE $roleName2 PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role(roleName2).graph("*").map))
 
     // Should not be able to execute (@admin) procedure
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.default_database')")
+      executeOnDBMSDefault(username, password, "CALL dbms.listConfig('dbms.default_database')")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
   test("should fail dbms management when denied all dbms privileges privilege") {
     // GIVEN
-    setupUserWithCustomAdminRole("foo", "bar")
-    execute("CREATE ROLE otherRole")
+    setupUserWithCustomAdminRole()
+    execute(s"CREATE ROLE $roleName2")
 
     // WHEN
     allDbmsPrivileges("GRANT", includingCompound = false)
-    execute("DENY ALL DBMS PRIVILEGES ON DBMS TO custom")
+    execute(s"DENY ALL DBMS PRIVILEGES ON DBMS TO $roleName")
 
     // THEN
 
     // Should not be able to do role management
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE ROLE role")
+      executeOnSystem(username, password, "CREATE ROLE role")
     } should have message PERMISSION_DENIED_CREATE_ROLE
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("custom").map, role("otherRole").map))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role(roleName).map, role(roleName2).map))
 
     // Should not be able to do user management
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "DROP USER neo4j")
+      executeOnSystem(username, password, s"DROP USER $defaultUsername")
     } should have message PERMISSION_DENIED_DROP_USER
-    execute("SHOW USERS").toSet should be(Set(user("neo4j", Seq("admin")), user("foo", Seq("custom"), passwordChangeRequired = false)))
+    execute("SHOW USERS").toSet should be(Set(user(defaultUsername, Seq("admin")), user(username, Seq(roleName), passwordChangeRequired = false)))
 
     // Should not be able to do database management
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "CREATE DATABASE baz")
+      executeOnSystem(username, password, s"CREATE DATABASE $databaseString")
     } should have message PERMISSION_DENIED_CREATE_DATABASE
-    execute("SHOW DATABASE baz").toSet should be(Set.empty)
+    execute(s"SHOW DATABASE $databaseString").toSet should be(Set.empty)
 
     // Should not be able to do privilege management
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES A TO otherRole")
+      executeOnSystem(username, password, s"GRANT TRAVERSE ON GRAPH * NODES A TO $roleName2")
     } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
-    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set.empty)
+    execute(s"SHOW ROLE $roleName2 PRIVILEGES").toSet should be(Set.empty)
+
+    // Should not be able to execute (@admin) procedure
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDBMSDefault(username, password, "CALL dbms.listConfig('dbms.default_database')")
+    }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
   // helper methods
@@ -263,7 +267,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     val commands = if (includingCompound) dbmsCommands else dbmsCommands.filterNot(s => s.equals("ALL DBMS PRIVILEGES"))
 
     commands.foreach { command =>
-      execute(s"$privType $command ON DBMS $preposition custom")
+      execute(s"$privType $command ON DBMS $preposition $roleName")
     }
   }
 }

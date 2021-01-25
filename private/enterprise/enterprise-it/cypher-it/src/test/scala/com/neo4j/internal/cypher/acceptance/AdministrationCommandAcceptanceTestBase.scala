@@ -80,6 +80,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val PERMISSION_DENIED_SET_PASSWORDS_OR_USER_STATUS: String = "Permission denied for SET PASSWORDS and/or SET USER STATUS." + helpfulCheckUserPrivilegeErrorText
 
   val roleName: String = "custom"
+  val roleName2: String = "otherRole"
   val username: String = "joe"
   val password: String = "soap"
   val newPassword: String = "new"

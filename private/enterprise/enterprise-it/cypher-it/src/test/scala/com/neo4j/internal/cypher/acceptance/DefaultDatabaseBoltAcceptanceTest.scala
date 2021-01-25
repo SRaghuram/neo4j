@@ -5,9 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import java.net.URI
-import java.util.function.BiConsumer
-
 import com.neo4j.causalclustering.common.Cluster
 import com.neo4j.causalclustering.core.consensus.roles.Role
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
@@ -35,12 +32,18 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.test.rule.TestDirectory.testDirectory
 import org.neo4j.util.FeatureToggles
 
+import java.net.URI
+import java.util.function.BiConsumer
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.mapAsScalaMapConverter
 import scala.util.Random
 
 class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
+  private val username = "foo"
+  private val password = "bar"
+  private val fooDb = "foodb"
+  private val fooDbRole = "foodbrole"
 
   var cluster: Cluster = _
   private val testDir = {
@@ -66,16 +69,12 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
       .asInstanceOf[Map[Setting[_], Object]]
   }
 
-  override def initTest(): Unit = {
-    super.initTest()
+  private def withDriver(f: Transaction => Unit, databaseName: Option[String] = None): Unit = {
+    withDriver(driverExecutor(databaseName)._2, f)
   }
 
-  private def withDriver(username: String, password: String, f: Transaction => Unit, databaseName: Option[String] = None): Unit = {
-    withDriver(driverExecutor(username, password, databaseName)._2, f)
-  }
-
-  private def withDriver(boltAddress: String, username: String, password: String, f: Transaction => Unit, databaseName: Option[String]) {
-    withDriver(driverExecutor(boltAddress, username, password, databaseName)._2, f)
+  private def withDriver(boltAddress: String, f: Transaction => Unit, databaseName: Option[String]) {
+    withDriver(driverExecutor(boltAddress, databaseName)._2, f)
   }
 
   private def withDriver(session: Session, f: Transaction => Unit): Unit = {
@@ -88,19 +87,19 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     }
   }
 
-  private def driverExecutor(username: String, password: String, databaseName: Option[String]): (Driver, Session) = {
+  private def driverExecutor(databaseName: Option[String]): (Driver, Session) = {
     val config = Config.newBuilder().set(databaseConfig().asJava).build()
     val connectorPortRegister =
       managementService.database(config.get(GraphDatabaseSettings.default_database)).asInstanceOf[GraphDatabaseAPI]
         .getDependencyResolver.resolveDependency(classOf[ConnectorPortRegister])
     if (config.get(BoltConnector.enabled)) {
-      driverExecutor(connectorPortRegister.getLocalAddress(BoltConnector.NAME).toString(), username, password, databaseName)
+      driverExecutor(connectorPortRegister.getLocalAddress(BoltConnector.NAME).toString(), databaseName)
     } else {
       throw new IllegalStateException("Bolt connector is not configured")
     }
   }
 
-  private def driverExecutor(boltAddress: String, username: String, password: String, databaseName: Option[String]): (Driver, Session) = {
+  private def driverExecutor(boltAddress: String, databaseName: Option[String]): (Driver, Session) = {
     val boltURI = URI.create(s"neo4j://$boltAddress/")
     val sessionConfig = databaseName.map(SessionConfig.forDatabase).getOrElse(SessionConfig.defaultConfig())
     val driver = GraphDatabase.driver(boltURI, AuthTokens.basic(username, password))
@@ -129,17 +128,17 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
 
       // GIVEN
       selectDatabase(SYSTEM_DATABASE_NAME)
-      execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-      execute("CREATE ROLE foodbrole")
-      execute("GRANT ROLE foodbrole to foo")
+      execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED")
+      execute(s"CREATE ROLE $fooDbRole")
+      execute(s"GRANT ROLE $fooDbRole TO $username")
 
       // WHEN
-      withDriver("foo", "bar", { tx =>
+      withDriver({ tx =>
         // THEN
         tx.execute("SHOW CURRENT USER YIELD defaultDatabase").toSet shouldBe
           Set(Map("defaultDatabase" -> DEFAULT_DATABASE_NAME))
-      }, Some("system"))
-      withDriver("foo", "bar", tx => tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set())
+      }, Some(SYSTEM_DATABASE_NAME))
+      withDriver(tx => tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set())
     }
 
     test(s"Should get user's default database when logging in and a default database has been set with fabric: $fabricIsEnabled") {
@@ -148,23 +147,23 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
 
       // GIVEN
       selectDatabase(SYSTEM_DATABASE_NAME)
-      execute("CREATE DATABASE foodb")
-      execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED SET DEFAULT DATABASE foodb")
-      execute("CREATE ROLE foodbrole")
-      execute("GRANT ROLE foodbrole to foo")
-      execute("GRANT ALL ON DATABASE foodb to foodbrole")
-      execute("GRANT ALL GRAPH PRIVILEGES ON GRAPH foodb to foodbrole")
+      execute(s"CREATE DATABASE $fooDb")
+      execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE $fooDb")
+      execute(s"CREATE ROLE $fooDbRole")
+      execute(s"GRANT ROLE $fooDbRole TO $username")
+      execute(s"GRANT ALL ON DATABASE $fooDb TO $fooDbRole")
+      execute(s"GRANT ALL ON GRAPH $fooDb TO $fooDbRole")
 
-      selectDatabase("foodb")
+      selectDatabase(fooDb)
       execute("CREATE (n:Foo{foo:'foo'}) RETURN n").toList
 
       // WHEN
-      withDriver("foo", "bar", { tx =>
+      withDriver({ tx =>
         // THEN
         tx.execute("SHOW CURRENT USER YIELD defaultDatabase").toSet shouldBe
-          Set(Map("defaultDatabase" -> "foodb"))
-      }, Some("system"))
-      withDriver("foo", "bar", tx => tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "foo")))
+          Set(Map("defaultDatabase" -> fooDb))
+      }, Some(SYSTEM_DATABASE_NAME))
+      withDriver(tx => tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "foo")))
     }
 
     test(s"Should fail when logging in and a default database has been set but is stopped with fabric: $fabricIsEnabled") {
@@ -173,22 +172,22 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
 
       // GIVEN
       selectDatabase(SYSTEM_DATABASE_NAME)
-      execute("CREATE DATABASE foodb")
-      execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED SET DEFAULT DATABASE foodb")
-      execute("STOP DATABASE foodb WAIT")
+      execute(s"CREATE DATABASE $fooDb")
+      execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE $fooDb")
+      execute(s"STOP DATABASE $fooDb WAIT")
 
-      selectDatabase("neo4j")
+      selectDatabase(DEFAULT_DATABASE_NAME)
       execute("CREATE (n:Foo{foo:'foo'}) RETURN n").toList
 
       // WHEN
-      withDriver("foo", "bar", { tx =>
+      withDriver({ tx =>
         // THEN
         tx.execute("SHOW CURRENT USER YIELD defaultDatabase").toSet shouldBe
-          Set(Map("defaultDatabase" -> "foodb"))
-      }, Some("system"))
+          Set(Map("defaultDatabase" -> fooDb))
+      }, Some(SYSTEM_DATABASE_NAME))
       the[TransientException] thrownBy {
-        withDriver("foo", "bar", tx => tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "foo")))
-      } should have message "Database 'foodb' is unavailable."
+        withDriver(tx => tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "foo")))
+      } should have message s"Database '$fooDb' is unavailable."
     }
 
     test(s"Should fail when logging in and a default database has been set but not created with fabric: $fabricIsEnabled") {
@@ -197,46 +196,46 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
 
       // GIVEN
       selectDatabase(SYSTEM_DATABASE_NAME)
-      execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED SET DEFAULT DATABASE foodb")
+      execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE $fooDb")
 
       // WHEN
-      withDriver("foo", "bar", { tx =>
+      withDriver({ tx =>
         // THEN
         tx.execute("SHOW CURRENT USER YIELD defaultDatabase").toSet shouldBe
-          Set(Map("defaultDatabase" -> "foodb"))
-      }, Some("system"))
+          Set(Map("defaultDatabase" -> fooDb))
+      }, Some(SYSTEM_DATABASE_NAME))
       the[FatalDiscoveryException] thrownBy {
-        withDriver("foo", "bar", tx => tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set())
-      } should have message "Database does not exist. Database name: 'foodb'."
+        withDriver(tx => tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set())
+      } should have message s"Database does not exist. Database name: '$fooDb'."
     }
   })
 
-  test("updating default database during a user session does not change the default database for that session") {
+  test("Updating default database during a user session does not change the default database for that session") {
     initTest()
 
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE DATABASE foodb")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED SET DEFAULT DATABASE foodb")
-    execute("CREATE ROLE foodbrole")
-    execute("GRANT ROLE foodbrole to foo")
-    execute("GRANT ALL ON DEFAULT DATABASE to foodbrole")
-    execute("GRANT ALL GRAPH PRIVILEGES ON DEFAULT GRAPH to foodbrole")
+    execute(s"CREATE DATABASE $fooDb")
+    execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE $fooDb")
+    execute(s"CREATE ROLE $fooDbRole")
+    execute(s"GRANT ROLE $fooDbRole TO $username")
+    execute(s"GRANT ALL ON DEFAULT DATABASE TO $fooDbRole")
+    execute(s"GRANT ALL ON DEFAULT GRAPH TO $fooDbRole")
 
-    selectDatabase("foodb")
+    selectDatabase(fooDb)
     execute("CREATE (n:Foo{foo:'foo'}) RETURN n").toList
-    selectDatabase("neo4j")
+    selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:Foo{foo:'neo4j'}) RETURN n").toList
 
     // WHEN
-    val (driver, session) = driverExecutor("foo", "bar", None)
+    val (driver, session) = driverExecutor(None)
     try {
       var tx = session.beginTransaction()
       tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "foo"))
       tx.commit()
 
       selectDatabase(SYSTEM_DATABASE_NAME)
-      execute(s"ALTER USER foo SET DEFAULT DATABASE $DEFAULT_DATABASE_NAME")
+      execute(s"ALTER USER $username SET DEFAULT DATABASE $DEFAULT_DATABASE_NAME")
 
       // THEN
       tx = session.beginTransaction()
@@ -248,33 +247,32 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     }
   }
 
-  test("updating default database during a user session where the default database has not previously been used does not changed it for that session")
-  {
+  test("Updating default database during a user session where the default database has not previously been used does not changed it for that session") {
     initTest()
 
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE DATABASE foodb")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED SET DEFAULT DATABASE foodb")
-    execute("CREATE ROLE foodbrole")
-    execute("GRANT ROLE foodbrole to foo")
-    execute("GRANT ALL ON DEFAULT DATABASE to foodbrole")
-    execute("GRANT ALL GRAPH PRIVILEGES ON DEFAULT GRAPH to foodbrole")
+    execute(s"CREATE DATABASE $fooDb")
+    execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE $fooDb")
+    execute(s"CREATE ROLE $fooDbRole")
+    execute(s"GRANT ROLE $fooDbRole TO $username")
+    execute(s"GRANT ALL ON DEFAULT DATABASE TO $fooDbRole")
+    execute(s"GRANT ALL ON DEFAULT GRAPH TO $fooDbRole")
 
-    selectDatabase("foodb")
+    selectDatabase(fooDb)
     execute("CREATE (n:Foo{foo:'foo'}) RETURN n").toList
-    selectDatabase("neo4j")
+    selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:Foo{foo:'neo4j'}) RETURN n").toList
 
     // WHEN
-    var (driver, session) = driverExecutor("foo", "bar", Some("foodb"))
+    var (driver, session) = driverExecutor(Some(fooDb))
     try {
       var tx = session.beginTransaction()
       tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "foo"))
       tx.commit()
 
       selectDatabase(SYSTEM_DATABASE_NAME)
-      execute(s"ALTER USER foo SET DEFAULT DATABASE $DEFAULT_DATABASE_NAME")
+      execute(s"ALTER USER $username SET DEFAULT DATABASE $DEFAULT_DATABASE_NAME")
 
       // THEN
       session.close()
@@ -287,16 +285,16 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     }
   }
 
-  test(s"Should get user's default database when logging onto a cluster") {
+  test("Should get user's default database when logging onto a cluster") {
     // GIVEN
     withCluster(cluster => {
       cluster.systemTx((_, tx) => {
-        tx.execute("CREATE DATABASE foodb WAIT").close()
-        tx.execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED SET DEFAULT DATABASE foodb").close()
-        tx.execute("CREATE ROLE foodbrole").close()
-        tx.execute("GRANT ROLE foodbrole to foo").close()
-        tx.execute("GRANT ALL ON DATABASE foodb to foodbrole").close()
-        tx.execute("GRANT ALL GRAPH PRIVILEGES ON GRAPH foodb to foodbrole").close()
+        tx.execute(s"CREATE DATABASE $fooDb WAIT").close()
+        tx.execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE $fooDb").close()
+        tx.execute(s"CREATE ROLE $fooDbRole").close()
+        tx.execute(s"GRANT ROLE $fooDbRole TO $username").close()
+        tx.execute(s"GRANT ALL ON DATABASE $fooDb TO $fooDbRole").close()
+        tx.execute(s"GRANT ALL ON GRAPH $fooDb TO $fooDbRole").close()
         tx.commit()
       })
 
@@ -304,32 +302,31 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
         tx.execute("CREATE (n:Foo{foo:'foo'}) RETURN n").close()
         tx.commit()
       }
-      cluster.coreTx("foodb", work)
+      cluster.coreTx(fooDb, work)
 
       val boltAddress = cluster.randomCoreMember(true).get().boltAdvertisedAddress()
 
       // WHEN
-      withDriver(boltAddress, "foo", "bar", { tx =>
+      withDriver(boltAddress, { tx =>
         // THEN
         tx.execute("SHOW CURRENT USER YIELD defaultDatabase").toSet shouldBe
-          Set(Map("defaultDatabase" -> "foodb"))
-      }, Some("system"))
-      withDriver(boltAddress, "foo", "bar",
+          Set(Map("defaultDatabase" -> fooDb))
+      }, Some(SYSTEM_DATABASE_NAME))
+      withDriver(boltAddress,
         tx => tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "foo")), None)
-
     })
   }
 
-  test(s"Should get user's default database and permissions when logging onto a cluster using fabric routing") {
+  test("Should get user's default database and permissions when logging onto a cluster using fabric routing") {
     // GIVEN
     withCluster(cluster => {
       cluster.systemTx((_, tx) => {
-        tx.execute("CREATE DATABASE foodb WAIT").close()
-        tx.execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED SET DEFAULT DATABASE foodb").close()
-        tx.execute("CREATE ROLE foodbrole").close()
-        tx.execute("GRANT ROLE foodbrole to foo").close()
-        tx.execute("GRANT ALL ON DEFAULT DATABASE to foodbrole").close()
-        tx.execute("GRANT ALL GRAPH PRIVILEGES ON DEFAULT GRAPH to foodbrole").close()
+        tx.execute(s"CREATE DATABASE $fooDb WAIT").close()
+        tx.execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE $fooDb").close()
+        tx.execute(s"CREATE ROLE $fooDbRole").close()
+        tx.execute(s"GRANT ROLE $fooDbRole TO $username").close()
+        tx.execute(s"GRANT ALL ON DEFAULT DATABASE TO $fooDbRole").close()
+        tx.execute(s"GRANT ALL ON DEFAULT GRAPH TO $fooDbRole").close()
         tx.commit()
       })
 
@@ -337,17 +334,17 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
         tx.execute("CREATE (n:Foo{foo:'foo'}) RETURN n").close()
         tx.commit()
       }
-      cluster.coreTx("foodb", work)
+      cluster.coreTx(fooDb, work)
 
-      val boltAddress = cluster.getMemberWithAnyRole("foodb", Role.FOLLOWER).boltAdvertisedAddress()
+      val boltAddress = cluster.getMemberWithAnyRole(fooDb, Role.FOLLOWER).boltAdvertisedAddress()
 
       // WHEN
-      withDriver(boltAddress, "foo", "bar", { tx =>
+      withDriver(boltAddress, { tx =>
         // THEN
         tx.execute("SHOW CURRENT USER YIELD defaultDatabase").toSet shouldBe
-          Set(Map("defaultDatabase" -> "foodb"))
-      }, Some("system"))
-      withDriver(boltAddress, "foo", "bar", tx => {
+          Set(Map("defaultDatabase" -> fooDb))
+      }, Some(SYSTEM_DATABASE_NAME))
+      withDriver(boltAddress, tx => {
         tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "foo"))
         tx.execute("CREATE (n{foo:'new'}) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "new"))
       }, None)
