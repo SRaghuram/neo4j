@@ -19,17 +19,6 @@
         <test.runner.jvm.settings.additional>-Xmx6g -Djmh.ignoreLock=true</test.runner.jvm.settings.additional>
     </properties>
 
-    <licenses>
-        <license>
-            <name>Neo4j Commercial license</name>
-            <comments>
-                Copyright (c) 2002-2020 "Neo4j,"
-                Neo4j Sweden AB [http://neo4j.com]
-                This file is part of Neo4j internal tooling.
-            </comments>
-        </license>
-    </licenses>
-
     <dependencies>
         <dependency>
             <groupId>org.apache.commons</groupId>

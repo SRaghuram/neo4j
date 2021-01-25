@@ -27,17 +27,6 @@
     <moduleName>com.neo4j.cypher.internal.enterprise.runtime.spec</moduleName>
   </properties>
 
-  <licenses>
-    <license>
-      <name>Neo4j Commercial license</name>
-      <comments>
-        Copyright (c) 2002-2020 "Neo4j,"
-        Neo4j Sweden AB [http://neo4j.com]
-        This file is a commercial add-on to Neo4j Enterprise Edition.
-      </comments>
-    </license>
-  </licenses>
-
   <dependencies>
 
     <!-- shared versions are defined in the parent pom -->
