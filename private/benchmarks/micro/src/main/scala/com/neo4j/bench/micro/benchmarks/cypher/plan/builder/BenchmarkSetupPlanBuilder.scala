@@ -18,12 +18,12 @@ import org.neo4j.cypher.internal.logical.plans.ProcedureSignature
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.logical.plans.UserFunctionSignature
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.util.Cardinality
+import org.neo4j.cypher.internal.util.EffectiveCardinality
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.attribution.Default
 import org.neo4j.cypher.internal.util.symbols.CypherType
@@ -33,12 +33,8 @@ import scala.collection.mutable.ArrayBuffer
 // TODO, create a default implementation for LogicalPlanBuilder https://trello.com/c/3j5PQ19Z/17-implementation-of-abstractlogicalplanbuilder-that-does-not-depend-on-planner
 class BenchmarkSetupPlanBuilder(wholePlan: Boolean = true, resolver: Resolver = new LogicalPlanResolver) extends AbstractLogicalPlanBuilder[TestSetup, BenchmarkSetupPlanBuilder](resolver, wholePlan) {
 
-  val cardinalities: Cardinalities = new Cardinalities with Default[LogicalPlan, Cardinality] {
-    override protected def defaultValue: Cardinality = Cardinality.SINGLE
-  }
-
-  val effectiveCardinalities: EffectiveCardinalities = new EffectiveCardinalities with Default[LogicalPlan, Cardinality] {
-    override protected def defaultValue: Cardinality = Cardinality.SINGLE
+  val effectiveCardinalities: EffectiveCardinalities = new EffectiveCardinalities with Default[LogicalPlan, EffectiveCardinality] {
+    override protected def defaultValue: EffectiveCardinality = EffectiveCardinality(Cardinality.SINGLE.amount)
   }
 
   val providedOrders: ProvidedOrders = new ProvidedOrders with Default[LogicalPlan, ProvidedOrder] {
@@ -62,7 +58,7 @@ class BenchmarkSetupPlanBuilder(wholePlan: Boolean = true, resolver: Resolver = 
   def getSemanticTable: SemanticTable = semanticTable
 
   def withCardinality(x: Double): BenchmarkSetupPlanBuilder = {
-    effectiveCardinalities.set(idOfLastPlan, Cardinality(x))
+    effectiveCardinalities.set(idOfLastPlan, EffectiveCardinality(x))
     this
   }
 
@@ -88,7 +84,6 @@ class BenchmarkSetupPlanBuilder(wholePlan: Boolean = true, resolver: Resolver = 
       semanticTable,
       plan.asInstanceOf[ProduceResult].columns.toList,
       new LeveragedOrders,
-      cardinalities,
       effectiveCardinalities,
       providedOrders,
       idGen

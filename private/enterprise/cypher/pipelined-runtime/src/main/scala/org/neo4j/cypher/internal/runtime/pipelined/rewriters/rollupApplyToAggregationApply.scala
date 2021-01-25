@@ -11,7 +11,6 @@ import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.RollUpApply
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.util.InputPosition.NONE
@@ -42,8 +41,7 @@ import org.neo4j.cypher.internal.util.bottomUp
   *      RHS
   *    LHS
  */
-case class rollupApplyToAggregationApply(cardinalities: Cardinalities,
-                                         effectiveCardinalities: EffectiveCardinalities,
+case class rollupApplyToAggregationApply(effectiveCardinalities: EffectiveCardinalities,
                                          providedOrders: ProvidedOrders,
                                          idGen: IdGen,
                                          stopper: AnyRef => Boolean) extends Rewriter {
@@ -51,7 +49,6 @@ case class rollupApplyToAggregationApply(cardinalities: Cardinalities,
     case o @ RollUpApply(lhs: LogicalPlan, rhs: LogicalPlan, collectionName, variableToCollect) =>
       val toCollect = Variable(variableToCollect)(NONE)
       val aggregation = Aggregation(rhs, Map.empty, Map(collectionName -> CollectAll(toCollect)(NONE)))(idGen)
-      cardinalities.copy(lhs.id, aggregation.id)
       effectiveCardinalities.copy(lhs.id, aggregation.id)
       providedOrders.copy(lhs.id, aggregation.id)
 

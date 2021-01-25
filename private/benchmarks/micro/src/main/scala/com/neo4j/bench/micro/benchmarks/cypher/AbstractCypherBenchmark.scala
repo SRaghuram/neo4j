@@ -31,7 +31,6 @@ import org.neo4j.cypher.internal.planner.spi.IndexDescriptor
 import org.neo4j.cypher.internal.planner.spi.InstrumentedGraphStatistics
 import org.neo4j.cypher.internal.planner.spi.MutableGraphStatisticsSnapshot
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
@@ -45,10 +44,10 @@ import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
 import org.neo4j.cypher.internal.util.Cardinality
+import org.neo4j.cypher.internal.util.EffectiveCardinality
 import org.neo4j.cypher.internal.util.LabelId
 import org.neo4j.cypher.internal.util.RelTypeId
 import org.neo4j.cypher.internal.util.Selectivity
-import org.neo4j.cypher.internal.util.attribution.Attribute
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.util.devNullLogger
@@ -92,7 +91,6 @@ case class TestSetup(
   semanticTable: SemanticTable,
   resultColumns: List[String],
   leveragedOrders: LeveragedOrders = new LeveragedOrders,
-  cardinalities: Cardinalities = new Cardinalities,
   effectiveCardinalities: EffectiveCardinalities = new EffectiveCardinalities,
   providedOrders: ProvidedOrders = new ProvidedOrders,
   idGen: IdGen = Plans.IdGen
@@ -211,12 +209,12 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   def beginInternalTransaction(loginContext: LoginContext): InternalTransaction =
     new GraphDatabaseCypherService(db).beginTransaction(Type.EXPLICIT, loginContext)
 
-  private def updateCardinalities(logicalPlan: LogicalPlan, cardinalities: Attribute[LogicalPlan, Cardinality]) {
-    if (!cardinalities.isDefinedAt(logicalPlan.id)) {
-      cardinalities.set(logicalPlan.id, 0.0)
+  private def updateCardinalities(logicalPlan: LogicalPlan, effectiveCardinalities: EffectiveCardinalities) {
+    if (!effectiveCardinalities.isDefinedAt(logicalPlan.id)) {
+      effectiveCardinalities.set(logicalPlan.id, EffectiveCardinality(0.0, Some(0.0)))
     }
-    logicalPlan.lhs.foreach(lhsPlan => updateCardinalities(lhsPlan, cardinalities))
-    logicalPlan.rhs.foreach(rhsPlan => updateCardinalities(rhsPlan, cardinalities))
+    logicalPlan.lhs.foreach(lhsPlan => updateCardinalities(lhsPlan, effectiveCardinalities))
+    logicalPlan.rhs.foreach(rhsPlan => updateCardinalities(rhsPlan, effectiveCardinalities))
   }
 
   def buildPlan(cypherRuntime: CypherRuntime, useCompiledExpressions: Boolean = true): ExecutablePlan = {
@@ -240,7 +238,6 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       val workerManager = dependencyResolver.resolveDependency( classOf[WorkerManagement] )
       val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, lifeSupport, workerManager)
       val testSetup = setup(planContext)
-      updateCardinalities(testSetup.logicalPlan, testSetup.cardinalities)
       updateCardinalities(testSetup.logicalPlan, testSetup.effectiveCardinalities)
       val compilationStateBefore = getLogicalQuery(testSetup)
       val runtime = EnterpriseRuntimeFactory.getRuntime(cypherRuntimeOption(cypherRuntime), disallowFallback = true)
@@ -301,7 +298,6 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       readOnly = true,
       testSetup.resultColumns.toArray,
       testSetup.semanticTable,
-      testSetup.cardinalities,
       testSetup.effectiveCardinalities,
       testSetup.providedOrders,
       testSetup.leveragedOrders,

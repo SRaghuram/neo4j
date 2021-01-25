@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.rewriters.combineCartesianPro
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
-import org.neo4j.cypher.internal.util.Cardinality
+import org.neo4j.cypher.internal.util.EffectiveCardinality
 
 abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
                                                                               edition: Edition[CONTEXT],
@@ -45,11 +45,11 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
       .apply()
       .|.cartesianProduct().withLeveragedOrder()
       .|.|.nodeIndexOperator("m:Label(prop < ???)", paramExpr = Some(varFor("j")), getValue = DoNotGetValue)
-                            .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + Cardinality(1))
+                            .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + EffectiveCardinality(1))
       .|.nodeIndexOperator("n:Label(prop < ???)",
                            paramExpr = Some(varFor("i")),
                            getValue = GetValue)
-                          .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + Cardinality(1))
+                          .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + EffectiveCardinality(1))
                           .withProvidedOrder(ProvidedOrder.asc(Parser.parseExpression("n.prop")))
       .input(variables = Seq("i", "j"))
       .build()
@@ -88,11 +88,11 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
       .apply()
       .|.cartesianProduct()
       .|.|.nodeIndexOperator("m:Label(prop < ???)", paramExpr = Some(varFor("j")), getValue = DoNotGetValue)
-                            .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + Cardinality(1))
+                            .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + EffectiveCardinality(1))
       .|.nodeIndexOperator("n:Label(prop < ???)",
                            paramExpr = Some(varFor("i")),
                            getValue = GetValue)
-                          .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + Cardinality(-1)) // One below threshold and no leveraged order
+                          .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + EffectiveCardinality(-1)) // One below threshold and no leveraged order
       .input(variables = Seq("i", "j"))
       .build()
 
@@ -130,7 +130,7 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
       .apply()
       .|.cartesianProduct()
       .|.|.nodeIndexOperator("m:Label(prop < ???)", paramExpr = Some(varFor("j")), getValue = DoNotGetValue)
-                            .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + Cardinality(-1)) // Low rhs cardinality
+                            .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + EffectiveCardinality(-1)) // Low rhs cardinality
       .|.nodeIndexOperator("n:Label(prop < ???)",
                            paramExpr = Some(varFor("i")),
                            getValue = GetValue)

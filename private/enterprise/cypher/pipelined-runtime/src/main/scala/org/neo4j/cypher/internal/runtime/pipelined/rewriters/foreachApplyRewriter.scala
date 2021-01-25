@@ -18,7 +18,6 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
 import org.neo4j.cypher.internal.logical.plans.UnwindCollection
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.util.FreshIdNameGenerator
@@ -73,8 +72,7 @@ import org.neo4j.cypher.internal.util.bottomUp
  *                             Argument
  *}}}
  */
-case class foreachApplyRewriter(cardinalities: Cardinalities,
-                                effectiveCardinalities: EffectiveCardinalities,
+case class foreachApplyRewriter(effectiveCardinalities: EffectiveCardinalities,
                                 providedOrders: ProvidedOrders,
                                 idGen: IdGen,
                                 stopper: AnyRef => Boolean) extends Rewriter {
@@ -89,7 +87,6 @@ case class foreachApplyRewriter(cardinalities: Cardinalities,
 
   private def newPlan(source: LogicalPlan, creator: LogicalPlan => LogicalPlan): LogicalPlan = {
     val plan = creator(source)
-    cardinalities.copy(source.id, plan.id)
     effectiveCardinalities.copy(source.id, plan.id)
     providedOrders.copy(source.id, plan.id)
     plan
@@ -104,7 +101,6 @@ case class foreachApplyRewriter(cardinalities: Cardinalities,
           rhs.endoRewrite(addUnwindToLeftMostLeaf(a, variableName, listProjected))
         case _ => //general case
           val unwind = UnwindCollection(Argument()(idGen), variableName, listProjected)(idGen)
-          cardinalities.copy(rhs.id, unwind.id)
           effectiveCardinalities.copy(rhs.id, unwind.id)
           providedOrders.copy(rhs.id, unwind.id)
           val apply = newPlan(unwind, Apply(_, rhs)(idGen))

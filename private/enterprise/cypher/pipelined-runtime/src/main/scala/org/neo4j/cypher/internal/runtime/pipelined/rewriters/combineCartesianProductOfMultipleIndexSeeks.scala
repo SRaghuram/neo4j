@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.logical.plans.MultiNodeIndexSeek
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.runtime.pipelined.rewriters.combineCartesianProductOfMultipleIndexSeeks.CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD
-import org.neo4j.cypher.internal.util.Cardinality
+import org.neo4j.cypher.internal.util.EffectiveCardinality
 import org.neo4j.cypher.internal.util.Rewriter
 import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.bottomUp
@@ -22,7 +22,7 @@ object combineCartesianProductOfMultipleIndexSeeks {
   // is faster above a fairly low threshold (based on micro benchmarks)
   // However, we currently always do the rewrite if there is a leveraged order since the normal cartesian product operator cannot handle that and
   // would cause fallback to slotted runtime, and the MultiNodeIndexSeek operator is always slightly faster than using normal cartesian product in slotted.
-  val CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD: Cardinality = Cardinality(16)
+  val CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD: EffectiveCardinality = EffectiveCardinality(16)
 }
 
 /**
@@ -30,7 +30,7 @@ object combineCartesianProductOfMultipleIndexSeeks {
   */
 case class combineCartesianProductOfMultipleIndexSeeks(effectiveCardinalities: EffectiveCardinalities,
                                                        leveragedOrders: LeveragedOrders,
-                                                       threshold: Cardinality = CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD,
+                                                       threshold: EffectiveCardinality = CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD,
                                                        stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case o @ CartesianProduct(lhs: IndexSeekLeafPlan, rhs: IndexSeekLeafPlan) if leveragedOrders.get(o.id) || effectiveCardinalities.get(lhs.id) < threshold =>
