@@ -7,10 +7,10 @@ package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.exceptions.DatabaseAdministrationException
+import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
@@ -907,7 +907,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should fail when ${grantOrDeny}ing $actionName privilege using * as parameter") {
             execute("CREATE ROLE custom")
-            val error = the[InvalidArgumentsException] thrownBy {
+            val error = the[InvalidArgumentException] thrownBy {
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH $$graph TO custom", Map("graph" -> "*"))
             }
             error.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Parameterized database and graph names do not support wildcards.")

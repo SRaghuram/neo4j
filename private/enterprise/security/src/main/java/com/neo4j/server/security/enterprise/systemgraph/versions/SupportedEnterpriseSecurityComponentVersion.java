@@ -22,6 +22,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.neo4j.cypher.internal.security.SystemGraphCredential;
+import org.neo4j.exceptions.InvalidArgumentException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -343,7 +344,7 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
                         userToRoles.get( username ).add( String.format( "GRANT ROLE `%s` TO `%s`", role, username ) );
                     }
                 }
-                catch ( InvalidArgumentsException e )
+                catch ( IllegalArgumentException e )
                 {
                     log.error( "Failed to write restore command for user '%s': %s", username, e.getMessage() );
                 }

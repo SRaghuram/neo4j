@@ -128,7 +128,6 @@ import org.neo4j.graphdb.Transaction
 import org.neo4j.internal.helpers.collection.Iterables
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.api.exceptions.Status.HasStatus
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException
@@ -321,7 +320,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           .handleNoResult(p => Some(new IllegalStateException(s"Failed to create the specified role '${runtimeValue(roleName, p)}'.")))
           .handleError((error, p) => (error, error.getCause) match {
             case (_, _: UniquePropertyValueValidationException) =>
-              new InvalidArgumentsException(s"Failed to create the specified role '${runtimeValue(roleName, p)}': Role already exists.", error)
+              new InvalidArgumentException(s"Failed to create the specified role '${runtimeValue(roleName, p)}': Role already exists.", error)
             case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
               new DatabaseAdministrationOnFollowerException(s"Failed to create the specified role '${runtimeValue(roleName, p)}': $followerError", error)
             case _ => new IllegalStateException(s"Failed to create the specified role '${runtimeValue(roleName, p)}'.", error)
@@ -343,7 +342,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN role.name""".stripMargin,
         VirtualValues.map(Array(roleNameFields.nameKey), Array(roleNameFields.nameValue)),
         QueryHandler
-          .handleNoResult(p => Some(new InvalidArgumentsException(s"Failed to create a role as copy of '${runtimeValue(roleName, p)}': Role does not exist.")))
+          .handleNoResult(p => Some(new InvalidArgumentException(s"Failed to create a role as copy of '${runtimeValue(roleName, p)}': Role does not exist.")))
           .handleError {
             case (error: HasStatus, p) if error.status() == Status.Cluster.NotALeader =>
               new DatabaseAdministrationOnFollowerException(s"Failed to create a role as copy of '${runtimeValue(roleName, p)}': $followerError", error)
@@ -400,10 +399,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN u.name AS user""".stripMargin,
         VirtualValues.map(Array(roleNameFields.nameKey, userNameFields.nameKey), Array(roleNameFields.nameValue, userNameFields.nameValue)),
         QueryHandler
-          .handleNoResult(p => Some(new InvalidArgumentsException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}': Role does not exist.")))
+          .handleNoResult(p => Some(new InvalidArgumentException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}': Role does not exist.")))
           .handleError {
             case (e: InternalException, p) if e.getMessage.contains("ignore rows where a relationship node is missing") =>
-              new InvalidArgumentsException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}': User does not exist.", e)
+              new InvalidArgumentException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}': User does not exist.", e)
             case (e: HasStatus, p) if e.status() == Status.Cluster.NotALeader =>
               new DatabaseAdministrationOnFollowerException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}': $followerError", e)
             case (e, p) => new IllegalStateException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}'.", e)
@@ -1127,14 +1126,14 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         .handleNoResult(params => {
           val db = params.get(databaseKey).asInstanceOf[TextValue].stringValue()
           if (db.equals("*") && !databaseKey.equals("*"))
-            Some(new InvalidArgumentsException(s"${startOfErrorMessage(params)}: Parameterized database and graph names do not support wildcards."))
+            Some(new InvalidArgumentException(s"${startOfErrorMessage(params)}: Parameterized database and graph names do not support wildcards."))
           else
             // needs to have the database name here since it is not in the startOfErrorMessage
             Some(new DatabaseNotFoundException(s"${startOfErrorMessage(params)}: Database '$db' does not exist."))
         })
         .handleError {
           case (e: InternalException, p) if e.getMessage.contains("ignore rows where a relationship node is missing") =>
-            new InvalidArgumentsException(s"${startOfErrorMessage(p)}: Role does not exist.", e) // the rolename is included in the startOfErrorMessage so not needed here (consistent with the other commands)
+            new InvalidArgumentException(s"${startOfErrorMessage(p)}: Role does not exist.", e) // the rolename is included in the startOfErrorMessage so not needed here (consistent with the other commands)
           case (e: HasStatus, p) if e.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"${startOfErrorMessage(p)}: $followerError", e)
           case (e, p) => new IllegalStateException(s"${startOfErrorMessage(p)}.", e)
@@ -1193,7 +1192,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }.handleNoResult(params => {
         val roleName = params.get(nameFields.nameKey).asInstanceOf[TextValue].stringValue()
         if (isTemporaryPrivilege(privilegeAction, qualifier, revokeType, roleName))
-          Some(new InvalidArgumentsException(
+          Some(new InvalidArgumentException(
             s"""${startOfErrorMessage(params)}: This privilege was granted through the configuration file.
                |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin))
         else

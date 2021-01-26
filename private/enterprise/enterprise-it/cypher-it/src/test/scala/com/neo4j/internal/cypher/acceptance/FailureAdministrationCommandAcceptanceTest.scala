@@ -9,6 +9,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.exceptions.DatabaseAdministrationException
+import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
@@ -30,7 +31,7 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
   }
 
   test("should fail to grant privilege to non-existing role") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("GRANT TRAVERSE ON GRAPH * NODE A TO role")
       // THEN
@@ -38,7 +39,7 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
   }
 
   test("should fail to deny privilege to non-existing role") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("DENY DROP USER ON DBMS TO $r", Map("r" -> "role"))
       // THEN
@@ -74,7 +75,7 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
 
-    val exception = the[InvalidArgumentsException] thrownBy {
+    val exception = the[InvalidArgumentException] thrownBy {
       execute("GRANT CREATE INDEX ON DATABASE foo TO role, role2")
     }
     exception.getMessage should include("Role does not exist")

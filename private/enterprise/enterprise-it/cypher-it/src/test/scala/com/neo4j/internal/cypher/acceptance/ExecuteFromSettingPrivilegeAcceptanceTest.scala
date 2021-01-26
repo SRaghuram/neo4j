@@ -6,13 +6,12 @@
 package com.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.TRUE
-
 import com.neo4j.server.security.enterprise.auth.PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 import scala.collection.mutable
 
@@ -291,7 +290,7 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
     execute("CREATE ROLE configRole")
 
     // WHEN .. THEN
-    (the[InvalidArgumentsException] thrownBy {
+    (the[InvalidArgumentException] thrownBy {
       execute("REVOKE EXECUTE BOOSTED FUNCTION db.property* ON DBMS FROM configRole")
     }).getMessage should be
     """Failed to revoke execute_boosted privilege from role 'configRole': This privilege was granted through the configuration file.
@@ -309,7 +308,7 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
     execute("CREATE ROLE configRole")
 
     // WHEN .. THEN
-    (the[InvalidArgumentsException] thrownBy {
+    (the[InvalidArgumentException] thrownBy {
       execute("REVOKE EXECUTE BOOSTED PROCEDURE db.property* ON DBMS FROM configRole")
     }).getMessage should be
     """Failed to revoke execute_boosted privilege from role 'configRole': This privilege was granted through the configuration file.
@@ -327,7 +326,7 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
     execute("CREATE ROLE default")
 
     // WHEN .. THEN
-    (the[InvalidArgumentsException] thrownBy {
+    (the[InvalidArgumentException] thrownBy {
       execute("REVOKE EXECUTE BOOSTED FUNCTION * ON DBMS FROM default")
     }).getMessage should be
     """Failed to revoke execute_boosted privilege from role 'default': This privilege was granted through the configuration file.
@@ -347,7 +346,7 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
     execute("CREATE ROLE default")
 
     // WHEN .. THEN
-    (the[InvalidArgumentsException] thrownBy {
+    (the[InvalidArgumentException] thrownBy {
       execute("REVOKE EXECUTE BOOSTED PROCEDURE * ON DBMS FROM default")
     }).getMessage should be
     """Failed to revoke execute_boosted privilege from role 'default': This privilege was granted through the configuration file.

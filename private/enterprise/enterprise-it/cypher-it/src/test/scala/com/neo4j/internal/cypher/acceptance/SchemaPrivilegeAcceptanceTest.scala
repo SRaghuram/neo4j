@@ -6,17 +6,16 @@
 package com.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.TRUE
-
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
+import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.Result.ResultRow
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
   private val indexName = "my_index"
@@ -440,7 +439,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // When
       execute("GRANT ALL DATABASE PRIVILEGES ON DATABASE $db TO custom", Map("db" -> "*"))
       // Then

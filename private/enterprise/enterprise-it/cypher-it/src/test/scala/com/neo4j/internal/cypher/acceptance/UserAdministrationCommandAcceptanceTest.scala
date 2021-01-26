@@ -24,7 +24,6 @@ import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
@@ -480,7 +479,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating user with empty password") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD ''")
       // THEN
@@ -625,13 +624,13 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating already existing user") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE USER neo4j SET PASSWORD 'password'")
       // THEN
     } should have message "Failed to create the specified user 'neo4j': User already exists."
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE USER $user SET PASSWORD 'password'", Map("user" -> "neo4j"))
       // THEN
@@ -727,13 +726,13 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     execute("ALTER USER neo4j SET PASSWORD 'bar' CHANGE NOT REQUIRED")
 
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("neo4j", "bar", "CREATE OR REPLACE USER neo4j SET PASSWORD 'baz'")
       // THEN
     } should have message "Failed to replace the specified user 'neo4j': Deleting yourself is not allowed."
 
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("neo4j", "bar", "CREATE OR REPLACE USER $user SET PASSWORD 'baz'", Map[String, Object]("user" -> "neo4j").asJava)
       // THEN
@@ -801,7 +800,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val username = "foo"
     val unmaskedEncryptedPassword = "SHA-256,04773b8510aea96ca2085cb81764b0a2,75f4201d047191c17c5e236311b7c4d77e36877503fe60b1ca6d4016160782ab,1024"
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$unmaskedEncryptedPassword'")
       // THEN
@@ -815,7 +814,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val username = "foo"
     val incorrectlyEncryptedPassword = "8,04773b8510aea96ca2085cb81764b0a2,75f4201d047191c17c5e236311b7c4d77e36877503fe60b1ca6d4016160782ab"
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$incorrectlyEncryptedPassword'")
       // THEN
@@ -829,7 +828,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val username = "foo"
     val incorrectlyEncryptedPassword = "1,75f4201d047191c17c5e236311b7c4d77e36877503fe60b1ca6d4016160782ab"
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$incorrectlyEncryptedPassword'")
       // THEN
@@ -839,7 +838,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail to create user with empty encrypted password") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET ENCRYPTED PASSWORD ''")
       // THEN
@@ -952,7 +951,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
 
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("neo4j", "neo", "DROP USER neo4j")
       // THEN
@@ -961,7 +960,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(defaultUserActive)
 
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("neo4j", "neo", "DROP USER $user IF EXISTS", Map[String, Object]("user" -> "neo4j").asJava)
       // THEN
@@ -972,14 +971,14 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when dropping non-existing user") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("DROP USER foo")
       // THEN
     } should have message "Failed to delete the specified user 'foo': User does not exist."
 
     // and with parameter
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("DROP USER $user", Map("user" -> "foo"))
       // THEN
@@ -989,14 +988,14 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet should be(Set(defaultUser))
 
     // and an invalid (non-existing) one
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("DROP USER `:foo`")
       // THEN
     } should have message "Failed to delete the specified user ':foo': User does not exist."
 
     // and an invalid (non-existing) one with parameter
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("DROP USER $user", Map("user" -> ":foo"))
       // THEN
@@ -1053,7 +1052,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     prepareUser("foo", "bar")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD ''")
       // THEN
@@ -1061,7 +1060,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER $user SET PASSWORD 'bar'", Map("user" -> "foo"))
       // THEN
@@ -1074,7 +1073,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     prepareUser("foo", "bar")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER $user SET PASSWORD $password", Map("user" -> "foo", "password" -> ""))
       // THEN
@@ -1087,7 +1086,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     prepareUser("foo", "bar")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password", Map("password" -> "bar"))
       // THEN
@@ -1234,7 +1233,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("ALTER USER neo4j SET PLAINTEXT PASSWORD 'potato' CHANGE NOT REQUIRED")
 
     // WHEN
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       executeOnSystem("neo4j", "potato", "ALTER USER neo4j SET STATUS SUSPENDED")
     } should have message "Failed to alter the specified user 'neo4j': Changing your own activation status is not allowed."
 
@@ -1247,7 +1246,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("ALTER USER neo4j SET PASSWORD 'potato' CHANGE NOT REQUIRED")
 
     // WHEN
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       executeOnSystem("neo4j", "potato", "ALTER USER $user SET STATUS ACTIVE", Map[String, Object]("user" -> "neo4j").asJava)
     } should have message "Failed to alter the specified user 'neo4j': Changing your own activation status is not allowed."
 
@@ -1351,13 +1350,13 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: string password") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz'")
       // THEN
     } should have message "Failed to alter the specified user 'foo': User does not exist."
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER $user SET PASSWORD 'baz'", Map("user" -> "foo"))
       // THEN
@@ -1365,7 +1364,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: parameter password (and illegal username)") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER `neo:4j` SET PASSWORD $password", Map("password" -> "baz"))
       // THEN
@@ -1373,7 +1372,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: string password and password mode") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' CHANGE NOT REQUIRED")
       // THEN
@@ -1381,7 +1380,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: parameter password and password mode") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password SET PASSWORD CHANGE REQUIRED", Map("password" -> "baz"))
       // THEN
@@ -1389,7 +1388,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: string password and status") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' SET STATUS ACTIVE")
       // THEN
@@ -1397,7 +1396,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: parameter password and status") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER $user SET PASSWORD $password SET STATUS ACTIVE", Map("user" -> "foo", "password" -> "baz"))
       // THEN
@@ -1405,7 +1404,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: string password, password mode and status") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' CHANGE REQUIRED SET STATUS ACTIVE")
       // THEN
@@ -1413,7 +1412,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: password mode") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
       // THEN
@@ -1421,7 +1420,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: password mode and status") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD CHANGE REQUIRED SET STATUS SUSPENDED")
       // THEN
@@ -1429,7 +1428,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: status") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET STATUS SUSPENDED")
       // THEN
@@ -1437,7 +1436,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing parameterized user: status") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER $user SET STATUS SUSPENDED", Map("user" -> "foo"))
       // THEN
@@ -1449,7 +1448,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER foo SET PASSWORD 'password'")
     execute("DROP USER foo")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
       // THEN
@@ -1499,7 +1498,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val password = "bar"
     execute(s"CREATE USER $username SET PASSWORD '$password'")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET ENCRYPTED PASSWORD ''")
       // THEN
@@ -1517,7 +1516,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     execute(s"CREATE USER $username SET PASSWORD '$password'")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute(s"ALTER USER $username SET ENCRYPTED PASSWORD '$incorrectlyEncryptedPassword'")
       // THEN
@@ -1660,7 +1659,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
     execute("GRANT ROLE editor TO foo")
 
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'wrongPassword' TO 'baz'")
       // THEN
@@ -1831,7 +1830,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     parameter.put("currentPassword", "bar")
     parameter.put("newPassword", "bar")
 
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $currentPassword TO $newPassword", params = parameter)
       // THEN
@@ -1851,7 +1850,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val parameter = new util.HashMap[String, Object]()
     parameter.put("currentPassword", "bar")
 
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $currentPassword TO $currentPassword", params = parameter)
       // THEN
@@ -1871,7 +1870,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val parameter = new util.HashMap[String, Object]()
     parameter.put("wrongPassword", "boo")
 
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $wrongPassword TO 'baz'", params = parameter)
       // THEN
@@ -1892,7 +1891,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     parameter.put("wrongPassword", "boo")
     parameter.put("newPassword", "baz")
 
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $wrongPassword TO $newPassword", params = parameter)
       // THEN
@@ -1912,7 +1911,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val parameter = new util.HashMap[String, Object]()
     parameter.put("newPassword", "baz")
 
-    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'boo' TO $newPassword", params = parameter)
       // THEN

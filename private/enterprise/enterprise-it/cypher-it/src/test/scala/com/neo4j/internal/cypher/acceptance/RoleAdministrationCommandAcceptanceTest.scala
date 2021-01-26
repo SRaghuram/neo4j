@@ -14,7 +14,6 @@ import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
@@ -443,13 +442,13 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     execute("CREATE ROLE foo")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE foo")
       // THEN
     } should have message "Failed to create the specified role 'foo': Role already exists."
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE $r", Map("r" -> "foo"))
       // THEN
@@ -617,7 +616,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating from non-existing role") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
       // THEN
@@ -626,7 +625,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles)
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE $newRole IF NOT EXISTS AS COPY OF $oldRole", Map("newRole" -> "bar", "oldRole" -> "foo"))
       // THEN
@@ -636,7 +635,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles)
 
     // and an invalid (non-existing) one
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF ``")
       // THEN
@@ -689,13 +688,13 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE ROLE foo")
     execute("CREATE ROLE bar")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
       // THEN
     } should have message "Failed to create the specified role 'bar': Role already exists."
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE $newRole AS COPY OF $oldRole", Map("newRole" -> "bar", "oldRole" -> "foo"))
       // THEN
@@ -723,7 +722,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     execute("CREATE ROLE bar")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
       // THEN
@@ -854,14 +853,14 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when dropping non-existing role") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("DROP ROLE foo")
       // THEN
     } should have message "Failed to delete the specified role 'foo': Role does not exist."
 
     // and with parameter
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("DROP ROLE $role", Map("role" -> "foo"))
       // THEN
@@ -871,14 +870,14 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles)
 
     // and an invalid (non-existing) one
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("DROP ROLE ``")
       // THEN
     } should have message "Failed to delete the specified role '': Role does not exist."
 
     // and an invalid (non-existing) one with parameter
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("DROP ROLE $role", Map("role" -> ""))
       // THEN
@@ -1082,7 +1081,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     execute("CREATE USER Bar SET PASSWORD 'neo'")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
@@ -1093,7 +1092,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
 
     // and with parameters
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("GRANT ROLE $role TO Bar", Map("role" -> "dragon"))
       // THEN
@@ -1104,7 +1103,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
 
     // and an invalid (non-existing) one
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("GRANT ROLE `` TO Bar")
       // THEN
@@ -1115,7 +1114,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
 
     // and an invalid (non-existing) one with parameter
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("GRANT ROLE $role TO Bar", Map("role" -> ""))
       // THEN
@@ -1131,7 +1130,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val rolesWithUsers = defaultRolesWithUsers + role("dragon").noMember().map
     execute("CREATE ROLE dragon")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
@@ -1142,7 +1141,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
     // and with parameters
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO $user", Map("user" -> "Bar"))
       // THEN
@@ -1153,7 +1152,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
     // and an invalid (non-existing) one
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO ``")
       // THEN
@@ -1164,7 +1163,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
     // and an invalid (non-existing) one with parameters
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO $user", Map("user" -> ""))
       // THEN
@@ -1176,7 +1175,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when granting non-existing role to non-existing user") {
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
@@ -1186,7 +1185,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
     // and an invalid (non-existing) ones
-    the[InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("GRANT ROLE `` TO ``")
       // THEN
