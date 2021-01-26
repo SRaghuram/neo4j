@@ -146,21 +146,23 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         var cluster = actorSystemLifecycle.cluster();
         var replicator = actorSystemLifecycle.replicator();
         var rrTopologyActor = readReplicaTopologyActor( rrTopologySink, databaseStateSink );
-        coreTopologyActorRef = coreTopologyActor( cluster, replicator, coreTopologySink, bootstrapStateSink, raftMappingSink, rrTopologyActor );
-        directoryActorRef = directoryActor( cluster, replicator, directorySink, rrTopologyActor );
         databaseStateActorRef = databaseStateActor( cluster, replicator, databaseStateSink, rrTopologyActor );
+        coreTopologyActorRef =
+                coreTopologyActor( cluster, replicator, coreTopologySink, bootstrapStateSink, raftMappingSink, databaseStateActorRef, rrTopologyActor );
+        directoryActorRef = directoryActor( cluster, replicator, directorySink, rrTopologyActor );
         publishInitialData( coreTopologyActorRef, directoryActorRef, databaseStateActorRef );
     }
 
     private ActorRef coreTopologyActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<CoreTopologyMessage> topologySink,
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink, SourceQueueWithComplete<ReplicatedRaftMapping> raftMappingSink,
-            ActorRef rrTopologyActor )
+            ActorRef databaseStateActor, ActorRef rrTopologyActor )
     {
         var topologyBuilder = new TopologyBuilder();
         var coreTopologyProps = CoreTopologyActor.props(
                 topologySink,
                 bootstrapStateSink,
                 raftMappingSink,
+                databaseStateActor,
                 rrTopologyActor,
                 replicator,
                 cluster,

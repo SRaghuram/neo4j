@@ -243,6 +243,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
       .thenReturn(expectedCoreTopology)
 
+    val databaseStateProbe = TestProbe("databaseStateActor")
     val readReplicaProbe = TestProbe("readReplicaActor")
     val cluster = mock[Cluster]
     val myAddress = Address("akka", system.name, "myHost", 12)
@@ -255,6 +256,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
       topologySink,
       bootstrapStateSink,
       raftMappingSink,
+      databaseStateProbe.ref,
       readReplicaProbe.ref,
       replicatorProbe.ref,
       cluster,

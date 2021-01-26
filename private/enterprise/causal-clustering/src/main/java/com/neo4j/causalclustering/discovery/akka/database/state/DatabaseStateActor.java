@@ -14,10 +14,12 @@ import akka.japi.pf.ReceiveBuilder;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
+import com.neo4j.causalclustering.discovery.akka.coretopology.RaftMemberMappingActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -89,7 +91,8 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseS
     @Override
     protected void handleCustomEvents( ReceiveBuilder builder )
     {
-        builder.match( DiscoveryDatabaseState.class, this::handleDatabaseState );
+        builder.match( DatabaseStateActor.CleanupMessage.class, this::removeDataFromReplicator )
+               .match( DiscoveryDatabaseState.class,            this::handleDatabaseState );
     }
 
     private void handleDatabaseState( DiscoveryDatabaseState update )
@@ -102,6 +105,14 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseS
         {
             modifyReplicatedData( key, map -> map.put( cluster, new DatabaseServer( update.databaseId(), myself ), update ) );
         }
+    }
+
+    private void removeDataFromReplicator( DatabaseStateActor.CleanupMessage message )
+    {
+        data.getEntries().keySet().stream()
+                .filter( ds -> ds.serverId().equals( message.serverId ) )
+                .peek( ds -> log().info( "remove state {}", ds ) )
+                .forEach( ds -> modifyReplicatedData( key, map -> map.remove( cluster, ds ) ));
     }
 
     @Override
@@ -123,5 +134,36 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseS
     private static <K,V> Collector<Map.Entry<K,V>,?,Map<K,V>> entriesToMap()
     {
         return Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue );
+    }
+
+    public static class CleanupMessage
+    {
+        private final ServerId serverId;
+
+        public CleanupMessage( ServerId serverId )
+        {
+            this.serverId = serverId;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            DatabaseStateActor.CleanupMessage that = (DatabaseStateActor.CleanupMessage) o;
+            return Objects.equals( serverId, that.serverId );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( serverId );
+        }
     }
 }

@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
+import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseStateActor
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory
 import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot
@@ -101,8 +102,9 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       Then("update replicator")
       expectReplicatorUpdates(replicator, dataKey)
 
-      And("sending cleanup to mapping")
+      And("sending cleanup to mapping, database-state")
       mappingProbe.expectMsg(new RaftMemberMappingActor.CleanupMessage(identityModule.serverId()));
+      databaseStateProbe.expectMsg(new DatabaseStateActor.CleanupMessage(identityModule.serverId()));
     }
 
     "update data on database start" in new Fixture {
@@ -148,6 +150,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
 
   class Fixture extends ReplicatedDataActorFixture[LWWMap[UniqueAddress, CoreServerInfoForServerId]] {
     val coreTopologyProbe = TestProbe("topology")
+    val databaseStateProbe = TestProbe("databaseState")
     val mappingProbe = TestProbe("mapping")
     val identityModule = new InMemoryCoreServerIdentity()
     val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForServerId](ReplicatedDataIdentifier.METADATA.keyName())
@@ -168,7 +171,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       conf
     }
 
-    val replicatedDataActorRef = system.actorOf(MetadataActor.props(cluster, replicator.ref, coreTopologyProbe.ref, mappingProbe.ref, config, monitor,
+    val replicatedDataActorRef = system.actorOf(MetadataActor.props(cluster, replicator.ref, coreTopologyProbe.ref, databaseStateProbe.ref, mappingProbe.ref, config, monitor,
       identityModule.serverId()))
 
     def expectUpdateWithDatabases(namedDatabaseIds: Set[NamedDatabaseId]): Unit = {

@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
+import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseStateActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 
@@ -30,24 +31,26 @@ import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDat
 
 public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,CoreServerInfoForServerId>>
 {
-    static Props props( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ActorRef raftMappingActor,
+    static Props props( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ActorRef databaseStateActor, ActorRef raftMappingActor,
             Config config, ReplicatedDataMonitor monitor, ServerId myself )
     {
-        return Props.create( MetadataActor.class, () -> new MetadataActor( cluster, replicator, topologyActor, raftMappingActor,
+        return Props.create( MetadataActor.class, () -> new MetadataActor( cluster, replicator, topologyActor, databaseStateActor, raftMappingActor,
                                                                            config, monitor, myself ) );
     }
 
     private final ActorRef topologyActor;
+    private final ActorRef databaseStateActor;
     private final ActorRef raftMappingActor;
     private final Config config;
     private final ServerId myself;
     private final Set<DatabaseId> startedDatabases = new HashSet<>();
 
-    private MetadataActor( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ActorRef raftMappingActor,
+    private MetadataActor( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ActorRef databaseStateActor, ActorRef raftMappingActor,
             Config config, ReplicatedDataMonitor monitor, ServerId myself )
     {
         super( cluster, replicator, LWWMapKey::create, LWWMap::empty, METADATA, monitor );
         this.topologyActor = topologyActor;
+        this.databaseStateActor = databaseStateActor;
         this.raftMappingActor = raftMappingActor;
         this.config = config;
         this.myself = myself;
@@ -92,6 +95,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
         if ( coreServerInfo != null )
         {
             raftMappingActor.tell( new RaftMemberMappingActor.CleanupMessage( coreServerInfo.serverId() ), getSelf() );
+            databaseStateActor.tell( new DatabaseStateActor.CleanupMessage( coreServerInfo.serverId() ), getSelf() );
         }
     }
 

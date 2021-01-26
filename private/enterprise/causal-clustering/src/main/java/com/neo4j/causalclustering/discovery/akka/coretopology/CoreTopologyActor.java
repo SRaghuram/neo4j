@@ -45,6 +45,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
             SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink,
             SourceQueueWithComplete<ReplicatedRaftMapping> raftMappingSink,
+            ActorRef databaseStateActor,
             ActorRef rrTopologyActor,
             ActorRef replicator,
             Cluster cluster,
@@ -55,7 +56,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
             ClusterSizeMonitor clusterSizeMonitor )
     {
         return Props.create( CoreTopologyActor.class,
-                () -> new CoreTopologyActor( topologyUpdateSink, bootstrapStateSink, raftMappingSink, rrTopologyActor, replicator, cluster,
+                () -> new CoreTopologyActor( topologyUpdateSink, bootstrapStateSink, raftMappingSink, databaseStateActor, rrTopologyActor, replicator, cluster,
                         topologyBuilder, config, myIdentity, replicatedDataMonitor, clusterSizeMonitor ) );
     }
 
@@ -87,6 +88,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
             SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink,
             SourceQueueWithComplete<ReplicatedRaftMapping> raftMappingSink,
+            ActorRef databaseStateActor,
             ActorRef readReplicaTopologyActor,
             ActorRef replicator,
             Cluster cluster,
@@ -111,7 +113,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         // Children, who will be sending messages to us
         mappingActor = getContext().actorOf( RaftMemberMappingActor.props( cluster, replicator, getSelf(), myIdentity, replicatedDataMonitor ) );
         metadataActor = getContext().actorOf(
-                MetadataActor.props( cluster, replicator, getSelf(), mappingActor, config, replicatedDataMonitor, myIdentity.serverId() ) );
+                MetadataActor.props( cluster, replicator, getSelf(), databaseStateActor, mappingActor, config, replicatedDataMonitor, myIdentity.serverId() ) );
         ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, config ) );
         getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config, clusterSizeMonitor ) );
         raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf(), replicatedDataMonitor, minCoreHostsAtRuntime ) );
