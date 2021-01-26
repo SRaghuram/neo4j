@@ -351,7 +351,8 @@ class CommandsRoutingTest
     {
         assertThat( catchThrowable( () -> inNeo4jTx( tx ->
                 tx.run( joinAsLines( "USE system", "CREATE ROLE foo" ) ).consume()
-        ) ) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
+        ) ) ).hasMessageContaining( "The `USE` clause is not required for Administration Commands. " +
+                "Retry your query omitting the `USE` clause and it will be routed automatically." );
     }
 
     // Multiple statement types tests

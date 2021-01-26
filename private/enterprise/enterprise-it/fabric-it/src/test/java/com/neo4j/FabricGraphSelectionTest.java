@@ -566,9 +566,12 @@ class FabricGraphSelectionTest
         var query = joinAsLines( "USE system",
                                  "SHOW DATABASES" );
 
-        assertThat( catchThrowable( () -> run( neo4j, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
-        assertThat( catchThrowable( () -> run( fabric, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
-        assertThat( catchThrowable( () -> run( system, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
+        assertThat( catchThrowable( () -> run( neo4j, query )) ).hasMessageContaining( "The `USE` clause is not required for Administration Commands. " +
+                "Retry your query omitting the `USE` clause and it will be routed automatically." );
+        assertThat( catchThrowable( () -> run( fabric, query )) ).hasMessageContaining( "The `USE` clause is not required for Administration Commands. " +
+                "Retry your query omitting the `USE` clause and it will be routed automatically." );
+        assertThat( catchThrowable( () -> run( system, query )) ).hasMessageContaining( "The `USE` clause is not required for Administration Commands. " +
+                "Retry your query omitting the `USE` clause and it will be routed automatically." );
     }
 
     @Test
@@ -577,9 +580,12 @@ class FabricGraphSelectionTest
         var query = joinAsLines( "USE intB",
                                  "SHOW DATABASES" );
 
-        assertThat( catchThrowable( () -> run( neo4j, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
-        assertThat( catchThrowable( () -> run( fabric, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
-        assertThat( catchThrowable( () -> run( system, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
+        assertThat( catchThrowable( () -> run( neo4j, query )) ).hasMessageContaining( "The `USE` clause is not required for Administration Commands. " +
+                "Retry your query omitting the `USE` clause and it will be routed automatically." );
+        assertThat( catchThrowable( () -> run( fabric, query )) ).hasMessageContaining( "The `USE` clause is not required for Administration Commands. " +
+                "Retry your query omitting the `USE` clause and it will be routed automatically." );
+        assertThat( catchThrowable( () -> run( system, query )) ).hasMessageContaining( "The `USE` clause is not required for Administration Commands. " +
+                "Retry your query omitting the `USE` clause and it will be routed automatically." );
     }
 
     @Test
