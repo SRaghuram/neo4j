@@ -154,26 +154,34 @@ class Worker(val workerId: Int,
     } catch {
       // Failure in nextTask of a pipeline, after taking Morsel
       case NextTaskException(pipeline, SchedulingInputException(MorselParallelizerInput(morsel), cause)) =>
-        executingQuery.executionState.closeMorselTask(pipeline, morsel.originalForClosing)
+        // Important: fail query before closing task.
+        // Otherwise, if this is the last task, closing it will decrement counts to zero and the query will complete successfully, which is wrong.
         executingQuery.executionState.failQuery(cause, resources, pipeline)
+        executingQuery.executionState.closeMorselTask(pipeline, morsel.originalForClosing)
         SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline, after taking Accumulator
       case NextTaskException(pipeline, SchedulingInputException(MorselAccumulatorsInput(acc), cause)) =>
-        executingQuery.executionState.closeAccumulatorsTask(pipeline, acc.toIndexedSeq)
+        // Important: fail query before closing task.
+        // Otherwise, if this is the last task, closing it will decrement counts to zero and the query will complete successfully, which is wrong.
         executingQuery.executionState.failQuery(cause, resources, pipeline)
+        executingQuery.executionState.closeAccumulatorsTask(pipeline, acc.toIndexedSeq)
         SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline, after taking AccumulatorAndMorsel
       case NextTaskException(pipeline, SchedulingInputException(AccumulatorAndPayloadInput(accAndMorsel), cause)) =>
-        executingQuery.executionState.closeDataAndAccumulatorTask(pipeline, accAndMorsel.payload, accAndMorsel.acc)
+        // Important: fail query before closing task.
+        // Otherwise, if this is the last task, closing it will decrement counts to zero and the query will complete successfully, which is wrong.
         executingQuery.executionState.failQuery(cause, resources, pipeline)
+        executingQuery.executionState.closeDataAndAccumulatorTask(pipeline, accAndMorsel.payload, accAndMorsel.acc)
         SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline, after taking Data
       case NextTaskException(pipeline, SchedulingInputException(DataInput(data), cause)) =>
-        executingQuery.executionState.closeData(pipeline, data)
+        // Important: fail query before closing task.
+        // Otherwise, if this is the last task, closing it will decrement counts to zero and the query will complete successfully, which is wrong.
         executingQuery.executionState.failQuery(cause, resources, pipeline)
+        executingQuery.executionState.closeData(pipeline, data)
         SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline
