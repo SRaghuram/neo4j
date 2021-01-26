@@ -8,7 +8,7 @@ package com.neo4j.server.security.enterprise.systemgraph;
 import org.neo4j.dbms.database.ComponentVersion;
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
 
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.UNKNOWN_VERSION;
+import static org.neo4j.dbms.database.KnownSystemComponentVersion.UNKNOWN_VERSION;
 
 public enum EnterpriseSecurityGraphComponentVersion implements ComponentVersion
 {

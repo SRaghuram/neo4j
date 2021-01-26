@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.neo4j.dbms.database.ComponentVersion;
+import org.neo4j.dbms.database.KnownSystemComponentVersion;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
@@ -27,11 +29,8 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
-import org.neo4j.dbms.database.ComponentVersion;
-import org.neo4j.dbms.database.KnownSystemComponentVersion;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.UNKNOWN_VERSION;
 
 public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSystemComponentVersion
 {
@@ -60,7 +59,7 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
 
     boolean componentNotInVersionNode( Transaction tx )
     {
-        return getVersion( tx ) == UNKNOWN_VERSION;
+        return getVersion( tx ) == null;
     }
 
     boolean supportsUpdateAction( PrivilegeAction action )

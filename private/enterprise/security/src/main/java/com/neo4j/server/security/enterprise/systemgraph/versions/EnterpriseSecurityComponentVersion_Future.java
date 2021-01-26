@@ -50,7 +50,8 @@ public class EnterpriseSecurityComponentVersion_Future extends KnownEnterpriseSe
     @Override
     public boolean detected( Transaction tx )
     {
-        return getVersion( tx ) > latestVersion.version;
+        Integer version = getVersion( tx );
+        return version != null && version > latestVersion.version;
     }
 
     @Override

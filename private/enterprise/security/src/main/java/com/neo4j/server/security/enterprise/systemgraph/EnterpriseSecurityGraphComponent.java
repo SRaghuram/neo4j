@@ -36,6 +36,7 @@ import java.util.Set;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.dbms.database.AbstractSystemGraphComponent;
+import org.neo4j.dbms.database.KnownSystemComponentVersion;
 import org.neo4j.dbms.database.KnownSystemComponentVersions;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -49,8 +50,8 @@ import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
 
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.ROLE_LABEL;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.USER_LABEL;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.UNKNOWN_VERSION;
 import static org.neo4j.dbms.database.ComponentVersion.SECURITY_PRIVILEGE_COMPONENT;
+import static org.neo4j.dbms.database.KnownSystemComponentVersion.UNKNOWN_VERSION;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
 /**
