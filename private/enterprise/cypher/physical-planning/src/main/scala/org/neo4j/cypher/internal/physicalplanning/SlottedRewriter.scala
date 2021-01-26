@@ -207,7 +207,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
             prop.copy(map = ReferenceFromSlot(offset, key))(prop.position)
         }
 
-      case prop@CachedProperty(originalEntityName, variable, pkn@PropertyKeyName(propKey), entityType) =>
+      case prop@CachedProperty(originalEntityName, variable, pkn@PropertyKeyName(propKey), entityType, _) =>
         slotConfiguration(variable.name) match {
           case LongSlot(offset, nullable, cypherType) if
           (cypherType == CTNode && entityType == NODE_TYPE) || (cypherType == CTRelationship && entityType == RELATIONSHIP_TYPE) =>
