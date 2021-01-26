@@ -18,6 +18,8 @@ import com.neo4j.bench.jmh.api.config.BenchmarksValidator.BenchmarkValidationRes
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
+import com.neo4j.bench.jmh.api.profile.AbstractMicroProfiler;
+import com.neo4j.bench.jmh.api.profile.NoOpProfiler;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
@@ -27,6 +29,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.results.Result;
 import org.openjdk.jmh.results.RunResult;
+import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.CommandLineOptions;
 import org.openjdk.jmh.runner.options.Options;
@@ -36,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -43,6 +47,7 @@ import java.util.List;
 import static com.neo4j.bench.common.profiling.ProfilerType.NO_OP;
 import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
 import static com.neo4j.bench.jmh.api.config.BenchmarkConfigFile.fromFile;
+import static com.neo4j.bench.jmh.api.config.JmhOptionsUtil.baseBuilder;
 import static com.neo4j.bench.jmh.api.config.SuiteDescription.fromConfig;
 import static com.neo4j.bench.jmh.api.config.Validation.assertValid;
 import static java.lang.String.format;
@@ -146,12 +151,7 @@ public abstract class Runner
                 throw new RuntimeException( "Expected at least one benchmark description, but found none" );
             }
 
-            List<BenchmarkDescription> benchmarksAfterPrepare = prepare( enabledExplodedBenchmarks,
-                                                                         runnerParams,
-                                                                         jvm,
-                                                                         errorReporter,
-                                                                         jvmArgs,
-                                                                         threadCounts );
+            List<BenchmarkDescription> benchmarksAfterPrepare = prepare( enabledExplodedBenchmarks, runnerParams, jvm, errorReporter, jvmArgs );
 
             if ( benchmarksAfterPrepare.isEmpty() )
             {
@@ -159,15 +159,15 @@ public abstract class Runner
             }
             else
             {
-                Options jmhOptions = new CommandLineOptions( jmhArgs );
-                Executor executor = new Executor( jvm, jvmArgs, errorReporter, runnerParams, threadCounts );
                 List<BenchmarkDescription> benchmarksAfterProfiling = profileBenchmarks(
                         benchmarksAfterPrepare,
-                        jmhOptions,
+                        jvm,
+                        jvmArgs,
+                        jmhArgs,
+                        threadCounts,
                         profilers,
                         runnerParams,
-                        errorReporter,
-                        executor );
+                        errorReporter );
 
                 if ( benchmarksAfterProfiling.isEmpty() )
                 {
@@ -178,10 +178,12 @@ public abstract class Runner
                     executeBenchmarks(
                             benchmarkGroupBenchmarkMetrics,
                             benchmarksAfterProfiling,
-                            jmhOptions,
+                            jvm,
+                            jvmArgs,
+                            jmhArgs,
+                            threadCounts,
                             runnerParams,
-                            errorReporter,
-                            executor );
+                            errorReporter );
 
                     // Print Pretty Results Summary
                     boolean verbose = true;
@@ -217,8 +219,7 @@ public abstract class Runner
             RunnerParams runnerParams,
             Jvm jvm,
             ErrorReporter errorReporter,
-            String[] jvmArgs,
-            int[] threadCounts );
+            String[] jvmArgs );
 
     /**
      * This method is invoked once for each benchmark that is profiled, before profiling begins.
@@ -276,67 +277,124 @@ public abstract class Runner
 
     private List<BenchmarkDescription> profileBenchmarks(
             Collection<BenchmarkDescription> benchmarks,
-            Options jmhOptions,
+            Jvm jvm,
+            String[] jvmArgs,
+            String[] jmhArgs,
+            int[] threadCounts,
             List<ParameterizedProfiler> profilers,
             RunnerParams runnerParams,
-            ErrorReporter errorReporter,
-            Executor executor )
+            ErrorReporter errorReporter )
     {
         logStageHeader( "PROFILING" );
 
-        Executor.ExecutionResult executionResult = executor.runWithProfilers(
-                benchmarks,
-                profilers,
-                ( builder, benchmark, profiler ) -> profilerOptions( builder, benchmark, profiler, jmhOptions, runnerParams ),
-                ( benchmark, profiler ) -> afterProfilerRun( benchmark, profiler.profilerType(), runnerParams, errorReporter ) );
-        return executionResult.successfulBenchmarks();
-    }
+        List<BenchmarkDescription> benchmarksWithProfiles = new ArrayList<>( benchmarks );
 
-    private ChainedOptionsBuilder profilerOptions( ChainedOptionsBuilder builder,
-                                                   BenchmarkDescription benchmark,
-                                                   ParameterizedProfiler profiler,
-                                                   Options jmhOptions,
-                                                   RunnerParams runnerParams )
-    {
-        builder = builder.forks( 1 );
-        // allow Runner implementation to override/enrich JMH configuration
-        builder = beforeProfilerRun( benchmark, profiler.profilerType(), runnerParams, builder );
-        // user provided 'additional' JMH arguments these take precedence over all other configurations. apply them last.
-        return JmhOptionsUtil.applyOptions( builder, jmhOptions );
+        for ( ParameterizedProfiler profiler : profilers )
+        {
+            for ( int threadCount : threadCounts )
+            {
+                for ( BenchmarkDescription benchmark : benchmarks )
+                {
+                    if ( threadCount == 1 || benchmark.isThreadSafe() )
+                    {
+                        try
+                        {
+                            RunnerParams finalRunnerParams = runnerParams.copyWithNewRunId()
+                                                                         .copyWithProfilers( Collections.singletonList( profiler ) );
+
+                            Class<? extends AbstractMicroProfiler> microProfiler = AbstractMicroProfiler.toJmhProfiler( profiler.profilerType() );
+
+                            ChainedOptionsBuilder builder = baseBuilder(
+                                    finalRunnerParams,
+                                    benchmark,
+                                    threadCount,
+                                    jvm,
+                                    jvmArgs );
+                            // profile using exactly one profiler
+                            builder = builder.addProfiler( microProfiler )
+                                             .forks( 1 );
+                            // allow Runner implementation to override/enrich JMH configuration
+                            builder = beforeProfilerRun( benchmark, profiler.profilerType(), runnerParams, builder );
+                            // user provided 'additional' JMH arguments these take precedence over all other configurations. apply then last.
+                            builder = JmhOptionsUtil.applyOptions( builder, new CommandLineOptions( jmhArgs ) );
+                            Options options = builder.build();
+                            // sanity check, make sure provided benchmarks were correctly exploded
+                            JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
+
+                            // Clear the JMH lifecycle event log for every new execution
+                            JmhLifecycleTracker.load( runnerParams.workDir() ).reset();
+
+                            // not interested in results from profiling run, the profiling artifacts will be generated however, and collected later
+                            new org.openjdk.jmh.runner.Runner( options ).run();
+                        }
+                        catch ( Exception e )
+                        {
+                            // may occur multiple times for same benchmark, once per thread count, this is ok
+                            // if benchmark profiling fails at any thread count it will not be executed in next phase
+                            benchmarksWithProfiles.remove( benchmark );
+                            errorReporter.recordOrThrow( e, benchmark.group(), benchmark.guessSingleName() );
+                        }
+                        finally
+                        {
+                            afterProfilerRun( benchmark, profiler.profilerType(), runnerParams, errorReporter );
+                        }
+                    }
+                }
+            }
+        }
+        return benchmarksWithProfiles;
     }
 
     private void executeBenchmarks(
             BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics,
             Collection<BenchmarkDescription> benchmarks,
-            Options jmhOptions,
+            Jvm jvm,
+            String[] jvmArgs,
+            String[] jmhArgs,
+            int[] threadCounts,
             RunnerParams runnerParams,
-            ErrorReporter errorReporter,
-            Executor executor )
+            ErrorReporter errorReporter )
     {
         logStageHeader( "EXECUTION" );
 
-        // necessary for robust fork directory creation
-        List<ParameterizedProfiler> profilers = Collections.singletonList( ParameterizedProfiler.defaultProfiler( NO_OP ) );
-        Executor.ExecutionResult executionResult = executor.runWithProfilers(
-                benchmarks,
-                profilers,
-                ( builder, benchmark, profiler ) -> executeOptions( builder, benchmark, jmhOptions, runnerParams ),
-                ( benchmark, profiler ) -> afterMeasurementRun( benchmark, runnerParams, errorReporter ) );
-        for ( RunResult runResult : executionResult.runResults() )
+        RunnerParams finalRunnerParams = runnerParams.copyWithProfilers( ParameterizedProfiler.defaultProfilers( NO_OP ) );
+        for ( int threadCount : threadCounts )
         {
-            extractMetrics( benchmarkGroupBenchmarkMetrics, runnerParams, runResult );
-        }
-    }
+            for ( BenchmarkDescription benchmark : benchmarks )
+            {
+                if ( threadCount == 1 || benchmark.isThreadSafe() )
+                {
+                    try
+                    {
+                        ChainedOptionsBuilder builder = baseBuilder(
+                                finalRunnerParams.copyWithNewRunId(),
+                                benchmark,
+                                threadCount,
+                                jvm,
+                                jvmArgs );
+                        // necessary for robust fork directory creation
+                        builder = builder.addProfiler( NoOpProfiler.class );
+                        // allow Runner implementation to override/enrich JMH configuration
+                        builder = beforeMeasurementRun( benchmark, runnerParams, builder );
+                        // user provided 'additional' JMH arguments these take precedence over all other configurations. apply then last.
+                        builder = JmhOptionsUtil.applyOptions( builder, new CommandLineOptions( jmhArgs ) );
+                        Options options = builder.build();
+                        // sanity check, make sure provided benchmarks were correctly exploded
+                        JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
 
-    private ChainedOptionsBuilder executeOptions( ChainedOptionsBuilder builder,
-                                                  BenchmarkDescription benchmark,
-                                                  Options jmhOptions,
-                                                  RunnerParams runnerParams )
-    {
-        // allow Runner implementation to override/enrich JMH configuration
-        builder = beforeMeasurementRun( benchmark, runnerParams, builder );
-        // user provided 'additional' JMH arguments these take precedence over all other configurations. apply them last.
-        return JmhOptionsUtil.applyOptions( builder, jmhOptions );
+                        executeBenchmarksForConfig( options, benchmarkGroupBenchmarkMetrics, runnerParams );
+                    }
+                    catch ( Exception e )
+                    {
+                        errorReporter.recordOrThrow( e, benchmark.group(), benchmark.guessSingleName() );
+                    }
+                    finally
+                    {
+                        afterMeasurementRun( benchmark, runnerParams, errorReporter );
+                    }
+                }
+            }
+        }
     }
 
     protected void logStageHeader( String header )
@@ -348,55 +406,62 @@ public abstract class Runner
         LOG.info( "\n\n" );
     }
 
-    private void extractMetrics( BenchmarkGroupBenchmarkMetrics metrics,
-                                 RunnerParams runnerParams,
-                                 RunResult runResult )
+    private void executeBenchmarksForConfig(
+            Options options,
+            BenchmarkGroupBenchmarkMetrics metrics,
+            RunnerParams runnerParams ) throws RunnerException
     {
-        BenchmarkParams params = runResult.getParams();
-        BenchmarkGroup benchmarkGroup = BenchmarkDiscoveryUtils.toBenchmarkGroup( params );
-        Benchmarks benchmarks = BenchmarkDiscoveryUtils.toBenchmarks( params, runnerParams );
-        Benchmark benchmark = benchmarks.parentBenchmark();
+        // Clear the JMH lifecycle event log for every new execution
+        JmhLifecycleTracker.load( runnerParams.workDir() ).reset();
 
-        Neo4jConfig neo4jConfig = systemConfigFor( benchmarkGroup, benchmark, runnerParams );
+        for ( RunResult runResult : new org.openjdk.jmh.runner.Runner( options ).run() )
+        {
+            BenchmarkParams params = runResult.getParams();
+            BenchmarkGroup benchmarkGroup = BenchmarkDiscoveryUtils.toBenchmarkGroup( params );
+            Benchmarks benchmarks = BenchmarkDiscoveryUtils.toBenchmarks( params, runnerParams );
+            Benchmark benchmark = benchmarks.parentBenchmark();
 
-        if ( !benchmarks.isGroup() )
-        {
-            Result<?> primaryResult = runResult.getPrimaryResult();
-            Metrics parentBenchmarkMetrics = BenchmarkDiscoveryUtils.toMetrics(
-                    primaryResult.getStatistics(),
-                    params.getTimeUnit() );
-            metrics.add(
-                    benchmarkGroup,
-                    benchmark,
-                    parentBenchmarkMetrics,
-                    null /*no auxiliary metrics*/,
-                    neo4jConfig );
-        }
-        else
-        {
-            // Secondary results will be empty for 'symmetric' (non-@Group) benchmarks
-            //
-            // JMH will return secondary results for both:
-            //   (1) ConcurrentReadWriteLabels.readNodesWithLabel:readNodesWithLabel
-            //   (2) ConcurrentReadWriteLabels.readNodesWithLabel:readNodesWithLabel·p0.00
-            // But only (1) is needed, and only (1) is in Benchmarks.
-            // This check simply omits all percentile-specific secondary results.
-            // Percentile data is also available in (1).
-            runResult.getSecondaryResults().values().stream()
-                     .filter( result -> benchmarks.hasChildBenchmarkWith( result.getLabel() ) )
-                     .forEach( result ->
-                               {
-                                   Benchmark childBenchmark = benchmarks.childBenchmarkWith( result.getLabel() );
-                                   Metrics childBenchmarkMetrics = BenchmarkDiscoveryUtils.toMetrics(
-                                           result.getStatistics(),
-                                           params.getTimeUnit() );
-                                   metrics.add(
-                                           benchmarkGroup,
-                                           childBenchmark,
-                                           childBenchmarkMetrics,
-                                           null /*no auxiliary metrics*/,
-                                           neo4jConfig );
-                               } );
+            Neo4jConfig neo4jConfig = systemConfigFor( benchmarkGroup, benchmark, runnerParams );
+
+            if ( !benchmarks.isGroup() )
+            {
+                Result<?> primaryResult = runResult.getPrimaryResult();
+                Metrics parentBenchmarkMetrics = BenchmarkDiscoveryUtils.toMetrics(
+                        primaryResult.getStatistics(),
+                        params.getTimeUnit() );
+                metrics.add(
+                        benchmarkGroup,
+                        benchmark,
+                        parentBenchmarkMetrics,
+                        null /*no auxiliary metrics*/,
+                        neo4jConfig );
+            }
+            else
+            {
+                // Secondary results will be empty for 'symmetric' (non-@Group) benchmarks
+                //
+                // JMH will return secondary results for both:
+                //   (1) ConcurrentReadWriteLabels.readNodesWithLabel:readNodesWithLabel
+                //   (2) ConcurrentReadWriteLabels.readNodesWithLabel:readNodesWithLabel·p0.00
+                // But only (1) is needed, and only (1) is in Benchmarks.
+                // This check simply omits all percentile-specific secondary results.
+                // Percentile data is also available in (1).
+                runResult.getSecondaryResults().values().stream()
+                         .filter( result -> benchmarks.hasChildBenchmarkWith( result.getLabel() ) )
+                         .forEach( result ->
+                                   {
+                                       Benchmark childBenchmark = benchmarks.childBenchmarkWith( result.getLabel() );
+                                       Metrics childBenchmarkMetrics = BenchmarkDiscoveryUtils.toMetrics(
+                                               result.getStatistics(),
+                                               params.getTimeUnit() );
+                                       metrics.add(
+                                               benchmarkGroup,
+                                               childBenchmark,
+                                               childBenchmarkMetrics,
+                                               null /*no auxiliary metrics*/,
+                                               neo4jConfig );
+                                   } );
+            }
         }
     }
 }

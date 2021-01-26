@@ -35,8 +35,7 @@ public class SimpleRunner extends Runner
                                                   RunnerParams runnerParams,
                                                   Jvm jvm,
                                                   ErrorReporter errorReporter,
-                                                  String[] jvmArgs,
-                                                  int[] threadCounts )
+                                                  String[] jvmArgs )
     {
         return benchmarks;
     }

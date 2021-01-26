@@ -10,28 +10,30 @@ import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils;
-import com.neo4j.bench.jmh.api.Executor;
+import com.neo4j.bench.jmh.api.JmhLifecycleTracker;
 import com.neo4j.bench.jmh.api.Runner;
 import com.neo4j.bench.jmh.api.RunnerParams;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
+import com.neo4j.bench.jmh.api.profile.NoOpProfiler;
 import com.neo4j.bench.micro.data.Stores;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
+import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.TimeValue;
 import org.openjdk.jmh.runner.options.VerboseMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
-import static com.neo4j.bench.common.profiling.ProfilerType.NO_OP;
 import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
+import static com.neo4j.bench.jmh.api.config.JmhOptionsUtil.baseBuilder;
+import static java.time.temporal.ChronoUnit.MILLIS;
 
 class BenchmarksRunner extends Runner
 {
@@ -72,43 +74,68 @@ class BenchmarksRunner extends Runner
                                                   RunnerParams runnerParams,
                                                   Jvm jvm,
                                                   ErrorReporter errorReporter,
-                                                  String[] jvmArgs,
-                                                  int[] threadCounts )
+                                                  String[] jvmArgs )
     {
         // Run every benchmark once to create stores -- triggers store generation in benchmark setups
         // Ensures generation does not occur in benchmark setup later, which would, for example, pollute the heap
         logStageHeader( "STORE GENERATION" );
 
-        Instant storeGenerationStart = Instant.now();
+        long storeGenerationStart = System.currentTimeMillis();
 
         Stores stores = new Stores( runnerParams.workDir() );
 
-        // necessary for robust fork directory creation
-        List<ParameterizedProfiler> profilers = Collections.singletonList( ParameterizedProfiler.defaultProfiler( NO_OP ) );
-        Executor executor = new Executor( jvm, jvmArgs, errorReporter, runnerParams, threadCounts );
-        Executor.ExecutionResult executionResult = executor.runWithProfilers(
-                benchmarks,
-                profilers,
-                ( builder, benchmark, profiler ) -> storeGenerationOptions( builder ),
-                ( benchmark, profiler ) -> stores.deleteFailedStores() );
-        List<BenchmarkDescription> benchmarksWithStores = executionResult.successfulBenchmarks();
-        Instant storeGenerationFinish = Instant.now();
-        Duration storeGenerationDuration = Duration.between( storeGenerationStart, storeGenerationFinish );
+        List<BenchmarkDescription> benchmarksWithStores = new ArrayList<>( benchmarks );
+        for ( BenchmarkDescription benchmark : benchmarks )
+        {
+            try
+            {
+                Options options = buildOptions( runnerParams, jvm, jvmArgs, benchmark );
+                // sanity check, make sure provided benchmarks were correctly exploded
+                JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
+
+                // Clear the JMH lifecycle event log for every new execution
+                JmhLifecycleTracker.load( runnerParams.workDir() ).reset();
+
+                new org.openjdk.jmh.runner.Runner( options ).run();
+            }
+            catch ( Exception e )
+            {
+                benchmarksWithStores.remove( benchmark );
+                errorReporter.recordOrThrow( e, benchmark.group(), benchmark.guessSingleName() );
+            }
+            finally
+            {
+                // make sure stores of failed benchmarks are cleaned up
+                stores.deleteFailedStores();
+            }
+        }
+        long storeGenerationFinish = System.currentTimeMillis();
+        Duration storeGenerationDuration = Duration.of( storeGenerationFinish - storeGenerationStart, MILLIS );
         // Print details of storage directory
         LOG.info( "Store generation took: {}", durationToString( storeGenerationDuration ) );
         LOG.info( stores.details() );
         return benchmarksWithStores;
     }
 
-    private ChainedOptionsBuilder storeGenerationOptions( ChainedOptionsBuilder builder )
+    private Options buildOptions( RunnerParams runnerParams, Jvm jvm, String[] jvmArgs, BenchmarkDescription benchmark )
     {
-        return builder
+        ChainedOptionsBuilder builder = baseBuilder(
+                runnerParams.copyWithNewRunId()
+                            .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.NO_OP ) ),
+                benchmark,
+                1, // thread count
+                jvm,
+                jvmArgs );
+        builder = builder
                 .warmupIterations( 0 )
                 .warmupTime( TimeValue.NONE )
                 .measurementIterations( 1 )
                 .measurementTime( TimeValue.NONE )
                 .verbosity( VerboseMode.SILENT )
                 .forks( Math.min( forkCount, 1 ) );
+        // necessary for robust fork directory creation
+        builder = builder.addProfiler( NoOpProfiler.class );
+        return builder.build();
     }
 
     @Override
