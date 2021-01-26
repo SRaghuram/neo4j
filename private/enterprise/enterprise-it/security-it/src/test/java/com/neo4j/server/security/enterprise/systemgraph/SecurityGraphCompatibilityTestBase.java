@@ -146,7 +146,8 @@ abstract class SecurityGraphCompatibilityTestBase
         {
             builder.initializePrivileges( tx, roles, Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) ) );
             // Versions older than 41 drop 01 should not have a version set
-            if (version.compareTo( ENTERPRISE_SECURITY_41D1 ) > 0 ) {
+            if ( version.compareTo( ENTERPRISE_SECURITY_41D1 ) > 0 )
+            {
                 builder.setVersionProperty( tx, builder.version );
             }
             tx.commit();

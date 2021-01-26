@@ -151,7 +151,8 @@ class SystemGraphComponentsTest
         assertCanUpgradeThisVersionAndThenUpgradeIt( initialStatus );
     }
 
-    private static Stream<Arguments> FailUpgradeWhen_PUBLIC_RoleExistsVersions() {
+    private static Stream<Arguments> FailUpgradeWhen_PUBLIC_RoleExistsVersions()
+    {
         final EnterpriseSecurityGraphComponentVersion[] list = {EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36,
                                                                 EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40};
         return Arrays.stream( list ).map( Arguments::of );
@@ -161,7 +162,8 @@ class SystemGraphComponentsTest
     @MethodSource( "FailUpgradeWhen_PUBLIC_RoleExistsVersions" )
     void shouldFailUpgradeWhen_PUBLIC_RoleExists( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
-        SystemGraphComponent.Status initialStatus = version.equals( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36 ) ? UNSUPPORTED_BUT_CAN_UPGRADE : REQUIRES_UPGRADE;
+        SystemGraphComponent.Status initialStatus =
+                version.equals( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36 ) ? UNSUPPORTED_BUT_CAN_UPGRADE : REQUIRES_UPGRADE;
         initializeLatestSystemAndUsers();
         initEnterprise( version, List.of( ADMIN, PUBLIC ) );
 
@@ -178,8 +180,8 @@ class SystemGraphComponentsTest
         ) );
     }
 
-
-    private static Stream<Arguments> GrantExecuteProcedurePrivilegeToPublicOnUpgradeVersions() {
+    private static Stream<Arguments> GrantExecuteProcedurePrivilegeToPublicOnUpgradeVersions()
+    {
         final EnterpriseSecurityGraphComponentVersion[] list = {EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36,
                                                                 EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40,
                                                                 EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1,
@@ -188,7 +190,7 @@ class SystemGraphComponentsTest
     }
 
     @ParameterizedTest
-    @MethodSource("GrantExecuteProcedurePrivilegeToPublicOnUpgradeVersions")
+    @MethodSource( "GrantExecuteProcedurePrivilegeToPublicOnUpgradeVersions" )
     void shouldGrantExecuteProcedurePrivilegeToPublicOnUpgrade( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initializeLatestSystemAndUsers();
@@ -212,7 +214,8 @@ class SystemGraphComponentsTest
         } );
     }
 
-    private static Stream<Arguments> GrantExecuteFunctionPrivilegeToPublicOnUpgradeVersions() {
+    private static Stream<Arguments> GrantExecuteFunctionPrivilegeToPublicOnUpgradeVersions()
+    {
         final EnterpriseSecurityGraphComponentVersion[] list = {EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36,
                                                                 EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40,
                                                                 EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1,
@@ -222,7 +225,7 @@ class SystemGraphComponentsTest
     }
 
     @ParameterizedTest
-    @MethodSource("GrantExecuteFunctionPrivilegeToPublicOnUpgradeVersions")
+    @MethodSource( "GrantExecuteFunctionPrivilegeToPublicOnUpgradeVersions" )
     void shouldGrantExecuteFunctionPrivilegeToPublicOnUpgrade( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initializeLatestSystemAndUsers();
