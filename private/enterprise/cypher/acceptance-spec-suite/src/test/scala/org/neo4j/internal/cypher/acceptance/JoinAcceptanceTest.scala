@@ -438,9 +438,8 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
             prop <- Seq.fill(60)(0) ++ (1 until 20)
           } yield Map(returnColumnName -> prop)
 
-          // TODO run with executeWith when pipelined bug is fixed
-          val ascResult = executeSingle("CYPHER runtime=slotted " + query + " ASC")
-          val descResult = executeSingle("CYPHER runtime=slotted " + query + " DESC")
+          val ascResult = executeWith(Configs.All, query + " ASC")
+          val descResult = executeWith(Configs.All, query + " DESC")
 
           ascResult.executionPlanDescription() should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
           descResult.executionPlanDescription() should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
