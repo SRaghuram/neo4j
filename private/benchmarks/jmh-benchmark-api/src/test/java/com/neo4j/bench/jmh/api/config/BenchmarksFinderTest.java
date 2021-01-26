@@ -7,6 +7,10 @@ package com.neo4j.bench.jmh.api.config;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.neo4j.bench.jmh.api.BaseBenchmark;
+import com.neo4j.bench.jmh.api.benchmarks.executor.FailingForSingleThreadBenchmark;
+import com.neo4j.bench.jmh.api.benchmarks.executor.ValidBenchmark;
+import com.neo4j.bench.jmh.api.benchmarks.executor.ValidThreadSafeBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.invalid.DuplicateAllowedBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.invalid.DuplicateBaseBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.invalid.WithParamValuesBenchmark;
@@ -33,16 +37,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BenchmarksFinderTest extends BenchmarksFinderFixture
 {
-    private Set<Class> invalidBenchmarks = Sets.newHashSet( DuplicateAllowedBenchmark.class,
-                                                            DuplicateBaseBenchmark.class,
-                                                            WithoutModeBenchmark.class,
-                                                            WithParamValuesBenchmark.class );
+    private static final Set<Class<? extends BaseBenchmark>> INVALID_BENCHMARKS = Sets.newHashSet( DuplicateAllowedBenchmark.class,
+                                                                                                   DuplicateBaseBenchmark.class,
+                                                                                                   WithoutModeBenchmark.class,
+                                                                                                   WithParamValuesBenchmark.class );
 
-    private Set<Class> validBenchmarks = Sets.newHashSet( ValidDisabledBenchmark.class,
-                                                          ValidEnabledBenchmark1.class,
-                                                          ValidEnabledBenchmark2.class,
-                                                          ValidEnabledBenchmarkWithoutParams.class,
-                                                          ValidEnabledGroupBenchmark.class );
+    private static final Set<Class<? extends BaseBenchmark>> VALID_BENCHMARKS = Sets.newHashSet( ValidDisabledBenchmark.class,
+                                                                                                 ValidEnabledBenchmark1.class,
+                                                                                                 ValidEnabledBenchmark2.class,
+                                                                                                 ValidEnabledBenchmarkWithoutParams.class,
+                                                                                                 ValidEnabledGroupBenchmark.class );
+
+    private static final Set<Class<? extends BaseBenchmark>> EXECUTOR_BENCHMARKS = Sets.newHashSet( FailingForSingleThreadBenchmark.class,
+                                                                                                    ValidBenchmark.class,
+                                                                                                    ValidThreadSafeBenchmark.class );
 
     @Test
     void shouldGetParameterFieldsForBenchmark()
@@ -64,21 +72,21 @@ class BenchmarksFinderTest extends BenchmarksFinderFixture
     @Test
     void shouldGetAllBenchmarks()
     {
-        assertThat( getBenchmarksFinder().getBenchmarks(), equalTo( Sets.union( invalidBenchmarks, validBenchmarks ) ) );
-        assertThat( getInvalidBenchmarksFinder().getBenchmarks(), equalTo( invalidBenchmarks ) );
-        assertThat( getValidBenchmarksFinder().getBenchmarks(), equalTo( validBenchmarks ) );
+        assertThat( getBenchmarksFinder().getBenchmarks(), equalTo( Sets.union( Sets.union( INVALID_BENCHMARKS, VALID_BENCHMARKS ), EXECUTOR_BENCHMARKS ) ) );
+        assertThat( getInvalidBenchmarksFinder().getBenchmarks(), equalTo( INVALID_BENCHMARKS ) );
+        assertThat( getValidBenchmarksFinder().getBenchmarks(), equalTo( VALID_BENCHMARKS ) );
     }
 
     @Test
     void shouldHasBenchmark()
     {
-        for ( Class benchmark : invalidBenchmarks )
+        for ( Class<? extends BaseBenchmark> benchmark : INVALID_BENCHMARKS )
         {
             assertTrue( getBenchmarksFinder().hasBenchmark( benchmark.getName() ) );
             assertTrue( getInvalidBenchmarksFinder().hasBenchmark( benchmark.getName() ) );
             assertFalse( getValidBenchmarksFinder().hasBenchmark( benchmark.getName() ) );
         }
-        for ( Class benchmark : validBenchmarks )
+        for ( Class<? extends BaseBenchmark> benchmark : VALID_BENCHMARKS )
         {
             assertTrue( getBenchmarksFinder().hasBenchmark( benchmark.getName() ) );
             assertFalse( getInvalidBenchmarksFinder().hasBenchmark( benchmark.getName() ) );
