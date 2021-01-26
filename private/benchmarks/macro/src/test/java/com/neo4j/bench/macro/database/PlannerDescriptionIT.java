@@ -73,9 +73,9 @@ class PlannerDescriptionIT
     private static final String EXPECTED_ASCII_PLAN = "+--------------------+------------------------+----------------+------+\n" +
                                                       "| Operator           | Details                | Estimated Rows | Rows |\n" +
                                                       "+--------------------+------------------------+----------------+------+\n" +
-                                                      "| +ProduceResults    | `count(a)`             |              0 |    1 |\n" +
+                                                      "| +ProduceResults    | `count(a)`             |              1 |    1 |\n" +
                                                       "| |                  +------------------------+----------------+------+\n" +
-                                                      "| +EagerAggregation  | count(a) AS `count(a)` |              0 |    1 |\n" +
+                                                      "| +EagerAggregation  | count(a) AS `count(a)` |              1 |    1 |\n" +
                                                       "| |                  +------------------------+----------------+------+\n" +
                                                       "| +Apply             |                        |              0 |    0 |\n" +
                                                       "| |\\                 +------------------------+----------------+------+\n" +
@@ -97,9 +97,9 @@ class PlannerDescriptionIT
     private static final String EXPECTED_ASCII_PLAN_SERVER = "+--------------------------+------------------------+----------------+------+\n" +
                                                              "| Operator                 | Details                | Estimated Rows | Rows |\n" +
                                                              "+--------------------------+------------------------+----------------+------+\n" +
-                                                             "| +ProduceResults@neo4j    | `count(a)`             |              0 |    1 |\n" +
+                                                             "| +ProduceResults@neo4j    | `count(a)`             |              1 |    1 |\n" +
                                                              "| |                        +------------------------+----------------+------+\n" +
-                                                             "| +EagerAggregation@neo4j  | count(a) AS `count(a)` |              0 |    1 |\n" +
+                                                             "| +EagerAggregation@neo4j  | count(a) AS `count(a)` |              1 |    1 |\n" +
                                                              "| |                        +------------------------+----------------+------+\n" +
                                                              "| +Apply@neo4j             |                        |              0 |    0 |\n" +
                                                              "| |\\                       +------------------------+----------------+------+\n" +
