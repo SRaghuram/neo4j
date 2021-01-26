@@ -8,9 +8,9 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.configuration.TransactionStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
+import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
@@ -27,6 +27,7 @@ import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ResolutionResolverFactory;
+import com.neo4j.configuration.TransactionStreamingStrategy;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
@@ -255,11 +256,15 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
         var catchupServerHandler =
                 new MultiDatabaseCatchupServerHandler( databaseManager, reconcilerModule.databaseStateService(), fileSystem, maxChunkSize, logProvider,
-                                                       globalModule.getGlobalDependencies(), () -> TransactionStreamingStrategy.Aggressive );
+                        globalModule.getGlobalDependencies(), () -> TransactionStreamingStrategy.Aggressive );
+        var backupTransactionStreamStrategy = ConfigurableTransactionStreamingStrategy.create( globalConfig );
+        var backupServerHandler =
+                new MultiDatabaseCatchupServerHandler( databaseManager, reconcilerModule.databaseStateService(), fileSystem, maxChunkSize, logProvider,
+                        globalModule.getGlobalDependencies(), backupTransactionStreamStrategy );
         var installedProtocolsHandler = new InstalledProtocolHandler();
 
         var catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );
-        var backupServerOptional = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, catchupServerHandler );
+        var backupServerOptional = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, backupServerHandler );
 
         var catchupComponentsRepository = new CatchupComponentsRepository( databaseManager );
         var catchupClientFactory = catchupComponentsProvider.catchupClientFactory();

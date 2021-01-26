@@ -114,7 +114,7 @@ public class TransactionStream implements ChunkedInput<Object>
      */
     private boolean addNextTx()
     {
-        if ( !constraint.shouldContinue( lastTxId ) )
+        if ( constraint.isCompleted( lastTxId ) )
         {
             return false;
         }

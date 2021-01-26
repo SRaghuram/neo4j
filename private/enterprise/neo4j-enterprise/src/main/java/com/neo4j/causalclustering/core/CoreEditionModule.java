@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
+import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
 import com.neo4j.configuration.TransactionStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
@@ -283,19 +284,18 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
             DatabaseStateService databaseStateService, FileSystemAbstraction fileSystem )
     {
         int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
-        CatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fileSystem,
+        var catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fileSystem,
                 maxChunkSize, logProvider, globalModule.getGlobalDependencies(), () -> TransactionStreamingStrategy.Aggressive );
-        Server catchupServer = catchupComponentsProvider.createCatchupServer( serverInstalledProtocolHandler, catchupServerHandler );
+        var backupTransactionStreamStrategy = ConfigurableTransactionStreamingStrategy.create( globalConfig );
+        var backupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fileSystem,
+                maxChunkSize, logProvider, globalModule.getGlobalDependencies(), backupTransactionStreamStrategy );
+        var catchupServer = catchupComponentsProvider.createCatchupServer( serverInstalledProtocolHandler, catchupServerHandler );
         life.add( catchupServer );
         // used by ReadReplicaHierarchicalCatchupIT
         globalModule.getGlobalDependencies().satisfyDependencies( (CatchupServerProvider) () -> catchupServer );
 
-        Optional<Server> optionalBackupServer = catchupComponentsProvider.createBackupServer( serverInstalledProtocolHandler, catchupServerHandler );
-        if ( optionalBackupServer.isPresent() )
-        {
-            Server backupServer = optionalBackupServer.get();
-            life.add( backupServer );
-        }
+        var optionalBackupServer = catchupComponentsProvider.createBackupServer( serverInstalledProtocolHandler, backupServerHandler );
+        optionalBackupServer.ifPresent( life::add );
     }
 
     @Override

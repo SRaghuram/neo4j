@@ -126,7 +126,7 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 
     private TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new TxPullRequestHandler( protocol, db, txStreamingStrategyProvider );
+        return new TxPullRequestHandler( protocol, db, txStreamingStrategyProvider.get() );
     }
 
     private static GetStoreIdRequestHandler buildStoreIdRequestHandler( Database db, CatchupServerProtocol protocol )

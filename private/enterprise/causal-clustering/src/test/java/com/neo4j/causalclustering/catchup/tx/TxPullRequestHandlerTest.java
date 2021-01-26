@@ -111,7 +111,7 @@ class TxPullRequestHandlerTest
         var databaseLogService = new DatabaseLogService( NAMED_DATABASE_ID, new SimpleLogService( logProvider ) );
         when( database.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
         final var protocol = new CatchupServerProtocol();
-        txPullRequestHandler = new TxPullRequestHandler( protocol, database, () -> TransactionStreamingStrategy.Aggressive );
+        txPullRequestHandler = new TxPullRequestHandler( protocol, database, TransactionStreamingStrategy.Aggressive );
         lifeSupport.add( availabilityGuard );
     }
 
@@ -192,7 +192,7 @@ class TxPullRequestHandlerTest
 
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database, () -> TransactionStreamingStrategy.Aggressive );
+                new TxPullRequestHandler( protocol, database, TransactionStreamingStrategy.Aggressive );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, clientStoreId, DATABASE_ID ) );
@@ -214,7 +214,7 @@ class TxPullRequestHandlerTest
 
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database, () -> TransactionStreamingStrategy.Aggressive );
+                new TxPullRequestHandler( protocol, database, TransactionStreamingStrategy.Aggressive );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, storeId, DATABASE_ID ) );
@@ -232,7 +232,7 @@ class TxPullRequestHandlerTest
     {
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database, () -> TransactionStreamingStrategy.Aggressive );
+                new TxPullRequestHandler( protocol, database, TransactionStreamingStrategy.Aggressive );
 
         var request = mock( TxPullRequest.class );
         when( request.previousTxId() ).thenReturn( incorrectTxId );
@@ -261,7 +261,7 @@ class TxPullRequestHandlerTest
 
         final var protocol = new CatchupServerProtocol();
         var txPullRequestHandler =
-                new TxPullRequestHandler( protocol, database, () -> TransactionStreamingStrategy.Aggressive );
+                new TxPullRequestHandler( protocol, database, TransactionStreamingStrategy.Aggressive );
 
         txPullRequestHandler.channelRead0( context, new TxPullRequest( previousTxId, storeId, DATABASE_ID ) );
 

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup.tx;
 
 public interface TxStreamingConstraint
 {
-    boolean shouldContinue( long lastSentTxId );
+    boolean isCompleted( long lastSentTxId );
 
     class Limited implements TxStreamingConstraint
     {
@@ -19,18 +19,18 @@ public interface TxStreamingConstraint
         }
 
         @Override
-        public boolean shouldContinue( long lastSentTxId )
+        public boolean isCompleted( long lastSentTxId )
         {
-            return lastSentTxId < lastTxIdToSend;
+            return lastSentTxId >= lastTxIdToSend;
         }
     }
 
     class Unbounded implements TxStreamingConstraint
     {
         @Override
-        public boolean shouldContinue( long lastSentTxId )
+        public boolean isCompleted( long lastSentTxId )
         {
-            return true;
+            return false;
         }
     }
 }

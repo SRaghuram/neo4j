@@ -16,7 +16,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.io.IOException;
-import java.util.function.Supplier;
 
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
@@ -42,9 +41,9 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
     private final LogEntryWriterFactory logEntryWriterFactory;
     private final TxPullRequestsMonitor monitor;
     private final Log log;
-    private final Supplier<TransactionStreamingStrategy> txStreamingStrategyProviderProvider;
+    private final TransactionStreamingStrategy txStreamingStrategy;
 
-    public TxPullRequestHandler( CatchupServerProtocol protocol, Database db, Supplier<TransactionStreamingStrategy> txStreamingStrategyProvider )
+    public TxPullRequestHandler( CatchupServerProtocol protocol, Database db, TransactionStreamingStrategy txStreamingStrategy )
     {
         this.protocol = protocol;
         this.db = db;
@@ -53,14 +52,14 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         this.logEntryWriterFactory = DbmsLogEntryWriterProvider.resolveEntryWriterFactory( db );
         this.monitor = db.getMonitors().newMonitor( TxPullRequestsMonitor.class );
         this.log = db.getInternalLogProvider().getLog( getClass() );
-        this.txStreamingStrategyProviderProvider = txStreamingStrategyProvider;
+        this.txStreamingStrategy = txStreamingStrategy;
     }
 
     @Override
     protected void channelRead0( ChannelHandlerContext ctx, final TxPullRequest msg ) throws Exception
     {
         monitor.increment();
-        var prepare = prepareRequest( msg, txStreamingStrategyProviderProvider.get() );
+        var prepare = prepareRequest( msg, txStreamingStrategy );
 
         if ( prepare.isComplete() )
         {
@@ -158,7 +157,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         case Aggressive:
             return new TxStreamingConstraint.Unbounded();
         default:
-            throw new IllegalArgumentException( " Unknown strategy " + txStreamingStrategyProviderProvider );
+            throw new IllegalArgumentException( " Unknown strategy " + txStreamingStrategy );
         }
     }
 
