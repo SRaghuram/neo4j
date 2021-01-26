@@ -465,6 +465,17 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                 .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true, caches = true)
                 .withRows(0)
                 .withExactVariables("s")
+              or
+              includeSomewhere.aPlan("AntiConditionalApply")
+                .withLHS(
+                  includeSomewhere.aPlan("Expand(All)")
+                    .onTopOf(
+                      includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)")
+                        .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true, caches = true)
+                        .withRows(0)
+                        .withExactVariables("s")
+                    )
+                )
             )
           )
       }))
