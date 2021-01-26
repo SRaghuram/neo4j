@@ -653,22 +653,29 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
         |""".stripMargin
 
     def shouldPlanOptionalLast(r: RewindableExecutionResult): Unit = {
-      r.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults")
-        .onTopOf(aPlan("EagerAggregation")
-          .onTopOf(aPlan("Apply")
-            .withRHS(aPlan("Optional"))))
+      withClue(r.executionPlanDescription()) {
+        r.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults")
+          .onTopOf(aPlan("EagerAggregation")
+            .onTopOf(aPlan("Apply")
+              .withRHS(aPlan("Optional"))))
+      }
     }
 
     def shouldPlanCartesianLast(r: RewindableExecutionResult): Unit = {
-      r.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults")
-        .onTopOf(aPlan("EagerAggregation")
-          .onTopOf(aPlan("CartesianProduct")))
+      withClue(r.executionPlanDescription()) {
+        r.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults")
+          .onTopOf(aPlan("EagerAggregation")
+            .onTopOf(aPlan("CartesianProduct")))
+      }
     }
 
     test("Should switch order of CartesianProduct vs. Apply-Optional in grid query depending on runtime") {
       restartWithConfig(databaseConfig() ++ Map(
         GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(128),
-        GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(1024)
+        GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(1024),
+        // When IDP compaction kicks in too early, that will favor plans that do CartesianProduct early, since they are cheaper and will more likely be
+        // picked for compaction. By increasing this time for IDP we decrease the likeliness of these tests being flaky.
+        org.neo4j.configuration.GraphDatabaseInternalSettings.cypher_idp_solver_duration_threshold -> java.lang.Long.valueOf(10000)
       ))
 
       create10x10grid()
