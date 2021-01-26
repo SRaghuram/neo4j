@@ -103,7 +103,7 @@ class SuiteDescriptionTest extends BenchmarksFinderFixture
         assertThat( groupBenchmarks.toString(), groupBenchmarks.size(), equalTo( 1 ) );
 
         List<String> exampleBenchmarks = groupBenchmarks.get( "Example" );
-        assertThat( exampleBenchmarks.size(), equalTo( 9 ) );
+        assertThat( exampleBenchmarks.size(), equalTo( 12 ) );
         getBenchmarksFinder().getBenchmarks().forEach(
                 benchmark -> assertTrue( exampleBenchmarks.contains( benchmark.getName() ) ) );
     }
