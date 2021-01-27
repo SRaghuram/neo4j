@@ -375,8 +375,8 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
           declareReturnValue,
           condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addRhs"), noValue)))
           (assignReturnValue(block(
-            declareAndAssign("cosInput", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
-            declareAndAssign("sinInput", invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("cos"), load[AnyValue]("cosInput"))),
+            declareAndAssign(typeRefOf[AnyValue], "cosInput", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
+            declareAndAssign(typeRefOf[AnyValue], "sinInput", invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("cos"), load[AnyValue]("cosInput"))),
             invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("sin"), load[AnyValue]("sinInput"))
             ))),
           loadReturnValue
@@ -436,8 +436,8 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
             declareReturnValue,
             condition(IntermediateRepresentation.not(Eq(load[AnyValue]("sinInput"), noValue)))
             (assignReturnValue(block(
-              declareAndAssign("subRhs", invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("sin"), load[AnyValue]("sinInput"))),
-              declareAndAssign("subLhs", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
+              declareAndAssign(typeRefOf[AnyValue],"subRhs", invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("sin"), load[AnyValue]("sinInput"))),
+              declareAndAssign(typeRefOf[AnyValue], "subLhs", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
               invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("subtract"), load[AnyValue]("subLhs"), load[AnyValue]("subRhs"))
             )
             )
@@ -486,19 +486,19 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign("addLhs", getNodeProperty(getLongAt(nOffset), nOffset, 10)),
+        declareAndAssign(typeRefOf[AnyValue],"addLhs", getNodeProperty(getLongAt(nOffset), nOffset, 10)),
         declareReturnValue,
         condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addLhs"), noValue)))
         (assignReturnValue(block(
-          declareAndAssign("addRhs", getNodeProperty(getLongAt(nOffset), nOffset, 11)),
+          declareAndAssign(typeRefOf[AnyValue],"addRhs", getNodeProperty(getLongAt(nOffset), nOffset, 11)),
           declareReturnValue,
           condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addRhs"), noValue)))
           (assignReturnValue(block(
-            declareAndAssign("subRhs", getNodeProperty(getLongAt(nOffset), nOffset, 12)),
+            declareAndAssign(typeRefOf[AnyValue],"subRhs", getNodeProperty(getLongAt(nOffset), nOffset, 12)),
             declareReturnValue,
             condition(IntermediateRepresentation.not(Eq(load[AnyValue]("subRhs"), noValue)))
             (assignReturnValue(block(
-              declareAndAssign("subLhs", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
+              declareAndAssign(typeRefOf[AnyValue],"subLhs", invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs"))),
               invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("subtract"), load[AnyValue]("subLhs"), load[AnyValue]("subRhs"))
             ))),
             loadReturnValue
@@ -529,10 +529,10 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     // then
     assertCompilesTo(testCompiler, ast, slots,
       block(
-        declareAndAssign("isNotNullInput",
+        declareAndAssign(typeRefOf[AnyValue],"isNotNullInput",
           getNodeProperty(getLongAt(nOffset), nOffset, 8)
         ),
-        ternary(notEqual(load[AnyValue]("isNotNullInput"), noValue), trueValue, falseValue)
+        ternary(notEqual("isNotNullInput", noValue), trueValue, falseValue)
       )
     )
   }
@@ -589,7 +589,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
         declareAndAssign("orReturn", noValue),
         declareAndAssign(typeRefOf[RuntimeException], "orError", constant(null)),
         declareAndAssign(typeRefOf[Boolean], "seenNull", constant(false)),
-        declareAndAssign("orLhs", getRefAt(xOffset)),
+        declareAndAssign(typeRefOf[AnyValue],"orLhs", getRefAt(xOffset)),
 
         // check lhs
         ifElse(Eq(load[AnyValue]("orLhs"), noValue))
@@ -601,8 +601,8 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
         )),
 
         // only evaluate rhs if lhs isn't trueValue
-        condition(notEqual(load[AnyValue]("orReturn"), trueValue))(block(
-          declareAndAssign("orRhs", getRefAt(yOffset)),
+        condition(notEqual("orReturn", trueValue))(block(
+          declareAndAssign(typeRefOf[AnyValue],"orRhs", getRefAt(yOffset)),
           ifElse(Eq(load[AnyValue]("orRhs"), noValue))
           (block(assign("seenNull", constant(true))))
           (block(
@@ -614,12 +614,12 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
         // if no side is trueValue and there was a runtime error -> throw error
         condition(IntermediateRepresentation.and(
-          notEqual(load[AnyValue]("orReturn"), trueValue),
+          notEqual("orReturn", trueValue),
           notEqual(load[RuntimeException]("orError"), constant(null))
         ))
         (block(IntermediateRepresentation.fail(load[RuntimeException]("orError")))),
 
-        ternary(Eq(load[AnyValue]("orReturn"), trueValue), trueValue, ternary(load[Boolean]("seenNull"), noValue, falseValue))
+        ternary(IntermediateRepresentation.equal("orReturn", trueValue), trueValue, ternary(load[Boolean]("seenNull"), noValue, falseValue))
       )
     )
   }
@@ -686,7 +686,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
         )),
 
         // only evaluate rhs if lhs isn't trueValue
-        condition(notEqual(load[AnyValue]("orReturn"), trueValue))(block(
+        condition(notEqual("orReturn", trueValue))(block(
           declareAndAssign("orRhs", getNodeProperty(getLongAt(xOffset), xOffset, 0)),
           ifElse(Eq(load[AnyValue]("orRhs"), noValue))
           (block(assign("seenNull", constant(true))))
@@ -699,12 +699,12 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
         // if no side is trueValue and there was a runtime error -> throw error
         condition(IntermediateRepresentation.and(
-          notEqual(load[AnyValue]("orReturn"), trueValue),
+          notEqual("orReturn", trueValue),
           notEqual(load[RuntimeException]("orError"), constant(null))
         ))
         (block(IntermediateRepresentation.fail(load[RuntimeException]("orError")))),
 
-        ternary(Eq(load[AnyValue]("orReturn"), trueValue), trueValue, ternary(load[Boolean]("seenNull"), noValue, falseValue))
+        ternary(IntermediateRepresentation.equal("orReturn", trueValue), trueValue, ternary(load[Boolean]("seenNull"), noValue, falseValue))
       )
     )
   }
@@ -765,7 +765,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
           (assign("orError", load[RuntimeException]("orException1"))),
 
         // only evaluate rhs if lhs isn't trueValue
-        condition(notEqual(load[AnyValue]("orReturn"), trueValue))(block(
+        condition(notEqual("orReturn", trueValue))(block(
           declareAndAssign("orRhs", getRefAt(yOffset)),
             tryCatch[RuntimeException]("orException2")
               (assign("orReturn", invokeStatic(method[CypherBoolean, Value, AnyValue]("coerceToBoolean"), load[AnyValue]("orRhs"))))
@@ -774,12 +774,12 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
         // if no side is trueValue and there was a runtime error -> throw error
         condition(IntermediateRepresentation.and(
-          notEqual(load[AnyValue]("orReturn"), trueValue),
+          notEqual("orReturn", trueValue),
           notEqual(load[RuntimeException]("orError"), constant(null))
         ))
         (block(IntermediateRepresentation.fail(load[RuntimeException]("orError")))),
 
-        ternary(Eq(load[AnyValue]("orReturn"), trueValue), trueValue, ternary(load[Boolean]("seenNull"), noValue, falseValue))
+        ternary(IntermediateRepresentation.equal("orReturn", trueValue), trueValue, ternary(load[Boolean]("seenNull"), noValue, falseValue))
       )
     )
   }
@@ -844,7 +844,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
         )),
 
         // only evaluate rhs if lhs isn't trueValue
-        condition(notEqual(load[AnyValue]("orReturn"), trueValue))(block(
+        condition(notEqual("orReturn", trueValue))(block(
           declareAndAssign("orRhs", getNodeProperty(getLongAt(nOffset), nOffset, 3)),
           ifElse(Eq(load[AnyValue]("orRhs"), noValue))
           (block(assign("seenNull", constant(true))))
@@ -857,12 +857,12 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
         // if no side is trueValue and there was a runtime error -> throw error
         condition(IntermediateRepresentation.and(
-          notEqual(load[AnyValue]("orReturn"), trueValue),
+          notEqual("orReturn", trueValue),
           notEqual(load[RuntimeException]("orError"), constant(null))
         ))
         (block(IntermediateRepresentation.fail(load[RuntimeException]("orError")))),
 
-        ternary(Eq(load[AnyValue]("orReturn"), trueValue), trueValue, ternary(load[Boolean]("seenNull"), noValue, falseValue))
+        ternary(IntermediateRepresentation.equal("orReturn", trueValue), trueValue, ternary(load[Boolean]("seenNull"), noValue, falseValue))
       )
     )
   }
@@ -919,7 +919,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
         declareAndAssign(typeRefOf[Boolean], "seenNull", constant(false)),
         declareAndAssign("orLhs", block(
           declareAndAssign("isNotNullInput", getRefAt(xOffset)),
-            ternary(notEqual(load[AnyValue]("isNotNullInput"), noValue), trueValue, falseValue)
+            ternary(notEqual("isNotNullInput", noValue), trueValue, falseValue)
           ),
         ),
 
@@ -927,7 +927,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
         assign("orReturn", load[AnyValue]("orLhs")),
 
         // only evaluate rhs if lhs isn't trueValue
-        condition(notEqual(load[AnyValue]("orReturn"), trueValue))(block(
+        condition(notEqual("orReturn", trueValue))(block(
           declareAndAssign("orRhs", getRefAt(yOffset)),
           ifElse(Eq(load[AnyValue]("orRhs"), noValue))
           (block(assign("seenNull", constant(true))))
@@ -940,12 +940,12 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
 
         // if no side is trueValue and there was a runtime error -> throw error
         condition(IntermediateRepresentation.and(
-          notEqual(load[AnyValue]("orReturn"), trueValue),
+          notEqual("orReturn", trueValue),
           notEqual(load[RuntimeException]("orError"), constant(null))
         ))
         (block(IntermediateRepresentation.fail(load[RuntimeException]("orError")))),
 
-        ternary(Eq(load[AnyValue]("orReturn"), trueValue), trueValue, ternary(load[Boolean]("seenNull"), noValue, falseValue))
+        ternary(IntermediateRepresentation.equal("orReturn", trueValue), trueValue, ternary(load[Boolean]("seenNull"), noValue, falseValue))
       )
     )
   }
@@ -1006,11 +1006,11 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
               declareAndAssign(
                 typeRefOf[AnyValue],
                 "result", block(
-                  declareAndAssign("addLhs", loadExpressionVariable(exprVariable)),
+                  declareAndAssign(typeRefOf[AnyValue],"addLhs", loadExpressionVariable(exprVariable)),
                   declareReturnValue,
                   condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addLhs"), noValue)))
                   (assignReturnValue(block(
-                    declareAndAssign("addRhs", getStatic[LongValue]("INTLIT")),
+                    declareAndAssign(typeRefOf[AnyValue],"addRhs", getStatic[LongValue]("INTLIT")),
                     invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), load[AnyValue]("addLhs"), load[AnyValue]("addRhs")),
                   ))),
                   loadReturnValue
@@ -1087,11 +1087,11 @@ retVal1
             block(
               setExpressionVariable(reduceVariable, invoke(load[java.util.Iterator[AnyValue]]("iter"), method[java.util.Iterator[AnyValue], Object]("next"))),
               setExpressionVariable(accumulatorVariable, block(
-                declareAndAssign("addLhs", loadExpressionVariable(accumulatorVariable)),
+                declareAndAssign(typeRefOf[AnyValue], "addLhs", loadExpressionVariable(accumulatorVariable)),
                 declareReturnValue,
                 condition(IntermediateRepresentation.not(Eq(load[AnyValue]("addLhs"), noValue)))
                 (assignReturnValue(block(
-                  declareAndAssign("addRhs", loadExpressionVariable(reduceVariable)),
+                  declareAndAssign(typeRefOf[AnyValue], "addRhs", loadExpressionVariable(reduceVariable)),
                   ternary(
                     Eq(load[AnyValue]("addRhs"), noValue),
                     noValue,
@@ -1234,6 +1234,7 @@ retVal1
       "\n------------ CodeChainExpressionCompiler ------------\n",
       PrettyIR.pretty(expected))
 
+
     withClue(clues.mkString("\n", "\n", "\n\n")) {
       got should IrMatcher(expected.asInstanceOf[IntermediateRepresentation])
     }
@@ -1249,6 +1250,7 @@ retVal1
              |${PrettyIR.pretty(flattenedActual)}
              |""".stripMargin
 
+        flattenedActual should equal(flattenedExpected)
         MatchResult(
           matches = flattenedExpected == flattenedActual,
           rawFailureMessage = s"Failed to correctly compile $failureMsg",
