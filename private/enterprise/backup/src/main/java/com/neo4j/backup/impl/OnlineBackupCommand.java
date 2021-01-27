@@ -188,6 +188,7 @@ public class OnlineBackupCommand extends AbstractCommand
                            // Such policies would be loaded eagerly and the operation would fail
                            // if there are not relevant directories and certificates in the backup directory.
                            .set( getSettingDisablingUnrelatedSslPolicies() )
+                           .commandExpansion( allowCommandExpansion )
                            .build();
         ConfigUtils.disableAllConnectors( cfg );
 

@@ -64,13 +64,14 @@ class SetOperatorPasswordCommandTest
         }
         assertThat( baos.toString().trim() ).isEqualTo( String.format(
                 "USAGE%n" + "%n" +
-                "set-operator-password [--verbose] <password>%n" +
+                "set-operator-password [--expand-commands] [--verbose] <password>%n" +
                 "%n" + "DESCRIPTION%n" + "%n" +
                 "Sets the password of the operator user as defined by%n" +
                 "'unsupported.dbms.upgrade_procedure_username'.%n" +
                 "%n" + "PARAMETERS%n" + "%n" +
                 "      <password>%n" + "%n" + "OPTIONS%n" + "%n" +
-                "      --verbose    Enable verbose output." ) );
+                "      --verbose           Enable verbose output.%n" +
+                "      --expand-commands   Allow command expansion in config value evaluation." ) );
     }
 
     @Test

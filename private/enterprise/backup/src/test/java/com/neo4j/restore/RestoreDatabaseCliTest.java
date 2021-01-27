@@ -32,9 +32,9 @@ class RestoreDatabaseCliTest
         assertThat( baos.toString().trim(), equalTo( String.format(
                 "USAGE%n" +
                 "%n" +
-                "restore [--force] [--move] [--verbose] [--database=<database>]%n" +
-                "        [--to-data-directory=<path>] [--to-data-tx-directory=<path>]%n" +
-                "        --from=<path>[,<path>...]...%n" +
+                "restore [--expand-commands] [--force] [--move] [--verbose]%n" +
+                "        [--database=<database>] [--to-data-directory=<path>]%n" +
+                "        [--to-data-tx-directory=<path>] --from=<path>[,<path>...]...%n" +
                 "%n" +
                 "DESCRIPTION%n" +
                 "%n" +
@@ -42,26 +42,28 @@ class RestoreDatabaseCliTest
                 "%n" +
                 "OPTIONS%n" +
                 "%n" +
-                "      --verbose   Enable verbose output.%n" +
+                "      --verbose           Enable verbose output.%n" +
+                "      --expand-commands   Allow command expansion in config value evaluation.%n" +
                 "      --from=<path>[,<path>...]...%n" +
-                "                  Path or paths from which to restore. Every path can contain%n" +
-                "                    asterisks or question marks in the last subpath. Multiple%n" +
-                "                    paths may be separated by a comma, but paths themselves%n" +
-                "                    must not contain commas.%n" +
+                "                          Path or paths from which to restore. Every path can%n" +
+                "                            contain asterisks or question marks in the last%n" +
+                "                            subpath. Multiple paths may be separated by a%n" +
+                "                            comma, but paths themselves must not contain commas.%n" +
                 "      --database=<database>%n" +
-                "                  Name of the database after restore. Usage of this option is%n" +
-                "                    only allowed if --from parameter point to exact one%n" +
-                "                    directory%n" +
-                "      --force     If an existing database should be replaced.%n" +
-                "      --move      Moves the backup files to the destination, rather than%n" +
-                "                    copying.%n" +
+                "                          Name of the database after restore. Usage of this%n" +
+                "                            option is only allowed if --from parameter point to%n" +
+                "                            exact one directory%n" +
+                "      --force             If an existing database should be replaced.%n" +
+                "      --move              Moves the backup files to the destination, rather%n" +
+                "                            than copying.%n" +
                 "      --to-data-directory=<path>%n" +
-                "                  Base directory for databases. Usage of this option is only%n" +
-                "                    allowed if --from parameter point to exact one directory%n" +
+                "                          Base directory for databases. Usage of this option is%n" +
+                "                            only allowed if --from parameter point to exact one%n" +
+                "                            directory%n" +
                 "      --to-data-tx-directory=<path>%n" +
-                "                  Base directory for transaction logs. Usage of this option is%n" +
-                "                    only allowed if --from parameter point to exact one%n" +
-                "                    directory"
+                "                          Base directory for transaction logs. Usage of this%n" +
+                "                            option is only allowed if --from parameter point to%n" +
+                "                            exact one directory"
         ) ) );
     }
 }

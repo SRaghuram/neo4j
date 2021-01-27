@@ -97,7 +97,7 @@ class UnbindFromClusterCommandTest
                 "%n" +
                 "USAGE%n" +
                 "%n" +
-                "unbind [--verbose]%n" +
+                "unbind [--expand-commands] [--verbose]%n" +
                 "%n" +
                 "DESCRIPTION%n" +
                 "%n" +
@@ -105,7 +105,8 @@ class UnbindFromClusterCommandTest
                 "%n" +
                 "OPTIONS%n" +
                 "%n" +
-                "      --verbose   Enable verbose output."
+                "      --verbose           Enable verbose output.%n" +
+                "      --expand-commands   Allow command expansion in config value evaluation."
         ) ) );
     }
 

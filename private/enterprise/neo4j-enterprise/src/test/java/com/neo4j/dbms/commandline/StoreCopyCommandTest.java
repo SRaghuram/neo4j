@@ -34,9 +34,9 @@ class StoreCopyCommandTest
                 "%n" +
                 "USAGE%n" +
                 "%n" +
-                "copy [--force] [--verbose] [--from-pagecache=<size>] [--from-path-tx=<path>]%n" +
-                "     [--neo4j-home-directory=<path>] --to-database=<database>%n" +
-                "     [--to-format=<format>] [--to-pagecache=<size>]%n" +
+                "copy [--expand-commands] [--force] [--verbose] [--from-pagecache=<size>]%n" +
+                "     [--from-path-tx=<path>] [--neo4j-home-directory=<path>]%n" +
+                "     --to-database=<database> [--to-format=<format>] [--to-pagecache=<size>]%n" +
                 "     [--delete-nodes-with-labels=<label>[,<label>...]]...%n" +
                 "     [--keep-only-node-properties=<label.property>[,<label.property>...]]...%n" +
                 "     [--keep-only-nodes-with-labels=<label>[,<label>...]]...%n" +
@@ -57,6 +57,7 @@ class StoreCopyCommandTest
                 "OPTIONS%n" +
                 "%n" +
                 "      --verbose              Enable verbose output.%n" +
+                "      --expand-commands      Allow command expansion in config value evaluation.%n" +
                 "      --from-database=<database>%n" +
                 "                             Name of database to copy from.%n" +
                 "      --from-path=<path>     Path to the database to copy from.%n" +

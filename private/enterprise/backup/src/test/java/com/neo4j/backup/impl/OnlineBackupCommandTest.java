@@ -60,8 +60,8 @@ class OnlineBackupCommandTest
                 "%n" +
                 "USAGE%n" +
                 "%n" +
-                "backup [--check-consistency] [--fallback-to-full] [--verbose]%n" +
-                "       [--additional-config=<path>] --backup-dir=<path>%n" +
+                "backup [--check-consistency] [--expand-commands] [--fallback-to-full]%n" +
+                "       [--verbose] [--additional-config=<path>] --backup-dir=<path>%n" +
                 "       [--check-graph=<true/false>] [--check-index-structure=<true/false>]%n" +
                 "       [--check-indexes=<true/false>] [--check-label-scan-store=<true/false>]%n" +
                 "       [--check-property-owners=<true/false>]%n" +
@@ -85,6 +85,7 @@ class OnlineBackupCommandTest
                 "OPTIONS%n" +
                 "%n" +
                 "      --verbose             Enable verbose output.%n" +
+                "      --expand-commands     Allow command expansion in config value evaluation.%n" +
                 "      --backup-dir=<path>   Directory to place backup in.%n" +
                 "      --from=<host:port>    Host and port of Neo4j.%n" +
                 "                              Default: localhost:6362%n" +

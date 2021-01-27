@@ -304,6 +304,7 @@ public class StoreCopyCommand extends AbstractCommand
                                    .set( neo4j_home, source.path.getParent() )
                                    .set( databases_root_path, source.path.getParent() )
                                    .set( transaction_logs_root_path, sourceTxLogs.getParent() )
+                                   .commandExpansion( allowCommandExpansion )
                                    .build();
                 return DatabaseLayout.of( cfg );
             }
@@ -389,7 +390,9 @@ public class StoreCopyCommand extends AbstractCommand
     {
         Config cfg = Config.newBuilder()
                            .fromFileNoThrow( ctx.confDir().resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
-                           .set( GraphDatabaseSettings.neo4j_home, ctx.homeDir() ).build();
+                           .set( GraphDatabaseSettings.neo4j_home, ctx.homeDir() )
+                           .commandExpansion( allowCommandExpansion )
+                           .build();
         ConfigUtils.disableAllConnectors( cfg );
         cfg.set( record_format, "" ); // Record format should be ignored to allow upgrade
         return cfg;

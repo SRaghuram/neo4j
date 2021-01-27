@@ -30,17 +30,18 @@ import static picocli.CommandLine.Command;
 )
 public class UnbindFromClusterCommand extends AbstractCommand
 {
-    UnbindFromClusterCommand( ExecutionContext ctx )
+    public UnbindFromClusterCommand( ExecutionContext ctx )
     {
         super( ctx );
     }
 
-    private static Config loadNeo4jConfig( Path homeDir, Path configDir )
+    private Config loadNeo4jConfig( Path homeDir, Path configDir )
     {
         return Config.newBuilder()
-                .fromFileNoThrow( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
-                .set( GraphDatabaseSettings.neo4j_home, homeDir )
-                .build();
+                     .fromFileNoThrow( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
+                     .set( GraphDatabaseSettings.neo4j_home, homeDir )
+                     .commandExpansion( allowCommandExpansion )
+                     .build();
     }
 
     @Override
@@ -73,7 +74,7 @@ public class UnbindFromClusterCommand extends AbstractCommand
         }
         catch ( Exception e )
         {
-            throw new CommandFailedException( e.getMessage(), e );
+            throw new RuntimeException( e );
         }
     }
 
