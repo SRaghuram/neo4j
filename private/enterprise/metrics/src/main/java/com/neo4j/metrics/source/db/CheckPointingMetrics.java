@@ -8,15 +8,18 @@ package com.neo4j.metrics.source.db;
 import com.codahale.metrics.Gauge;
 import com.neo4j.metrics.metric.MetricsCounter;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.kernel.impl.transaction.stats.CheckpointCounters;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".Database checkpointing metrics" )
-public class CheckPointingMetrics extends LifecycleAdapter
+public class CheckPointingMetrics extends Metrics
 {
     private static final String CHECK_POINT_PREFIX = "check_point";
 
@@ -34,8 +37,18 @@ public class CheckPointingMetrics extends LifecycleAdapter
     private final MetricsRegister registry;
     private final CheckpointCounters checkpointCounters;
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public CheckPointingMetrics()
+    {
+        this( "", null, null );
+    }
+
     public CheckPointingMetrics( String metricsPrefix, MetricsRegister registry, CheckpointCounters checkpointCounters )
     {
+        super( MetricGroup.GENERAL );
         this.checkPointEvents = name( metricsPrefix, CHECK_POINT_EVENTS_TEMPLATE );
         this.checkPointTotalTime = name( metricsPrefix, CHECK_POINT_TOTAL_TIME_TEMPLATE );
         this.checkPointDuration = name( metricsPrefix, CHECK_POINT_DURATION_TEMPLATE );

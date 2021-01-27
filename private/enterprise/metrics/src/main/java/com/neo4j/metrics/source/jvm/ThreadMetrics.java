@@ -12,9 +12,11 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".JVM threads metrics." )
 public class ThreadMetrics extends JvmMetrics
 {
@@ -28,6 +30,15 @@ public class ThreadMetrics extends JvmMetrics
 
     private final MetricsRegister registry;
     private final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public ThreadMetrics()
+    {
+        this( "", null );
+    }
 
     public ThreadMetrics( String metricsPrefix, MetricsRegister registry )
     {

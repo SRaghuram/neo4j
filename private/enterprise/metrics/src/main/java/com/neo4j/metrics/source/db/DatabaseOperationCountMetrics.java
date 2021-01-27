@@ -7,15 +7,18 @@ package com.neo4j.metrics.source.db;
 
 import com.neo4j.metrics.metric.MetricsCounter;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.dbms.database.DatabaseOperationCounts;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".Database operation count metrics" )
-public class DatabaseOperationCountMetrics extends LifecycleAdapter
+public class DatabaseOperationCountMetrics extends Metrics
 {
     private static final String SERVER_PREFIX = "db.operation.count";
 
@@ -42,8 +45,18 @@ public class DatabaseOperationCountMetrics extends LifecycleAdapter
     private final MetricsRegister registry;
     private final DatabaseOperationCounts counter;
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public DatabaseOperationCountMetrics()
+    {
+        this( "", null, null );
+    }
+
     public DatabaseOperationCountMetrics( String metricsPrefix, MetricsRegister registry, DatabaseOperationCounts counter )
     {
+        super( MetricGroup.GENERAL );
         this.registry = registry;
         this.counter = counter;
 

@@ -7,16 +7,19 @@ package com.neo4j.metrics.source.causalclustering;
 
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import org.neo4j.annotations.documented.Documented;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.monitoring.Monitors;
 
 import static com.codahale.metrics.MetricRegistry.name;
 import static com.neo4j.metrics.source.causalclustering.RaftCoreMetrics.CAUSAL_CLUSTERING_PREFIX;
 
+@ServiceProvider
 @Documented( ".Discovery core metrics" )
-public class DiscoveryCoreMetrics extends LifecycleAdapter
+public class DiscoveryCoreMetrics extends Metrics
 {
     @Documented( "Size of replicated data structures. (gauge)" )
     public static final String REPLICATED_DATA_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "replicated_data" );
@@ -37,8 +40,18 @@ public class DiscoveryCoreMetrics extends LifecycleAdapter
     private final String clusterUnreachable;
     private final String replicatedData;
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public DiscoveryCoreMetrics()
+    {
+        this( "", null, null );
+    }
+
     public DiscoveryCoreMetrics( String globalMetricsPrefix, Monitors globalMonitors, MetricsRegister metricRegistry )
     {
+        super( MetricGroup.CAUSAL_CLUSTERING );
         this.monitors = globalMonitors;
         this.registry = metricRegistry;
         this.clusterConverged = name( globalMetricsPrefix, CLUSTER_CONVERGED_TEMPLATE );

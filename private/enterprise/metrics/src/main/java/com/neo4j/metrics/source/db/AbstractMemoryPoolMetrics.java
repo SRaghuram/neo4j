@@ -7,15 +7,16 @@ package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import java.util.List;
 
 import org.neo4j.annotations.documented.Documented;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.memory.ScopedMemoryPool;
 
-public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
+public abstract class AbstractMemoryPoolMetrics extends Metrics
 {
     @Documented( "Used or reserved heap memory in bytes. (gauge)" )
     private static final String USED_HEAP = "used_heap";
@@ -33,6 +34,7 @@ public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
 
     public AbstractMemoryPoolMetrics( String metricsPoolPrefix, MetricsRegister registry, MemoryPools memoryPools )
     {
+        super( MetricGroup.GENERAL );
         this.registry = registry;
         this.memoryPools = memoryPools;
         this.metricsPoolPrefix = metricsPoolPrefix;

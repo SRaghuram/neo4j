@@ -7,6 +7,8 @@ package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,9 +18,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.scheduler.JobScheduler;
@@ -27,8 +29,9 @@ import static com.codahale.metrics.MetricRegistry.name;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.scheduler.Group.FILE_IO_HELPER;
 
+@ServiceProvider
 @Documented( ".Database store size metrics" )
-public class StoreSizeMetrics extends LifecycleAdapter
+public class StoreSizeMetrics extends Metrics
 {
     public static final Duration UPDATE_INTERVAL = Duration.ofMinutes( 10 );
 
@@ -50,9 +53,19 @@ public class StoreSizeMetrics extends LifecycleAdapter
     private volatile long cachedStoreTotalSize = -1L;
     private volatile long cachedDatabaseSize = -1L;
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public StoreSizeMetrics()
+    {
+        this( "", null, null, null, null );
+    }
+
     public StoreSizeMetrics( String metricsPrefix, MetricsRegister registry, JobScheduler scheduler, FileSystemAbstraction fileSystemAbstraction,
             DatabaseLayout databaseLayout )
     {
+        super( MetricGroup.GENERAL );
         this.registry = registry;
         this.totalStoreSize = name( metricsPrefix, TOTAL_STORE_SIZE );
         this.databaseSize = name( metricsPrefix, DATABASE_SIZE );

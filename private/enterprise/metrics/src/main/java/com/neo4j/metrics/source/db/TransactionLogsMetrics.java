@@ -8,15 +8,18 @@ package com.neo4j.metrics.source.db;
 import com.codahale.metrics.Gauge;
 import com.neo4j.metrics.metric.MetricsCounter;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.kernel.impl.transaction.stats.TransactionLogCounters;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".Database transaction log metrics" )
-public class TransactionLogsMetrics extends LifecycleAdapter
+public class TransactionLogsMetrics extends Metrics
 {
     private static final String TX_LOG_PREFIX = "log";
 
@@ -37,8 +40,18 @@ public class TransactionLogsMetrics extends LifecycleAdapter
     private final MetricsRegister registry;
     private final TransactionLogCounters logCounters;
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public TransactionLogsMetrics()
+    {
+        this( "", null, null );
+    }
+
     public TransactionLogsMetrics( String metricsPrefix, MetricsRegister registry, TransactionLogCounters logCounters )
     {
+        super( MetricGroup.GENERAL );
         this.logRotationEvents = name( metricsPrefix, LOG_ROTATION_EVENTS_TEMPLATE );
         this.logRotationTotalTime = name( metricsPrefix, LOG_ROTATION_TOTAL_TIME_TEMPLATE );
         this.logRotationDuration = name( metricsPrefix, LOG_ROTATION_DURATION_TEMPLATE );

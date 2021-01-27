@@ -10,6 +10,7 @@ import com.neo4j.metrics.metric.MetricsRegister;
 import java.util.List;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.memory.GlobalMemoryGroupTracker;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.memory.ScopedMemoryPool;
@@ -17,6 +18,7 @@ import org.neo4j.memory.ScopedMemoryPool;
 import static com.codahale.metrics.MetricRegistry.name;
 import static java.lang.String.format;
 
+@ServiceProvider
 @Documented( ".Global neo4j pools metrics" )
 public class GlobalMemoryPoolMetrics extends AbstractMemoryPoolMetrics
 {
@@ -24,6 +26,15 @@ public class GlobalMemoryPoolMetrics extends AbstractMemoryPoolMetrics
     private static final String NEO_POOL_USAGE_TEMPLATE = name( NEO_GLOBAL_POOL_PREFIX, "%s", "%s" );
 
     private final String poolTemplate;
+
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public GlobalMemoryPoolMetrics()
+    {
+        this( "", null, null );
+    }
 
     public GlobalMemoryPoolMetrics( String metricsPrefix, MetricsRegister registry, MemoryPools memoryPools )
     {
@@ -41,5 +52,11 @@ public class GlobalMemoryPoolMetrics extends AbstractMemoryPoolMetrics
     protected String namePoolMetric( ScopedMemoryPool pool, String metricName )
     {
         return format( poolTemplate, pool.group().getName().toLowerCase(), metricName.toLowerCase() );
+    }
+
+    @Override
+    public String modifyDocumentedMetricName( String metric )
+    {
+        return NEO_GLOBAL_POOL_PREFIX + ".<pool>." + metric;
     }
 }

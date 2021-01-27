@@ -7,17 +7,20 @@ package com.neo4j.metrics.source.server;
 
 import com.codahale.metrics.Gauge;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import java.util.function.Supplier;
 
 import org.neo4j.annotations.documented.Documented;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.server.web.WebContainerThreadInfo;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".Server metrics" )
-public class ServerMetrics extends LifecycleAdapter
+public class ServerMetrics extends Metrics
 {
     private static final String SERVER_PREFIX = "server";
 
@@ -32,8 +35,18 @@ public class ServerMetrics extends LifecycleAdapter
     private final MetricsRegister registry;
     private final Supplier<WebContainerThreadInfo> webContainerThreadInfo;
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public ServerMetrics()
+    {
+        this( "", null, null );
+    }
+
     public ServerMetrics( String metricsPrefix, MetricsRegister registry, Supplier<WebContainerThreadInfo> webThreadInfo )
     {
+        super( MetricGroup.GENERAL );
         this.registry = registry;
         this.threadJettyIdle = name( metricsPrefix, THREAD_JETTY_IDLE_TEMPLATE );
         this.threadJettyAll = name( metricsPrefix, THREAD_JETTY_ALL_TEMPLATE );

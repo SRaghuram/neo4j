@@ -11,16 +11,19 @@ import com.neo4j.causalclustering.core.consensus.CoreMetaData;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.metrics.metric.MetricsCounter;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import java.util.function.Supplier;
 
 import org.neo4j.annotations.documented.Documented;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.annotations.service.ServiceProvider;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".Raft core metrics" )
-public class RaftCoreMetrics extends LifecycleAdapter
+public class RaftCoreMetrics extends Metrics
 {
     static final String CAUSAL_CLUSTERING_PREFIX = "causal_clustering.core";
 
@@ -101,8 +104,18 @@ public class RaftCoreMetrics extends LifecycleAdapter
     private final ReplicationMetric replicationMetric = new ReplicationMetric();
     private final LastLeaderMessageMetric lastLeaderMessageMetric;
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public RaftCoreMetrics()
+    {
+        this( "", null, null, null );
+    }
+
     public RaftCoreMetrics( String metricsPrefix, RaftMonitors monitors, MetricsRegister registry, Supplier<CoreMetaData> coreMetaData )
     {
+        super( MetricGroup.CAUSAL_CLUSTERING );
         this.appendIndex = name( metricsPrefix, APPEND_INDEX_TEMPLATE );
         this.commitIndex = name( metricsPrefix, COMMIT_INDEX_TEMPLATE );
         this.appliedIndex = name( metricsPrefix, APPLIED_INDEX_TEMPLATE );

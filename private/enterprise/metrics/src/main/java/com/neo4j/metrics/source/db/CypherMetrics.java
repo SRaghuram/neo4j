@@ -7,16 +7,19 @@ package com.neo4j.metrics.source.db;
 
 import com.neo4j.metrics.metric.MetricsCounter;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.cypher.PlanCacheMetricsMonitor;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.monitoring.Monitors;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".Cypher metrics" )
-public class CypherMetrics extends LifecycleAdapter
+public class CypherMetrics extends Metrics
 {
     private static final String CYPHER_PREFIX = "cypher";
 
@@ -32,8 +35,18 @@ public class CypherMetrics extends LifecycleAdapter
     private final Monitors monitors;
     private final PlanCacheMetricsMonitor cacheMonitor = new PlanCacheMetricsMonitor();
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public CypherMetrics()
+    {
+        this( "", null, null );
+    }
+
     public CypherMetrics( String metricsPrefix, MetricsRegister registry, Monitors monitors )
     {
+        super( MetricGroup.GENERAL );
         this.replanEvents = name( metricsPrefix, REPLAN_EVENTS_TEMPLATE );
         this.replanWaitTime = name( metricsPrefix, REPLAN_WAIT_TIME_TEMPLATE );
         this.registry = registry;

@@ -7,17 +7,20 @@ package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import java.util.function.Supplier;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".Database data metrics" )
-public class EntityCountMetrics extends LifecycleAdapter
+public class EntityCountMetrics extends Metrics
 {
     private static final String COUNTS_PREFIX = "ids_in_use";
 
@@ -38,8 +41,18 @@ public class EntityCountMetrics extends LifecycleAdapter
     private final MetricsRegister registry;
     private final Supplier<StoreEntityCounters> storeEntityCounters;
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public EntityCountMetrics()
+    {
+        this( "", null, null );
+    }
+
     public EntityCountMetrics( String metricsPrefix, MetricsRegister registry, Supplier<StoreEntityCounters> storeEntityCounters )
     {
+        super( MetricGroup.GENERAL );
         this.countsRelationshipType = name( metricsPrefix, COUNTS_RELATIONSHIP_TYPE_TEMPLATE );
         this.countsProperty = name( metricsPrefix, COUNTS_PROPERTY_TEMPLATE );
         this.countsRelationship = name( metricsPrefix, COUNTS_RELATIONSHIP_TEMPLATE );

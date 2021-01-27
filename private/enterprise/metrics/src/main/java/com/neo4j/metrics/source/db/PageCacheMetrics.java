@@ -8,15 +8,18 @@ package com.neo4j.metrics.source.db;
 import com.codahale.metrics.Gauge;
 import com.neo4j.metrics.metric.MetricsCounter;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".Database page cache metrics" )
-public class PageCacheMetrics extends LifecycleAdapter
+public class PageCacheMetrics extends Metrics
 {
     private static final String PAGE_CACHE_PREFIX = "page_cache";
 
@@ -61,8 +64,18 @@ public class PageCacheMetrics extends LifecycleAdapter
     private final MetricsRegister registry;
     private final PageCacheCounters pageCacheCounters;
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public PageCacheMetrics()
+    {
+        this( "", null, null );
+    }
+
     public PageCacheMetrics( String metricsPrefix, MetricsRegister registry, PageCacheCounters pageCacheCounters )
     {
+        super( MetricGroup.GENERAL );
         this.registry = registry;
         this.pageCacheCounters = pageCacheCounters;
         this.pcEvictionExceptions = name( metricsPrefix, PC_EVICTION_EXCEPTIONS_TEMPLATE );

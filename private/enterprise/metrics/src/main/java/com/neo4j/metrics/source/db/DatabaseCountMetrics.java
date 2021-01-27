@@ -7,18 +7,21 @@ package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import java.util.function.Supplier;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".Database data count metrics" )
-public class DatabaseCountMetrics extends LifecycleAdapter
+public class DatabaseCountMetrics extends Metrics
 {
     private static final String COUNT_ALL_NODES_TAG = "countAllNodesMetrics";
     private static final String COUNT_ALL_RELATIONSHIP_TAG = "countAllRelationshipMetrics";
@@ -35,8 +38,18 @@ public class DatabaseCountMetrics extends LifecycleAdapter
     private final String relationshipCounts;
     private final String nodeCounts;
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public DatabaseCountMetrics()
+    {
+        this( "", null, null, null );
+    }
+
     public DatabaseCountMetrics( String metricsPrefix, MetricsRegister registry, Supplier<StoreEntityCounters> countsSource, PageCacheTracer pageCacheTracer )
     {
+        super( MetricGroup.GENERAL );
         this.nodeCounts = name( metricsPrefix, COUNTS_NODE_TEMPLATE );
         this.relationshipCounts = name( metricsPrefix, COUNTS_RELATIONSHIP_TEMPLATE );
         this.registry = registry;

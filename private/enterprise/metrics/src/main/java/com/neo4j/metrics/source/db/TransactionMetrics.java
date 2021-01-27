@@ -8,18 +8,21 @@ package com.neo4j.metrics.source.db;
 import com.codahale.metrics.Gauge;
 import com.neo4j.metrics.metric.MetricsCounter;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import java.util.function.Supplier;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".Database transaction metrics" )
-public class TransactionMetrics extends LifecycleAdapter
+public class TransactionMetrics extends Metrics
 {
     private static final String TRANSACTION_PREFIX = "transaction";
 
@@ -96,9 +99,19 @@ public class TransactionMetrics extends LifecycleAdapter
     private final TransactionCounters transactionCounters;
     private final Supplier<TransactionIdStore> transactionIdStoreSupplier;
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public TransactionMetrics()
+    {
+        this( "", null, null, null );
+    }
+
     public TransactionMetrics( String metricsPrefix, MetricsRegister registry,
             Supplier<TransactionIdStore> transactionIdStoreSupplier, TransactionCounters transactionCounters )
     {
+        super( MetricGroup.GENERAL );
         this.txStarted = name( metricsPrefix, TX_STARTED_TEMPLATE );
         this.txPeakConcurrent = name( metricsPrefix, TX_PEAK_CONCURRENT_TEMPLATE );
         this.txActive = name( metricsPrefix, TX_ACTIVE_TEMPLATE );

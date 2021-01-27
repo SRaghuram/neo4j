@@ -8,18 +8,21 @@ package com.neo4j.metrics.source.db;
 import com.codahale.metrics.Gauge;
 import com.neo4j.metrics.metric.MetricsCounter;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.bolt.runtime.BoltConnectionMetricsMonitor;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.monitoring.Monitors;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".Bolt metrics" )
-public class BoltMetrics extends LifecycleAdapter
+public class BoltMetrics extends Metrics
 {
     private static final String BOLT_PREFIX = "bolt";
 
@@ -78,8 +81,18 @@ public class BoltMetrics extends LifecycleAdapter
     private final Monitors monitors;
     private final BoltMetricsMonitor boltMonitor = new BoltMetricsMonitor();
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public BoltMetrics()
+    {
+        this( "", null, null );
+    }
+
     public BoltMetrics( String metricsPrefix, MetricsRegister registry, Monitors monitors )
     {
+        super( MetricGroup.GENERAL );
         this.sessionsStarted = name( metricsPrefix, SESSIONS_STARTED_TEMPLATE );
         this.connectionsOpened = name( metricsPrefix, CONNECTIONS_OPENED_TEMPLATE );
         this.connectionsClosed = name( metricsPrefix, CONNECTIONS_CLOSED_TEMPLATE );

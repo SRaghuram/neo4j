@@ -12,10 +12,12 @@ import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 
 import static com.codahale.metrics.MetricRegistry.name;
 import static java.lang.String.format;
 
+@ServiceProvider
 @Documented( ".GC metrics." )
 public class GCMetrics extends JvmMetrics
 {
@@ -31,6 +33,15 @@ public class GCMetrics extends JvmMetrics
     private final String gcCount;
 
     private final MetricsRegister registry;
+
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public GCMetrics()
+    {
+        this( "", null );
+    }
 
     public GCMetrics( String metricsPrefix, MetricsRegister registry )
     {
@@ -54,5 +65,11 @@ public class GCMetrics extends JvmMetrics
     public void stop()
     {
         registry.removeMatching( ( name, metric ) -> name.startsWith( gcPrefix ) );
+    }
+
+    @Override
+    public String modifyDocumentedMetricName( String metric )
+    {
+        return metric.replace( "%s", "<gc>" );
     }
 }

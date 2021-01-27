@@ -11,11 +11,13 @@ import com.neo4j.metrics.metric.MetricsRegister;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.monitoring.VmPauseMonitor;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".JVM pause time metrics." )
 public class PauseMetrics extends JvmMetrics
 {
@@ -27,6 +29,15 @@ public class PauseMetrics extends JvmMetrics
     private final Monitors monitors;
     private final MetricsRegister registry;
     private final MetricPauseMonitor metricPauseMonitor;
+
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public PauseMetrics()
+    {
+        this( "", null, null );
+    }
 
     public PauseMetrics( String metricsPrefix, MetricsRegister registry, Monitors monitors )
     {

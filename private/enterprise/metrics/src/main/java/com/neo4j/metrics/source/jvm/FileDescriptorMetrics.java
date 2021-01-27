@@ -10,10 +10,12 @@ import com.neo4j.metrics.metric.MetricsRegister;
 import org.apache.commons.lang3.SystemUtils;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.io.os.OsBeanUtil;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".JVM file descriptor metrics." )
 public class FileDescriptorMetrics extends JvmMetrics
 {
@@ -26,6 +28,15 @@ public class FileDescriptorMetrics extends JvmMetrics
     private final String fileMaximum;
 
     private final MetricsRegister registry;
+
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public FileDescriptorMetrics()
+    {
+        this( "", null );
+    }
 
     public FileDescriptorMetrics( String metricsPrefix, MetricsRegister registry )
     {

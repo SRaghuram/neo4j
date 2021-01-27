@@ -12,10 +12,12 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 
 import static com.codahale.metrics.MetricRegistry.name;
 import static java.lang.String.format;
 
+@ServiceProvider
 @Documented( ".JVM memory pools metrics." )
 public class JVMMemoryPoolMetrics extends JvmMetrics
 {
@@ -26,6 +28,15 @@ public class JVMMemoryPoolMetrics extends JvmMetrics
     private static final String MEMORY_POOL_PREFIX = name( VM_NAME_PREFIX, "memory.pool" );
     @Documented( "Estimated number of buffers in the pool. (gauge)" )
     private static final String MEMORY_POOL_USAGE_TEMPLATE = name( MEMORY_POOL_PREFIX, "%s" );
+
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public JVMMemoryPoolMetrics()
+    {
+        this( "", null );
+    }
 
     public JVMMemoryPoolMetrics( String metricsPrefix, MetricsRegister registry )
     {
@@ -48,5 +59,11 @@ public class JVMMemoryPoolMetrics extends JvmMetrics
     public void stop()
     {
         registry.removeMatching( ( name, metric ) -> name.startsWith( memoryPoolPrefix ) );
+    }
+
+    @Override
+    public String modifyDocumentedMetricName( String metric )
+    {
+        return metric.replace( "%s", "<pool>" );
     }
 }

@@ -7,15 +7,18 @@ package com.neo4j.metrics.source.causalclustering;
 
 import com.neo4j.metrics.metric.MetricsCounter;
 import com.neo4j.metrics.metric.MetricsRegister;
+import com.neo4j.metrics.source.MetricGroup;
+import com.neo4j.metrics.source.Metrics;
 
 import org.neo4j.annotations.documented.Documented;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.monitoring.Monitors;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+@ServiceProvider
 @Documented( ".CatchUp Metrics" )
-public class CatchUpMetrics extends LifecycleAdapter
+public class CatchUpMetrics extends Metrics
 {
     @Documented( "TX pull requests received from read replicas. (counter)" )
     private static final String TX_PULL_REQUESTS_RECEIVED_TEMPLATE = name( "causal_clustering.catchup.tx_pull_requests_received" );
@@ -26,8 +29,18 @@ public class CatchUpMetrics extends LifecycleAdapter
     private final MetricsRegister registry;
     private final TxPullRequestsMetric txPullRequestsMetric = new TxPullRequestsMetric();
 
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public CatchUpMetrics()
+    {
+        this( "", null, null );
+    }
+
     public CatchUpMetrics( String metricsPrefix, Monitors monitors, MetricsRegister registry )
     {
+        super( MetricGroup.CAUSAL_CLUSTERING );
         this.txPullRequestsReceived = name( metricsPrefix, TX_PULL_REQUESTS_RECEIVED_TEMPLATE );
         this.monitors = monitors;
         this.registry = registry;

@@ -12,10 +12,12 @@ import java.lang.management.BufferPoolMXBean;
 import java.lang.management.ManagementFactory;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
 
 import static com.codahale.metrics.MetricRegistry.name;
 import static java.lang.String.format;
 
+@ServiceProvider
 @Documented( ".JVM memory buffers metrics." )
 public class JVMMemoryBuffersMetrics extends JvmMetrics
 {
@@ -33,6 +35,15 @@ public class JVMMemoryBuffersMetrics extends JvmMetrics
     private final String memoryBufferCount;
     private final String memoryBufferUsed;
     private final String memoryBufferCapacity;
+
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public JVMMemoryBuffersMetrics()
+    {
+        this( "", null );
+    }
 
     public JVMMemoryBuffersMetrics( String metricsPrefix, MetricsRegister registry )
     {
@@ -59,5 +70,11 @@ public class JVMMemoryBuffersMetrics extends JvmMetrics
     public void stop()
     {
         registry.removeMatching( ( name, metric ) -> name.startsWith( memoryBufferPrefix ) );
+    }
+
+    @Override
+    public String modifyDocumentedMetricName( String metric )
+    {
+        return metric.replace( "%s", "<bufferpool>" );
     }
 }

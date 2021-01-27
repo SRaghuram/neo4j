@@ -12,6 +12,9 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 
+import org.neo4j.annotations.documented.Documented;
+import org.neo4j.annotations.service.ServiceProvider;
+
 import static com.codahale.metrics.MetricRegistry.name;
 
 /**
@@ -23,16 +26,30 @@ import static com.codahale.metrics.MetricRegistry.name;
  * the setting of the heap memory which may not be the sum of those of all heap
  * memory pools.
  */
+@ServiceProvider
+@Documented( ".JVM Heap metrics." )
 public class HeapMetrics extends JvmMetrics
 {
+    @Documented( "Amount of memory (in bytes) guaranteed to be available for use by the JVM. (gauge)" )
     public static final String HEAP_COMMITTED_TEMPLATE = name( VM_NAME_PREFIX, "heap.committed" );
+    @Documented( "Amount of memory (in bytes) currently used. (gauge)" )
     public static final String HEAP_USED_TEMPLATE = name( VM_NAME_PREFIX, "heap.used" );
+    @Documented( "Maximum amount of heap memory (in bytes) that can be used. (gauge)" )
     public static final String HEAP_MAX_TEMPLATE = name( VM_NAME_PREFIX, "heap.max" );
 
     private final MetricsRegister registry;
     private final String heapCommitted;
     private final String heapUsed;
     private final String heapMax;
+
+    /**
+     * Only for generating documentation. The metrics documentation is generated through
+     * service loading which requires a zero-argument constructor.
+     */
+    public HeapMetrics()
+    {
+        this( "", null );
+    }
 
     public HeapMetrics( String metricsPrefix, MetricsRegister registry )
     {
