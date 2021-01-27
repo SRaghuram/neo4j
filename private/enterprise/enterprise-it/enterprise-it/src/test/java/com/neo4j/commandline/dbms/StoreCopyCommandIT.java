@@ -144,10 +144,10 @@ class StoreCopyCommandIT extends AbstractCommandIT
         var pageCacheTracer = new DefaultPageCacheTracer();
         copyDatabase( pageCacheTracer, "--from-database=" + databaseName, "--to-database=" + copyName );
 
-        assertThat( pageCacheTracer.hits() ).isEqualTo( 19 );
+        assertThat( pageCacheTracer.hits() ).isEqualTo( 18 );
         assertThat( pageCacheTracer.faults() ).isEqualTo( 16 );
-        assertThat( pageCacheTracer.pins() ).isEqualTo( 35 );
-        assertThat( pageCacheTracer.unpins() ).isEqualTo( 35 );
+        assertThat( pageCacheTracer.pins() ).isEqualTo( 34 );
+        assertThat( pageCacheTracer.unpins() ).isEqualTo( 34 );
     }
 
     @Test

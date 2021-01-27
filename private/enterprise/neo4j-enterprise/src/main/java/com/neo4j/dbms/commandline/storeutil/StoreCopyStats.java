@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.LongAdder;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
+import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.logging.Log;
 import org.neo4j.values.storable.Value;
 
@@ -48,6 +49,11 @@ class StoreCopyStats
     void brokenPropertyChain( String type, PrimitiveRecord record, Exception e )
     {
         log.error( format( "%s(%d): Ignoring broken property chain.", type, record.getId() ), e );
+    }
+
+    void circularPropertyChain( String type, PrimitiveRecord record, PropertyRecord circleCompleter )
+    {
+        log.error( format( "%s(%d): Ignoring circular property chain %s.", type, record.getId(), circleCompleter ) );
     }
 
     void brokenRecord( String type, long id, Exception e )
