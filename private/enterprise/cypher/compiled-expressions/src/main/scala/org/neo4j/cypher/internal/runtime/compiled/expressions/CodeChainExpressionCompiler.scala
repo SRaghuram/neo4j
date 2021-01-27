@@ -11,6 +11,7 @@ import org.neo4j.codegen.TypeReference
 import org.neo4j.codegen.api.Constant
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.add
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
@@ -367,7 +368,8 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
           loop(invoke(iter, method[java.util.Iterator[AnyValue], Boolean]("hasNext")))(block(
             setExpressionVariable(expressionVariable, invoke(iter, method[java.util.Iterator[AnyValue], Object]("next"))),
             declareAndAssign(result, irInfo.code),
-            assign(heapUsage.variable, ternary(equal(result, noValue), heapUsage, heapUsage + invoke(result, method[AnyValue, Long]("estimatedHeapUsage")))),
+            assign(heapUsage.variable, ternary(equal(result, noValue), heapUsage,
+              add(heapUsage, invoke(result, method[AnyValue, Long]("estimatedHeapUsage"))))),
             invokeSideEffect(extracted, method[java.util.ArrayList[_], Boolean, Object]("add"), result)
           )),
           invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue], Long]("fromList"), extracted, heapUsage)

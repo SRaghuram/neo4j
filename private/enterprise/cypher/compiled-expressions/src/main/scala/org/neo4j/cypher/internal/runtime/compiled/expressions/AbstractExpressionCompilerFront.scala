@@ -12,7 +12,7 @@ import java.util.regex
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
-import org.neo4j.codegen.api.IntermediateRepresentation.++
+import org.neo4j.codegen.api.IntermediateRepresentation.add
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
@@ -32,6 +32,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.greaterThan
 import org.neo4j.codegen.api.IntermediateRepresentation.greaterThanOrEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.increment
 import org.neo4j.codegen.api.IntermediateRepresentation.instanceOf
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
@@ -577,7 +578,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
               declare[Value](isMatch),
               assign(isMatch, nullCheckIfRequired(coercedPredicate)),
               condition(equal(isMatch, trueValue))(
-                ++(matches)
+                increment(matches)
               ),
               // if (isMatch == Values.NO_VALUE)
               // {
@@ -1624,19 +1625,19 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case HasDegreeGreaterThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
-     checkDegree(offset, typ, dir, maxDegreeExpression, greaterThan, d => d + 1, id)
+     checkDegree(offset, typ, dir, maxDegreeExpression, greaterThan, d => add(d, 1), id)
 
     case HasDegreeGreaterThanOrEqualPrimitive(offset, typ, dir, maxDegreeExpression) =>
       checkDegree(offset, typ, dir, maxDegreeExpression, greaterThanOrEqual, identity, id)
 
     case HasDegreePrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, equal, d => d + 1, id)
+      checkDegree(offset, typ, dir, maxDegreeExpression, equal, d => add(d, 1), id)
 
     case HasDegreeLessThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
       checkDegree(offset, typ, dir, maxDegreeExpression, lessThan, identity, id)
 
     case HasDegreeLessThanOrEqualPrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, lessThanOrEqual, d => d + 1, id)
+      checkDegree(offset, typ, dir, maxDegreeExpression, lessThanOrEqual, d => add(d, 1), id)
 
     case f@ResolvedFunctionInvocation(name, Some(signature), args) if !f.isAggregate =>
       val inputArgs = args.map(Some(_))
@@ -2887,7 +2888,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                 setExpressionVariable(innerVariable, load[AnyValue](currentValue)),
                 // extracted.add([result from inner expression]);
                 declareAndAssign(innerVar, nullCheckIfRequired(inner)),
-                assign(payloadVar, load[Long](payloadVar) + invoke(load[AnyValue](innerVar), method[AnyValue, Long]("estimatedHeapUsage"))),
+                assign(payloadVar, add(load[Long](payloadVar), invoke(load[AnyValue](innerVar), method[AnyValue, Long]("estimatedHeapUsage")))),
                 invokeSideEffect(load[java.util.ArrayList[AnyValue]](extractedVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
                   load[AnyValue](innerVar))): _*)
             },

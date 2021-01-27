@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.add
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
@@ -290,7 +291,7 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecord")),
       project,
       invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecordCompleted")),
-      assign(SERVED, load(SERVED) + 1L),
+      assign(SERVED, add(load(SERVED), 1L)),
       profileRow(id, doProfile),
       inner.genOperateWithExpressions
     )
