@@ -51,6 +51,7 @@ import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.ProcedureCallMode
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.CREATE_FUSING_LIMIT
 import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.NewTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.TemplateAndArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.TemplateContext
@@ -188,6 +189,8 @@ object TemplateOperators {
   }
   case class TemplateAndArgumentStateFactory(template: OperatorTaskTemplate, argumentStateFactory: Option[ArgumentStateDescriptor])
   type NewTemplate = TemplateContext => TemplateAndArgumentStateFactory
+
+  private val CREATE_FUSING_LIMIT: Int = 32
 }
 
 abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, fuseOverPipelines: Boolean) {
@@ -837,7 +840,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
             new EmptyResultOperatorTemplate(ctx.inner, plan.id)(ctx.expressionCompiler)
 
           //For really long create patterns it is no longer beneficial to fuse the create
-        case plan@plans.Create(_, nodes, relationships) if !parallelExecution && (nodes.length + relationships.length < 32)=>
+        case plan@plans.Create(_, nodes, relationships) if !parallelExecution && (nodes.length + relationships.length < CREATE_FUSING_LIMIT)=>
           ctx: TemplateContext =>
             val nodeCommands = nodes.map(n =>
               CreateNodeFusedCommand(
