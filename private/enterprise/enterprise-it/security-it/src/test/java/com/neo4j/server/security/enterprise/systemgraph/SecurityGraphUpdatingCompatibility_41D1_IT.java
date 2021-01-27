@@ -24,7 +24,7 @@ class SecurityGraphUpdatingCompatibility_41D1_IT extends SecurityGraphCompatibil
     @Override
     void initEnterprise() throws Exception
     {
-        initEnterprise( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1 );
+        initEnterprise( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1 );
     }
 
     @ParameterizedTest
@@ -52,7 +52,7 @@ class SecurityGraphUpdatingCompatibility_41D1_IT extends SecurityGraphCompatibil
                 var exception = assertThrows( UnsupportedOperationException.class, () -> tx.execute( query ), query );
                 assertThat( exception.getMessage() )
                         .contains( "This operation is not supported while running in compatibility mode with version " +
-                                   EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1.getDescription() );
+                                   EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1.getDescription() );
             }
         }
     }
