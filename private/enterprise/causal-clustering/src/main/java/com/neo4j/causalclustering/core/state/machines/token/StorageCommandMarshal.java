@@ -12,27 +12,29 @@ import io.netty.buffer.Unpooled;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.StorageCommand;
 
 public class StorageCommandMarshal
 {
-    public static byte[] commandsToBytes( Collection<StorageCommand> commands, LogEntryWriterFactory logEntryWriterFactory )
+    public static byte[] commandsToBytes( List<StorageCommand> commands, LogEntryWriterFactory logEntryWriterFactory )
     {
         ByteBuf commandBuffer = Unpooled.buffer();
         BoundedNetworkWritableChannel channel = new BoundedNetworkWritableChannel( commandBuffer );
 
         try
         {
-            logEntryWriterFactory.createEntryWriter( channel ).serialize( commands );
+            LogEntryWriter<BoundedNetworkWritableChannel> writer =
+                    commands.isEmpty() ? logEntryWriterFactory.createEntryWriter( channel ) : new LogEntryWriter<>( channel, commands.get( 0 ).version() );
+            writer.serialize( commands );
         }
         catch ( IOException e )
         {
@@ -49,7 +51,7 @@ public class StorageCommandMarshal
         return commandsBytes;
     }
 
-    static Collection<StorageCommand> bytesToCommands( byte[] commandBytes, CommandReaderFactory commandReaderFactory )
+    static List<StorageCommand> bytesToCommands( byte[] commandBytes, CommandReaderFactory commandReaderFactory )
     {
         ByteBuf txBuffer = Unpooled.wrappedBuffer( commandBytes );
         NetworkReadableChannel channel = new NetworkReadableChannel( txBuffer );

@@ -21,6 +21,7 @@ import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.storageengine.api.StorageCommand;
 
 import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
@@ -149,7 +150,7 @@ public class ReplicatedTransactionFactory
             if ( commands.hasNext() )
             {
                 StorageCommand storageCommand = commands.next();
-                nextJob = c -> logEntryWriterFactory.createEntryWriter( c ).serialize( storageCommand );
+                nextJob = c -> new LogEntryWriter<>( c, storageCommand.version() ).serialize( storageCommand );
             }
             else
             {

@@ -20,7 +20,10 @@ import java.io.IOException;
 import java.util.LinkedList;
 
 import org.neo4j.io.ByteUnit;
+import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.util.VisibleForTesting;
+
+import static org.neo4j.kernel.database.LogEntryWriterFactory.createEntryWriter;
 
 public class TxPullResponseEncoder extends ChannelOutboundHandlerAdapter
 {
@@ -97,7 +100,8 @@ public class TxPullResponseEncoder extends ChannelOutboundHandlerAdapter
         }
         else
         {
-            logEntryWriterFactory.createEntryWriter( channel ).serialize( txPullResponse.tx() );
+            CommittedTransactionRepresentation tx = txPullResponse.tx();
+            createEntryWriter( channel, tx.getTransactionRepresentation(), logEntryWriterFactory ).serialize( tx );
         }
         // the size is only required if the tx stretches over multiple chunks
         if ( !pendingChunks.isEmpty() )

@@ -106,6 +106,12 @@ class BareTransactionProvider implements Iterator<CommittedTransactionRepresenta
         }
 
         @Override
+        public KernelVersion version()
+        {
+            return KernelVersion.LATEST;
+        }
+
+        @Override
         public boolean equals( Object o )
         {
             if ( this == o )

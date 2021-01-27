@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.replication.Replicator;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.List;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
@@ -135,7 +135,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     private byte[] createCommands( String tokenName, boolean internal )
     {
         StorageEngine storageEngine = storageEngineSupplier.get();
-        Collection<StorageCommand> commands = new ArrayList<>();
+        List<StorageCommand> commands = new ArrayList<>();
         var memoryTracker = EmptyMemoryTracker.INSTANCE;
         TransactionState txState = new TxState( OnHeapCollectionsFactory.INSTANCE, memoryTracker );
         try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( REPLICATED_TOKEN_HOLDER_CREATOR_TAG ) )

@@ -12,6 +12,7 @@ import java.io.IOException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.KernelVersion;
 import org.neo4j.kernel.impl.transaction.SimpleMetaDataProvider;
@@ -154,11 +155,21 @@ class EnterpriseCheckPointerImplTest
 
     private static StorageCommand testCommand()
     {
-        return channel ->
+        return new StorageCommand()
         {
-            channel.putLong( 1 );
-            channel.putLong( 2 );
-            channel.putLong( 3 );
+            @Override
+            public void serialize( WritableChannel channel ) throws IOException
+            {
+                channel.putLong( 1 );
+                channel.putLong( 2 );
+                channel.putLong( 3 );
+            }
+
+            @Override
+            public KernelVersion version()
+            {
+                return KernelVersion.LATEST;
+            }
         };
     }
 }

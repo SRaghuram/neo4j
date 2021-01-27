@@ -35,7 +35,7 @@ class TransactionRepresentationReplicatedTransactionTest
     void shouldMarshalToSameByteIfByteBufBackedOrNot() throws IOException
     {
         var expectedTx =
-                new PhysicalTransactionRepresentation( Collections.singleton( new Command.NodeCommand( new NodeRecord( 1 ), new NodeRecord( 2 ) ) ) );
+                new PhysicalTransactionRepresentation( Collections.singletonList( new Command.NodeCommand( new NodeRecord( 1 ), new NodeRecord( 2 ) ) ) );
 
         expectedTx.setHeader( new byte[0], 3, 4, 5, 6, ANONYMOUS );
         var replicatedTransaction = ReplicatedTransaction.from( expectedTx, new TestDatabaseIdRepository().defaultDatabase(), LogEntryWriterFactory.LATEST );

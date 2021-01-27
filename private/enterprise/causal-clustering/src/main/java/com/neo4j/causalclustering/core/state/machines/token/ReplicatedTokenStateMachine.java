@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.state.machines.StateMachineCommitHelper;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Consumer;
 
 import org.neo4j.graphdb.TransientTransactionFailureException;
@@ -96,7 +97,7 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
         callback.accept( StateMachineResult.of( newTokenId ) );
     }
 
-    private void applyToStore( Collection<StorageCommand> commands, long logIndex )
+    private void applyToStore( List<StorageCommand> commands, long logIndex )
     {
         var representation = new PhysicalTransactionRepresentation( commands );
         representation.setHeader( LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader( logIndex ), 0, 0L, 0L, 0, AUTH_DISABLED );
