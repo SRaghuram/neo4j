@@ -18,6 +18,8 @@ dataset_base_uri=
 neo4j_version=
 neo4j_branch=
 
+artifact_base_uri=s3://benchmarking.neo4j.com/artifacts/macro/
+
 while (("$#")); do
   case "$1" in
   --job-queue)
@@ -68,6 +70,10 @@ while (("$#")); do
     dataset_base_uri=$2
     shift 2
     ;;
+  --artifact-base-uri)
+    artifact_base_uri=$2
+    shift 2
+    ;;
   --) # end of argument parsing
     shift
     break
@@ -108,7 +114,6 @@ neo4j_commit=$(git rev-parse HEAD)
 triggered_by=$(whoami)
 parent_teamcity_build="-1"
 teamcity_build="$RANDOM"
-artifact_base_uri=s3://benchmarking.neo4j.com/artifacts/macro/
 
 $java_cmd -jar $benchmark_infra_scheduler_jar \
   schedule \

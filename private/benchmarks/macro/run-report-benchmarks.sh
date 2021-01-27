@@ -53,6 +53,7 @@ all_args=("$@")
 optional_args=("${all_args[@]:29}")
 aws_endpoint_url=
 test_run_id=
+recordings_bucket=
 
 while ((${#optional_args[@]})); do
   arg=${optional_args[0]}
@@ -64,6 +65,10 @@ while ((${#optional_args[@]})); do
     ;;
   --test-run-id)
     test_run_id=${optional_args[0]}
+    optional_args=("${optional_args[@]:1}")
+    ;;
+   --s3-bucket)
+    recordings_bucket=${optional_args[0]}
     optional_args=("${optional_args[@]:1}")
     ;;
   --)
@@ -152,7 +157,7 @@ ${jvm} -Xmx1g -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --outpu
   --results-store-uri "${results_store_uri}" \
   --results-store-user "${results_store_user}" \
   --results-store-pass "${results_store_password}" \
-  --s3-bucket "benchmarking.neo4j.com/recordings/" \
+  ${recordings_bucket:+--s3-bucket $recordings_bucket} \
   --aws-region "eu-north-1" \
   ${aws_endpoint_url:+--aws-endpoint-url $aws_endpoint_url} \
   ${recreate_schema:+--recreate-schema} \

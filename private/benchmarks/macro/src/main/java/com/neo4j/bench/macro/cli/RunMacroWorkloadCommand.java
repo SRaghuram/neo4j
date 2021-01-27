@@ -148,8 +148,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
              name = {CMD_S3_BUCKET},
              description = "S3 bucket profiles were uploaded to",
              title = "S3 bucket" )
-    @Required
-    private String s3Bucket;
+    private String s3Bucket = "benchmarking.neo4j.com/recordings/";
 
     public static final String CMD_TEST_RUN_ID = "--test-run-id";
     @Option( type = OptionType.COMMAND,

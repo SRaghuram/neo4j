@@ -12,9 +12,12 @@ branch_owner=
 workload=accesscontrol
 profilers="GC"
 db_name=$workload
+dataset_base_uri=
 # get neo4j version from POM
 neo4j_version=
 neo4j_branch=
+
+artifact_base_uri=s3://benchmarking.neo4j.com/artifacts/macro/
 
 while (("$#")); do
   case "$1" in
@@ -58,6 +61,14 @@ while (("$#")); do
     neo4j_branch=$2
     shift 2
     ;;
+  --dataset-base-uri)
+    dataset_base_uri=$2
+    shift 2
+    ;;
+  --artifact-base-uri)
+    artifact_base_uri=$2
+    shift 2
+    ;;
   --) # end of argument parsing
     shift
     break
@@ -94,22 +105,11 @@ if [[ ! -f "$benchmark_infra_scheduler_jar" ]]; then
   exit 1
 fi
 
-# setting proper result store instance
-if [[ $batch_stack == "benchmarking-production" ]]; then
-    results_store_uri="neo4j://e605d648.databases.neo4j.io:7687"
-    results_store_user="client"
-    results_store_pass_secret_name="ResultStoreSecret-production"
-else
-    results_store_uri=neo4j://1a20c636.databases.neo4j.io
-    results_store_user=neo4j
-    results_store_pass_secret_name="ResultStoreSecret-test"
-fi
-
 neo4j_commit=$(git rev-parse HEAD)
 triggered_by=$(whoami)
 parent_teamcity_build="-1"
 teamcity_build="$RANDOM"
-artifact_base_uri=s3://benchmarking.neo4j.com/artifacts/macro/
+artifact_base_uri=s3://storage.benchmarking.neo4j.com/artifacts/macro/
 
 $java_cmd -jar $benchmark_infra_scheduler_jar \
   schedule \
@@ -161,13 +161,10 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
   "$workspace_dir" \
   --db-name \
   "$db_name" \
-  --results-store-user \
-  "$results_store_user" \
   --results-store-pass-secret-name \
   "$results_store_pass_secret_name" \
-  --results-store-uri \
-  "$results_store_uri" \
   --infrastructure-capabilities \
   "$infrastructure_capabilities" \
   --batch-stack \
-  "$batch_stack"
+  "$batch_stack" \
+  ${dataset_base_uri:+--dataset-base-uri $dataset_base_uri}
