@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
-import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
@@ -61,13 +60,11 @@ class ReadReplicaDatabaseFactory
     private final PanicService panicService;
     private final DatabaseStartAborter databaseStartAborter;
     private final PageCacheTracer pageCacheTracer;
-    private final AsyncTxApplier asyncTxApplier;
 
     ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService,
             ServerId serverId, CatchupComponentsRepository catchupComponentsRepository,
             CatchupClientFactory catchupClientFactory, ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory clusterStateFactory,
-            PanicService panicService, DatabaseStartAborter databaseStartAborter, PageCacheTracer pageCacheTracer,
-            AsyncTxApplier asyncTxApplier )
+            PanicService panicService, DatabaseStartAborter databaseStartAborter, PageCacheTracer pageCacheTracer )
     {
         this.config = config;
         this.jobScheduler = jobScheduler;
@@ -80,7 +77,6 @@ class ReadReplicaDatabaseFactory
         this.clusterStateFactory = clusterStateFactory;
         this.databaseStartAborter = databaseStartAborter;
         this.pageCacheTracer = pageCacheTracer;
-        this.asyncTxApplier = asyncTxApplier;
     }
 
     ReadReplicaDatabase createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator )
@@ -92,6 +88,7 @@ class ReadReplicaDatabaseFactory
         DatabaseLogProvider userLogProvider = databaseLogService.getUserLogProvider();
 
         LifeSupport clusterComponents = new LifeSupport();
+        Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_PROCESS );
         CommandIndexTracker commandIndexTracker = databaseContext.dependencies().satisfyDependency( new CommandIndexTracker() );
         initialiseStatusDescriptionEndpoint( commandIndexTracker, clusterComponents, databaseContext.dependencies() );
 
@@ -103,9 +100,9 @@ class ReadReplicaDatabaseFactory
 
         Panicker panicker = panicService.panicker();
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
-        CatchupProcessFactory catchupProcessFactory = new CatchupProcessFactory( panicker, catchupComponentsRepository, topologyService,
+        CatchupProcessFactory catchupProcessFactory = new CatchupProcessFactory( catchupExecutor, panicker, catchupComponentsRepository, topologyService,
                 catchupClientFactory, upstreamDatabaseStrategySelector, commandIndexTracker, internalLogProvider, config, databaseEventDispatch,
-                pageCacheTracer, asyncTxApplier );
+                pageCacheTracer );
         CatchupProcessManager catchupProcess = new CatchupProcessManager( databaseContext, panicker, timerService, internalLogProvider, config,
                 catchupProcessFactory );
         databaseContext.dependencies().satisfyDependency( catchupProcess );

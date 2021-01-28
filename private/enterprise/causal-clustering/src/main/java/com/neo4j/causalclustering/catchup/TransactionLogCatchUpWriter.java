@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.catchup.tx.ReceivedTxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponseListener;
 
@@ -151,7 +150,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     }
 
     @Override
-    public synchronized void onTxReceived( ReceivedTxPullResponse txPullResponse )
+    public synchronized void onTxReceived( TxPullResponse txPullResponse )
     {
         CommittedTransactionRepresentation tx = txPullResponse.tx();
         long receivedTxId = tx.getCommitEntry().getTxId();

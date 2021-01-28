@@ -147,7 +147,7 @@ class CatchupProcessManagerTest
     {
         //given
         CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
-        when( catchupProcess.isCopyingStore() ).thenReturn( false );
+        when( catchupProcess.isStoryCopy() ).thenReturn( false );
         CatchupProcessManager catchupProcessManager = createProcessManager( catchupProcess );
 
         //when
@@ -160,7 +160,7 @@ class CatchupProcessManagerTest
     {
         //given
         CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
-        when( catchupProcess.isCopyingStore() ).thenReturn( false );
+        when( catchupProcess.isStoryCopy() ).thenReturn( false );
         CatchupProcessManager catchupProcessManager = createProcessManager( catchupProcess );
 
         //when
@@ -174,7 +174,7 @@ class CatchupProcessManagerTest
     {
         //given
         CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
-        when( catchupProcess.isCopyingStore() ).thenReturn( true );
+        when( catchupProcess.isStoryCopy() ).thenReturn( true );
         CatchupProcessManager catchupProcessManager = createProcessManager( catchupProcess );
 
         //when

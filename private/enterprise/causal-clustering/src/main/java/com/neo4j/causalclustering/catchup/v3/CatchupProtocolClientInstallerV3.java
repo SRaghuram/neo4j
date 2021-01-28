@@ -34,7 +34,7 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequestEn
 import com.neo4j.causalclustering.catchup.v3.storecopy.StoreCopyFinishedResponseDecoder;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequestEncoder;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullResponseDecoder;
-import com.neo4j.causalclustering.catchup.v3.tx.ReceivedTxPullResponseHandler;
+import com.neo4j.causalclustering.catchup.v3.tx.TxPullResponseHandler;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotDecoder;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotResponseHandler;
 import com.neo4j.causalclustering.protocol.ClientNettyPipelineBuilder;
@@ -135,7 +135,7 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
 
     protected ClientNettyPipelineBuilder handlers( ClientNettyPipelineBuilder builder, CatchupClientProtocol protocol )
     {
-        return builder.add( "hnd_res_tx", new ReceivedTxPullResponseHandler( protocol, handler ) )
+        return builder.add( "hnd_res_tx", new TxPullResponseHandler( protocol, handler ) )
                 .add( "hnd_res_snapshot", new CoreSnapshotResponseHandler( protocol, handler ) )
                 .add( "hnd_res_copy_fin", new StoreCopyFinishedResponseHandler( protocol, handler ) )
                 .add( "hnd_res_tx_fin", new TxStreamFinishedResponseHandler( protocol, handler ) )

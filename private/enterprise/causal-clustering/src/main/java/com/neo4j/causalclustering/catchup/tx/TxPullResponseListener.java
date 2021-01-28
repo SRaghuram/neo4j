@@ -7,5 +7,5 @@ package com.neo4j.causalclustering.catchup.tx;
 
 public interface TxPullResponseListener
 {
-    void onTxReceived( ReceivedTxPullResponse tx );
+    void onTxReceived( TxPullResponse tx );
 }

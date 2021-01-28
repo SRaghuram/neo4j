@@ -60,6 +60,6 @@ public class TxPullResponse
     @Override
     public String toString()
     {
-        return String.format( "TxPullResponse{storeId=%s}", storeId );
+        return String.format( "TxPullResponse{storeId=%s, tx=%s}", storeId, tx );
     }
 }

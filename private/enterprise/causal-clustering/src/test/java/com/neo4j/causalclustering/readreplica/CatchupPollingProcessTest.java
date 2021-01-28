@@ -19,13 +19,14 @@ import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
-import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 
 import org.neo4j.collection.Dependencies;
@@ -40,6 +41,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.test.CallingThreadExecutor;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.CatchupFailed;
@@ -68,6 +70,7 @@ class CatchupPollingProcessTest
 {
     private final CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
+    private final Executor executor = new CallingThreadExecutor();
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
     private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
@@ -111,8 +114,8 @@ class CatchupPollingProcessTest
 
         MockCatchupClient catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3_0, v3Client );
         when( catchupClientFactory.getClient( any( SocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
-        txPuller = new CatchupPollingProcess( databaseContext, catchupClientFactory, txApplier, databaseEventDispatch,
-                storeCopy, nullLogProvider(), panicker, catchupAddressProvider, mock( AsyncTxApplier.class ) );
+        txPuller = new CatchupPollingProcess( executor, databaseContext, catchupClientFactory, txApplier, databaseEventDispatch,
+                storeCopy, nullLogProvider(), panicker, catchupAddressProvider );
     }
 
     @Test
@@ -124,8 +127,8 @@ class CatchupPollingProcessTest
         long lastAppliedTxId = 99L;
         when( txApplier.lastQueuedTxId() ).thenReturn( lastAppliedTxId );
         // when
-        txPuller.tick();
-        txPuller.tick();
+        txPuller.tick().get();
+        txPuller.tick().get();
 
         // then
         verify( v3Client, times( 2 ) ).pullTransactions( storeId, lastAppliedTxId, namedDatabaseId );
@@ -133,7 +136,7 @@ class CatchupPollingProcessTest
     }
 
     @Test
-    void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAway()
+    void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAway() throws Exception
     {
         // when
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -141,7 +144,7 @@ class CatchupPollingProcessTest
         txPuller.start();
 
         // when
-        txPuller.tick();
+        txPuller.tick().get();
 
         // then
         assertEquals( STORE_COPYING, txPuller.state() );
@@ -156,13 +159,13 @@ class CatchupPollingProcessTest
         txPuller.start();
 
         // when
-        txPuller.tick();
+        txPuller.tick().get();
 
         // then
         assertEquals( STORE_COPYING, txPuller.state() );
 
         // when
-        txPuller.tick();
+        txPuller.tick().get();
 
         // then
         verify( storeCopy ).replaceWithStoreFrom( catchupAddressProvider, storeId );
@@ -177,9 +180,9 @@ class CatchupPollingProcessTest
         txPuller.start();
 
         // when (tx pull)
-        txPuller.tick();
+        txPuller.tick().get();
         // when (store copy)
-        txPuller.tick();
+        txPuller.tick().get();
 
         // then
         verify( databaseContext ).stopForStoreCopy();
@@ -193,11 +196,11 @@ class CatchupPollingProcessTest
     }
 
     @Test
-    void shouldPanicOnException()
+    void shouldPanicOnException() throws ExecutionException, InterruptedException
     {
         when( txApplier.lastQueuedTxId() ).thenThrow( IllegalStateException.class );
         txPuller.start();
-        txPuller.tick();
+        txPuller.tick().get();
 
         verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, CatchupFailed, any() ) );
     }
@@ -214,15 +217,15 @@ class CatchupPollingProcessTest
         Future<Boolean> operationalFuture = txPuller.upToDateFuture();
         assertFalse( operationalFuture.isDone() );
 
-        txPuller.tick(); // realises we need a store copy
+        txPuller.tick().get(); // realises we need a store copy
         assertFalse( operationalFuture.isDone() );
 
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 15 ) );
 
-        txPuller.tick(); // does the store copy
+        txPuller.tick().get(); // does the store copy
         assertFalse( operationalFuture.isDone() );
 
-        txPuller.tick(); // does a pulling
+        txPuller.tick().get(); // does a pulling
         assertTrue( operationalFuture.isDone() );
         assertTrue( operationalFuture.get() );
 
@@ -243,9 +246,9 @@ class CatchupPollingProcessTest
         doThrow( storeCopyError ).when( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
 
         // when tx pull
-        txPuller.tick();
+        txPuller.tick().get();
         // when store copy #1
-        txPuller.tick();
+        txPuller.tick().get();
 
         // then
         verify( databaseContext ).stopForStoreCopy();
@@ -260,7 +263,7 @@ class CatchupPollingProcessTest
 
         // when store copy #2
         doNothing().when( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
-        txPuller.tick();
+        txPuller.tick().get();
 
         // then
         verify( databaseContext ).stopForStoreCopy(); // only once
@@ -286,9 +289,9 @@ class CatchupPollingProcessTest
         when( kernelDatabase.isStarted() ).thenReturn( false );
 
         // when tx pull, moves over to store copy state
-        txPuller.tick();
+        txPuller.tick().get();
         // when store copy attempt #1
-        txPuller.tick();
+        txPuller.tick().get();
 
         // then
         verify( databaseContext ).stopForStoreCopy();
@@ -303,7 +306,7 @@ class CatchupPollingProcessTest
 
         // store copy attempt #2 with the kernel now starting correctly
         when( kernelDatabase.isStarted() ).thenReturn( true );
-        txPuller.tick();
+        txPuller.tick().get();
 
         // then
         verify( databaseContext, times( 2 ) ).stopForStoreCopy();
