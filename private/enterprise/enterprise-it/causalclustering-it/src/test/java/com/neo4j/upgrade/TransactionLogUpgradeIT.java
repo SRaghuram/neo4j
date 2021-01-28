@@ -119,6 +119,7 @@ class TransactionLogUpgradeIT
         //Then
         assertRuntimeVersion( DbmsRuntimeVersion.V4_2 );
         assertKernelVersion( KernelVersion.V4_2 );
+        doWriteTransaction();
 
         //When
         systemDb.executeTransactionally( "CALL dbms.upgrade()" );
@@ -148,6 +149,7 @@ class TransactionLogUpgradeIT
         //Then
         assertRuntimeVersion( DbmsRuntimeVersion.V4_2 );
         assertKernelVersion( KernelVersion.V4_2 );
+        doWriteTransaction();
 
         //When
         Race race = new Race().withRandomStartDelays().withEndCondition( () -> isKernelVersion( KernelVersion.LATEST ) );
@@ -197,7 +199,7 @@ class TransactionLogUpgradeIT
             assertThat( transactionVersions.get( 0 ) ).isEqualTo( from ); //First should be "from" version
             assertThat( transactionVersions.get( transactionVersions.size() - 1 ) ).isEqualTo( to ); //And last the "to" version
 
-            CommittedTransactionRepresentation upgradeTransaction = transactions.get( transactionVersions.indexOf( to ) - 1 );
+            CommittedTransactionRepresentation upgradeTransaction = transactions.get( transactionVersions.indexOf( to ) );
             PhysicalTransactionRepresentation physicalRep = (PhysicalTransactionRepresentation) upgradeTransaction.getTransactionRepresentation();
             physicalRep.accept( element ->
             {
