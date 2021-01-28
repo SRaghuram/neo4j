@@ -26,29 +26,23 @@ public class InfraParams
 
     public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
     public static final String CMD_AWS_ENDPOINT_URL = "--aws-endpoint-url";
+    public static final String CMD_RESULTS_STORE_PASSWORD_SECRET_NAME = "--results-store-pass-secret-name";
+
     private final URI artifactBaseUri;
 
     private final Workspace workspaceStructure;
+    private final URI recordingsBaseUri;
 
     // -----------------------------------------------------------------------
     // Common: Result Client Report Results Args
     // -----------------------------------------------------------------------
 
-    public static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     private final String resultsStoreUsername;
-
-    public static final String CMD_RESULTS_STORE_PASSWORD_SECRET_NAME = "--results-store-pass-secret-name";
-    private final String resultsStorePasswordSecretName;
-
-    public static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
-    private final URI resultsStoreUri;
-
-    private final ErrorReportingPolicy errorPolicy;
-
-    private final AWSCredentials awsCredentials;
-
-    public static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
     private final String resultsStorePassword;
+    private final URI resultsStoreUri;
+    private final String resultsStorePasswordSecretName;
+    private final ErrorReportingPolicy errorPolicy;
+    private final AWSCredentials awsCredentials;
 
     @Deprecated
     public InfraParams( AWSCredentials awsCredentials,
@@ -66,7 +60,8 @@ public class InfraParams
               resultsStoreUri,
               artifactBaseUri,
               errorPolicy,
-              workspaceStructure );
+              workspaceStructure,
+              null );
     }
 
     @JsonCreator
@@ -77,7 +72,8 @@ public class InfraParams
                         @JsonProperty( "resultsStoreUri" ) URI resultsStoreUri,
                         @JsonProperty( "artifactBaseUri" ) URI artifactBaseUri,
                         @JsonProperty( "errorPolicy" ) ErrorReportingPolicy errorPolicy,
-                        @JsonProperty( "workspaceStructure" ) Workspace workspaceStructure )
+                        @JsonProperty( "workspaceStructure" ) Workspace workspaceStructure,
+                        @JsonProperty( "recordingsBaseUri" ) URI recordingsBaseUri )
     {
         this.awsCredentials = awsCredentials;
         this.resultsStoreUsername = resultsStoreUsername;
@@ -87,6 +83,7 @@ public class InfraParams
         this.artifactBaseUri = artifactBaseUri;
         this.errorPolicy = errorPolicy;
         this.workspaceStructure = workspaceStructure;
+        this.recordingsBaseUri = recordingsBaseUri;
     }
 
     public AWSCredentials awsCredentials()
@@ -129,6 +126,11 @@ public class InfraParams
         return workspaceStructure;
     }
 
+    public URI recordingsBaseUri()
+    {
+        return recordingsBaseUri;
+    }
+
     public InfraParams withArtifactBaseUri( URI newArtifactBaseUri )
     {
         return new InfraParams( awsCredentials,
@@ -138,7 +140,8 @@ public class InfraParams
                                 resultsStoreUri,
                                 newArtifactBaseUri,
                                 errorPolicy,
-                                workspaceStructure );
+                                workspaceStructure,
+                                recordingsBaseUri );
     }
 
     @Override

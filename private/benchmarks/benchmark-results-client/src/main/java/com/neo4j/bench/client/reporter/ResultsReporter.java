@@ -12,7 +12,6 @@ import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.util.JsonUtil;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.net.URI;
@@ -22,6 +21,7 @@ import java.util.List;
 
 import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.appendIfMissing;
+import static org.apache.commons.lang3.StringUtils.removeStart;
 
 public class ResultsReporter
 {
@@ -40,14 +40,13 @@ public class ResultsReporter
     }
 
     public void reportAndUpload( TestRunReport testRunReport,
-                                 String s3Bucket,
+                                 URI recordingsBaseUri,
                                  File workDir,
                                  String awsEndpointURL,
                                  ErrorReportingPolicy errorReportingPolicy )
     {
         try
         {
-            s3Bucket = appendIfMissing( s3Bucket, "/" );
             Path testRunReportFile = workDir.toPath().resolve( "test-result.json" );
             System.out.println( "Exporting results as JSON to: " + testRunReportFile.toAbsolutePath() );
             JsonUtil.serializeJson( testRunReportFile, testRunReport );
@@ -56,7 +55,7 @@ public class ResultsReporter
             System.out.printf( "Reporting test run with id %s%n", testRunId );
 
             Path tempRecordingsDir = Files.createTempDirectory( workDir.toPath(), null );
-            URI s3ProfilerRecordingsFolderUri = constructS3Uri( awsEndpointURL, s3Bucket, tempRecordingsDir );
+            URI s3ProfilerRecordingsFolderUri = constructS3Uri( awsEndpointURL, recordingsBaseUri, tempRecordingsDir );
 
             ResultsCopy.extractProfilerRecordings( testRunReport.benchmarkGroupBenchmarkMetrics(),
                                                    tempRecordingsDir,
@@ -64,7 +63,7 @@ public class ResultsReporter
                                                    workDir.toPath() );
 
             String archiveName = tempRecordingsDir.getFileName() + ".tar.gz";
-            String s3ArchivePath = s3Bucket + archiveName;
+            String s3ArchivePath = appendIfMissing( removeStart( recordingsBaseUri.toString(), "s3://" ), "/" ) + archiveName;
             Path testRunArchive = workDir.toPath().resolve( archiveName );
             System.out.printf( "creating .tar.gz archive '%s' of profiles directory '%s'%n", testRunArchive, tempRecordingsDir );
             TarGzArchive.compress( testRunArchive, tempRecordingsDir );
@@ -74,7 +73,7 @@ public class ResultsReporter
                 System.out.printf( "uploading profiler recording directory '%s' to '%s'%n", tempRecordingsDir, s3ProfilerRecordingsFolderUri );
                 amazonS3Upload.uploadFolder( tempRecordingsDir, s3ProfilerRecordingsFolderUri );
 
-                URI testRunArchiveS3Uri = constructS3Uri( awsEndpointURL, s3Bucket, testRunArchive );
+                URI testRunArchiveS3Uri = constructS3Uri( awsEndpointURL, recordingsBaseUri, testRunArchive );
                 System.out.printf( "uploading profiler recordings archive '%s' to '%s'%n", testRunArchive, testRunArchiveS3Uri );
                 amazonS3Upload.uploadFile( testRunArchive, testRunArchiveS3Uri );
                 testRunReport.testRun().setArchive( s3ArchivePath );
@@ -88,13 +87,12 @@ public class ResultsReporter
         }
     }
 
-    private URI constructS3Uri( String awsEndpointURL, String s3Bucket, Path tempRecordingsDir )
+    private URI constructS3Uri( String awsEndpointURL, URI recordingsBaseUri, Path tempRecordingsDir )
     {
         try ( AmazonS3Upload amazonS3Upload = AmazonS3Upload.create( awsRegion, awsEndpointURL ) )
         {
-            URI s3BucketUri = URI.create( StringUtils.prependIfMissing( s3Bucket, "s3://" ) );
-            String bucketName = s3BucketUri.getAuthority();
-            String recordingsKeyPrefix = s3BucketUri.getPath();
+            String bucketName = recordingsBaseUri.getAuthority();
+            String recordingsKeyPrefix = recordingsBaseUri.getPath();
             return amazonS3Upload.constructS3Uri( bucketName, recordingsKeyPrefix, tempRecordingsDir );
         }
         catch ( Exception e )

@@ -18,9 +18,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 
-import org.neo4j.test.extension.Inject;
-import org.neo4j.test.rule.TestDirectory;
-
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 

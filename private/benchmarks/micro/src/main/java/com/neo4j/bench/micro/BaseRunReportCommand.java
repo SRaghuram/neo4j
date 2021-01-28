@@ -10,9 +10,8 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.cli.ResultsStoreCredentials;
-import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.ParameterVerifier;
+import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.micro.RunReportParams;
 import com.neo4j.bench.model.options.Edition;
@@ -20,11 +19,11 @@ import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.model.model.BranchAndVersion;
 import com.neo4j.bench.model.model.Repository;
+import com.neo4j.bench.model.options.Edition;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 
 import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
@@ -41,115 +40,116 @@ import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_NEO4J_EDITIO
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_NEO4J_VERSION;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_PARENT_TEAMCITY_BUILD;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_PROFILERS;
-import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_WORK_DIR;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TEAMCITY_BUILD;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TRIGGERED_BY;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_WORK_DIR;
+import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 
 public abstract class BaseRunReportCommand implements Runnable
 {
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_NEO4J_COMMIT},
-             description = "Commit of Neo4j that benchmark is run against",
-             title = "Neo4j Commit" )
+            name = {CMD_NEO4J_COMMIT},
+            description = "Commit of Neo4j that benchmark is run against",
+            title = "Neo4j Commit" )
     @Required
     private String neo4jCommit;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_NEO4J_VERSION},
-             description = "Version of Neo4j that benchmark is run against (e.g., '3.0.2')",
-             title = "Neo4j Version" )
+            name = {CMD_NEO4J_VERSION},
+            description = "Version of Neo4j that benchmark is run against (e.g., '3.0.2')",
+            title = "Neo4j Version" )
     @Required
     private String neo4jVersion;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_NEO4J_EDITION},
-             description = "Edition of Neo4j that benchmark is run against",
-             title = "Neo4j Edition" )
+            name = {CMD_NEO4J_EDITION},
+            description = "Edition of Neo4j that benchmark is run against",
+            title = "Neo4j Edition" )
     private Edition neo4jEdition = ENTERPRISE;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_NEO4J_BRANCH},
-             description = "Neo4j branch name",
-             title = "Neo4j Branch" )
+            name = {CMD_NEO4J_BRANCH},
+            description = "Neo4j branch name",
+            title = "Neo4j Branch" )
     @Required
     private String neo4jBranch;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_BRANCH_OWNER},
-             description = "Owner of repository containing Neo4j branch",
-             title = "Branch Owner" )
+            name = {CMD_BRANCH_OWNER},
+            description = "Owner of repository containing Neo4j branch",
+            title = "Branch Owner" )
     @Required
     private String neo4jBranchOwner;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_NEO4J_CONFIG},
-             description = "Neo4j configuration used during benchmark",
-             title = "Neo4j Configuration" )
+            name = {CMD_NEO4J_CONFIG},
+            description = "Neo4j configuration used during benchmark",
+            title = "Neo4j Configuration" )
     @Required
     private File neo4jConfigFile;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_TEAMCITY_BUILD},
-             description = "Build number of the TeamCity build that ran the benchmarks",
-             title = "TeamCity Build Number" )
+            name = {CMD_TEAMCITY_BUILD},
+            description = "Build number of the TeamCity build that ran the benchmarks",
+            title = "TeamCity Build Number" )
     @Required
     private Long build;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_PARENT_TEAMCITY_BUILD},
-             description = "Build number of the TeamCity parent build, e.g., Packaging",
-             title = "Parent TeamCity Build Number" )
+            name = {CMD_PARENT_TEAMCITY_BUILD},
+            description = "Build number of the TeamCity parent build, e.g., Packaging",
+            title = "Parent TeamCity Build Number" )
     @Required
     private Long parentBuild;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_JVM_ARGS},
-             description = "JVM arguments that benchmark was run with (e.g., '-XX:+UseG1GC -Xms4g -Xmx4g')",
-             title = "JVM Args" )
+            name = {CMD_JVM_ARGS},
+            description = "JVM arguments that benchmark was run with (e.g., '-XX:+UseG1GC -Xms4g -Xmx4g')",
+            title = "JVM Args" )
     private String jvmArgsString = "";
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_BENCHMARK_CONFIG},
-             description = "Benchmark configuration: enable/disable tests, specify parameters to run with",
-             title = "Benchmark Configuration" )
+            name = {CMD_BENCHMARK_CONFIG},
+            description = "Benchmark configuration: enable/disable tests, specify parameters to run with",
+            title = "Benchmark Configuration" )
     private File benchConfigFile;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_JMH_ARGS},
-             description = "Standard JMH CLI args. These will be applied on top of other provided configuration",
-             title = "JMH Args" )
+            name = {CMD_JMH_ARGS},
+            description = "Standard JMH CLI args. These will be applied on top of other provided configuration",
+            title = "JMH Args" )
     private String jmhArgs = "";
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_PROFILERS},
-             description = "Comma separated list of profilers to run with",
-             title = "Profilers" )
+            name = {CMD_PROFILERS},
+            description = "Comma separated list of profilers to run with",
+            title = "Profilers" )
     private String profilerNames = "";
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_WORK_DIR},
-             description = "Directory where stores, configurations, etc. will be created",
-             title = "Work directory" )
+            name = {CMD_WORK_DIR},
+            description = "Directory where stores, configurations, etc. will be created",
+            title = "Work directory" )
     private File workDir = Paths.get( "benchmark_stores" ).toFile();
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_ERROR_POLICY},
-             description = "Prescribes how to deal with errors",
-             title = "Error Policy" )
+            name = {CMD_ERROR_POLICY},
+            description = "Prescribes how to deal with errors",
+            title = "Error Policy" )
     @AllowedEnumValues( ErrorReporter.ErrorPolicy.class )
     private ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.SKIP;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_JVM_PATH},
-             description = "Path to JVM -- will also be used when launching fork processes",
-             title = "Path to JVM" )
+            name = {CMD_JVM_PATH},
+            description = "Path to JVM -- will also be used when launching fork processes",
+            title = "Path to JVM" )
     private File jvmFile;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_TRIGGERED_BY},
-             description = "Specifies user that triggered this build",
-             title = "Specifies user that triggered this build" )
+            name = {CMD_TRIGGERED_BY},
+            description = "Specifies user that triggered this build",
+            title = "Specifies user that triggered this build" )
     @Required
     private String triggeredBy;
 
@@ -173,7 +173,7 @@ public abstract class BaseRunReportCommand implements Runnable
             String resultStoreUri,
             String resultStoreUser,
             String resultStorePass,
-            String s3Bucket )
+            String recordingsBaseUri )
     {
         List<String> commandArgs = Lists.newArrayList(
                 "run-export",
@@ -207,10 +207,10 @@ public abstract class BaseRunReportCommand implements Runnable
                 triggeredBy,
                 CMD_PROFILERS,
                 ProfilerType.serializeProfilers( profilers ),
-                RunReportCommand.CMD_S3_BUCKET,
-                s3Bucket
+                RunReportCommand.CMD_RECORDINGS_BASE_URI,
+                recordingsBaseUri
         );
-        commandArgs.addAll( ResultsStoreCredentials.argsFor( resultStoreUser, resultStorePass, resultStoreUri ) );
+        commandArgs.addAll( ResultsStoreArgs.argsFor( resultStoreUser, resultStorePass, resultStoreUri ) );
         if ( jvm.hasPath() )
         {
             commandArgs.add( CMD_JVM_PATH );

@@ -30,6 +30,7 @@ import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.ParameterVerifier;
+import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.process.ProcessFailureException;
@@ -91,6 +92,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import javax.inject.Inject;
 
 import static com.ldbc.driver.control.ConsoleAndFileDriverConfiguration.fromParamsMap;
 import static com.ldbc.driver.runtime.metrics.WorkloadResultsSnapshot.fromJson;
@@ -360,26 +363,8 @@ public class RunReportCommand implements Runnable
             title = "AWS region" )
     private String awsRegion = "eu-north-1";
 
-    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_RESULTS_STORE_USER},
-            description = "Username for Neo4j database server that stores benchmarking results",
-            title = "Results Store Username" )
-    private String resultsStoreUsername;
-
-    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_RESULTS_STORE_PASSWORD},
-            description = "Password for Neo4j database server that stores benchmarking results",
-            title = "Results Store Password" )
-    private String resultsStorePassword;
-
-    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_RESULTS_STORE_URI},
-            description = "URI to Neo4j database server for storing benchmarking results",
-            title = "Results Store" )
-    private URI resultsStoreUri;
+    @Inject
+    private final ResultsStoreArgs resultsStoreArgs = new ResultsStoreArgs();
 
     @Option( type = OptionType.COMMAND,
             name = {InfraParams.CMD_RESULTS_STORE_PASSWORD_SECRET_NAME},
@@ -387,13 +372,12 @@ public class RunReportCommand implements Runnable
             title = "Results Store Password Secret Name" )
     private String resultsStorePasswordSecretName;
 
-    public static final String CMD_S3_BUCKET = "--s3-bucket";
+    public static final String CMD_RECORDINGS_BASE_URI = "--recordings-base-uri";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_S3_BUCKET},
-            description = "S3 bucket profiles were uploaded to",
-            title = "S3 bucket" )
-    @Required
-    private String s3Bucket;
+            name = {CMD_RECORDINGS_BASE_URI},
+            description = "S3 bucket recorsings and profiles were uploaded to",
+            title = "Recordings and profiles S3 URI" )
+    private URI recordingsBaseUri = URI.create( "s3://benchmarking.neo4j.com/recordings/" );
 
     private static final String LDBC_FORK_NAME = "ldbc-fork";
 
@@ -567,18 +551,18 @@ public class RunReportCommand implements Runnable
                     neo4jConfig,
                     triggeredBy );
 
-            ResultStoreCredentials resultStoreCredentials = PasswordManager.getResultStoreCredentials( new ResultStoreCredentials(
-                                                                                                               resultsStoreUsername,
-                                                                                                               resultsStorePassword,
-                                                                                                               resultsStoreUri
-                                                                                                       ),
+            ResultStoreCredentials cmdResultStoreCredentials = new ResultStoreCredentials(
+                    resultsStoreArgs.resultsStoreUsername(),
+                    resultsStoreArgs.resultsStorePassword(),
+                    resultsStoreArgs.resultsStoreUri() );
+            ResultStoreCredentials resultStoreCredentials = PasswordManager.getResultStoreCredentials( cmdResultStoreCredentials,
                                                                                                        resultsStorePasswordSecretName,
                                                                                                        AWSPasswordManager.create( awsRegion ) );
 
-            ResultsReporter resultsReporter = new ResultsReporter( resultsStoreUsername,
-                                                                   resultsStorePassword,
-                                                                   resultsStoreUri );
-            resultsReporter.reportAndUpload( testRunReport, s3Bucket, resultsDir, awsEndpointURL, REPORT_THEN_FAIL );
+            ResultsReporter resultsReporter = new ResultsReporter( resultStoreCredentials.username(),
+                                                                   resultStoreCredentials.password(),
+                                                                   resultStoreCredentials.uri() );
+            resultsReporter.reportAndUpload( testRunReport, recordingsBaseUri, resultsDir, awsEndpointURL, REPORT_THEN_FAIL );
         }
         catch ( Throwable e )
         {

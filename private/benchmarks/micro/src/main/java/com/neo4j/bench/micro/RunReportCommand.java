@@ -8,13 +8,11 @@ package com.neo4j.bench.micro;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
-import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.tool.micro.RunReportParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
@@ -102,13 +100,12 @@ public class RunReportCommand extends BaseRunReportCommand
             title = "Results Store Password Secret Name" )
     private String resultsStorePasswordSecretName;
 
-    public static final String CMD_S3_BUCKET = "--s3-bucket";
+    public static final String CMD_RECORDINGS_BASE_URI = "--recordings-base-uri";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_S3_BUCKET},
-            description = "S3 bucket profiles were uploaded to",
-            title = "S3 bucket" )
-    @Required
-    private String s3Bucket;
+            name = {CMD_RECORDINGS_BASE_URI},
+            description = "S3 bucket recordings and profiles were uploaded to",
+            title = "Recordings and profiles S3 URI" )
+    private URI recordingsBaseUri = URI.create( "s3://benchmarking.neo4j.com/recordings/" );
 
     private static final int[] DEFAULT_THREAD_COUNTS = new int[]{1, Runtime.getRuntime().availableProcessors()};
 
@@ -133,7 +130,7 @@ public class RunReportCommand extends BaseRunReportCommand
                                                                resultStoreCredentials.password(),
                                                                resultStoreCredentials.uri() );
         resultsReporter.reportAndUpload( testRunReport,
-                                         s3Bucket,
+                                         recordingsBaseUri,
                                          runReportParams.workDir(),
                                          awsEndpointURL,
                                          REPORT_THEN_FAIL );

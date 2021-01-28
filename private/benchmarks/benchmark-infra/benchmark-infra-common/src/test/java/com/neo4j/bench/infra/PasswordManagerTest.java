@@ -35,7 +35,8 @@ public class PasswordManagerTest
                                                    uri,
                                                    URI.create( "http://localhost" ),
                                                    ErrorReportingPolicy.FAIL,
-                                                   Workspace.create( Paths.get( "." ) ).build() );
+                                                   Workspace.create( Paths.get( "." ) ).build(),
+                                                   URI.create( "http://localhost/recordings" ) );
         // when
         ResultStoreCredentials resultStoreCredentials = PasswordManager.getResultStoreCredentials( infraParams );
         // then
@@ -66,7 +67,8 @@ public class PasswordManagerTest
                                                    uri,
                                                    URI.create( "http://localhost" ),
                                                    ErrorReportingPolicy.FAIL,
-                                                   Workspace.create( Paths.get( "." ) ).build() );
+                                                   Workspace.create( Paths.get( "." ) ).build(),
+                                                   URI.create( "http://localhost/recordings" ) );
         // when
         ResultStoreCredentials resultStoreCredentials = PasswordManager.getResultStoreCredentials( infraParams, passwordManager );
         // then
@@ -96,7 +98,8 @@ public class PasswordManagerTest
                                                    uri,
                                                    URI.create( "http://localhost" ),
                                                    ErrorReportingPolicy.FAIL,
-                                                   Workspace.create( Paths.get( "." ) ).build() );
+                                                   Workspace.create( Paths.get( "." ) ).build(),
+                                                   URI.create( "http://localhost/recordings" ) );
         // when
         ResultStoreCredentials resultStoreCredentials = PasswordManager.getResultStoreCredentials( infraParams, passwordManager );
         // then
@@ -126,7 +129,8 @@ public class PasswordManagerTest
                                                    uri,
                                                    URI.create( "http://localhost" ),
                                                    ErrorReportingPolicy.FAIL,
-                                                   Workspace.create( Paths.get( "." ) ).build() );
+                                                   Workspace.create( Paths.get( "." ) ).build(),
+                                                   URI.create( "http://localhost/recordings" ) );
         // when
         assertThrows( IllegalArgumentException.class,
                       () -> PasswordManager.getResultStoreCredentials( infraParams, passwordManager ),

@@ -13,6 +13,7 @@ import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Neo4jStore;
+import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
@@ -59,6 +60,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
+import javax.inject.Inject;
+
 import org.neo4j.configuration.GraphDatabaseSettings;
 
 import static com.google.common.collect.Sets.newHashSet;
@@ -105,50 +108,27 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
              title = "Error handling policy" )
     private ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.SKIP;
 
-    @Option(
-            type = OptionType.COMMAND,
-            name = {"--aws-endpoint-url"},
-            description = "AWS endpoint URL, used during testing",
-            title = "AWS endpoint URL" )
+    @Option( type = OptionType.COMMAND,
+             name = {"--aws-endpoint-url"},
+             description = "AWS endpoint URL, used during testing",
+             title = "AWS endpoint URL" )
     private String awsEndpointURL;
 
-    @Option(
-            type = OptionType.COMMAND,
-            name = "--aws-region",
-            description = "AWS region",
-            title = "AWS region" )
+    @Option( type = OptionType.COMMAND,
+             name = "--aws-region",
+             description = "AWS region",
+             title = "AWS region" )
     private String awsRegion = "eu-north-1";
 
-    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_USER},
-             description = "Username for Neo4j database server that stores benchmarking results",
-             title = "Results Store Username" )
-    @Required
-    private String resultsStoreUsername;
+    @Inject
+    private final ResultsStoreArgs resultsStoreArgs = new ResultsStoreArgs();
 
-    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
+    public static final String CMD_RECORDINGS_BASE_URI = "--recordings-base-uri";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_PASSWORD},
-             description = "Password for Neo4j database server that stores benchmarking results",
-             title = "Results Store Password" )
-    @Required
-    private String resultsStorePassword;
-
-    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_URI},
-             description = "URI to Neo4j database server for storing benchmarking results",
-             title = "Results Store" )
-    @Required
-    private URI resultsStoreUri;
-
-    public static final String CMD_S3_BUCKET = "--s3-bucket";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_S3_BUCKET},
-             description = "S3 bucket profiles were uploaded to",
-             title = "S3 bucket" )
-    private String s3Bucket = "benchmarking.neo4j.com/recordings/";
+             name = {CMD_RECORDINGS_BASE_URI},
+             description = "S3 bucket recordings and profiles were uploaded to",
+             title = "Recordings and profiles S3 URI" )
+    private URI recordingsBaseUri = URI.create( "s3://benchmarking.neo4j.com/recordings/" );
 
     public static final String CMD_TEST_RUN_ID = "--test-run-id";
     @Option( type = OptionType.COMMAND,
@@ -167,11 +147,11 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                                                  neo4jConfigFile,
                                                  errorPolicy,
                                                  testRunId );
-        ResultsReporter resultsReporter = new ResultsReporter( resultsStoreUsername,
-                                                               resultsStorePassword,
-                                                               resultsStoreUri );
+        ResultsReporter resultsReporter = new ResultsReporter( resultsStoreArgs.resultsStoreUsername(),
+                                                               resultsStoreArgs.resultsStorePassword(),
+                                                               resultsStoreArgs.resultsStoreUri() );
 
-        resultsReporter.reportAndUpload( testRunReport, s3Bucket, workDir, awsEndpointURL, REPORT_THEN_FAIL );
+        resultsReporter.reportAndUpload( testRunReport, recordingsBaseUri, workDir, awsEndpointURL, REPORT_THEN_FAIL );
     }
 
     public static TestRunReport runReport( RunMacroWorkloadParams params,

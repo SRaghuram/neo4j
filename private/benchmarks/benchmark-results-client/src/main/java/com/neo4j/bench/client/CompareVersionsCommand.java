@@ -10,7 +10,6 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.ImmutableList;
-import com.neo4j.bench.client.cli.ResultsStoreCredentials;
 import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.client.queries.report.CsvHeader;
 import com.neo4j.bench.client.queries.report.CsvRow;
@@ -18,6 +17,7 @@ import com.neo4j.bench.client.queries.report.LdbcComparison;
 import com.neo4j.bench.client.queries.report.MacroComparison;
 import com.neo4j.bench.client.queries.report.MicroComparison;
 import com.neo4j.bench.client.queries.report.MicroCoverage;
+import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +43,7 @@ public class CompareVersionsCommand implements Runnable
     static final String MACRO_COMPARISON_FILENAME = "macro_comparison.csv";
 
     @Inject
-    @Required
-    private ResultsStoreCredentials resultsStoreCredentials;
+    private final ResultsStoreArgs resultsStoreArgs = new ResultsStoreArgs();
 
     private static final String CMD_OLD_VERSION = "--old-version";
     @Option( type = OptionType.COMMAND,
@@ -81,9 +80,9 @@ public class CompareVersionsCommand implements Runnable
     public void run()
     {
         BenchmarkUtil.assertDirectoryExists( outputDir.toPath() );
-        try ( StoreClient client = StoreClient.connect( resultsStoreCredentials.uri(),
-                                                        resultsStoreCredentials.username(),
-                                                        resultsStoreCredentials.password() ) )
+        try ( StoreClient client = StoreClient.connect( resultsStoreArgs.resultsStoreUri(),
+                                                        resultsStoreArgs.resultsStoreUsername(),
+                                                        resultsStoreArgs.resultsStorePassword() ) )
         {
             LOG.debug( "Writing results to: " + outputDir.getAbsolutePath() );
 
@@ -132,7 +131,7 @@ public class CompareVersionsCommand implements Runnable
                       Double.toString( minimumDifference ),
                       CMD_OUTPUT_DIRECTORY,
                       outputDir.toAbsolutePath().toString() )
-                .addAll( ResultsStoreCredentials.argsFor( resultsStoreUsername, resultsStorePassword, resultsStoreUri ) )
+                .addAll( ResultsStoreArgs.argsFor( resultsStoreUsername, resultsStorePassword, resultsStoreUri ) )
                 .build();
     }
 

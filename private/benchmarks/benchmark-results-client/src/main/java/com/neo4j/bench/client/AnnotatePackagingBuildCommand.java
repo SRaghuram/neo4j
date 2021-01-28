@@ -9,17 +9,16 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
-import com.google.common.collect.Lists;
-import com.neo4j.bench.client.cli.ResultsStoreCredentials;
+import com.google.common.collect.ImmutableList;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotations;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotationsResult;
+import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.model.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -38,8 +37,7 @@ public class AnnotatePackagingBuildCommand implements Runnable
     private static final Logger LOG = LoggerFactory.getLogger( AnnotatePackagingBuildCommand.class );
 
     @Inject
-    @Required
-    private ResultsStoreCredentials resultsStoreCredentials;
+    private final ResultsStoreArgs resultsStoreArgs = new ResultsStoreArgs();
 
     private static final String CMD_PACKAGING_BUILD_ID = "--packaging-build-id";
     @Option( type = OptionType.COMMAND,
@@ -101,9 +99,9 @@ public class AnnotatePackagingBuildCommand implements Runnable
         {
             throw new IllegalArgumentException( "Command only supports annotating standard Neo4j branches. Branch is not standard: " + neo4jSeries );
         }
-        try ( StoreClient client = StoreClient.connect( resultsStoreCredentials.uri(),
-                                                        resultsStoreCredentials.username(),
-                                                        resultsStoreCredentials.password() ) )
+        try ( StoreClient client = StoreClient.connect( resultsStoreArgs.resultsStoreUri(),
+                                                        resultsStoreArgs.resultsStoreUsername(),
+                                                        resultsStoreArgs.resultsStorePassword() ) )
         {
             List<Repository> benchmarkTools = benchmarkToolNames == null
                                               // create annotation for all (supported) tools
@@ -118,10 +116,10 @@ public class AnnotatePackagingBuildCommand implements Runnable
                                                              getAnnotationTargets() );
             CreateAnnotationsResult result = client.execute( query );
             LOG.debug( format( "Annotations created!\n" +
-                                        "Test Run Annotations: %s\n" +
-                                        "Metrics Annotations:  %s",
-                                        result.createdTestRunAnnotations(),
-                                        result.createdMetricsAnnotations() ) );
+                               "Test Run Annotations: %s\n" +
+                               "Metrics Annotations:  %s",
+                               result.createdTestRunAnnotations(),
+                               result.createdMetricsAnnotations() ) );
         }
         catch ( Exception e )
         {
@@ -154,17 +152,18 @@ public class AnnotatePackagingBuildCommand implements Runnable
             List<Repository> benchmarkTools,
             Set<AnnotationTarget> annotationTargets )
     {
-        ArrayList<String> args = Lists.newArrayList( "annotate",
-                                                     "packaging",
-                                                     CMD_PACKAGING_BUILD_ID,
-                                                     Long.toString( packagingBuildId ),
-                                                     CMD_ANNOTATION_COMMENT,
-                                                     annotationComment,
-                                                     CMD_ANNOTATION_AUTHOR,
-                                                     annotationAuthor,
-                                                     CMD_NEO4J_SERIES,
-                                                     neo4jSeries );
-        args.addAll( ResultsStoreCredentials.argsFor( resultsStoreUsername, resultsStorePassword, resultsStoreUri ) );
+        ImmutableList.Builder<String> args = ImmutableList.<String>builder()
+                .add( "annotate",
+                      "packaging",
+                      CMD_PACKAGING_BUILD_ID,
+                      Long.toString( packagingBuildId ),
+                      CMD_ANNOTATION_COMMENT,
+                      annotationComment,
+                      CMD_ANNOTATION_AUTHOR,
+                      annotationAuthor,
+                      CMD_NEO4J_SERIES,
+                      neo4jSeries )
+                .addAll( ResultsStoreArgs.argsFor( resultsStoreUsername, resultsStorePassword, resultsStoreUri ) );
 
         if ( !benchmarkTools.isEmpty() )
         {
@@ -179,6 +178,6 @@ public class AnnotatePackagingBuildCommand implements Runnable
         {
             args.add( CMD_ANNOTATE_METRICS );
         }
-        return args;
+        return args.build();
     }
 }

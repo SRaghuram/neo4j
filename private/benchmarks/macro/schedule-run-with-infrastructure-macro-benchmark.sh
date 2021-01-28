@@ -17,7 +17,8 @@ dataset_base_uri=
 neo4j_version=
 neo4j_branch=
 
-artifact_base_uri=s3://benchmarking.neo4j.com/artifacts/macro/
+recordings_base_uri=
+artifact_base_uri=
 
 while (("$#")); do
   case "$1" in
@@ -67,6 +68,10 @@ while (("$#")); do
     ;;
   --artifact-base-uri)
     artifact_base_uri=$2
+    shift 2
+    ;;
+  --recordings-base-uri)
+    recordings_base_uri=$2
     shift 2
     ;;
   --) # end of argument parsing
@@ -167,4 +172,5 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
   "$infrastructure_capabilities" \
   --batch-stack \
   "$batch_stack" \
-  ${dataset_base_uri:+--dataset-base-uri $dataset_base_uri}
+  ${dataset_base_uri:+--dataset-base-uri $dataset_base_uri} \
+  ${recordings_base_uri:+--recordings-base-uri $recordings_base_uri}

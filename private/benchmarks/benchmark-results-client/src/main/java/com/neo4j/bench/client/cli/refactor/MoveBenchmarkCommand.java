@@ -11,8 +11,8 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.ImmutableList;
 import com.neo4j.bench.client.StoreClient;
-import com.neo4j.bench.client.cli.ResultsStoreCredentials;
 import com.neo4j.bench.client.queries.refactor.MoveBenchmarkQuery;
+import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 
 import java.net.URI;
@@ -23,8 +23,7 @@ import javax.inject.Inject;
 public class MoveBenchmarkCommand implements Runnable
 {
     @Inject
-    @Required
-    private ResultsStoreCredentials resultsStoreCredentials;
+    private final ResultsStoreArgs resultStoreArgs = new ResultsStoreArgs();
 
     private static final String CMD_BENCHMARK_TOOL_NAME = "--benchmark-tool-name";
     @Option( type = OptionType.COMMAND,
@@ -62,9 +61,9 @@ public class MoveBenchmarkCommand implements Runnable
     @Override
     public void run()
     {
-        try ( StoreClient client = StoreClient.connect( resultsStoreCredentials.uri(),
-                                                        resultsStoreCredentials.username(),
-                                                        resultsStoreCredentials.password() ) )
+        try ( StoreClient client = StoreClient.connect( resultStoreArgs.resultsStoreUri(),
+                                                        resultStoreArgs.resultsStoreUsername(),
+                                                        resultStoreArgs.resultsStorePassword() ) )
         {
             BenchmarkGroup oldGroup = new BenchmarkGroup( oldGroupName );
             BenchmarkGroup newGroup = new BenchmarkGroup( newGroupName );
@@ -72,7 +71,7 @@ public class MoveBenchmarkCommand implements Runnable
         }
         catch ( Exception e )
         {
-            throw new RuntimeException( "Error moving group: " + resultsStoreCredentials.uri(), e );
+            throw new RuntimeException( "Error moving group: " + resultStoreArgs.resultsStoreUri(), e );
         }
     }
 
@@ -95,7 +94,7 @@ public class MoveBenchmarkCommand implements Runnable
                       newGroupName,
                       CMD_BENCHMARK_NAME,
                       benchmarkName )
-                .addAll( ResultsStoreCredentials.argsFor( resultsStoreUsername, resultsStorePassword, resultsStoreUri ) )
+                .addAll( ResultsStoreArgs.argsFor( resultsStoreUsername, resultsStorePassword, resultsStoreUri ) )
                 .build();
     }
 }

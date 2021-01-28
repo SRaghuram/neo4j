@@ -11,6 +11,7 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.StoreClient;
+import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.DeploymentModes;
@@ -52,6 +53,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import javax.inject.Inject;
+
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -90,28 +93,13 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
     private File workspaceDir;
 
     @Option( type = OptionType.COMMAND,
-            name = {InfraParams.CMD_RESULTS_STORE_USER},
-            description = "Username for Neo4j database server that stores benchmarking results",
-            title = "Results Store Username" )
-    private String resultsStoreUsername;
-
-    @Option( type = OptionType.COMMAND,
             name = {InfraParams.CMD_RESULTS_STORE_PASSWORD_SECRET_NAME},
             description = "Secret name in AWS Secrets Manager with password for Neo4j database server that stores benchmarking results",
             title = "Results Store Password Secret Name" )
     private String resultsStorePasswordSecretName;
 
-    @Option( type = OptionType.COMMAND,
-            name = {InfraParams.CMD_RESULTS_STORE_PASSWORD},
-            description = "Password for Neo4j database server that stores benchmarking results",
-            title = "Password Store Password Secret Name" )
-    private String resultsStorePassword;
-
-    @Option( type = OptionType.COMMAND,
-            name = {InfraParams.CMD_RESULTS_STORE_URI},
-            description = "URI to Neo4j database server for storing benchmarking results",
-            title = "Results Store URI" )
-    private URI resultsStoreUri;
+    @Inject
+    private final ResultsStoreArgs resultsStoreArgs = new ResultsStoreArgs();
 
     @Option( type = OptionType.COMMAND,
             name = InfraParams.CMD_AWS_SECRET,
@@ -146,8 +134,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             description = "Location of worker jar and other artifacts needed " +
                           "(e.g., s3://benchmarking.neo4j.com/artifacts/macro/<triggered_by>/<build_id>/<workload>/<query>/<uuid>) in S3",
             title = "Location of worker jar" )
-    @Required
-    private URI artifactBaseUri;
+    private URI artifactBaseUri = URI.create( "s3://benchmarking.neo4j.com/artifacts/macro/" );
 
     private static final String CMD_INFRASTRUCTURE_CAPABILITIES = "--infrastructure-capabilities";
     @Option( type = OptionType.COMMAND,
@@ -163,7 +150,14 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             name = CMD_DATASET_BASE_URI,
             description = "S3 base uri to location with macro datasets",
             title = "Dataset base S3 URI" )
-    private String dataSetBaseUri = "s3://benchmarking.neo4j.com/datasets/macro/";
+    private URI dataSetBaseUri = URI.create( "s3://benchmarking.neo4j.com/datasets/macro/" );
+
+    private static final String CMD_RECORDINGS_BASE_URI = "--recordings-base-uri";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_RECORDINGS_BASE_URI},
+            description = "S3 bucket recordings and profiles were uploaded to",
+            title = "Recordings and profiles S3 URI" )
+    private URI recordingsBaseUri = URI.create( "benchmarking.neo4j.com/recordings/" );
 
     private static String getJobName( String tool, String benchmark, String version, String triggered )
     {
@@ -203,13 +197,14 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
 
             CompletableFuture<Void> awaitFinished = CompletableFuture.runAsync( benchmarkJobScheduler::awaitFinished );
             InfraParams infraParams = new InfraParams( awsCredentials,
-                                                       resultsStoreUsername,
+                                                       resultsStoreArgs.resultsStoreUsername(),
                                                        resultsStorePasswordSecretName,
-                                                       resultsStorePassword,
-                                                       resultsStoreUri,
+                                                       resultsStoreArgs.resultsStorePassword(),
+                                                       resultsStoreArgs.resultsStoreUri(),
                                                        null,
                                                        errorReportingPolicy,
-                                                       workspace );
+                                                       workspace,
+                                                       recordingsBaseUri );
             try ( Resources resources = new Resources( Paths.get( "." ) ) )
             {
                 Workload workload = Workload.fromName( runMacroWorkloadParams.workloadName(), resources, runMacroWorkloadParams.deployment() );
@@ -232,7 +227,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                                                        new RunToolMacroWorkloadParams(
                                                                                                runMacroWorkloadParams.setQueryNames( queryNames ),
                                                                                                storeName,
-                                                                                               URI.create( dataSetBaseUri ) ) ),
+                                                                                               dataSetBaseUri ) ),
                                                                  testRunId ) );
 
                     workspace.assertArtifactsExist();

@@ -165,6 +165,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
                                    infraParams.errorReportingPolicy().name(),
                                    runMacroWorkloadParams.deployment().parsableValue(),
                                    String.join( ",", runMacroWorkloadParams.queryNames() ),
-                                   "--test-run-id", testRunId );
+                                   "--test-run-id", testRunId,
+                                   "--recordings-base-uri", infraParams.recordingsBaseUri().toString() );
     }
 }

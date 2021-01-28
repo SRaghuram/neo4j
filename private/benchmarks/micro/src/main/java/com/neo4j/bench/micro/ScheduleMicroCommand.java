@@ -9,6 +9,7 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams;
 import com.neo4j.bench.infra.AWSCredentials;
@@ -21,14 +22,13 @@ import com.neo4j.bench.infra.URIHelper;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.micro.MicroToolRunner;
 import com.neo4j.bench.infra.scheduler.BenchmarkJobScheduler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.UUID;
+import javax.inject.Inject;
 
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static java.lang.String.format;
@@ -36,8 +36,6 @@ import static java.lang.String.format;
 @Command( name = "schedule" )
 public class ScheduleMicroCommand extends BaseRunWorkloadCommand
 {
-    private static final Logger LOG = LoggerFactory.getLogger( ScheduleMicroCommand.class );
-
     @Option( type = OptionType.COMMAND,
             name = InfraParams.CMD_JOB_QUEUE,
             title = "AWS Batch Job Queue Name",
@@ -63,25 +61,15 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
             title = "Local workspace" )
     private File workspaceDir;
 
-    @Option( type = OptionType.COMMAND,
-            name = {InfraParams.CMD_RESULTS_STORE_USER},
-            description = "Username for Neo4j database server that stores benchmarking results",
-            title = "Results Store Username" )
-    @Required
-    private String resultsStoreUsername;
+    @Inject
+    private final ResultsStoreArgs resultsStoreArgs = new ResultsStoreArgs();
+
     @Option( type = OptionType.COMMAND,
             name = {InfraParams.CMD_RESULTS_STORE_PASSWORD_SECRET_NAME},
             description = "Secret name in AWS Secrets Manager with password for Neo4j database server that stores benchmarking results",
             title = "Results Store Password Secret Name" )
     @Required
     private String resultsStorePasswordSecretName;
-
-    @Option( type = OptionType.COMMAND,
-            name = {InfraParams.CMD_RESULTS_STORE_URI},
-            description = "URI to Neo4j database server for storing benchmarking results",
-            title = "Results Store" )
-    @Required
-    private URI resultsStoreUri;
 
     @Option( type = OptionType.COMMAND,
             name = InfraParams.CMD_AWS_SECRET,
@@ -135,17 +123,17 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
                                                          .resolve( URIHelper.toURIPart( uuid.toString() ) );
             URI artifactWorkerUri = artifactBaseWorkloadURI.resolve( "benchmark-infra-worker.jar" );
             InfraParams infraParams = new InfraParams( awsCredentials,
-                                                       resultsStoreUsername,
+                                                       resultsStoreArgs.resultsStoreUsername(),
                                                        resultsStorePasswordSecretName,
-                                                       resultsStoreUri,
+                                                       resultsStoreArgs.resultsStoreUri(),
                                                        artifactBaseWorkloadURI,
                                                        errorReportingPolicy,
                                                        workspace );
             String testRunId = UUID.randomUUID().toString();
-            JobParams jobParams = new JobParams( infraParams,
-                                                 new BenchmarkingRun(
-                                                         new BenchmarkingTool<>( MicroToolRunner.class, runMicroWorkloadParams ),
-                                                         testRunId ) );
+            JobParams<MicroToolRunner> jobParams = new JobParams<>( infraParams,
+                                                                    new BenchmarkingRun(
+                                                                            new BenchmarkingTool<>( MicroToolRunner.class, runMicroWorkloadParams ),
+                                                                            testRunId ) );
 
             String jobName = getJobName( "micro",
                                          runMicroWorkloadParams.neo4jVersion().toString(),

@@ -9,7 +9,7 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.ImmutableList;
 import com.neo4j.bench.client.StoreClient;
-import com.neo4j.bench.client.cli.ResultsStoreCredentials;
+import com.neo4j.bench.common.command.ResultsStoreArgs;
 
 import java.net.URI;
 import java.util.List;
@@ -22,14 +22,14 @@ public class VerifySchemaCommand implements Runnable
 
     @Inject
     @Required
-    private ResultsStoreCredentials resultsStoreCredentials;
+    private ResultsStoreArgs resultStoreArgs;
 
     @Override
     public void run()
     {
-        try ( StoreClient client = StoreClient.connect( resultsStoreCredentials.uri(),
-                                                        resultsStoreCredentials.username(),
-                                                        resultsStoreCredentials.password(),
+        try ( StoreClient client = StoreClient.connect( resultStoreArgs.resultsStoreUri(),
+                                                        resultStoreArgs.resultsStoreUsername(),
+                                                        resultStoreArgs.resultsStorePassword(),
                                                         RETRIES ) )
         {
             // verify is called when connecting to store
@@ -43,7 +43,7 @@ public class VerifySchemaCommand implements Runnable
         return ImmutableList.<String>builder()
                 .add( "refactor",
                       "verify" )
-                .addAll( ResultsStoreCredentials.argsFor( resultsStoreUsername, resultsStorePassword, resultsStoreUri ) )
+                .addAll( ResultsStoreArgs.argsFor( resultsStoreUsername, resultsStorePassword, resultsStoreUri ) )
                 .build();
     }
 }

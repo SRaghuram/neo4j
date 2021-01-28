@@ -3,27 +3,22 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client;
+package com.neo4j.bench.common.command;
 
-import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
-import com.neo4j.bench.client.cli.ResultsStoreCredentials;
-import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
-import com.neo4j.bench.model.model.TestRunReport;
-import com.neo4j.bench.model.util.JsonUtil;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.io.File;
-import javax.inject.Inject;
+import java.net.URI;
 
-@Command( name = "report-test-run" )
-public class ReportTestRun implements Runnable
+public class ReportTestRunArgs
 {
-    @Inject
-    @Required
-    private ResultsStoreCredentials resultsStoreCredentials;
 
     private static final String CMD_TEST_RUN_REPORT_FILE = "--test-run-report";
     @Option( type = OptionType.COMMAND,
@@ -33,13 +28,12 @@ public class ReportTestRun implements Runnable
     @Required
     private File testRunReportFile;
 
-    private static final String CMD_S3_BUCKET = "--s3-bucket";
+    private static final String CMD_RECORDINGS_BASE_URI = "--recordings-base-uri";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_S3_BUCKET},
-            description = "S3 bucket for uploading profiler recordings",
-            title = "S3 bucket" )
-    @Required
-    private String s3Bucket;
+            name = {CMD_RECORDINGS_BASE_URI},
+            description = "S3 bucket recorsings and profiles were uploaded to",
+            title = "Recordings and profiles S3 URI" )
+    private URI recordingsBaseUri;
 
     private static final String CMD_WORK_DIR = "--working-dir";
     @Option( type = OptionType.COMMAND,
@@ -63,13 +57,47 @@ public class ReportTestRun implements Runnable
             title = "Error reporting policy" )
     private ErrorReportingPolicy errorReportingPolicy = ErrorReportingPolicy.REPORT_THEN_FAIL;
 
-    @Override
-    public void run()
+    public File testRunReportFile()
     {
-        TestRunReport testRunReport = JsonUtil.deserializeJson( testRunReportFile.toPath(), TestRunReport.class );
-        ResultsReporter resultsReporter = new ResultsReporter( resultsStoreCredentials.username(),
-                                                               resultsStoreCredentials.password(),
-                                                               resultsStoreCredentials.uri() );
-        resultsReporter.reportAndUpload( testRunReport, s3Bucket, workDir, awsEndpointURL, errorReportingPolicy );
+        return testRunReportFile;
+    }
+
+    public URI recordingsBaseUri()
+    {
+        return recordingsBaseUri;
+    }
+
+    public File workDir()
+    {
+        return workDir;
+    }
+
+    public String awsEndpointURL()
+    {
+        return awsEndpointURL;
+    }
+
+    public ErrorReportingPolicy errorReportingPolicy()
+    {
+        return errorReportingPolicy;
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+
+        return EqualsBuilder.reflectionEquals( this, o );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return HashCodeBuilder.reflectionHashCode( this );
+    }
+
+    @Override
+    public String toString()
+    {
+        return ToStringBuilder.reflectionToString( this, ToStringStyle.SHORT_PREFIX_STYLE );
     }
 }

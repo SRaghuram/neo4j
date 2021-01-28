@@ -34,6 +34,7 @@ profilers="${15}"
 triggered_by="${16}"
 work_dir="${17}"
 micro_benchmarks_dir=$(pwd)
+recordings_base_uri=
 
 # here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
@@ -86,6 +87,6 @@ ${jvm_path} -jar "${jar_path}" run-export  \
         --results-store-uri "${results_store_uri}" \
         --results-store-user "${results_store_user}" \
         --results-store-pass "${results_store_password}" \
-        --s3-bucket "benchmarking.neo4j.com/recordings/" \
+        ${recordings_base_uri:+--recordings-base-uri $recordings_base_uri} \
         --aws-region "eu-north-1" \
         ${aws_endpoint_url:+--aws-endpoint-url $aws_endpoint_url}

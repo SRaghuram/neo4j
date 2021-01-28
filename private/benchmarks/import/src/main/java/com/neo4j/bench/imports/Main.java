@@ -19,6 +19,7 @@ import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.ParameterVerifier;
+import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroup;
@@ -40,7 +41,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,6 +51,7 @@ import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import javax.inject.Inject;
 
 import org.neo4j.cli.AdminTool;
 import org.neo4j.internal.helpers.collection.MapUtil;
@@ -89,24 +90,9 @@ public class Main
             title = "Working directory" )
     @Required
     private String workingDirName = "";
-    @Option( type = OptionType.COMMAND,
-             name = {"--results-store-user"},
-             description = "Username for Neo4j database server that stores benchmarking results",
-             title = "Results Store Username" )
-    @Required
-    private String resultsStoreUsername;
-    @Option( type = OptionType.COMMAND,
-             name = {"--results-store-pass"},
-             description = "Password for Neo4j database server that stores benchmarking results",
-             title = "Results Store Password" )
-    @Required
-    private String resultsStorePassword;
-    @Option( type = OptionType.COMMAND,
-             name = {"--results-store-uri"},
-             description = "URI to Neo4j database server for storing benchmarking results",
-             title = "Results Store" )
-    @Required
-    private URI resultsStoreUri;
+
+    @Inject
+    private final ResultsStoreArgs resultsStoreArgs = new ResultsStoreArgs();
     @Option( type = OptionType.COMMAND,
              name = {"--neo4j_commit"},
              description = "Commit of Neo4j that benchmark is run against",
@@ -314,7 +300,9 @@ public class Main
         BenchmarkTool tool = new BenchmarkTool( IMPORT_BENCH, neo4jCommit, IMPORT_OWNER, neo4jBranch );
         Java java = Java.current( Stream.of( jvmArgs ).collect( joining( " " ) ) );
 
-        try ( StoreClient client = StoreClient.connect( resultsStoreUri, resultsStoreUsername, resultsStorePassword ) )
+        try ( StoreClient client = StoreClient.connect( resultsStoreArgs.resultsStoreUri(),
+                                                        resultsStoreArgs.resultsStoreUsername(),
+                                                        resultsStoreArgs.resultsStorePassword() ) )
         {
             Neo4j neo4j = new Neo4j( neo4jCommit, neo4jVersion, neo4jEdition, neo4jBranch, neo4jBranchOwner );
             String id = UUID.randomUUID().toString();
@@ -339,7 +327,7 @@ public class Main
         }
         catch ( Exception e )
         {
-            throw new RuntimeException( "Error submitting benchmark results to " + resultsStoreUri, e );
+            throw new RuntimeException( "Error submitting benchmark results to " + resultsStoreArgs.resultsStoreUri(), e );
         }
     }
 }
