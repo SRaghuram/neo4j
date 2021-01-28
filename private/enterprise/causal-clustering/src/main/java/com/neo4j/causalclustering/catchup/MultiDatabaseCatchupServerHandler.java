@@ -19,6 +19,7 @@ import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsRequestHandler;
 import com.neo4j.causalclustering.catchup.v4.info.InfoRequestHandler;
 import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataRequestHandler;
+import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestHandler;
 import com.neo4j.configuration.TransactionStreamingStrategy;
@@ -46,7 +47,22 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     private final DatabaseStateService databaseStateService;
     private final int maxChunkSize;
 
-    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, DatabaseStateService databaseStateService,
+    public static MultiDatabaseCatchupServerHandler backupServerHandler( DatabaseManager<?> databaseManager, DatabaseStateService databaseStateService,
+            FileSystemAbstraction fs, int maxChunkSize, LogProvider logProvider, DependencyResolver dependencyResolver,
+            ConfigurableTransactionStreamingStrategy streamingStrategyProvider )
+    {
+        return new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, logProvider, dependencyResolver,
+                streamingStrategyProvider );
+    }
+
+    public static MultiDatabaseCatchupServerHandler catchupServerHandler( DatabaseManager<?> databaseManager, DatabaseStateService databaseStateService,
+            FileSystemAbstraction fs, int maxChunkSize, LogProvider logProvider, DependencyResolver dependencyResolver )
+    {
+        return new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, logProvider, dependencyResolver,
+                () -> TransactionStreamingStrategy.Aggressive );
+    }
+
+    private MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, DatabaseStateService databaseStateService,
             FileSystemAbstraction fs, int maxChunkSize, LogProvider logProvider, DependencyResolver dependencyResolver,
             Supplier<TransactionStreamingStrategy> txStreamingStrategyProvider )
     {

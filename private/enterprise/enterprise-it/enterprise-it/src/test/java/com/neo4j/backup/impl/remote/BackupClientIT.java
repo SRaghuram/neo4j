@@ -8,9 +8,7 @@ package com.neo4j.backup.impl.remote;
 import com.neo4j.backup.impl.BackupOutputMonitor;
 import com.neo4j.backup.impl.BackupsLifecycle;
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
-import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseIdDownloadFailedException;
-import com.neo4j.configuration.TransactionStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v4.metadata.IncludeMetadata;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -47,6 +45,8 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler.backupServerHandler;
+import static com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy.create;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
 import static java.util.Collections.emptyList;
@@ -76,25 +76,26 @@ class BackupClientIT
     @BeforeEach
     void setUp()
     {
+        var config = Config.defaults( CausalClusteringInternalSettings.experimental_catchup_protocol, true );
         lifecycle = BackupsLifecycle.startLifecycle( new RecordStorageEngineFactory(), testDirectory.getFileSystem(), NullLogProvider.nullLogProvider(),
                 Clocks.nanoClock(),
-                Config.defaults(), PageCacheTracer.NULL );
+                config, PageCacheTracer.NULL );
         scheduler = new ThreadPoolJobScheduler();
         backupClient = new BackupClient( NullLogProvider.nullLogProvider(), lifecycle.getCatchupClientFactory(), testDirectory.getFileSystem(), pageCache,
                                          PageCacheTracer.NULL, new Monitors(), Config.defaults(), new RecordStorageEngineFactory(), Clocks.nanoClock(),
                                          scheduler );
+        var configurableTransactionStreamingStrategy = create( config );
         catchupServer = CatchupServerBuilder.builder()
-                .catchupServerHandler( new MultiDatabaseCatchupServerHandler( defaultDatabaseAPI.getDependencyResolver().resolveDependency(
-                        DatabaseManager.class ), defaultDatabaseAPI.getDependencyResolver().resolveDependency( DatabaseStateService.class ),
-                        testDirectory.getFileSystem(), 32768, NullLogProvider.getInstance(), defaultDatabaseAPI.getDependencyResolver(),
-                        () -> TransactionStreamingStrategy.StartTime ) )
+                .catchupServerHandler( backupServerHandler( defaultDatabaseAPI.getDependencyResolver().resolveDependency( DatabaseManager.class ),
+                        defaultDatabaseAPI.getDependencyResolver().resolveDependency( DatabaseStateService.class ), testDirectory.getFileSystem(), 32768,
+                        NullLogProvider.getInstance(), defaultDatabaseAPI.getDependencyResolver(), configurableTransactionStreamingStrategy ) )
                 .catchupProtocols( new ApplicationSupportedProtocols( CATCHUP, emptyList() ) )
                 .modifierProtocols( emptyList() )
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
                 .installedProtocolsHandler( null )
                 .listenAddress( address ).scheduler( scheduler )
-                .config( Config.defaults( CausalClusteringInternalSettings.experimental_catchup_protocol, true ) )
-                .bootstrapConfig( serverConfig( Config.defaults() ) )
+                .config( config )
+                .bootstrapConfig( serverConfig( config ) )
                 .portRegister( new ConnectorPortRegister() )
                 .debugLogProvider( NullLogProvider.getInstance() )
                 .userLogProvider( NullLogProvider.getInstance() )

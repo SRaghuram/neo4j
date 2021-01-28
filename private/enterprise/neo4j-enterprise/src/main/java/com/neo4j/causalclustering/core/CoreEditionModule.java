@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
-import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
@@ -97,7 +96,6 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -136,6 +134,8 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
+import static com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler.backupServerHandler;
+import static com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler.catchupServerHandler;
 import static com.neo4j.causalclustering.messaging.marshalling.SupportedMessages.SUPPORT_ALL;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolUtil.buildClientInstallers;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolUtil.checkInstallersExhaustive;
@@ -284,10 +284,10 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
             DatabaseStateService databaseStateService, FileSystemAbstraction fileSystem )
     {
         int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
-        var catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fileSystem,
-                maxChunkSize, logProvider, globalModule.getGlobalDependencies(), () -> TransactionStreamingStrategy.Aggressive );
+        var catchupServerHandler = catchupServerHandler( databaseManager, databaseStateService, fileSystem,
+                maxChunkSize, logProvider, globalModule.getGlobalDependencies() );
         var backupTransactionStreamStrategy = ConfigurableTransactionStreamingStrategy.create( globalConfig );
-        var backupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fileSystem,
+        var backupServerHandler = backupServerHandler( databaseManager, databaseStateService, fileSystem,
                 maxChunkSize, logProvider, globalModule.getGlobalDependencies(), backupTransactionStreamStrategy );
         var catchupServer = catchupComponentsProvider.createCatchupServer( serverInstalledProtocolHandler, catchupServerHandler );
         life.add( catchupServer );

@@ -9,7 +9,6 @@ import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.configuration.TransactionStreamingStrategy;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory;
@@ -53,6 +52,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler.catchupServerHandler;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -125,12 +125,12 @@ class StoreCopyCheckpointMutexIT
     private static Server buildCatchupServer( GraphDatabaseAPI db, DatabaseStateService databaseStateService, InjectingFileSystemAbstraction injectingFS )
     {
         var databaseManager = resolve( db, DatabaseManager.class );
-        var regularCatchupServerHandler = new MultiDatabaseCatchupServerHandler(
+        var regularCatchupServerHandler = catchupServerHandler(
                 databaseManager,
                 databaseStateService, injectingFS,
                 32768,
                 new Log4jLogProvider( System.out ),
-                db.getDependencyResolver(), () -> TransactionStreamingStrategy.Aggressive );
+                db.getDependencyResolver() );
 
         return CatchupServerBuilder.builder()
                 .catchupServerHandler( regularCatchupServerHandler )

@@ -5,11 +5,10 @@
  */
 package com.neo4j.enterprise.edition;
 
-import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
+import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
-import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
@@ -82,6 +81,7 @@ import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.TokenHolders;
 
+import static com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler.backupServerHandler;
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.function.Predicates.any;
@@ -296,8 +296,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
                 supportedProtocolCreator.createSupportedModifierProtocols(),
                 pipelineBuilders.backupServer(),
-                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, internalLogProvider,
-                        globalModule.getGlobalDependencies(), backupStrategyProvider ),
+                backupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, internalLogProvider, globalModule.getGlobalDependencies(),
+                        backupStrategyProvider ),
                 new InstalledProtocolHandler(),
                 jobScheduler, portRegister );
 

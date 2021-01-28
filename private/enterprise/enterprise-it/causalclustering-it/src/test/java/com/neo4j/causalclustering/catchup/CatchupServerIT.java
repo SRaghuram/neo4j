@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
-import com.neo4j.configuration.TransactionStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
@@ -54,6 +53,7 @@ import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler.catchupServerHandler;
 import static com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse.Status;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_DATABASE_UNKNOWN;
 import static java.util.stream.Collectors.toList;
@@ -117,8 +117,7 @@ class CatchupServerIT
                 DatabaseStateService.class );
         final var dependencyResolver = Mockito.mock( DependencyResolver.class );
         MultiDatabaseCatchupServerHandler catchupServerHandler =
-                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, 32768, LOG_PROVIDER, dependencyResolver,
-                        () -> TransactionStreamingStrategy.Aggressive );
+                catchupServerHandler( databaseManager, databaseStateService, fs, 32768, LOG_PROVIDER, dependencyResolver );
 
         executor = Executors.newCachedThreadPool();
         catchupServer = new TestCatchupServer( catchupServerHandler, LOG_PROVIDER, executor );

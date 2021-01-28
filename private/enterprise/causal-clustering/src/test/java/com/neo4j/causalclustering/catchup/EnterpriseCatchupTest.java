@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.configuration.TransactionStreamingStrategy;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
@@ -52,6 +51,7 @@ import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler.catchupServerHandler;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -97,9 +97,7 @@ abstract class EnterpriseCatchupTest
                 .withDatabaseAvailabilityGuard( availabilityGuard )
                 .register();
         final var dependencyResolver = mock( DependencyResolver.class );
-        serverResponseHandler =
-                new MultiDatabaseCatchupServerHandler( databaseManager, mock( DatabaseStateService.class ), fsa, 32768, LOG_PROVIDER, dependencyResolver,
-                        () -> TransactionStreamingStrategy.Aggressive );
+        serverResponseHandler = catchupServerHandler( databaseManager, mock( DatabaseStateService.class ), fsa, 32768, LOG_PROVIDER, dependencyResolver );
     }
 
     void executeTestScenario( Function<DatabaseManager<?>,RequestResponse> responseFunction ) throws Exception
