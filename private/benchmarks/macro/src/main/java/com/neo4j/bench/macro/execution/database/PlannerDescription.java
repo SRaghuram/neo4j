@@ -53,7 +53,7 @@ public class PlannerDescription
     public static String toAsciiPlan( PlanOperator plan )
     {
         InternalPlanDescription planDescription = toPlanDescription( plan );
-        return renderAsTreeTable.apply( planDescription );
+        return renderAsTreeTable.apply( planDescription, false );
     }
 
     private static InternalPlanDescription toPlanDescription( PlanOperator plan )
@@ -63,7 +63,7 @@ public class PlannerDescription
 
         List<Argument> javaArguments = new ArrayList<>();
 
-        javaArguments.add( Arguments.EstimatedRows$.MODULE$.apply( plan.estimatedRows().doubleValue() ) );
+        javaArguments.add( Arguments.estimatedRows( plan.estimatedRows().doubleValue() ) );
         plan.rows().ifPresent( rowsValue -> javaArguments.add( Arguments.Rows$.MODULE$.apply( rowsValue ) ) );
 
         List<PrettyString> prettyStrings = plan.detailStrings().stream()
@@ -83,7 +83,7 @@ public class PlannerDescription
         else
         {
             Children children = getChildren( plan );
-            return new PlanDescriptionImpl( id, name, children, arguments, variables );
+            return new PlanDescriptionImpl( id, name, children, arguments, variables, false );
         }
     }
 
