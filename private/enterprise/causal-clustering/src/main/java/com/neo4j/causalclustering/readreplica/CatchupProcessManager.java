@@ -118,11 +118,11 @@ public class CatchupProcessManager extends SafeLifecycle
     /**
      * Time to catchup, thrusters to maximum!
      */
-    private void onTimeout() throws Exception
+    private void onTimeout()
     {
         if ( !txPullingPaused )
         {
-            catchupProcessComponents.catchupProcess().tick().get();
+            catchupProcessComponents.catchupProcess().tick();
         }
 
         if ( !isPanicked )
@@ -133,7 +133,7 @@ public class CatchupProcessManager extends SafeLifecycle
 
     private boolean isCatchupProcessAvailableForPausing()
     {
-        return catchupProcessComponents != null && !catchupProcessComponents.catchupProcess().isStoryCopy();
+        return catchupProcessComponents != null && !catchupProcessComponents.catchupProcess().isCopyingStore();
     }
 
     @VisibleForTesting

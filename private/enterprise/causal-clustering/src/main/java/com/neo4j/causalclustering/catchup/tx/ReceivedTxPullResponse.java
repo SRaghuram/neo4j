@@ -10,16 +10,18 @@ import java.util.Objects;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.storageengine.api.StoreId;
 
-public class TxPullResponse
+public class ReceivedTxPullResponse
 {
-    public static final TxPullResponse EMPTY = new TxPullResponse( null, null );
+    public static final ReceivedTxPullResponse EMPTY = new ReceivedTxPullResponse( null, null, -1 );
     private final StoreId storeId;
     private final CommittedTransactionRepresentation tx;
+    private final int txSize;
 
-    public TxPullResponse( StoreId storeId, CommittedTransactionRepresentation tx )
+    public ReceivedTxPullResponse( StoreId storeId, CommittedTransactionRepresentation tx, int txSize )
     {
         this.storeId = storeId;
         this.tx = tx;
+        this.txSize = txSize;
     }
 
     public StoreId storeId()
@@ -32,6 +34,11 @@ public class TxPullResponse
         return tx;
     }
 
+    public int txSize()
+    {
+        return txSize;
+    }
+
     @Override
     public boolean equals( Object o )
     {
@@ -39,27 +46,28 @@ public class TxPullResponse
         {
             return true;
         }
-        if ( o == null || getClass() != o.getClass() )
+        if ( !(o instanceof ReceivedTxPullResponse) )
         {
             return false;
         }
-
-        TxPullResponse that = (TxPullResponse) o;
-
-        return Objects.equals( storeId, that.storeId ) && Objects.equals( tx, that.tx );
+        ReceivedTxPullResponse that = (ReceivedTxPullResponse) o;
+        return txSize == that.txSize &&
+               Objects.equals( storeId, that.storeId ) &&
+               Objects.equals( tx, that.tx );
     }
 
     @Override
     public int hashCode()
     {
-        int result = storeId != null ? storeId.hashCode() : 0;
-        result = 31 * result + (tx != null ? tx.hashCode() : 0);
-        return result;
+        return Objects.hash( storeId, tx, txSize );
     }
 
     @Override
     public String toString()
     {
-        return String.format( "TxPullResponse{storeId=%s}", storeId );
+        return "ReceivedTxPullResponse{" +
+               "storeId=" + storeId +
+               ", txSize=" + txSize +
+               '}';
     }
 }

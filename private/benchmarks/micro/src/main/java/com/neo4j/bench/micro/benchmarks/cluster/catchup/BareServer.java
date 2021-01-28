@@ -53,6 +53,7 @@ import static com.neo4j.causalclustering.catchup.ResponseMessageType.TX_STREAM_F
 class BareServer implements CatchupServerHandler
 {
     private static final String ATOMIC = "atomic.bin";
+    public static final int UNDEFINED_TX_SIZE = 1;
 
     private final Log log;
     private final BareFilesHolder fileHolder;

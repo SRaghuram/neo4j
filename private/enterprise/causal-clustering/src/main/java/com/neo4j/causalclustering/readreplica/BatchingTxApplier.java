@@ -12,6 +12,7 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDisp
 
 import java.util.function.Supplier;
 
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -33,7 +34,7 @@ import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 public class BatchingTxApplier extends LifecycleAdapter
 {
     private static final String CLUSTERING_BATCHING_TRANSACTION_TAG = "clusteringBatchingTransaction";
-    private final int maxBatchSize;
+    private final long maxBatchSize;
     private final Supplier<TransactionIdStore> txIdStoreSupplier;
     private final Supplier<TransactionCommitProcess> commitProcessSupplier;
     private final VersionContextSupplier versionContextSupplier;
@@ -49,8 +50,9 @@ public class BatchingTxApplier extends LifecycleAdapter
 
     private volatile long lastQueuedTxId;
     private volatile boolean stopped;
+    private int batchSize;
 
-    BatchingTxApplier( int maxBatchSize, Supplier<TransactionIdStore> txIdStoreSupplier, Supplier<TransactionCommitProcess> commitProcessSupplier,
+    BatchingTxApplier( long maxBatchSize, Supplier<TransactionIdStore> txIdStoreSupplier, Supplier<TransactionCommitProcess> commitProcessSupplier,
             Monitors monitors, VersionContextSupplier versionContextSupplier,
             CommandIndexTracker commandIndexTracker, LogProvider logProvider, ReplicatedDatabaseEventDispatch databaseEventDispatch,
             PageCacheTracer pageCacheTracer )
@@ -71,7 +73,7 @@ public class BatchingTxApplier extends LifecycleAdapter
     {
         stopped = false;
         refreshFromNewStore();
-        txQueue = new TransactionQueue( maxBatchSize, ( first, last ) ->
+        txQueue = new TransactionQueue( Integer.MAX_VALUE, ( first, last ) ->
         {
             commitProcess.commit( first, NULL, EXTERNAL );
             long lastAppliedRaftLogIndex = LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader( last.transactionRepresentation().additionalHeader() );
@@ -96,9 +98,10 @@ public class BatchingTxApplier extends LifecycleAdapter
     /**
      * Queues a transaction for application.
      *
-     * @param tx The transaction to be queued for application.
+     * @param tx     The transaction to be queued for application.
+     * @param txSize the size of the provided tx
      */
-    public void queue( CommittedTransactionRepresentation tx ) throws Exception
+    public void queue( CommittedTransactionRepresentation tx, int txSize ) throws Exception
     {
         long receivedTxId = tx.getCommitEntry().getTxId();
         long expectedTxId = lastQueuedTxId + 1;
@@ -117,6 +120,12 @@ public class BatchingTxApplier extends LifecycleAdapter
             cursorTracer.close();
         } );
         txQueue.queue( toApply );
+        batchSize += txSize;
+
+        if ( batchSize >= maxBatchSize )
+        {
+            applyBatch();
+        }
 
         if ( !stopped )
         {
@@ -125,9 +134,10 @@ public class BatchingTxApplier extends LifecycleAdapter
         }
     }
 
-    void applyBatch() throws Exception
+    public void applyBatch() throws Exception
     {
         txQueue.empty();
+        batchSize = 0;
     }
 
     /**

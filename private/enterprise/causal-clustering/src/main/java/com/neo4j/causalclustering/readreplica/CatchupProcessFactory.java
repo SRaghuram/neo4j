@@ -11,14 +11,15 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 
-import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.api.InternalTransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -34,30 +35,30 @@ public class CatchupProcessFactory
     private final CatchupClientFactory catchupClient;
     private final UpstreamDatabaseStrategySelector selectionStrategyPipeline;
     private final CommandIndexTracker commandIndexTracker;
-    private final Executor executor;
     private final Panicker panicker;
     private final LogProvider logProvider;
     private final Config config;
     private final CatchupComponentsRepository catchupComponents;
     private final ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch databaseEventDispatch;
     private final PageCacheTracer pageCacheTracer;
+    private final AsyncTxApplier asyncTxApplier;
 
-    CatchupProcessFactory( Executor executor, Panicker panicker, CatchupComponentsRepository catchupComponents, TopologyService topologyService,
+    CatchupProcessFactory( Panicker panicker, CatchupComponentsRepository catchupComponents, TopologyService topologyService,
             CatchupClientFactory catchUpClient, UpstreamDatabaseStrategySelector selectionStrategyPipeline, CommandIndexTracker commandIndexTracker,
             LogProvider logProvider, Config config, ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch databaseEventDispatch,
-            PageCacheTracer pageCacheTracer )
+            PageCacheTracer pageCacheTracer, AsyncTxApplier asyncTxApplier )
     {
         this.panicker = panicker;
         this.logProvider = logProvider;
         this.config = config;
         this.commandIndexTracker = commandIndexTracker;
-        this.executor = executor;
         this.catchupComponents = catchupComponents;
         this.topologyService = topologyService;
         this.catchupClient = catchUpClient;
         this.selectionStrategyPipeline = selectionStrategyPipeline;
         this.databaseEventDispatch = databaseEventDispatch;
         this.pageCacheTracer = pageCacheTracer;
+        this.asyncTxApplier = asyncTxApplier;
     }
 
     CatchupProcessComponents create( ReadReplicaDatabaseContext databaseContext )
@@ -70,15 +71,16 @@ public class CatchupProcessFactory
                 databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( TransactionAppender.class ),
                 databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( StorageEngine.class ) );
 
-        int maxBatchSize = config.get( CausalClusteringInternalSettings.read_replica_transaction_applier_batch_size );
+        long maxBatchSize = ByteUnit.mebiBytes( config.get( CausalClusteringInternalSettings.read_replica_transaction_applier_batch_size ) );
+
         BatchingTxApplier batchingTxApplier = new BatchingTxApplier( maxBatchSize,
                 () -> databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( TransactionIdStore.class ), writableCommitProcess,
                 databaseContext.monitors(), databaseContext.kernelDatabase().getVersionContextSupplier(), commandIndexTracker, logProvider,
                 databaseEventDispatch, pageCacheTracer );
 
-        CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext, catchupClient, batchingTxApplier, databaseEventDispatch,
+        CatchupPollingProcess catchupProcess = new CatchupPollingProcess( databaseContext, catchupClient, batchingTxApplier, databaseEventDispatch,
                 dbCatchupComponents.storeCopyProcess(), logProvider, this.panicker,
-                new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
+                new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ), asyncTxApplier );
 
         return new CatchupProcessComponents( catchupProcess, batchingTxApplier );
     }

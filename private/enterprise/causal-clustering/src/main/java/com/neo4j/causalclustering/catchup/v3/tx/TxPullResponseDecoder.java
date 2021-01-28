@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.v3.tx;
 
-import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
+import com.neo4j.causalclustering.catchup.tx.ReceivedTxPullResponse;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.ReadableNetworkChannelDelegator;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
@@ -49,9 +49,11 @@ public class TxPullResponseDecoder extends ByteToMessageDecoder
 
         while ( nextTxInfo.canReadNextTx( in ) )
         {
+            var txStartIndex = in.readerIndex();
             transactionCursor.next();
+            var txSize = in.readerIndex() - txStartIndex;
             CommittedTransactionRepresentation tx = transactionCursor.get();
-            out.add( new TxPullResponse( storeId, tx ) );
+            out.add( new ReceivedTxPullResponse( storeId, tx, txSize ) );
             nextTxInfo.update( in );
         }
 
@@ -60,7 +62,7 @@ public class TxPullResponseDecoder extends ByteToMessageDecoder
             transactionCursor.close();
             transactionCursor = null;
             nextTxInfo = null;
-            out.add( TxPullResponse.EMPTY );
+            out.add( ReceivedTxPullResponse.EMPTY );
         }
     }
 
