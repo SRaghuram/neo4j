@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -91,9 +92,9 @@ class BatchingTxApplierTest
     void shouldApplyBatchAndDispatchEvents() throws Exception
     {
         // given
-        txApplier.queue( createTxWithId( startTxId + 1 ) );
-        txApplier.queue( createTxWithId( startTxId + 2 ) );
-        txApplier.queue( createTxWithId( startTxId + 3 ) );
+        txApplier.queue( createTxWithId( startTxId + 1 ), 1 );
+        txApplier.queue( createTxWithId( startTxId + 2 ), 1 );
+        txApplier.queue( createTxWithId( startTxId + 3 ), 1 );
 
         // when
         txApplier.applyBatch();
@@ -107,17 +108,17 @@ class BatchingTxApplierTest
     void shouldIgnoreOutOfOrderTransactions() throws Exception
     {
         // given
-        txApplier.queue( createTxWithId( startTxId + 4 ) ); // ignored
-        txApplier.queue( createTxWithId( startTxId + 1 ) );
-        txApplier.queue( createTxWithId( startTxId + 3 ) ); // ignored
-        txApplier.queue( createTxWithId( startTxId + 2 ) );
-        txApplier.queue( createTxWithId( startTxId + 3 ) );
-        txApplier.queue( createTxWithId( startTxId + 5 ) ); // ignored
-        txApplier.queue( createTxWithId( startTxId + 5 ) ); // ignored
-        txApplier.queue( createTxWithId( startTxId + 4 ) );
-        txApplier.queue( createTxWithId( startTxId + 4 ) ); // ignored
-        txApplier.queue( createTxWithId( startTxId + 4 ) ); // ignored
-        txApplier.queue( createTxWithId( startTxId + 6 ) ); // ignored
+        txApplier.queue( createTxWithId( startTxId + 4 ), 1 ); // ignored
+        txApplier.queue( createTxWithId( startTxId + 1 ), 1 );
+        txApplier.queue( createTxWithId( startTxId + 3 ), 1 ); // ignored
+        txApplier.queue( createTxWithId( startTxId + 2 ), 1 );
+        txApplier.queue( createTxWithId( startTxId + 3 ), 1 );
+        txApplier.queue( createTxWithId( startTxId + 5 ), 1 ); // ignored
+        txApplier.queue( createTxWithId( startTxId + 5 ), 1 ); // ignored
+        txApplier.queue( createTxWithId( startTxId + 4 ), 1 );
+        txApplier.queue( createTxWithId( startTxId + 4 ), 1 ); // ignored
+        txApplier.queue( createTxWithId( startTxId + 4 ), 1 ); // ignored
+        txApplier.queue( createTxWithId( startTxId + 6 ), 1 ); // ignored
 
         // when
         txApplier.applyBatch();
@@ -127,30 +128,13 @@ class BatchingTxApplierTest
     }
 
     @Test
-    void shouldBeAbleToQueueMaxBatchSize() throws Exception
-    {
-        // given
-        var endTxId = startTxId + maxBatchSize;
-        for ( var txId = startTxId + 1; txId <= endTxId; txId++ )
-        {
-            txApplier.queue( createTxWithId( txId ) );
-        }
-
-        // when
-        txApplier.applyBatch();
-
-        // then
-        assertTransactionsCommitted( startTxId + 1, maxBatchSize );
-    }
-
-    @Test
     @Timeout( 3 )
     void shouldGiveUpQueueingOnStop() throws Throwable
     {
         // given
         for ( int i = 1; i <= maxBatchSize; i++ ) // fell the queue
         {
-            txApplier.queue( createTxWithId( startTxId + i ) );
+            txApplier.queue( createTxWithId( startTxId + i ), 1 );
         }
 
         // when
@@ -159,7 +143,7 @@ class BatchingTxApplierTest
             latch.countDown();
             try
             {
-                txApplier.queue( createTxWithId( startTxId + maxBatchSize + 1 ) );
+                txApplier.queue( createTxWithId( startTxId + maxBatchSize + 1 ), 1 );
             }
             catch ( Exception e )
             {
@@ -179,13 +163,53 @@ class BatchingTxApplierTest
     @Test
     void tracePageCacheAccessOnTransactionApply() throws Exception
     {
-        txApplier.queue( createTxWithId( startTxId + 1 ) );
-        txApplier.queue( createTxWithId( startTxId + 2 ) );
-        txApplier.queue( createTxWithId( startTxId + 3 ) );
+        txApplier.queue( createTxWithId( startTxId + 1 ), 1 );
+        txApplier.queue( createTxWithId( startTxId + 2 ), 1 );
+        txApplier.queue( createTxWithId( startTxId + 3 ), 1 );
 
         txApplier.applyBatch();
 
         pageCacheTracer.checkAllCursorsAreClosed();
+    }
+
+    @Test
+    void shouldApplyBatchWhenBatchLimitIsReached() throws Exception
+    {
+        txApplier.queue( createTxWithId( startTxId + 1 ), 0 );
+        txApplier.queue( createTxWithId( startTxId + 2 ), 0 );
+        txApplier.queue( createTxWithId( startTxId + 3 ), maxBatchSize );
+
+        assertTransactionsCommitted( startTxId + 1, 3 );
+    }
+
+    @Test
+    void shouldApplyBatchWhenBatchLimitIsExceeded() throws Exception
+    {
+        txApplier.queue( createTxWithId( startTxId + 1 ), 1 );
+        txApplier.queue( createTxWithId( startTxId + 2 ), 1 );
+        txApplier.queue( createTxWithId( startTxId + 3 ), maxBatchSize );
+        txApplier.queue( createTxWithId( startTxId + 4 ), 1 );
+
+        assertTransactionsCommitted( startTxId + 1, 3 );
+    }
+
+    @Test
+    void shouldResetBatchSizeWhenAppliedManually() throws Exception
+    {
+        txApplier.queue( createTxWithId( startTxId + 1 ), 1 );
+        txApplier.applyBatch();
+        txApplier.queue( createTxWithId( startTxId + 2 ), maxBatchSize - 1 );
+        assertTransactionsCommitted( startTxId + 1, 1 );
+    }
+
+    @Test
+    void shouldNotApplyBatchWhenBatchLimitIsNotReached() throws Exception
+    {
+        txApplier.queue( createTxWithId( startTxId + 1 ), 0 );
+        txApplier.queue( createTxWithId( startTxId + 2 ), 0 );
+        txApplier.queue( createTxWithId( startTxId + 3 ), maxBatchSize - 1 );
+
+        verify( commitProcess, Mockito.never() ).commit( any(), any(), any() );
     }
 
     private CommittedTransactionRepresentation createTxWithId( long txId )

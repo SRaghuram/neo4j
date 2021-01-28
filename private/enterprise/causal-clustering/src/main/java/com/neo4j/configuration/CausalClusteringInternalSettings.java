@@ -19,6 +19,7 @@ import static com.neo4j.configuration.CausalClusterSettingConstraints.validateMi
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static org.neo4j.configuration.SettingConstraints.lessThanOrEqual;
+import static org.neo4j.configuration.SettingConstraints.min;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
 import static org.neo4j.configuration.SettingValueParsers.BOOL;
 import static org.neo4j.configuration.SettingValueParsers.DOUBLE;
@@ -214,9 +215,12 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
             newBuilder( "causal_clustering.store_copy_backoff_max_wait", DURATION, ofSeconds( 5 ) ).build();
 
     @Internal
-    @Description( "Maximum transaction batch size for read replicas when applying transactions pulled from core servers." )
+    @Description( "Threshold in Mb for when a downloaded batch of transactions for a read replicas should be incrementally applied. " +
+                  "When a read replica has pulled transaction data overseeing this value they will be applied to the store" )
     public static final Setting<Integer> read_replica_transaction_applier_batch_size =
-            newBuilder( "causal_clustering.read_replica_transaction_applier_batch_size", INT, 64 ).build();
+            newBuilder( "causal_clustering.read_replica_transaction_applier_batch_size", INT, 4 )
+                    .dynamic()
+                    .addConstraint( min( 1 ) ).build();
 
     @Internal
     public static final Setting<Boolean> inbound_connection_initialization_logging_enabled =

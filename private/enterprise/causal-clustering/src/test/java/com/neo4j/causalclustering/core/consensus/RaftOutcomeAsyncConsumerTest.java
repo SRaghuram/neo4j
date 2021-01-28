@@ -39,7 +39,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class RaftOutcomeApplierTest
+class RaftOutcomeAsyncConsumerTest
 {
     private RaftState raftState = mock( RaftState.class );
     private LogProvider logProvider = NullLogProvider.getInstance();

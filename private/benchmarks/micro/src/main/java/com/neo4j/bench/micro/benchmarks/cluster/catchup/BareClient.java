@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.catchup.storecopy.FileHeader;
 import com.neo4j.causalclustering.catchup.storecopy.GetStoreIdResponse;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
-import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
+import com.neo4j.causalclustering.catchup.tx.ReceivedTxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdRequest;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
@@ -27,7 +27,6 @@ import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
 import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
@@ -153,13 +152,13 @@ class BareClient implements CatchupResponseHandler
     }
 
     @Override
-    public boolean onFileContent( FileChunk fileChunk ) throws IOException
+    public boolean onFileContent( FileChunk fileChunk )
     {
         return fileChunk.isLast();
     }
 
     @Override
-    public void onTxPullResponse( TxPullResponse tx )
+    public void onTxPullResponse( ReceivedTxPullResponse tx )
     {
         log.info( "Received TxPullResponse with %s,%s", tx.storeId(), tx.tx() );
     }

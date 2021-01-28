@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
+import com.neo4j.causalclustering.catchup.tx.ReceivedTxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.BeforeEach;
@@ -154,7 +155,7 @@ class TransactionLogCatchUpWriterIT
             // when a bunch of transactions received
             LongStream.range( nextTxId, nextTxId + MANY_TRANSACTIONS )
                       .mapToObj( TransactionLogCatchUpWriterIT::tx )
-                      .map( tx -> new TxPullResponse( storeId, tx ) )
+                      .map( tx -> new ReceivedTxPullResponse( storeId, tx, 1 ) )
                       .forEach( writer::onTxReceived );
 
             nextTxId = nextTxId + MANY_TRANSACTIONS;
@@ -222,7 +223,7 @@ class TransactionLogCatchUpWriterIT
         {
             LongStream.range( fromTxId, MANY_TRANSACTIONS )
                     .mapToObj( TransactionLogCatchUpWriterIT::tx )
-                    .map( tx -> new TxPullResponse( storeId, tx ) )
+                    .map( tx -> new ReceivedTxPullResponse( storeId, tx, 1 ) )
                     .forEach( subject::onTxReceived );
         }
 
@@ -268,7 +269,7 @@ class TransactionLogCatchUpWriterIT
         // when
         for ( int i = fromTxId; i <= endTxId; i++ )
         {
-            catchUpWriter.onTxReceived( new TxPullResponse( storeId, tx( i ) ) );
+            catchUpWriter.onTxReceived( new ReceivedTxPullResponse( storeId, tx( i ), 1 ) );
         }
 
         catchUpWriter.close();

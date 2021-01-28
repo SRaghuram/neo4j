@@ -5,13 +5,18 @@
  */
 package com.neo4j.causalclustering.catchup.v3.tx;
 
+import com.neo4j.causalclustering.catchup.tx.ReceivedTxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.WritableTxPullResponse;
+import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+
+import java.io.IOException;
 
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
@@ -26,7 +31,6 @@ import org.neo4j.storageengine.api.StoreId;
 
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.neo4j.internal.kernel.api.security.AuthSubject.ANONYMOUS;
 import static org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
@@ -36,9 +40,10 @@ class TxPullResponseEncodeDecodeV3Test
     private static final int TX_SIZE = sizeOfSingleDecodedTransaction();
 
     private EmbeddedChannel channel;
+
     private enum ChunkSize
     {
-        LESS_THAN_TX( TX_SIZE / 2 ),
+        LESS_THAN_TX( TX_SIZE - 10 ),
         MORE_THAN_TX_EVEN( TX_SIZE * 2 ),
         MORE_THAN_TX_UNEVEN( (int) (TX_SIZE * 1.5) ),
         EQUAL_TO_TX( TX_SIZE );
@@ -60,11 +65,11 @@ class TxPullResponseEncodeDecodeV3Test
 
     @ParameterizedTest( name = "Chunk size {0}" )
     @EnumSource( ChunkSize.class )
-    void shouldEncodeAndDecodePullResponseMessage( ChunkSize chunkSize )
+    void shouldEncodeAndDecodePullResponseMessage( ChunkSize chunkSize ) throws IOException
     {
         // given
         channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder( INSTANCE ) );
-        TxPullResponse sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
+        var sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
 
         // when
         writeTx( channel, sent );
@@ -75,11 +80,11 @@ class TxPullResponseEncodeDecodeV3Test
 
     @ParameterizedTest( name = "Chunk size {0}" )
     @EnumSource( ChunkSize.class )
-    void shouldDecodeTwoTransactionsAfterOneAnther( ChunkSize chunkSize )
+    void shouldDecodeTwoTransactionsAfterOneAnther( ChunkSize chunkSize ) throws IOException
     {
         // given
         channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder( INSTANCE ) );
-        TxPullResponse sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
+        var sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
 
         // when
         writeTx( channel, sent );
@@ -96,11 +101,11 @@ class TxPullResponseEncodeDecodeV3Test
 
     @ParameterizedTest( name = "Chunk size {0}" )
     @EnumSource( ChunkSize.class )
-    void shouldDecodeStreamOfTransactions( ChunkSize chunkSize )
+    void shouldDecodeStreamOfTransactions( ChunkSize chunkSize ) throws IOException
     {
         // given
         channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder( INSTANCE ) );
-        TxPullResponse sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
+        var sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
 
         // when
         writeTx( channel, sent, sent );
@@ -109,23 +114,22 @@ class TxPullResponseEncodeDecodeV3Test
         assertInboundEquals( channel, sent, sent );
     }
 
-    private void assertInboundEquals( EmbeddedChannel channel, TxPullResponse... expected )
+    private void assertInboundEquals( EmbeddedChannel channel, TxPullResponse... expected ) throws IOException
     {
         channel.checkException();
-        for ( TxPullResponse txPullResponse : expected )
+        for ( var txPullResponse : expected )
         {
-            TxPullResponse readInbound = channel.readInbound();
-            assertNotSame( txPullResponse, readInbound );
-            assertEquals( txPullResponse, readInbound );
+            ReceivedTxPullResponse readInbound = channel.readInbound();
+            assertEquals( new ReceivedTxPullResponse( txPullResponse.storeId(), txPullResponse.tx(), actualTxSize() ), readInbound );
             channel.checkException();
         }
 
-        assertEquals( TxPullResponse.EMPTY, channel.readInbound() );
+        assertEquals( ReceivedTxPullResponse.EMPTY, channel.readInbound() );
     }
 
     private void writeTx( EmbeddedChannel channel, TxPullResponse... sent )
     {
-        for ( TxPullResponse txPullResponse : sent )
+        for ( var txPullResponse : sent )
         {
             channel.writeOutbound( writable( txPullResponse ) );
         }
@@ -137,9 +141,18 @@ class TxPullResponseEncodeDecodeV3Test
         }
     }
 
+    private int actualTxSize() throws IOException
+    {
+        var inMemoryChannel = new NetworkWritableChannel( Unpooled.buffer() );
+        var tx = newCommittedTransactionRepresentation();
+        var entryWriter = LogEntryWriterFactory.LATEST.createEntryWriter( inMemoryChannel );
+        entryWriter.serialize( tx );
+        return inMemoryChannel.byteBuf().readableBytes();
+    }
+
     private static int sizeOfSingleDecodedTransaction()
     {
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel( new TxPullResponseEncoder() );
+        var embeddedChannel = new EmbeddedChannel( new TxPullResponseEncoder() );
         var txPullResopnse = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
         embeddedChannel.writeOutbound( writable( txPullResopnse ), writable( TxPullResponse.EMPTY ) );
         ByteBuf byteBuf = embeddedChannel.readOutbound();
@@ -156,15 +169,15 @@ class TxPullResponseEncodeDecodeV3Test
 
     private static CommittedTransactionRepresentation newCommittedTransactionRepresentation()
     {
-        final long arbitraryRecordId = 27L;
-        Command.NodeCommand command = new Command.NodeCommand( new NodeRecord( arbitraryRecordId ), new NodeRecord( arbitraryRecordId ) );
+        final var arbitraryRecordId = 27L;
+        var command = new Command.NodeCommand( new NodeRecord( arbitraryRecordId ), new NodeRecord( arbitraryRecordId ) );
 
-        PhysicalTransactionRepresentation physicalTransactionRepresentation =
+        var physicalTransactionRepresentation =
                 new PhysicalTransactionRepresentation( singletonList( new LogEntryCommand( command ).getCommand() ) );
         physicalTransactionRepresentation.setHeader( new byte[]{}, 0, 0, 0, 0, ANONYMOUS );
 
-        LogEntryStart startEntry = new LogEntryStart( 0L, 0L, BASE_TX_CHECKSUM, new byte[]{}, LogPosition.UNSPECIFIED );
-        LogEntryCommit commitEntry = new LogEntryCommit( 42, 0, 0 );
+        var startEntry = new LogEntryStart( 0L, 0L, BASE_TX_CHECKSUM, new byte[]{}, LogPosition.UNSPECIFIED );
+        var commitEntry = new LogEntryCommit( 42, 0, 0 );
 
         return new CommittedTransactionRepresentation( startEntry, physicalTransactionRepresentation, commitEntry );
     }

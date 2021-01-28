@@ -24,6 +24,7 @@ import com.neo4j.causalclustering.error_handling.DefaultPanicService;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
+import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ResolutionResolverFactory;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
@@ -264,6 +265,10 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         var catchupClientFactory = catchupComponentsProvider.catchupClientFactory();
 
         globalLife.add( catchupServer );
+
+        var asyncTxApplier = new AsyncTxApplier( jobScheduler, logProvider );
+        globalLife.add( asyncTxApplier );
+
         backupServerOptional.ifPresent( globalLife::add );
         //Reconciler module must start last, as it starting starts actual databases, which depend on all of the above components at runtime.
         globalLife.add( reconcilerModule );
@@ -274,7 +279,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         // TODO: Health should be created per-db in the factory. What about other things here?
         readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler,
                 topologyService, identityModule.serverId(), catchupComponentsRepository, catchupClientFactory, databaseEventService, storageFactory,
-                panicService, databaseStartAborter, globalModule.getTracers().getPageCacheTracer() );
+                panicService, databaseStartAborter, globalModule.getTracers().getPageCacheTracer(), asyncTxApplier );
     }
 
     @Override

@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.catchup.storecopy.FileHeader;
 import com.neo4j.causalclustering.catchup.storecopy.GetStoreIdResponse;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
-import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
+import com.neo4j.causalclustering.catchup.tx.ReceivedTxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
@@ -192,7 +192,7 @@ abstract class EnterpriseCatchupTest
     }
 
     private void installChannels( NettyPipelineBuilderFactory pipelineBuilderFactory, CatchupResponseHandler catchupResponseHandler,
-            MultiDatabaseCatchupServerHandler serverResponseHandler ) throws Exception
+            MultiDatabaseCatchupServerHandler serverResponseHandler )
     {
         if ( applicationProtocols == ApplicationProtocols.CATCHUP_3_0 )
         {
@@ -245,7 +245,7 @@ abstract class EnterpriseCatchupTest
         }
 
         @Override
-        public void onTxPullResponse( TxPullResponse tx )
+        public void onTxPullResponse( ReceivedTxPullResponse tx )
         {
             unexpected();
         }

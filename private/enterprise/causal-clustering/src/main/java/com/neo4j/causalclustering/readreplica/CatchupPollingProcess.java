@@ -8,27 +8,24 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
-import com.neo4j.causalclustering.catchup.CatchupErrorResponse;
-import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
-import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
-import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
+import com.neo4j.causalclustering.readreplica.tx.CancelledPullUpdatesJobException;
+import com.neo4j.causalclustering.readreplica.tx.PullUpdatesJob;
 import com.neo4j.dbms.ClusterInternalDbmsOperator.StoreCopyHandle;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutionException;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -65,15 +62,15 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private final BatchingTxApplier applier;
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
     private final PullRequestMonitor pullRequestMonitor;
-    private final Executor executor;
+    private final AsyncTxApplier asyncTxApplier;
 
     private volatile State state = TX_PULLING;
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private StoreCopyHandle storeCopyHandle;
 
-    CatchupPollingProcess( Executor executor, ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient, BatchingTxApplier applier,
+    CatchupPollingProcess( ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient, BatchingTxApplier applier,
             ReplicatedDatabaseEventDispatch databaseEventDispatch, StoreCopyProcess storeCopyProcess, LogProvider logProvider, Panicker panicker,
-            CatchupAddressProvider upstreamProvider )
+            CatchupAddressProvider upstreamProvider, AsyncTxApplier asyncTxApplier )
     {
         this.databaseContext = databaseContext;
         this.upstreamProvider = upstreamProvider;
@@ -84,7 +81,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         this.storeCopyProcess = storeCopyProcess;
         this.log = logProvider.getLog( getClass() );
         this.panicker = panicker;
-        this.executor = executor;
+        this.asyncTxApplier = asyncTxApplier;
     }
 
     @Override
@@ -114,50 +111,39 @@ public class CatchupPollingProcess extends LifecycleAdapter
         return state;
     }
 
-    boolean isStoryCopy()
+    boolean isCopyingStore()
     {
         return state == STORE_COPYING;
     }
 
     /**
-     * Time to catchup!
-     * //TODO: Fix error handling further down the stack to bubble up to this level rather than panicking, as that will not complete the future.
+     * Time to catchup! //TODO: Fix error handling further down the stack to bubble up to this level rather than panicking, as that will not complete the
+     * future.
      */
-    public CompletableFuture<Void> tick()
+    public void tick()
     {
-        if ( state == CANCELLED || state == PANIC )
+        try
         {
-            return CompletableFuture.completedFuture( null );
+            switch ( state )
+            {
+            case TX_PULLING:
+                pullTransactions();
+                break;
+            case STORE_COPYING:
+                copyStore();
+                break;
+            case CANCELLED:
+            case PANIC:
+                    break;
+            default:
+                throw new IllegalStateException( "Tried to execute catchup but was in state " + state );
+            }
         }
-
-        return CompletableFuture.runAsync( () ->
+        catch ( Throwable e )
         {
-            try
-            {
-                switch ( state )
-                {
-                case TX_PULLING:
-                    pullTransactions();
-                    break;
-                case STORE_COPYING:
-                    copyStore();
-                    break;
-                case CANCELLED:
-                case PANIC:
-                    break;
-                default:
-                    throw new IllegalStateException( "Tried to execute catchup but was in state " + state );
-                }
-            }
-            catch ( Throwable e )
-            {
-                throw new CompletionException( e );
-            }
-        }, executor ).exceptionally( e ->
-        {
+            log.error( "Polling process failed", e );
             panic( e );
-            return null;
-        } );
+        }
     }
 
     private synchronized void panic( Throwable e )
@@ -185,36 +171,36 @@ public class CatchupPollingProcess extends LifecycleAdapter
         pullAndApplyTransactions( address, localStoreId );
     }
 
-    private synchronized void handleTransaction( CommittedTransactionRepresentation tx )
-    {
-        if ( state == PANIC )
-        {
-            return;
-        }
-
-        try
-        {
-            applier.queue( tx );
-        }
-        catch ( Throwable e )
-        {
-            panic( e );
-        }
-    }
-
     private synchronized void streamComplete()
     {
         if ( state == PANIC )
         {
             return;
         }
-
+        var streamCompleteFuture = new CompletableFuture<Void>();
+        asyncTxApplier.add( () ->
+        {
+            try
+            {
+                applier.applyBatch();
+                streamCompleteFuture.complete( null );
+            }
+            catch ( Exception e )
+            {
+                streamCompleteFuture.completeExceptionally( e );
+            }
+        } );
         try
         {
-            applier.applyBatch();
+            streamCompleteFuture.get();
         }
-        catch ( Throwable e )
+        catch ( InterruptedException e )
         {
+            log.warn( "Unexpected interrupt when waiting for transactions to apply" );
+        }
+        catch ( ExecutionException e )
+        {
+            log.error( "Failure when applying batched transactions", e );
             panic( e );
         }
     }
@@ -225,32 +211,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         pullRequestMonitor.txPullRequest( lastQueuedTxId );
         log.debug( "Pull transactions from %s where tx id > %d", address, lastQueuedTxId );
 
-        CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<>()
-        {
-            @Override
-            public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxPullResponse response )
-            {
-                handleTransaction( response.tx() );
-                if ( state == CANCELLED )
-                {
-                    signal.complete( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, -1 ) );
-                }
-            }
-
-            @Override
-            public void onTxStreamFinishedResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxStreamFinishedResponse response )
-            {
-                streamComplete();
-                signal.complete( response );
-            }
-
-            @Override
-            public void onCatchupErrorResponse( CompletableFuture<TxStreamFinishedResponse> signal, CatchupErrorResponse catchupErrorResponse )
-            {
-                signal.complete( new TxStreamFinishedResponse( catchupErrorResponse.status(), -1 ) );
-                log.warn( catchupErrorResponse.message() );
-            }
-        };
+        var pullUpdatesJob = new PullUpdatesJob( this::panic, applier, asyncTxApplier, log, () -> state == CANCELLED || state == PANIC );
 
         TxStreamFinishedResponse result;
         try
@@ -260,12 +221,19 @@ public class CatchupPollingProcess extends LifecycleAdapter
                     .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
                     .v4( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
                     .v5( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
-                    .withResponseHandler( responseHandler )
+                    .withResponseHandler( pullUpdatesJob )
                     .request();
         }
         catch ( Exception e )
         {
-            log.warn( "Exception occurred while pulling transactions. Will retry shortly.", e );
+            if ( CancelledPullUpdatesJobException.INSTANCE.equals( e.getCause() ) )
+            {
+                log.info( "Update job was cancelled. Downloaded transactions will be applied" );
+            }
+            else
+            {
+                log.warn( "Exception occurred while pulling transactions. Will retry shortly.", e );
+            }
             streamComplete();
             return;
         }
