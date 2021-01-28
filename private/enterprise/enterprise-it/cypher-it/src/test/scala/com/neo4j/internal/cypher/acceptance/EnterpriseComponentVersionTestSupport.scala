@@ -34,15 +34,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
 
   val CURRENT_VERSION: EnterpriseSecurityGraphComponentVersion = EnterpriseSecurityGraphComponentVersion.
     values()(EnterpriseSecurityGraphComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION)
-  val allSystemGraphVersions: Array[EnterpriseSecurityGraphComponentVersion] = Array(
-    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40,
-    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1,
-    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41,
-    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4,
-    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6,
-    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7,
-    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1,
-    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1)
+  val allSystemGraphVersions: Array[EnterpriseSecurityGraphComponentVersion] = EnterpriseSecurityGraphComponentVersion.values().filter(version => version.runtimeSupported())
   var _configSupplier: () => Config = () => Config.defaults()
   var _version: Option[EnterpriseSecurityGraphComponentVersion] = None
   var _expectToFailWith: Option[Class[_]] = None

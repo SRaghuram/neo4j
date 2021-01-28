@@ -229,19 +229,10 @@ class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTes
 
     private static Stream<Arguments> allVersions()
     {
-        return Arrays.stream( new EnterpriseSecurityGraphComponentVersion[]{
-                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_35,
-                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36,
-                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40,
-                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1,
-                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41,
-                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4,
-                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6,
-                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7,
-                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1,
-                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1,
-                EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D2
-        } ).map( Arguments::of );
+        return Arrays.stream( EnterpriseSecurityGraphComponentVersion.values() )
+                     .filter( v -> v.getVersion() >= 0 &&
+                                   v.getVersion() < EnterpriseSecurityGraphComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION )
+                     .map( Arguments::of );
     }
 
     private static Stream<Arguments> versionsAffectedByPublicBug()

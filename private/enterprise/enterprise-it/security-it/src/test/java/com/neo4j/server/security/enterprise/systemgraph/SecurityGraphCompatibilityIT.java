@@ -38,17 +38,9 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 
 class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 {
-    private static final EnterpriseSecurityGraphComponentVersion[] SUPPORTED_VERSIONS =
-            {
-                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40,
-                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1,
-                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41,
-                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4,
-                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6,
-                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7,
-                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1,
-                    EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1
-            };
+    private static final EnterpriseSecurityGraphComponentVersion[] SUPPORTED_VERSIONS = Arrays.stream( EnterpriseSecurityGraphComponentVersion.values() )
+                                                                                              .filter( version -> version.runtimeSupported() )
+                                                                                              .toArray( EnterpriseSecurityGraphComponentVersion[]::new );
 
     @ParameterizedTest
     @MethodSource( "supportedVersions" )
