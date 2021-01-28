@@ -50,7 +50,7 @@ public class CatchupResponseAdaptor<T> implements CatchupResponseCallback<T>
     }
 
     @Override
-    public void onTxPullResponse( CompletableFuture<T> signal, ReceivedTxPullResponse response )
+    public void onTxPullResponse( CompletableFuture<T> signal, ReceivedTxPullResponse response, FlowControl flowControl )
     {
         unimplementedMethod( signal, response );
     }

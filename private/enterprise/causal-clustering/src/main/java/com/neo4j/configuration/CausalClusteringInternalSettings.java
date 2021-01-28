@@ -223,6 +223,13 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
                     .addConstraint( min( 1 ) ).build();
 
     @Internal
+    @Description( "Maximum queued transactions to be applied. A pull request will abort if this limit is reached" )
+    public static final Setting<Integer> read_replica_transaction_applier_max_queue_size =
+            newBuilder( "causal_clustering.read_replica_transaction_applier_max_queue_size", INT, 1024 )
+                    .dynamic()
+                    .addConstraint( min( 1 ) ).build();
+
+    @Internal
     public static final Setting<Boolean> inbound_connection_initialization_logging_enabled =
             newBuilder( "unsupported.causal_clustering.inbound_connection_initialization_logging_enabled", BOOL, true ).dynamic().build();
 

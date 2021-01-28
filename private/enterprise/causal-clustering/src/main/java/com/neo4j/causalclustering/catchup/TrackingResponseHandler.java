@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse
 import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
 import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
+import io.netty.channel.Channel;
 
 import java.nio.channels.ClosedChannelException;
 import java.time.Clock;
@@ -33,14 +34,16 @@ class TrackingResponseHandler implements CatchupResponseHandler
     private static final long NO_RESPONSE_TIME = 1;
 
     private final Clock clock;
+    private final FlowControl flowControl;
 
     private CatchupResponseCallback delegate;
     private CompletableFuture<?> requestOutcomeSignal;
     private long lastResponseTime = NO_RESPONSE_TIME;
 
-    TrackingResponseHandler( Clock clock )
+    TrackingResponseHandler( Clock clock, Channel flowControl )
     {
         this.clock = clock;
+        this.flowControl = new FlowControl( flowControl );
         clearResponseHandler();
     }
 
@@ -86,7 +89,7 @@ class TrackingResponseHandler implements CatchupResponseHandler
     @Override
     public void onTxPullResponse( ReceivedTxPullResponse tx )
     {
-        ifNotCancelled( () -> delegate.onTxPullResponse( requestOutcomeSignal, tx ) );
+        ifNotCancelled( () -> delegate.onTxPullResponse( requestOutcomeSignal, tx, flowControl ) );
     }
 
     @Override

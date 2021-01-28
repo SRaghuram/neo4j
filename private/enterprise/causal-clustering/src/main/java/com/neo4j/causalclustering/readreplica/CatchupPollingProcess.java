@@ -15,7 +15,9 @@ import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
+import com.neo4j.causalclustering.readreplica.tx.AsyncTaskEventHandler;
+import com.neo4j.causalclustering.readreplica.tx.BatchinTxApplierFactory;
+import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplier;
 import com.neo4j.causalclustering.readreplica.tx.CancelledPullUpdatesJobException;
 import com.neo4j.causalclustering.readreplica.tx.PullUpdatesJob;
 import com.neo4j.dbms.ClusterInternalDbmsOperator.StoreCopyHandle;
@@ -23,7 +25,6 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDisp
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -31,6 +32,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.util.VisibleForTesting;
+import org.neo4j.util.concurrent.BinaryLatch;
 
 import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.CATCHUP_FAILED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.CANCELLED;
@@ -53,35 +55,38 @@ public class CatchupPollingProcess extends LifecycleAdapter
         CANCELLED
     }
 
+    private final long maxQueueSize;
+    private final long applyBatchSize;
     private final ReadReplicaDatabaseContext databaseContext;
+    private final BatchinTxApplierFactory applierFactory;
     private final CatchupAddressProvider upstreamProvider;
     private final Log log;
     private final StoreCopyProcess storeCopyProcess;
     private final CatchupClientFactory catchUpClient;
     private final Panicker panicker;
-    private final BatchingTxApplier applier;
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
     private final PullRequestMonitor pullRequestMonitor;
-    private final AsyncTxApplier asyncTxApplier;
 
+    private volatile BatchingTxApplier applier;
     private volatile State state = TX_PULLING;
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private StoreCopyHandle storeCopyHandle;
 
-    CatchupPollingProcess( ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient, BatchingTxApplier applier,
-            ReplicatedDatabaseEventDispatch databaseEventDispatch, StoreCopyProcess storeCopyProcess, LogProvider logProvider, Panicker panicker,
-            CatchupAddressProvider upstreamProvider, AsyncTxApplier asyncTxApplier )
+    CatchupPollingProcess( long maxQueueSize, long applyBatchSize, ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient,
+            BatchinTxApplierFactory applierFactory, ReplicatedDatabaseEventDispatch databaseEventDispatch, StoreCopyProcess storeCopyProcess,
+            LogProvider logProvider, Panicker panicker, CatchupAddressProvider upstreamProvider )
     {
+        this.maxQueueSize = maxQueueSize;
+        this.applyBatchSize = applyBatchSize;
         this.databaseContext = databaseContext;
+        this.applierFactory = applierFactory;
         this.upstreamProvider = upstreamProvider;
         this.catchUpClient = catchUpClient;
-        this.applier = applier;
         this.databaseEventDispatch = databaseEventDispatch;
         this.pullRequestMonitor = databaseContext.monitors().newMonitor( PullRequestMonitor.class );
         this.storeCopyProcess = storeCopyProcess;
         this.log = logProvider.getLog( getClass() );
         this.panicker = panicker;
-        this.asyncTxApplier = asyncTxApplier;
     }
 
     @Override
@@ -90,6 +95,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         log.debug( "Starting catchup polling process %s", this );
         state = TX_PULLING;
         upToDateFuture = new CompletableFuture<>();
+        applier = applierFactory.create();
     }
 
     public CompletableFuture<Boolean> upToDateFuture()
@@ -171,38 +177,28 @@ public class CatchupPollingProcess extends LifecycleAdapter
         pullAndApplyTransactions( address, localStoreId );
     }
 
-    private synchronized void streamComplete()
+    private void streamComplete()
     {
         if ( state == PANIC )
         {
             return;
         }
-        var streamCompleteFuture = new CompletableFuture<Void>();
-        asyncTxApplier.add( () ->
+        BinaryLatch latch = new BinaryLatch();
+        applier.applyBatchAsync( new AsyncTaskEventHandler()
         {
-            try
+            @Override
+            public void onFailure( Exception e )
             {
-                applier.applyBatch();
-                streamCompleteFuture.complete( null );
+                panic( e );
             }
-            catch ( Exception e )
+
+            @Override
+            public void onSuccess()
             {
-                streamCompleteFuture.completeExceptionally( e );
+                latch.release();
             }
         } );
-        try
-        {
-            streamCompleteFuture.get();
-        }
-        catch ( InterruptedException e )
-        {
-            log.warn( "Unexpected interrupt when waiting for transactions to apply" );
-        }
-        catch ( ExecutionException e )
-        {
-            log.error( "Failure when applying batched transactions", e );
-            panic( e );
-        }
+        latch.await();
     }
 
     private void pullAndApplyTransactions( SocketAddress address, StoreId localStoreId )
@@ -211,7 +207,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         pullRequestMonitor.txPullRequest( lastQueuedTxId );
         log.debug( "Pull transactions from %s where tx id > %d", address, lastQueuedTxId );
 
-        var pullUpdatesJob = new PullUpdatesJob( this::panic, applier, asyncTxApplier, log, () -> state == CANCELLED || state == PANIC );
+        var pullUpdatesJob = new PullUpdatesJob( maxQueueSize, applyBatchSize, new PanicOnApply(), applier, log, () -> state == CANCELLED || state == PANIC );
 
         TxStreamFinishedResponse result;
         try
@@ -322,7 +318,22 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
 
         log.info( "Kernel started after store copy" );
-        applier.refreshFromNewStore();
+        applier = applierFactory.create();
         return true;
+    }
+
+    private class PanicOnApply implements AsyncTaskEventHandler
+    {
+        @Override
+        public void onFailure( Exception e )
+        {
+            panic( e );
+        }
+
+        @Override
+        public void onSuccess()
+        {
+            // no-op
+        }
     }
 }

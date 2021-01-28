@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
+import com.neo4j.causalclustering.readreplica.tx.BatchinTxApplierFactory;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
@@ -27,7 +28,6 @@ import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageEngine;
-import org.neo4j.storageengine.api.TransactionIdStore;
 
 public class CatchupProcessFactory
 {
@@ -71,30 +71,29 @@ public class CatchupProcessFactory
                 databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( TransactionAppender.class ),
                 databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( StorageEngine.class ) );
 
-        long maxBatchSize = ByteUnit.mebiBytes( config.get( CausalClusteringInternalSettings.read_replica_transaction_applier_batch_size ) );
+        long applyBatchSize = ByteUnit.mebiBytes( config.get( CausalClusteringInternalSettings.read_replica_transaction_applier_batch_size ) );
+        long maxQueueSize = ByteUnit.mebiBytes( config.get( CausalClusteringInternalSettings.read_replica_transaction_applier_max_queue_size ) );
 
-        BatchingTxApplier batchingTxApplier = new BatchingTxApplier( maxBatchSize,
-                () -> databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( TransactionIdStore.class ), writableCommitProcess,
-                databaseContext.monitors(), databaseContext.kernelDatabase().getVersionContextSupplier(), commandIndexTracker, logProvider,
-                databaseEventDispatch, pageCacheTracer );
+        var batchingTxApplierFactory =
+                new BatchinTxApplierFactory( databaseContext, commandIndexTracker, logProvider, databaseEventDispatch, pageCacheTracer, asyncTxApplier );
 
-        CatchupPollingProcess catchupProcess = new CatchupPollingProcess( databaseContext, catchupClient, batchingTxApplier, databaseEventDispatch,
-                dbCatchupComponents.storeCopyProcess(), logProvider, this.panicker,
-                new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ), asyncTxApplier );
+        CatchupPollingProcess catchupProcess =
+                new CatchupPollingProcess( maxQueueSize, applyBatchSize, databaseContext, catchupClient, batchingTxApplierFactory, databaseEventDispatch,
+                        dbCatchupComponents.storeCopyProcess(), logProvider, this.panicker,
+                        new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
 
-        return new CatchupProcessComponents( catchupProcess, batchingTxApplier );
+        return new CatchupProcessComponents( catchupProcess );
     }
 
     static class CatchupProcessComponents extends LifeSupport
     {
         private final CatchupPollingProcess catchupProcess;
 
-        CatchupProcessComponents( CatchupPollingProcess catchupProcess, BatchingTxApplier batchingTxApplier )
+        CatchupProcessComponents( CatchupPollingProcess catchupProcess )
         {
             this.catchupProcess = catchupProcess;
 
             add( catchupProcess );
-            add( batchingTxApplier );
         }
 
         CatchupPollingProcess catchupProcess()

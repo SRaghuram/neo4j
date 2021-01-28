@@ -5,7 +5,9 @@
  */
 package com.neo4j.causalclustering.readreplica.tx;
 
-public interface FailureEventHandler
+public interface AsyncTaskEventHandler
 {
     void onFailure( Exception e );
+
+    void onSuccess();
 }

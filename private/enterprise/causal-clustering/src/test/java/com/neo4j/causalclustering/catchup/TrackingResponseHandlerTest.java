@@ -32,7 +32,7 @@ class TrackingResponseHandlerTest
 
         FakeClock fakeClock = Clocks.fakeClock();
 
-        TrackingResponseHandler trackingResponseHandler = new TrackingResponseHandler( fakeClock );
+        TrackingResponseHandler trackingResponseHandler = new TrackingResponseHandler( fakeClock, null );
         trackingResponseHandler.setResponseHandler( catchUpResponseAdaptor, new CompletableFuture<>() );
 
         assertFalse( trackingResponseHandler.millisSinceLastResponse().isPresent() );

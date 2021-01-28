@@ -11,13 +11,13 @@ public class AsyncTask implements Runnable
 {
     private final Callable<Void> task;
     private final Aborter aborter;
-    private final FailureEventHandler failureEventHandler;
+    private final AsyncTaskEventHandler asyncTaskEventHandler;
 
-    public AsyncTask( Callable<Void> task, Aborter aborter, FailureEventHandler failureEventHandler )
+    AsyncTask( Callable<Void> task, Aborter aborter, AsyncTaskEventHandler asyncTaskEventHandler )
     {
         this.task = task;
         this.aborter = aborter;
-        this.failureEventHandler = failureEventHandler;
+        this.asyncTaskEventHandler = asyncTaskEventHandler;
     }
 
     @Override
@@ -30,10 +30,11 @@ public class AsyncTask implements Runnable
         try
         {
             task.call();
+            asyncTaskEventHandler.onSuccess();
         }
         catch ( Exception e )
         {
-            failureEventHandler.onFailure( e );
+            asyncTaskEventHandler.onFailure( e );
         }
     }
 }

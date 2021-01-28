@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica.tx;
 
-class TrackingFailureHandler implements FailureEventHandler, Aborter
+class TrackingFailureHandler implements AsyncTaskEventHandler, Aborter
 {
     private volatile boolean hasFailed;
 
@@ -13,6 +13,12 @@ class TrackingFailureHandler implements FailureEventHandler, Aborter
     public void onFailure( Exception e )
     {
         hasFailed = true;
+    }
+
+    @Override
+    public void onSuccess()
+    {
+        // no-op
     }
 
     @Override

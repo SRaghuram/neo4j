@@ -7,72 +7,70 @@ package com.neo4j.causalclustering.readreplica.tx;
 
 import com.neo4j.causalclustering.catchup.CatchupErrorResponse;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
+import com.neo4j.causalclustering.catchup.FlowControl;
 import com.neo4j.causalclustering.catchup.tx.ReceivedTxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.readreplica.BatchingTxApplier;
 
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 
 import org.neo4j.logging.Log;
 
+import static com.neo4j.causalclustering.readreplica.tx.SignalEventHandler.completeSignal;
+import static com.neo4j.causalclustering.readreplica.tx.SignalEventHandler.keepRunning;
+import static java.lang.StrictMath.max;
+
 public class PullUpdatesJob extends CatchupResponseAdaptor<TxStreamFinishedResponse>
 {
-    private final FailureEventHandler applyFailureHandler;
+    private final long upperWatermark;
+    private final long lowerWatermark;
+    private final long maxBatchSize;
+    private final AsyncTaskEventHandler applyFailureHandler;
     private final BatchingTxApplier batchingTxApplier;
-    private final AsyncTxApplier asyncTxApplier;
     private final Log log;
     private final Aborter cancelSignal;
     private final TrackingFailureHandler trackingFailureHandler = new TrackingFailureHandler();
-    private boolean hasCancelled;
+    private Backpressure backpressure;
+    private int currentBatchSize;
 
-    public PullUpdatesJob( FailureEventHandler applyFailureHandler, BatchingTxApplier batchingTxApplier, AsyncTxApplier asyncTxApplier, Log log,
+    public PullUpdatesJob( long maxQueueSize, long maxBatchSize, AsyncTaskEventHandler applyFailureHandler, BatchingTxApplier batchingTxApplier, Log log,
             Aborter cancelSignal )
     {
+        this.upperWatermark = max( 1, maxQueueSize / maxBatchSize );
+        this.lowerWatermark = upperWatermark / 2;
+        this.maxBatchSize = maxBatchSize;
         this.applyFailureHandler = applyFailureHandler;
         this.batchingTxApplier = batchingTxApplier;
-        this.asyncTxApplier = asyncTxApplier;
         this.log = log;
         this.cancelSignal = cancelSignal;
     }
 
     @Override
-    public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, ReceivedTxPullResponse response )
+    public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, ReceivedTxPullResponse response, FlowControl flowControl )
     {
-        if ( hasCancelled )
+        if ( backpressure == null )
         {
-            return;
+            backpressure = new Backpressure( upperWatermark, lowerWatermark, flowControl );
         }
-
-        queueJob( () ->
-        {
-            batchingTxApplier.queue( response.tx(), response.txSize() );
-            return null;
-        }, signal );
+        batchingTxApplier.queue( response.tx() );
+        currentBatchSize += response.txSize();
 
         if ( cancelSignal.shouldAbort() )
         {
-            queueJob( () ->
-            {
-                // signal is completed exceptionally so that it gets disposed,
-                // but only after applier is completed so that the catchup process blocks until completion
-                signal.completeExceptionally( CancelledPullUpdatesJobException.INSTANCE );
-                return null;
-            }, signal );
-            hasCancelled = true;
+            signal.completeExceptionally( CancelledPullUpdatesJobException.INSTANCE );
+        }
+        else if ( currentBatchSize >= maxBatchSize )
+        {
+            backpressure.scheduledJob();
+            batchingTxApplier.applyBatchAsync( ongoingJobEventHandler( signal ) );
+            currentBatchSize = 0;
         }
     }
 
     @Override
     public void onTxStreamFinishedResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxStreamFinishedResponse response )
     {
-        queueJob( () ->
-        {
-            batchingTxApplier.applyBatch();
-            signal.complete( response );
-            return null;
-        }, signal );
+        batchingTxApplier.applyBatchAsync( completeJobEventHandler( signal, response ) );
     }
 
     @Override
@@ -82,13 +80,13 @@ public class PullUpdatesJob extends CatchupResponseAdaptor<TxStreamFinishedRespo
         log.warn( catchupErrorResponse.message() );
     }
 
-    void queueJob( Callable<Void> task, CompletableFuture<TxStreamFinishedResponse> signal )
+    private AsyncTaskEventHandler completeJobEventHandler( CompletableFuture<TxStreamFinishedResponse> signal, TxStreamFinishedResponse response )
     {
-        asyncTxApplier.add( new AsyncTask( task, trackingFailureHandler, failureEvents( signal ) ) );
+        return new CompositeAsyncEventHandler( List.of( applyFailureHandler, trackingFailureHandler, completeSignal( signal, response ) ) );
     }
 
-    private FailureEventHandler failureEvents( CompletableFuture<TxStreamFinishedResponse> signal )
+    private AsyncTaskEventHandler ongoingJobEventHandler( CompletableFuture<TxStreamFinishedResponse> signal )
     {
-        return new CompositeFailureEventHandler( List.of( applyFailureHandler, trackingFailureHandler, new CloseSignalFailureHandler( signal ) ) );
+        return new CompositeAsyncEventHandler( List.of( backpressure, applyFailureHandler, trackingFailureHandler, keepRunning( signal ) ) );
     }
 }

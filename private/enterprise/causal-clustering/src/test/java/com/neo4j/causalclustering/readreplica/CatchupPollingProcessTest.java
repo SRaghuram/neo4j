@@ -19,7 +19,8 @@ import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
-import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
+import com.neo4j.causalclustering.readreplica.tx.BatchinTxApplierFactory;
+import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplier;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
@@ -68,6 +69,7 @@ class CatchupPollingProcessTest
 {
     private final CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
+    private final BatchinTxApplierFactory batchingTxApplierFactory = mock( BatchinTxApplierFactory.class );
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
     private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
@@ -111,8 +113,9 @@ class CatchupPollingProcessTest
 
         MockCatchupClient catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3_0, v3Client );
         when( catchupClientFactory.getClient( any( SocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
-        txPuller = new CatchupPollingProcess( databaseContext, catchupClientFactory, txApplier, databaseEventDispatch,
-                storeCopy, nullLogProvider(), panicker, catchupAddressProvider, mock( AsyncTxApplier.class ) );
+        when( batchingTxApplierFactory.create() ).thenReturn( txApplier );
+        txPuller = new CatchupPollingProcess( 100, 10, databaseContext, catchupClientFactory, batchingTxApplierFactory, databaseEventDispatch,
+                storeCopy, nullLogProvider(), panicker, catchupAddressProvider );
     }
 
     @Test
@@ -185,7 +188,7 @@ class CatchupPollingProcessTest
         verify( databaseContext ).stopForStoreCopy();
         verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
         verify( storeCopyHandle ).release();
-        verify( txApplier ).refreshFromNewStore();
+        verify( batchingTxApplierFactory, times( 2 ) ).create();
         verify( databaseEventDispatch ).fireStoreReplaced( BASE_TX_ID + 1 );
 
         // then
@@ -252,7 +255,7 @@ class CatchupPollingProcessTest
         verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
 
         verify( storeCopyHandle, never() ).release();
-        verify( txApplier, never() ).refreshFromNewStore();
+        verify( batchingTxApplierFactory, times( 1 ) ).create();
         verify( databaseEventDispatch, never() ).fireStoreReplaced( BASE_TX_ID + 1 );
 
         // puller remains in store copying state after a failed store copy
@@ -267,7 +270,7 @@ class CatchupPollingProcessTest
         verify( storeCopy, times( 2 ) ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
 
         verify( storeCopyHandle ).release();
-        verify( txApplier ).refreshFromNewStore();
+        verify( batchingTxApplierFactory, times( 2 ) ).create();
         verify( databaseEventDispatch ).fireStoreReplaced( BASE_TX_ID + 1 );
 
         // puller moves to tx pulling after a successful store copy
@@ -295,7 +298,7 @@ class CatchupPollingProcessTest
         verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
 
         verify( storeCopyHandle ).release();
-        verify( txApplier, never() ).refreshFromNewStore();
+        verify( batchingTxApplierFactory, times( 1 ) ).create();
         verify( databaseEventDispatch, never() ).fireStoreReplaced( BASE_TX_ID + 1 );
 
         // puller remains in store copying state after a failed store copy
@@ -310,7 +313,7 @@ class CatchupPollingProcessTest
         verify( storeCopy, times( 2 ) ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
 
         verify( storeCopyHandle, times( 2 ) ).release();
-        verify( txApplier ).refreshFromNewStore();
+        verify( batchingTxApplierFactory, times( 2 ) ).create();
         verify( databaseEventDispatch ).fireStoreReplaced( BASE_TX_ID + 1 );
 
         // puller moves to tx pulling after a successful store copy

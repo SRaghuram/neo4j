@@ -53,7 +53,7 @@ class CatchupChannelPoolService extends ChannelPoolService<SocketAddress>
         @Override
         public void channelCreated( Channel ch )
         {
-            TrackingResponseHandler trackingResponseHandler = new TrackingResponseHandler( clock );
+            TrackingResponseHandler trackingResponseHandler = new TrackingResponseHandler( clock, ch );
             ch.pipeline().addLast( initializerFactory.apply( trackingResponseHandler ) );
             ch.attr( TRACKING_RESPONSE_HANDLER ).set( trackingResponseHandler );
             ch.closeFuture().addListener( f -> trackingResponseHandler.onClose() );

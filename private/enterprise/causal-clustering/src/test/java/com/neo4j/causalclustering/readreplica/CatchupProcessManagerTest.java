@@ -87,7 +87,7 @@ class CatchupProcessManagerTest
     private CatchupProcessManager createProcessManager( CatchupPollingProcess catchupProcess )
     {
         var catchupProcessFactory = mock( CatchupProcessFactory.class );
-        var catchupProcessComponents = new CatchupProcessComponents( catchupProcess, mock( BatchingTxApplier.class ) );
+        var catchupProcessComponents = new CatchupProcessComponents( catchupProcess );
         when( catchupProcessFactory.create( any() ) ).thenReturn( catchupProcessComponents );
         var catchupProcessManager = new CatchupProcessManager(
                 databaseContext, panicker, timerService, nullLogProvider(), Config.defaults(), catchupProcessFactory );
@@ -195,7 +195,7 @@ class CatchupProcessManagerTest
         doAnswer( ignored -> cf.complete( null ) ).when( catchupProcess ).stop();
 
         var catchupProcessFactory = mock( CatchupProcessFactory.class );
-        when( catchupProcessFactory.create( any() ) ).thenReturn( new CatchupProcessComponents( catchupProcess, mock( BatchingTxApplier.class ) ) );
+        when( catchupProcessFactory.create( any() ) ).thenReturn( new CatchupProcessComponents( catchupProcess ) );
 
         var scheduler = new CentralJobScheduler( Clocks.nanoClock() )
         {
