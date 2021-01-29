@@ -7,6 +7,8 @@ package com.neo4j.procedure;
 
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -17,6 +19,7 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 
+import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -32,8 +35,9 @@ public class CommunityListLocksProcedureIT
         builder.setConfig( GraphDatabaseInternalSettings.lock_manager, "community" );
     }
 
-    @Test
-    void listSharedLabelLock()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void listSharedLabelLock( String runtime )
     {
         var markerLabel = Label.label( "Marker" );
         try ( Transaction transaction = database.beginTx() )
@@ -46,7 +50,7 @@ public class CommunityListLocksProcedureIT
         try ( Transaction transaction = database.beginTx() )
         {
             var result = transaction.execute( "MATCH (n:Marker) RETURN n" );
-            var procedureResult = transaction.execute( "CALL db.listLocks()" );
+            var procedureResult = transaction.execute( format("CYPHER runtime=%s CALL db.listLocks()", runtime ) );
             var labelLockMap = procedureResult.next();
             assertThat( labelLockMap ).containsEntry( "mode", "SHARED" )
                                       .containsEntry( "resourceType", "LABEL" )
@@ -56,8 +60,9 @@ public class CommunityListLocksProcedureIT
         }
     }
 
-    @Test
-    void listExclusiveNodeLock()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void listExclusiveNodeLock( String runtime )
     {
         long nodeId;
         try ( Transaction transaction = database.beginTx() )
@@ -68,7 +73,7 @@ public class CommunityListLocksProcedureIT
         try ( Transaction transaction = database.beginTx() )
         {
             var result = transaction.execute( "MATCH (n) SET n.property=4 RETURN n" );
-            var procedureResult = transaction.execute( "CALL db.listLocks()" );
+            var procedureResult = transaction.execute( format("CYPHER runtime=%s CALL db.listLocks()", runtime ) );
             var labelLockMap = procedureResult.next();
             assertThat( labelLockMap ).containsEntry( "mode", "EXCLUSIVE" )
                     .containsEntry( "resourceType", "NODE" )
@@ -78,8 +83,9 @@ public class CommunityListLocksProcedureIT
         }
     }
 
-    @Test
-    void listSharedAndExclusiveLockOnSameNode()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void listSharedAndExclusiveLockOnSameNode( String runtime )
     {
         long nodeId;
         try ( Transaction transaction = database.beginTx() )
@@ -94,7 +100,7 @@ public class CommunityListLocksProcedureIT
             transaction.acquireReadLock( node );
             transaction.acquireReadLock( node );
             var result = transaction.execute( "MATCH (n) SET n.property=4 RETURN n" );
-            var procedureResult = transaction.execute( "CALL db.listLocks()" );
+            var procedureResult = transaction.execute( format("CYPHER runtime=%s CALL db.listLocks()", runtime ) );
             var labelLockMap = procedureResult.next();
             assertThat( labelLockMap ).containsEntry( "mode", "EXCLUSIVE" )
                     .containsEntry( "resourceType", "NODE" )

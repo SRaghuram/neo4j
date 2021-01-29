@@ -11,6 +11,8 @@ import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,6 +42,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.jar.JarBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -82,26 +85,29 @@ public class ConcurrentProcedureIT
         }
     }
 
-    @Test
-    void proceduresShouldGetCorrectKernelTransaction() throws InterruptedException, ExecutionException
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void proceduresShouldGetCorrectKernelTransaction( String runtime ) throws InterruptedException, ExecutionException
     {
         run( tx ->
-                tx.execute( "CALL com.neo4j.procedure.metaDataIdProcedure" ).<Long>columnAs( "value" ).next() );
+                tx.execute( format("CYPHER runtime=%s CALL com.neo4j.procedure.metaDataIdProcedure", runtime ) ).<Long>columnAs( "value" ).next() );
     }
 
-    @Test
-    void userFunctionShouldGetCorrectKernelTransaction() throws InterruptedException, ExecutionException
+        @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void userFunctionShouldGetCorrectKernelTransaction( String runtime ) throws InterruptedException, ExecutionException
     {
         run( tx ->
-                tx.execute( "RETURN com.neo4j.procedure.metaDataIdFunction() AS value" ).<Long>columnAs( "value" )
+                tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.metaDataIdFunction() AS value", runtime ) ).<Long>columnAs( "value" )
                         .next() );
     }
 
-    @Test
-    void userAggregationFunctionShouldGetCorrectKernelTransaction() throws InterruptedException, ExecutionException
+        @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void userAggregationFunctionShouldGetCorrectKernelTransaction( String runtime ) throws InterruptedException, ExecutionException
     {
         run( tx ->
-                tx.execute( "RETURN com.neo4j.procedure.metaDataIdAggregation() AS value" ).<Long>columnAs( "value" )
+                tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.metaDataIdAggregation() AS value", runtime ) ).<Long>columnAs( "value" )
                         .next() );
     }
 

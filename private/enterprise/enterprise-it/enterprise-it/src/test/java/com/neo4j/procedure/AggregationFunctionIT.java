@@ -6,9 +6,12 @@
 package com.neo4j.procedure;
 
 import com.neo4j.configuration.OnlineBackupSettings;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,6 +41,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.jar.JarBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -53,8 +57,9 @@ class AggregationFunctionIT
     private GraphDatabaseService db;
     private DatabaseManagementService managementService;
 
-    @Test
-    void shouldHandleSingleStringArgumentAggregationFunction()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldHandleSingleStringArgumentAggregationFunction( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -70,7 +75,7 @@ class AggregationFunctionIT
         // When
         try ( Transaction transaction = db.beginTx() )
         {
-            Result result = transaction.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" );
+            Result result = transaction.execute( format("CYPHER runtime=%s MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count", runtime ) );
 
             // Then
             assertThat( result.next() ).isEqualTo( map( "count", 4L ) );
@@ -79,8 +84,9 @@ class AggregationFunctionIT
         }
     }
 
-    @Test
-    void shouldHandleSingleStringArgumentAggregationFunctionAndGroupingKey()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldHandleSingleStringArgumentAggregationFunctionAndGroupingKey( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -96,7 +102,7 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = transaction.execute( "MATCH (n) RETURN n.prop1, com.neo4j.procedure.count(n.prop2) AS count" );
+            Result result = transaction.execute( format("CYPHER runtime=%s MATCH (n) RETURN n.prop1, com.neo4j.procedure.count(n.prop2) AS count", runtime ) );
 
             // Then
             assertThat( result.next() ).isEqualTo( map( "n.prop1", 42L, "count", 3L ) );
@@ -106,8 +112,9 @@ class AggregationFunctionIT
         }
     }
 
-    @Test
-    void shouldFailNicelyWhenInvalidRuntimeType()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldFailNicelyWhenInvalidRuntimeType( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -124,13 +131,14 @@ class AggregationFunctionIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class,
-                                  () -> transaction.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" ).resultAsString() );
-            assertThat( exception.getMessage() ).isEqualTo( "Wrong argument type: Can't coerce `Long(42)` to String" );
+                                  () -> transaction.execute( format("CYPHER runtime=%s MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count", runtime ) ).resultAsString() );
+            assertThat( exception.getMessage() ).contains( "Can't coerce `Long(42)` to String" );
         }
     }
 
-    @Test
-    void shouldHandleNodeArgumentAggregationFunction()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldHandleNodeArgumentAggregationFunction( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -145,7 +153,7 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = transaction.execute( "MATCH (n) WITH com.neo4j.procedure.findBestNode(n) AS best RETURN best.level AS level" );
+            Result result = transaction.execute( format("CYPHER runtime=%s MATCH (n) WITH com.neo4j.procedure.findBestNode(n) AS best RETURN best.level AS level", runtime ) );
 
             // Then
             assertThat( result.next() ).isEqualTo( map( "level", 1337L ) );
@@ -154,8 +162,9 @@ class AggregationFunctionIT
         }
     }
 
-    @Test
-    void shouldHandleRelationshipArgumentAggregationFunction()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldHandleRelationshipArgumentAggregationFunction( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -170,7 +179,7 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = transaction.execute( "MATCH ()-[r]->() WITH com.neo4j.procedure.findBestRel(r) AS best RETURN best.level AS level" );
+            Result result = transaction.execute( format("CYPHER runtime=%s MATCH ()-[r]->() WITH com.neo4j.procedure.findBestRel(r) AS best RETURN best.level AS level", runtime ) );
 
             // Then
             assertThat( result.next() ).isEqualTo( map( "level", 1337L ) );
@@ -179,8 +188,9 @@ class AggregationFunctionIT
         }
     }
 
-    @Test
-    void shouldHandlePathArgumentAggregationFunction()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldHandlePathArgumentAggregationFunction( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -194,7 +204,7 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = transaction.execute( "MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN length(longest) AS len" );
+            Result result = transaction.execute( format("CYPHER runtime=%s MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN length(longest) AS len", runtime ) );
 
             // Then
             assertThat( result.next() ).isEqualTo( map( "len", 3L ) );
@@ -203,13 +213,14 @@ class AggregationFunctionIT
         }
     }
 
-    @Test
-    void shouldHandleNullPath()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldHandleNullPath( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = transaction.execute( "MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN longest" );
+            Result result = transaction.execute( format("CYPHER runtime=%s MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN longest", runtime ) );
 
             // Then
             assertThat( result.next() ).isEqualTo( map( "longest", null ) );
@@ -218,13 +229,14 @@ class AggregationFunctionIT
         }
     }
 
-    @Test
-    void shouldHandleNumberArgumentAggregationFunction()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldHandleNumberArgumentAggregationFunction( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
         {
             // Given, When
-            Result result = transaction.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.near42(num) AS closest" );
+            Result result = transaction.execute( format("CYPHER runtime=%s UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.near42(num) AS closest", runtime ) );
 
             // Then
             assertThat( result.next() ).isEqualTo( map( "closest", 41.9 ) );
@@ -233,13 +245,14 @@ class AggregationFunctionIT
         }
     }
 
-    @Test
-    void shouldHandleDoubleArgumentAggregationFunction()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldHandleDoubleArgumentAggregationFunction( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
         {
             // Given, When
-            Result result = transaction.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.doubleAggregator(num) AS closest" );
+            Result result = transaction.execute( format("CYPHER runtime=%s UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.doubleAggregator(num) AS closest", runtime ) );
 
             // Then
             assertThat( result.next() ).isEqualTo( map( "closest", 41.9 ) );
@@ -248,13 +261,14 @@ class AggregationFunctionIT
         }
     }
 
-    @Test
-    void shouldHandleLongArgumentAggregationFunction()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldHandleLongArgumentAggregationFunction( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
         {
             // Given, When
-            Result result = transaction.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.longAggregator(num) AS closest" );
+            Result result = transaction.execute( format("CYPHER runtime=%s UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.longAggregator(num) AS closest", runtime ) );
 
             // Then
             assertThat( result.next() ).isEqualTo( map( "closest", 42L ) );
@@ -263,22 +277,24 @@ class AggregationFunctionIT
         }
     }
 
-    @Test
-    void shouldHandleNoArgumentBooleanAggregationFunction()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldHandleNoArgumentBooleanAggregationFunction( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            assertThat( transaction.execute( "UNWIND [1,2] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled" ).next() )
+            assertThat( transaction.execute( format("CYPHER runtime=%s UNWIND [1,2] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled", runtime ) ).next() )
                     .isEqualTo( map( "wasCalled", true ) );
-            assertThat( transaction.execute( "UNWIND [] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled" ).next() )
+            assertThat( transaction.execute( format("CYPHER runtime=%s UNWIND [] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled", runtime ) ).next() )
                     .isEqualTo( map( "wasCalled", false ) );
             transaction.commit();
         }
 
     }
 
-    @Test
-    void shouldBeAbleToUseAdbInFunction()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldBeAbleToUseAdbInFunction( String runtime )
     {
         List<Node> nodes = new ArrayList<>();
         // Given
@@ -294,7 +310,7 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = transaction.execute( "UNWIND $ids AS ids WITH com.neo4j.procedure.collectNode(ids) AS nodes RETURN nodes",
+            Result result = transaction.execute( format("CYPHER runtime=%s UNWIND $ids AS ids WITH com.neo4j.procedure.collectNode(ids) AS nodes RETURN nodes", runtime ),
                     map( "ids", nodes.stream().map( Node::getId ).collect( Collectors.toList() ) ) );
 
             // Then
@@ -304,8 +320,9 @@ class AggregationFunctionIT
         }
     }
 
-    @Test
-    void shouldBeAbleToAccessPropertiesFromAggregatedValues()
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldBeAbleToAccessPropertiesFromAggregatedValues( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -327,7 +344,7 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             List<Map<String,Object>> result =
-                    Iterators.asList( transaction.execute( "MATCH (u:User) RETURN u.country,count(*),com.neo4j.procedure.first(u).country AS first" ) );
+                    Iterators.asList( transaction.execute( format("CYPHER runtime=%s MATCH (u:User) RETURN u.country,count(*),com.neo4j.procedure.first(u).country AS first", runtime ) ) );
 
             // Then
             assertThat( result ).hasSize( 4 );
@@ -339,9 +356,9 @@ class AggregationFunctionIT
     void setUp() throws IOException
     {
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        managementService = new TestDatabaseManagementServiceBuilder().impermanent()
-                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.absolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent()
+                                                                                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.absolutePath() )
+                                                                                .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
     }
