@@ -196,6 +196,12 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilat
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vRELATIONSHIP_CURSOR
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeCollectExpression
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.CachedPropertiesRow
+import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
+import org.neo4j.cypher.internal.runtime.ast.RuntimeLiteral
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTBoolean
 import org.neo4j.cypher.internal.util.symbols.CTDate
@@ -409,6 +415,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         Some(IntermediateExpression(block(ops: _*), compiled.values.flatMap(_.fields).toSeq,
           compiled.values.flatMap(_.variables).toSeq, Set.empty, requireNullCheck = false))
       }
+
+    case RuntimeLiteral(value) =>
+      val constant = staticConstant[AnyValue](namer.nextVariableName(), value)
+      Some(IntermediateExpression(getStatic(constant), Seq(constant), Seq.empty, Set.empty, requireNullCheck = false))
 
     case _: MapProjection => throw new InternalException("should have been rewritten away")
     case _: NestedPlanExpression => throw new InternalException("should have been rewritten away")

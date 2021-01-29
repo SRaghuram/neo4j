@@ -352,6 +352,24 @@ class AggregationFunctionIT
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    void shouldHandleDefaultArgument( String runtime )
+    {
+        // Given, empty db
+
+        // When
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Map<String,Object> result =
+                    Iterators.single( transaction.execute( format("CYPHER runtime=%s UNWIND range(1,100) AS i RETURN com.neo4j.procedure.count() AS count", "PIPELINED" ) ) );
+
+            // Then
+            assertThat( result ).isEqualTo( Map.of( "count", 100L ) );
+            transaction.commit();
+        }
+    }
+
     @BeforeEach
     void setUp() throws IOException
     {
@@ -632,7 +650,7 @@ class AggregationFunctionIT
             private long count;
 
             @UserAggregationUpdate
-            public void update( @Name( "in" ) String in )
+            public void update( @Name( value = "in", defaultValue = "hello" ) String in )
             {
                 if ( in != null )
                 {
