@@ -85,9 +85,8 @@ class ErrorsEndToEndTest
     {
         var e = run( "Some Garbage"  );
 
-        //temporary fallback to parboiled parser since error message includes java cc Parsing.FALLBACK_TRIGGERS removed
         assertEquals( SyntaxError.code().serialize(), e.code() );
-        assertThat( e.getMessage() ).contains( "line 1, column 2" );
+        assertThat( e.getMessage() ).contains( "line 1, column 1" );
         assertThat( e.getMessage() ).contains( "\"Some Garbage\"" );
 
         verifyCleanUp();
