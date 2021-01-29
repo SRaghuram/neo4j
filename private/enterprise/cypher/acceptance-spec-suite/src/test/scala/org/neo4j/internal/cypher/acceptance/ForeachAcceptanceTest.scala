@@ -44,7 +44,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
         | )
         |)""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     // then
     assertStats(result, nodesCreated = 110, relationshipsCreated = 110, propertiesWritten = 110, labelsAdded = 110)
@@ -59,7 +59,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
     val query = "FOREACH( n in range( 0, 1 ) | CREATE (p:Person) )"
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         val isPipelined = plan.arguments.collectFirst { case Runtime(r) => r.toLowerCase == "pipelined" }.getOrElse(false)
@@ -157,7 +157,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
         |FOREACH (x IN CASE WHEN condition THEN nodes ELSE [] END | CREATE (a)-[:X]->(x) );""".stripMargin
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     // then
     assertStats(result, nodesCreated = 2, relationshipsCreated = 1)
@@ -191,13 +191,13 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
         |FOREACH (x IN mixedTypeCollection | CREATE (n)-[:FOOBAR]->(x) );""".stripMargin
 
     // when
-    val explain = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"EXPLAIN $query")
+    val explain = executeWith(Configs.InterpretedAndSlotted, s"EXPLAIN $query")
 
     // then
     explain.executionPlanDescription().toString shouldNot include("CreateNode")
 
     // when
-    val config = Configs.InterpretedAndSlottedAndPipelined
+    val config = Configs.InterpretedAndSlotted
     failWithError(config, query, "Expected to find a node")
   }
 
@@ -210,7 +210,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
     val query =
       """MATCH p = ()-->()
         |FOREACH (n IN nodes(p) | SET n.marked = true)""".stripMargin
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     assertStats(result, propertiesWritten = 2)
   }
 
@@ -218,7 +218,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
     executeSingle("CREATE (:X)-[:T]->(), (:X)")
 
     val result = executeWith(
-      expectSucceed = Configs.InterpretedAndSlottedAndPipelined,
+      expectSucceed = Configs.InterpretedAndSlotted,
       query = "FOREACH (x in  [ (n:X)-->() | n ] | SET x.prop = 12 )")
     assertStats(result, propertiesWritten = 1)
   }

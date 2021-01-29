@@ -36,7 +36,10 @@ case object pipelinedPrePhysicalPlanRewriter {
         assertSameNodeNodeRewriter(stopper = stopper)
       ),
       cartesianProductLeveragedOrderToApplyPreserveOrder(cardinalities, providedOrders, leveragedOrders, parallelExecution, idGen, stopper),
-      foreachApplyRewriter(cardinalities, providedOrders, idGen, stopper),//foreach rewrites to selectOrSemiApply so must come before semiApplyToLimitApply
+
+      // Temporarily disabled to win some time to handle a regression https://trello.com/c/R6Yc26LB/2349-regression-in-ldbcldbcsnbinteractive-write-summary-for-version-430-drop020
+      //foreachApplyRewriter(cardinalities, providedOrders, idGen, stopper),//foreach rewrites to selectOrSemiApply so must come before semiApplyToLimitApply
+
       semiApplyToLimitApply(cardinalities, providedOrders, idGen, stopper),
       antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen, stopper),
       rollupApplyToAggregationApply(cardinalities, providedOrders, idGen, stopper),

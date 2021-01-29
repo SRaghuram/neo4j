@@ -140,7 +140,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   test("should have bound node recognized after projection with WITH + FOREACH") {
     val query = "CREATE (a) WITH a FOREACH (i in [] | SET a.prop = 1) CREATE (b) CREATE (a)<-[:T]-(b)"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     assertStats(result, nodesCreated = 2, relationshipsCreated = 1)
   }
 
