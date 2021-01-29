@@ -271,7 +271,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
           outputCursor.copyFrom(accumulator.argumentRow)
           var i = 0
           while (i < aggregations.length) {
-            outputCursor.setRefAt(reducerOutputSlots(i), accumulator.aggregatorRow.result(i))
+            outputCursor.setRefAt(reducerOutputSlots(i), accumulator.aggregatorRow.result(i, state))
             i += 1
           }
           outputCursor.next()

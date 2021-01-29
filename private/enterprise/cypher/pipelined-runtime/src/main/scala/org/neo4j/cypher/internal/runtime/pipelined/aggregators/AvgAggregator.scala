@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicReference
 
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
@@ -139,7 +140,7 @@ class AvgStandardReducer() extends AvgBase with StandardReducer {
 
   // Reducer
   override def newUpdater(): Updater = this
-  override def result: AnyValue =
+  override def result(state: QueryState): AnyValue =
     if (seenDuration) {
       DurationValue.approximate(monthsRunningAvg, daysRunningAvg, secondsRunningAvg, nanosRunningAvg).normalize()
     } else if (seenNumber) {
@@ -184,7 +185,7 @@ class AvgConcurrentReducer() extends Reducer {
   private val numberRunningAvg = new AtomicReference[AvgNumber](AvgNumber())
 
   override def newUpdater(): Updater = new Upd()
-  override def result: AnyValue =
+  override def result(state: QueryState): AnyValue =
     if (seenDuration) {
       val monthsRunningAvg = durationRunningAvg.get().monthsRunningAvg
       val daysRunningAvg = durationRunningAvg.get().daysRunningAvg

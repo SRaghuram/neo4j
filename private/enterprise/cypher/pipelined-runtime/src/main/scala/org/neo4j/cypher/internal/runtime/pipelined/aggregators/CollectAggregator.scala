@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.neo4j.collection.trackable.HeapTrackingCollections
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.kernel.impl.util.collection.DistinctSet
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
@@ -72,7 +73,7 @@ class CollectStandardReducer(preserveNulls: Boolean, memoryTracker: MemoryTracke
 
   // Reducer
   override def newUpdater(): Updater = this
-  override def result: AnyValue = {
+  override def result(state: QueryState): AnyValue = {
     collection.buildAndClose()
   }
 
@@ -86,7 +87,7 @@ class CollectConcurrentReducer(preserveNulls: Boolean) extends Reducer {
   private val collections = new ConcurrentLinkedQueue[ListValue]()
 
   override def newUpdater(): Updater = new Upd()
-  override def result: AnyValue = VirtualValues.concat(collections.toArray(new Array[ListValue](0)):_*)
+  override def result(state: QueryState): AnyValue = VirtualValues.concat(collections.toArray(new Array[ListValue](0)):_*)
 
   class Upd() extends CollectUpdater(preserveNulls, EmptyMemoryTracker.INSTANCE) with Updater {
     override def add(value: AnyValue): Unit = collect(value)
@@ -106,7 +107,7 @@ class CollectDistinctStandardReducer(memoryTracker: MemoryTracker) extends Direc
 
   // Reducer
   override def newUpdater(): Updater = this
-  override def result: AnyValue = {
+  override def result(state: QueryState): AnyValue = {
     collection.buildAndClose()
   }
 
@@ -125,7 +126,7 @@ class CollectDistinctConcurrentReducer() extends Reducer {
   private val seenSet = ConcurrentHashMap.newKeySet[AnyValue]()
 
   override def newUpdater(): Updater = new Upd()
-  override def result: AnyValue = {
+  override def result(state: QueryState): AnyValue = {
     val collection = ListValueBuilder.newListBuilder()
     seenSet.forEach(value => collection.add(value))
     collection.build()

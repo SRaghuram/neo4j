@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
@@ -40,7 +41,7 @@ class CheckEmptyStandardReducer(shouldBeEmpty: Boolean) extends DirectStandardRe
   // Reducer
   override def newUpdater(): Updater = this
 
-  override def result: AnyValue = Values.booleanValue(isEmpty == shouldBeEmpty)
+  override def result(state: QueryState): AnyValue = Values.booleanValue(isEmpty == shouldBeEmpty)
 
   // Updater
   override def add(value: AnyValue): Unit =
@@ -52,7 +53,7 @@ class CheckEmptyConcurrentReducer(shouldBeEmpty: Boolean) extends Reducer {
 
   override def newUpdater(): Updater = new Upd()
 
-  override def result: AnyValue = Values.booleanValue(isEmpty == shouldBeEmpty)
+  override def result(state: QueryState): AnyValue = Values.booleanValue(isEmpty == shouldBeEmpty)
 
   class Upd() extends Updater {
     override def add(value: AnyValue): Unit =

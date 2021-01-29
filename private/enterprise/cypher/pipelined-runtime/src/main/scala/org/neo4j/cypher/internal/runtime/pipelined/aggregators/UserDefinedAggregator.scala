@@ -26,6 +26,7 @@ object UserDefinedAggregator {
 class UserDefinedStandardReducer(callToken: Int, allowed: Array[String]) extends DirectStandardReducer {
 
   private var aggregator: org.neo4j.cypher.internal.runtime.UserDefinedAggregator = _
+
   // Reducer
   override def newUpdater(): Updater = this
 
@@ -37,8 +38,13 @@ class UserDefinedStandardReducer(callToken: Int, allowed: Array[String]) extends
   }
 
   override def add(values: Array[AnyValue]): Unit = aggregator.update(values)
+
   override def add(value: AnyValue): Unit = aggregator.update(IndexedSeq(value))
-  override def result: AnyValue = aggregator.result
+
+  override def result(state: QueryState): AnyValue = {
+    initialize(state)
+    aggregator.result
+  }
 }
 
 

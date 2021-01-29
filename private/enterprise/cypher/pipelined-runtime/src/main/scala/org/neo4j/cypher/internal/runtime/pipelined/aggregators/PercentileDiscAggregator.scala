@@ -10,6 +10,7 @@ import java.util.Collections
 
 import org.neo4j.collection.trackable.HeapTrackingArrayList
 import org.neo4j.collection.trackable.HeapTrackingCollections
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.operations.CypherCoercions
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.memory.HeapEstimator
@@ -93,7 +94,7 @@ abstract class PercentileStandardReducer(memoryTracker: MemoryTracker) extends D
 }
 
 class PercentileContStandardReducer(memoryTracker: MemoryTracker) extends PercentileStandardReducer(memoryTracker) {
-  override def result: AnyValue = {
+  override def result(state: QueryState): AnyValue = {
     tmp.sort((o1: NumberValue, o2: NumberValue) => java.lang.Double.compare(o1.doubleValue(), o2.doubleValue()))
     val count = tmp.size
     val r = if (percent == 1.0 || count == 1) {
@@ -115,7 +116,7 @@ class PercentileContStandardReducer(memoryTracker: MemoryTracker) extends Percen
 }
 
 class PercentileDiscStandardReducer(memoryTracker: MemoryTracker) extends PercentileStandardReducer(memoryTracker) {
-  override def result: AnyValue = {
+  override def result(state: QueryState): AnyValue = {
     tmp.sort((o1: NumberValue, o2: NumberValue) => java.lang.Double.compare(o1.doubleValue(), o2.doubleValue()))
     val count = tmp.size
     val r = if (percent == 1.0 || count == 1) {
@@ -169,7 +170,7 @@ abstract class PercentileConcurrentReducer() extends Reducer {
 }
 
 class PercentileContConcurrentReducer() extends PercentileConcurrentReducer {
-  override def result: AnyValue = {
+  override def result(state: QueryState): AnyValue = {
     tmp.sort((o1: NumberValue, o2: NumberValue) => java.lang.Double.compare(o1.doubleValue(), o2.doubleValue()))
 
     val count = tmp.size()
@@ -191,7 +192,7 @@ class PercentileContConcurrentReducer() extends PercentileConcurrentReducer {
 }
 
 class PercentileDiscConcurrentReducer() extends PercentileConcurrentReducer {
-  override def result: AnyValue = {
+  override def result(state: QueryState): AnyValue = {
     tmp.sort((o1: NumberValue, o2: NumberValue) => java.lang.Double.compare(o1.doubleValue(), o2.doubleValue()))
     val count = tmp.size()
     //volatile read, just do it once

@@ -32,7 +32,7 @@ import org.neo4j.values.AnyValue
  */
 trait AggregatedRow {
   def updaters(workerId: Int): AggregatedRowUpdaters
-  def result(index: Int): AnyValue
+  def result(index: Int,  state: QueryState): AnyValue
 }
 
 /**
@@ -135,7 +135,7 @@ class StandardAggregators(reducers: Array[StandardReducer]) extends AggregatedRo
 
   // Aggregators
   override def updaters(workerId: Int): AggregatedRowUpdaters = this
-  override def result(n: Int): AnyValue = reducers(n).result
+  override def result(n: Int, state: QueryState): AnyValue = reducers(n).result(state)
 
   // Update
 
@@ -157,7 +157,7 @@ class StandardDirectAggregators(reducers: Array[StandardReducer]) extends Aggreg
 
   // Aggregators
   override def updaters(workerId: Int): AggregatedRowUpdaters = this
-  override def result(n: Int): AnyValue = reducers(n).result
+  override def result(n: Int, state: QueryState): AnyValue = reducers(n).result(state)
 
   // Update
   override def initialize(n: Int, state: QueryState): Unit = reducers(n).initialize(state)
@@ -208,7 +208,7 @@ class ConcurrentAggregators(reducers: Array[Reducer], numberOfWorkers: Int) exte
   private val _updaters = (0 until numberOfWorkers).map(_ => new ConcurrentUpdaters(reducers.map(_.newUpdater()))).toArray
 
   override def updaters(workerId: Int): AggregatedRowUpdaters = _updaters(workerId)
-  override def result(n: Int): AnyValue = reducers(n).result
+  override def result(n: Int, state: QueryState): AnyValue = reducers(n).result(state)
   def applyUpdates(workerId: Int): Unit = {
     _updaters(workerId).applyUpdates()
   }

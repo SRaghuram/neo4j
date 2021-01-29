@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.ConcurrentHashMap
 
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.DistinctConcurrentMultiArgumentReducer.InputRow
 import org.neo4j.kernel.impl.util.collection.DistinctSet
 import org.neo4j.memory.EmptyMemoryTracker
@@ -20,7 +21,7 @@ class DistinctStandardReducer(inner: StandardReducer, memoryTracker: MemoryTrack
 
   // Reducer
   override def newUpdater(): Updater = this
-  override def result: AnyValue = inner.result
+  override def result(state: QueryState): AnyValue = inner.result(state)
 
   // Updater
   override def add(value: AnyValue): Unit = {
@@ -46,7 +47,7 @@ class DistinctConcurrentReducer(inner: Reducer) extends Reducer {
   private val seenSet = ConcurrentHashMap.newKeySet[AnyValue]()
 
   override def newUpdater(): Updater = new Upd(inner.newUpdater())
-  override def result: AnyValue = inner.result
+  override def result(state: QueryState): AnyValue = inner.result(state)
 
   class Upd(inner: Updater) extends Updater {
     private var partSeenSet: DistinctSet[AnyValue] = DistinctSet.createDistinctSet[AnyValue](EmptyMemoryTracker.INSTANCE)
@@ -69,7 +70,7 @@ class DistinctConcurrentMultiArgumentReducer(inner: Reducer, distinctIndex: Int)
   private val seenSet = ConcurrentHashMap.newKeySet[InputRow]()
 
   override def newUpdater(): Updater = new Upd(inner.newUpdater())
-  override def result: AnyValue = inner.result
+  override def result(state: QueryState): AnyValue = inner.result(state)
 
   class Upd(inner: Updater) extends Updater {
     private var partSeenSet: DistinctSet[InputRow] = DistinctSet.createDistinctSet[InputRow](EmptyMemoryTracker.INSTANCE)

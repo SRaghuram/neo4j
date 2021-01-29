@@ -298,7 +298,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
           groupings.project(outputCursor, key.asInstanceOf[groupings.KeyType])
           var i = 0
           while (i < aggregations.length) {
-            outputCursor.setRefAt(reducerOutputSlots(i), aggregators.result(i))
+            outputCursor.setRefAt(reducerOutputSlots(i), aggregators.result(i, state))
             i += 1
           }
           outputCursor.next()

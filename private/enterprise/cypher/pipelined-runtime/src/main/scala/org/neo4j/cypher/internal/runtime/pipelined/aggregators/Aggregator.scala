@@ -83,7 +83,7 @@ trait Reducer {
   /**
    * Compute the result of this reducer.
    */
-  def result: AnyValue
+  def result(state: QueryState): AnyValue
 }
 
 /**

@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.atomic.AtomicReference
 
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
@@ -87,7 +88,7 @@ class SumStandardReducer() extends SumBase with DirectStandardReducer {
 
   // Reducer
   override def newUpdater(): Updater = this
-  override def result: AnyValue =
+  override def result(state: QueryState): AnyValue =
     if (seenNumber && seenDuration) {
       SumAggregator.failMix()
     } else if (seenDuration) {
@@ -120,7 +121,7 @@ class SumConcurrentReducer extends Reducer {
 
   override def newUpdater(): Updater = new Upd()
 
-  override def result: AnyValue =
+  override def result(state: QueryState): AnyValue =
     if (seenNumber && seenDuration) {
       SumAggregator.failMix()
     } else if (seenDuration) {

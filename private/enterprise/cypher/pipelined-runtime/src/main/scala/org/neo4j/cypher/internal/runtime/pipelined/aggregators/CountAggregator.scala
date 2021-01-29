@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.atomic.AtomicLong
 
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
@@ -51,7 +52,7 @@ class CountStandardReducer(countNulls: Boolean) extends DirectStandardReducer {
 
   // Reducer
   override def newUpdater(): Updater = this
-  override def result: AnyValue = Values.longValue(count)
+  override def result(state: QueryState): AnyValue = Values.longValue(count)
 
   // Updater
   override def add(value: AnyValue): Unit =
@@ -63,7 +64,7 @@ class CountConcurrentReducer(countNulls: Boolean) extends Reducer {
   private val count = new AtomicLong(0L)
 
   override def newUpdater(): Updater = new Upd(countNulls)
-  override def result: AnyValue = Values.longValue(count.get)
+  override def result(state: QueryState): AnyValue = Values.longValue(count.get)
 
   class Upd(countNulls: Boolean) extends Updater {
     var partCount = 0L

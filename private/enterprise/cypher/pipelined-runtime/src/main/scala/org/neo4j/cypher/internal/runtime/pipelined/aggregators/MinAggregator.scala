@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.atomic.AtomicReference
 
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
@@ -38,7 +39,7 @@ class MinUpdater {
 class MinStandardReducer() extends MinUpdater with DirectStandardReducer {
   // Reducer
   override def newUpdater(): Updater = this
-  override def result: AnyValue = min
+  override def result(state: QueryState): AnyValue = min
 
   // Updater
   override def add(value: AnyValue): Unit = update(value)
@@ -49,7 +50,7 @@ class MinConcurrentReducer() extends Reducer {
 
   // Reducer
   override def newUpdater(): Updater = new Upd()
-  override def result: AnyValue = minAR.get
+  override def result(state: QueryState): AnyValue = minAR.get
 
   // Updater
   class Upd() extends MinUpdater with Updater {

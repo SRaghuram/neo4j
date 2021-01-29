@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.atomic.AtomicReference
 
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
@@ -39,7 +40,7 @@ class MaxUpdater {
 class MaxStandardReducer() extends MaxUpdater with DirectStandardReducer {
   // Reducer
   override def newUpdater(): Updater = this
-  override def result: AnyValue = max
+  override def result(state: QueryState): AnyValue = max
 
   // Updater
   override def add(value: AnyValue): Unit = update(value)
@@ -50,7 +51,7 @@ class MaxConcurrentReducer() extends Reducer {
   private val maxAR = new AtomicReference[AnyValue](Values.NO_VALUE)
 
   override def newUpdater(): Updater = new Upd()
-  override def result: AnyValue = maxAR.get
+  override def result(state: QueryState): AnyValue = maxAR.get
 
   // Updater
   class Upd() extends MaxUpdater with Updater {
