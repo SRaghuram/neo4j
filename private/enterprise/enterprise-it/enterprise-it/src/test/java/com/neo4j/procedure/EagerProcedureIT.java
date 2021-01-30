@@ -54,7 +54,7 @@ public class EagerProcedureIT
     private DatabaseManagementService managementService;
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldNotGetPropertyAccessFailureWhenStreamingToAnEagerDestructiveProcedure( String runtime )
     {
         // When we have a simple graph (a)
@@ -63,15 +63,16 @@ public class EagerProcedureIT
         try ( Transaction transaction = db.beginTx() )
         {
             // Then we can run an eagerized destructive procedure
-            Result res = transaction.execute( format("CYPHER runtime=%s MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursEagerized(n, 'FOLLOWS') " +
-                    "YIELD value RETURN value", runtime ) );
+            Result res = transaction.execute(
+                    format( "CYPHER runtime=%s MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursEagerized(n, 'FOLLOWS') " +
+                            "YIELD value RETURN value", runtime ) );
             assertThat( res.resultAsString() ).as( "Should get as many rows as original nodes" ).contains( "2 rows" );
             transaction.commit();
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldGetPropertyAccessFailureWhenStreamingToANonEagerDestructiveProcedure( String runtime )
     {
         // When we have a simple graph (a)
@@ -81,14 +82,15 @@ public class EagerProcedureIT
         {
             // When we try to run an eagerized destructive procedure
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> transaction.execute(
-                    format("CYPHER runtime=%s MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursNotEagerized(n, 'FOLLOWS') " +
+                    format( "CYPHER runtime=%s MATCH (n) WHERE n.key = 'value' " +
+                            "WITH n CALL com.neo4j.procedure.deleteNeighboursNotEagerized(n, 'FOLLOWS') " +
                             "YIELD value RETURN value", runtime ) ) );
             assertThat( exception.getMessage() ).isEqualTo( "Node with id 1 has been deleted in this transaction" );
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldNotGetErrorBecauseOfNormalEagerizationWhenStreamingFromANormalReadProcedureToDestructiveCypher( String runtime )
     {
         // When we have a simple graph (a)
@@ -99,7 +101,8 @@ public class EagerProcedureIT
         {
             // Then we can run an normal read procedure and it will be eagerized by normal Cypher eagerization
             Result res = transaction.execute(
-                    format("CYPHER runtime=%s MATCH (n) WHERE n.key = 'value' " + "CALL com.neo4j.procedure.findNeighboursNotEagerized(n) " + "YIELD relationship AS r, node as m " +
+                    format( "CYPHER runtime=%s MATCH (n) WHERE n.key = 'value' " + "CALL com.neo4j.procedure.findNeighboursNotEagerized(n) " +
+                            "YIELD relationship AS r, node as m " +
                             "DELETE r, m RETURN true", runtime ) );
             assertThat( res.resultAsString() ).as( "Should get one fewer rows than original nodes" ).contains( (count - 1) + " rows" );
             assertThat( res.getExecutionPlanDescription().toString() ).as( "The plan description should contain the 'Eager' operation" ).contains( "+Eager" );
@@ -108,7 +111,7 @@ public class EagerProcedureIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldGetEagerPlanForAnEagerProcedure( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
@@ -116,14 +119,14 @@ public class EagerProcedureIT
             // When explaining a call to an eagerized procedure
             Result res = transaction.execute(
                     "EXPLAIN MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursEagerized(n, 'FOLLOWS') " +
-                            "YIELD value RETURN value" );
+                    "YIELD value RETURN value" );
             assertThat( res.getExecutionPlanDescription().toString() ).as( "The plan description should contain the 'Eager' operation" ).contains( "+Eager" );
             transaction.commit();
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldNotGetEagerPlanForANonEagerProcedure( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
@@ -131,9 +134,9 @@ public class EagerProcedureIT
             // When explaining a call to an non-eagerized procedure
             Result res = transaction.execute(
                     "EXPLAIN MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursNotEagerized(n, 'FOLLOWS') " +
-                            "YIELD value RETURN value" );
+                    "YIELD value RETURN value" );
             assertThat( res.getExecutionPlanDescription().toString() ).as( "The plan description shouldn't contain the 'Eager' operation" )
-                    .doesNotContain( "+Eager" );
+                                                                      .doesNotContain( "+Eager" );
             transaction.commit();
         }
     }
@@ -178,7 +181,8 @@ public class EagerProcedureIT
     {
         new JarBuilder().createJarFor( testDirectory.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent()
-                                                                                .setConfig( GraphDatabaseSettings.plugin_dir, testDirectory.absolutePath() ).build();
+                                                                                .setConfig( GraphDatabaseSettings.plugin_dir, testDirectory.absolutePath() )
+                                                                                .build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

@@ -64,14 +64,14 @@ public class ConcurrentProcedureIT
     void setUp() throws IOException
     {
         new JarBuilder().createJarFor( plugins.createFile( "myProceduresWithKernelTransaction.jar" ),
-                ClassWithProceduresUsingKernelTransaction.class );
+                                       ClassWithProceduresUsingKernelTransaction.class );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder()
                 .impermanent()
                 .setConfig( plugin_dir, plugins.absolutePath() )
                 .setConfig( procedure_unrestricted,
-                        List.of( "com.neo4j.procedure.metaDataIdProcedure",
-                                "com.neo4j.procedure.metaDataIdFunction",
-                                "com.neo4j.procedure.metaDataIdAggregation" ) )
+                            List.of( "com.neo4j.procedure.metaDataIdProcedure",
+                                     "com.neo4j.procedure.metaDataIdFunction",
+                                     "com.neo4j.procedure.metaDataIdAggregation" ) )
                 .build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
     }
@@ -86,29 +86,29 @@ public class ConcurrentProcedureIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void proceduresShouldGetCorrectKernelTransaction( String runtime ) throws InterruptedException, ExecutionException
     {
         run( tx ->
-                tx.execute( format("CYPHER runtime=%s CALL com.neo4j.procedure.metaDataIdProcedure", runtime ) ).<Long>columnAs( "value" ).next() );
+                     tx.execute( format( "CYPHER runtime=%s CALL com.neo4j.procedure.metaDataIdProcedure", runtime ) ).<Long>columnAs( "value" ).next() );
     }
 
-        @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ParameterizedTest
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void userFunctionShouldGetCorrectKernelTransaction( String runtime ) throws InterruptedException, ExecutionException
     {
         run( tx ->
-                tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.metaDataIdFunction() AS value", runtime ) ).<Long>columnAs( "value" )
-                        .next() );
+                     tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.metaDataIdFunction() AS value", runtime ) ).<Long>columnAs( "value" )
+                             .next() );
     }
 
-        @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ParameterizedTest
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void userAggregationFunctionShouldGetCorrectKernelTransaction( String runtime ) throws InterruptedException, ExecutionException
     {
         run( tx ->
-                tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.metaDataIdAggregation() AS value", runtime ) ).<Long>columnAs( "value" )
-                        .next() );
+                     tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.metaDataIdAggregation() AS value", runtime ) ).<Long>columnAs( "value" )
+                             .next() );
     }
 
     private void run( Function<Transaction,Long> value ) throws InterruptedException, ExecutionException

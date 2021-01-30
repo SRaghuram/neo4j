@@ -36,7 +36,7 @@ public class CommunityListLocksProcedureIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void listSharedLabelLock( String runtime )
     {
         var markerLabel = Label.label( "Marker" );
@@ -50,7 +50,7 @@ public class CommunityListLocksProcedureIT
         try ( Transaction transaction = database.beginTx() )
         {
             var result = transaction.execute( "MATCH (n:Marker) RETURN n" );
-            var procedureResult = transaction.execute( format("CYPHER runtime=%s CALL db.listLocks()", runtime ) );
+            var procedureResult = transaction.execute( format( "CYPHER runtime=%s CALL db.listLocks()", runtime ) );
             var labelLockMap = procedureResult.next();
             assertThat( labelLockMap ).containsEntry( "mode", "SHARED" )
                                       .containsEntry( "resourceType", "LABEL" )
@@ -61,7 +61,7 @@ public class CommunityListLocksProcedureIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void listExclusiveNodeLock( String runtime )
     {
         long nodeId;
@@ -73,18 +73,18 @@ public class CommunityListLocksProcedureIT
         try ( Transaction transaction = database.beginTx() )
         {
             var result = transaction.execute( "MATCH (n) SET n.property=4 RETURN n" );
-            var procedureResult = transaction.execute( format("CYPHER runtime=%s CALL db.listLocks()", runtime ) );
+            var procedureResult = transaction.execute( format( "CYPHER runtime=%s CALL db.listLocks()", runtime ) );
             var labelLockMap = procedureResult.next();
             assertThat( labelLockMap ).containsEntry( "mode", "EXCLUSIVE" )
-                    .containsEntry( "resourceType", "NODE" )
-                    .containsEntry( "resourceId", nodeId )
-                    .containsEntry( "transactionId", database.databaseName() + "-transaction-2" );
+                                      .containsEntry( "resourceType", "NODE" )
+                                      .containsEntry( "resourceId", nodeId )
+                                      .containsEntry( "transactionId", database.databaseName() + "-transaction-2" );
             assertFalse( procedureResult.hasNext() );
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void listSharedAndExclusiveLockOnSameNode( String runtime )
     {
         long nodeId;
@@ -100,12 +100,12 @@ public class CommunityListLocksProcedureIT
             transaction.acquireReadLock( node );
             transaction.acquireReadLock( node );
             var result = transaction.execute( "MATCH (n) SET n.property=4 RETURN n" );
-            var procedureResult = transaction.execute( format("CYPHER runtime=%s CALL db.listLocks()", runtime ) );
+            var procedureResult = transaction.execute( format( "CYPHER runtime=%s CALL db.listLocks()", runtime ) );
             var labelLockMap = procedureResult.next();
             assertThat( labelLockMap ).containsEntry( "mode", "EXCLUSIVE" )
-                    .containsEntry( "resourceType", "NODE" )
-                    .containsEntry( "resourceId", nodeId )
-                    .containsEntry( "transactionId", database.databaseName() + "-transaction-2" );
+                                      .containsEntry( "resourceType", "NODE" )
+                                      .containsEntry( "resourceId", nodeId )
+                                      .containsEntry( "transactionId", database.databaseName() + "-transaction-2" );
             assertFalse( procedureResult.hasNext() );
         }
     }

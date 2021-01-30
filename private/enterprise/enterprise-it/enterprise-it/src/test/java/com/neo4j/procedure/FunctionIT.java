@@ -104,7 +104,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldGiveNiceErrorMessageOnWrongStaticType( String runtime )
     {
         QueryExecutionException exception =
@@ -113,14 +113,14 @@ class FunctionIT
                     try ( Transaction tx = db.beginTx() )
                     {
                         //Make sure argument here is not auto parameterized away as that will drop all type information on the floor
-                        tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.simpleArgument('42')", runtime ) );
+                        tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.simpleArgument('42')", runtime ) );
                     }
                 } );
         assertThat( exception ).hasMessageStartingWith( "Type mismatch: expected Integer but was String" );
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldGiveNiceErrorMessageWhenNoArguments( String runtime )
     {
         QueryExecutionException exception =
@@ -128,18 +128,18 @@ class FunctionIT
                 {
                     try ( Transaction tx = db.beginTx() )
                     {
-                        tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.simpleArgument()", runtime ) );
+                        tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.simpleArgument()", runtime ) );
                     }
                 } );
         assertThat( normalizeString( exception.getMessage() ) ).startsWith( format( "Function call does not provide the " +
-                "required number of arguments: expected 1 got 0.%n%n" +
-                "Function com.neo4j.procedure.simpleArgument has signature: " +
-                "com.neo4j.procedure.simpleArgument(someValue :: INTEGER?) :: INTEGER?%n" +
-                "meaning that it expects 1 argument of type INTEGER?") );
+                                                                                    "required number of arguments: expected 1 got 0.%n%n" +
+                                                                                    "Function com.neo4j.procedure.simpleArgument has signature: " +
+                                                                                    "com.neo4j.procedure.simpleArgument(someValue :: INTEGER?) :: INTEGER?%n" +
+                                                                                    "meaning that it expects 1 argument of type INTEGER?" ) );
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldShowDescriptionWhenMissingArguments( String runtime )
     {
         // When
@@ -148,27 +148,27 @@ class FunctionIT
                 {
                     try ( Transaction tx = db.beginTx() )
                     {
-                        tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.nodeWithDescription()", runtime ) );
+                        tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.nodeWithDescription()", runtime ) );
                     }
                 } );
         assertThat( normalizeString( exception.getMessage() ) ).startsWith( format( "Function call does not provide the " +
-                "required number of arguments: expected 1 got 0.%n%n" +
-                "Function com.neo4j.procedure.nodeWithDescription has signature: " +
-                "com.neo4j.procedure.nodeWithDescription(someValue :: NODE?) :: NODE?%n" +
-                "meaning that it expects 1 argument of type NODE?%n" +
-                "Description: This is a description" ) );
+                                                                                    "required number of arguments: expected 1 got 0.%n%n" +
+                                                                                    "Function com.neo4j.procedure.nodeWithDescription has signature: " +
+                                                                                    "com.neo4j.procedure.nodeWithDescription(someValue :: NODE?) :: NODE?%n" +
+                                                                                    "meaning that it expects 1 argument of type NODE?%n" +
+                                                                                    "Description: This is a description" ) );
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallDelegatingFunction( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.delegatingFunction($name) AS someVal", runtime ),
-                    map( "name", 43L ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.delegatingFunction($name) AS someVal", runtime ),
+                                     map( "name", 43L ) );
 
             // Then
             assertThat( res.next() ).isEqualTo( map( "someVal", 43L ) );
@@ -177,14 +177,14 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallRecursiveFunction( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.recursiveSum($order) AS someVal", runtime ), map( "order", 10L ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.recursiveSum($order) AS someVal", runtime ), map( "order", 10L ) );
 
             // Then
             assertThat( res.next() ).isEqualTo( map( "someVal", 55L ) );
@@ -193,7 +193,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithGenericArgument( String runtime )
     {
         // Given
@@ -201,8 +201,8 @@ class FunctionIT
         {
             // When
             Result res = tx.execute(
-                    format("CYPHER runtime=%s RETURN com.neo4j.procedure.genericArguments([ ['graphs'], ['are'], ['everywhere']], " +
-                    "[ [[1, 2, 3]], [[4, 5]]] ) AS someVal", runtime ) );
+                    format( "CYPHER runtime=%s RETURN com.neo4j.procedure.genericArguments([ ['graphs'], ['are'], ['everywhere']], " +
+                            "[ [[1, 2, 3]], [[4, 5]]] ) AS someVal", runtime ) );
 
             // Then
             assertThat( res.next() ).isEqualTo( map( "someVal", 5L ) );
@@ -211,14 +211,14 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithMapArgument( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.mapArgument({foo: 42, bar: 'hello'}) AS someVal", runtime ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.mapArgument({foo: 42, bar: 'hello'}) AS someVal", runtime ) );
 
             // Then
             assertThat( res.next() ).isEqualTo( map( "someVal", 2L ) );
@@ -227,14 +227,14 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithMapArgumentContainingNullFromParameter( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.mapArgument({foo: $p}) AS someVal", runtime ), map("p", null) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.mapArgument({foo: $p}) AS someVal", runtime ), map( "p", null ) );
 
             // Then
             assertThat( res.next() ).isEqualTo( map( "someVal", 1L ) );
@@ -243,14 +243,14 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithNull( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.mapArgument(null) AS someVal", runtime ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.mapArgument(null) AS someVal", runtime ) );
 
             // Then
             assertThat( res.next() ).isEqualTo( map( "someVal", 0L ) );
@@ -259,7 +259,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithNullFromParameter( String runtime )
     {
         // Given
@@ -267,7 +267,7 @@ class FunctionIT
         {
             // When
             Result res = tx.execute(
-                    format("CYPHER runtime=%s RETURN com.neo4j.procedure.mapArgument($p) AS someVal", runtime ), map("p", null) );
+                    format( "CYPHER runtime=%s RETURN com.neo4j.procedure.mapArgument($p) AS someVal", runtime ), map( "p", null ) );
 
             // Then
             assertThat( res.next() ).isEqualTo( map( "someVal", 0L ) );
@@ -276,7 +276,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithNodeReturn( String runtime )
     {
         // Given
@@ -285,7 +285,7 @@ class FunctionIT
             long nodeId = tx.createNode().getId();
 
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.node($id) AS node", runtime ), map( "id", nodeId ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.node($id) AS node", runtime ), map( "id", nodeId ) );
 
             // Then
             Node node = (Node) res.next().get( "node" );
@@ -295,37 +295,38 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldGiveHelpfulErrorOnMissingFunction( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
         {
             QueryExecutionException exception =
-                    assertThrows( QueryExecutionException.class, () -> transaction.execute( format("CYPHER runtime=%s RETURN org.someFunctionThatDoesNotExist()", runtime ) ) );
+                    assertThrows( QueryExecutionException.class,
+                                  () -> transaction.execute( format( "CYPHER runtime=%s RETURN org.someFunctionThatDoesNotExist()", runtime ) ) );
             assertThat( exception ).hasMessageStartingWith( "Unknown function 'org.someFunctionThatDoesNotExist'" );
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldGiveHelpfulErrorOnExceptionMidStream( String runtime )
     {
         // Given
         // run in tx to avoid having to wait for tx rollback on shutdown
         try ( Transaction tx = db.beginTx() )
         {
-            Result result = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.throwsExceptionInStream()", runtime ) );
+            Result result = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.throwsExceptionInStream()", runtime ) );
 
             // When
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, result::next );
             assertThat( exception ).hasMessage(
                     "Failed to invoke function `com.neo4j.procedure.throwsExceptionInStream`: Caused by: java.lang" +
-                            ".RuntimeException: Kaboom" );
+                    ".RuntimeException: Kaboom" );
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldShowCauseOfError( String runtime )
     {
         // Given
@@ -334,15 +335,16 @@ class FunctionIT
         {
             // When
             QueryExecutionException exception =
-                    assertThrows( QueryExecutionException.class, () -> tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.indexOutOfBounds()", runtime ) ).next() );
+                    assertThrows( QueryExecutionException.class,
+                                  () -> tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.indexOutOfBounds()", runtime ) ).next() );
             assertThat( exception ).hasMessageStartingWith(
                     "Failed to invoke function `com.neo4j.procedure.indexOutOfBounds`: Caused by: java.lang" +
-                            ".ArrayIndexOutOfBoundsException" );
+                    ".ArrayIndexOutOfBoundsException" );
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithAccessToDB( String runtime )
     {
         // When
@@ -356,43 +358,46 @@ class FunctionIT
         try ( Transaction tx = db.beginTx() )
         {
             Result res = tx.execute(
-                    format("CYPHER runtime=%s RETURN com.neo4j.procedure.listCoolPeopleInDatabase() AS cool", runtime ) );
+                    format( "CYPHER runtime=%s RETURN com.neo4j.procedure.listCoolPeopleInDatabase() AS cool", runtime ) );
 
             assertEquals( res.next().get( "cool" ), singletonList( "Buddy Holly" ) );
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldLogLikeThereIsNoTomorrow( String runtime )
     {
         // Given
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
         managementService.shutdown();
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).setUserLogProvider( logProvider ).impermanent()
-                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.absolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
+        managementService =
+                new TestEnterpriseDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).setUserLogProvider( logProvider ).impermanent()
+                                                                    .setConfig( GraphDatabaseSettings.plugin_dir, plugins.absolutePath() )
+                                                                    .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
         // When
         try ( Transaction tx = db.beginTx() )
         {
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.logAround()", runtime ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.logAround()", runtime ) );
             while ( res.hasNext() )
-            { res.next(); }
+            {
+                res.next();
+            }
         }
 
         // Then
         assertThat( logProvider ).forClass( GlobalProcedures.class )
-                .forLevel( DEBUG ).containsMessages( "1" )
-                .forLevel( INFO ).containsMessages( "2" )
-                .forLevel( WARN ).containsMessages( "3" )
-                .forLevel( ERROR ).containsMessages( "4" );
+                                 .forLevel( DEBUG ).containsMessages( "1" )
+                                 .forLevel( INFO ).containsMessages( "2" )
+                                 .forLevel( WARN ).containsMessages( "3" )
+                                 .forLevel( ERROR ).containsMessages( "4" );
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldDenyReadOnlyFunctionToPerformWrites( String runtime )
     {
         QueryExecutionException exception =
@@ -400,14 +405,14 @@ class FunctionIT
                 {
                     try ( Transaction tx = db.beginTx() )
                     {
-                        tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.readOnlyTryingToWrite()", runtime ) ).next();
+                        tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.readOnlyTryingToWrite()", runtime ) ).next();
                     }
                 } );
         assertThat( exception ).hasMessageContaining( "Create node with labels '' is not allowed" );
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldNotBeAbleToCallWriteProcedureThroughReadFunction( String runtime )
     {
         QueryExecutionException exception =
@@ -415,14 +420,14 @@ class FunctionIT
                 {
                     try ( Transaction tx = db.beginTx() )
                     {
-                        tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.readOnlyCallingWriteProcedure()", runtime ) ).next();
+                        tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.readOnlyCallingWriteProcedure()", runtime ) ).next();
                     }
-                } ) ;
+                } );
         assertThat( exception ).hasMessageContaining( "Create node with labels '' is not allowed" );
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldDenyReadOnlyFunctionToPerformSchema( String runtime )
     {
         QueryExecutionException exception =
@@ -431,21 +436,21 @@ class FunctionIT
                     try ( Transaction tx = db.beginTx() )
                     {
                         // When
-                        tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.readOnlyTryingToWriteSchema()", runtime ) ).next();
+                        tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.readOnlyTryingToWriteSchema()", runtime ) ).next();
                     }
                 } );
         assertThat( exception ).hasMessageContaining( "Schema operations are not allowed" );
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCoerceLongToDoubleAtRuntimeWhenCallingFunction( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.squareDouble($value) AS result", runtime ), map( "value", 4L ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.squareDouble($value) AS result", runtime ), map( "value", 4L ) );
 
             // Then
             assertThat( res.next() ).isEqualTo( map( "result", 16.0d ) );
@@ -454,15 +459,15 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCoerceListOfNumbersToDoublesAtRuntimeWhenCallingFunction( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.avgNumberList($param) AS result", runtime ),
-                    map( "param", Arrays.<Number>asList( 1L, 2L, 3L ) ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.avgNumberList($param) AS result", runtime ),
+                                     map( "param", Arrays.<Number>asList( 1L, 2L, 3L ) ) );
 
             // Then
             assertThat( res.next() ).isEqualTo( map( "result", 2.0d ) );
@@ -471,15 +476,15 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCoerceListOfMixedNumbers( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.avgDoubleList([$long, $double]) AS result", runtime ),
-                    map( "long", 1L, "double", 2.0d ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.avgDoubleList([$long, $double]) AS result", runtime ),
+                                     map( "long", 1L, "double", 2.0d ) );
 
             // Then
             assertThat( res.next() ).isEqualTo( map( "result", 1.5d ) );
@@ -488,14 +493,14 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCoerceDoubleToLongAtRuntimeWhenCallingFunction( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.squareLong($value) as someVal", runtime ), map( "value", 4L ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.squareLong($value) as someVal", runtime ), map( "value", 4L ) );
 
             // Then
             assertThat( res.next() ).isEqualTo( map( "someVal", 16L ) );
@@ -504,7 +509,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldBeAbleToPerformWritesOnNodesReturnedFromReadOnlyFunction( String runtime )
     {
         // When
@@ -512,7 +517,7 @@ class FunctionIT
         {
             long nodeId = tx.createNode().getId();
             Node node = Iterators.single(
-                    tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.node($id) AS node", runtime ), map( "id", nodeId ) ).columnAs(
+                    tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.node($id) AS node", runtime ), map( "id", nodeId ) ).columnAs(
                             "node" ) );
             node.setProperty( "name", "Stefan" );
             tx.commit();
@@ -520,18 +525,18 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldBeAbleToWriteAfterCallingReadOnlyFunction( String runtime )
     {
         try ( Transaction tx = db.beginTx() )
         {
-            tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.simpleArgument(12)", runtime ) ).close();
+            tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.simpleArgument(12)", runtime ) ).close();
             tx.createNode();
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldPreserveSecurityContextWhenSpawningThreadsCreatingTransactionInFunctions( String runtime ) throws Throwable
     {
         // given
@@ -539,7 +544,7 @@ class FunctionIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                try ( Result result = transaction.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.unsupportedFunction()", runtime ) ) )
+                try ( Result result = transaction.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.unsupportedFunction()", runtime ) ) )
                 {
                     result.resultAsString();
                 }
@@ -571,12 +576,12 @@ class FunctionIT
         for ( Exception exceptionInFunction : exceptionsInFunction )
         {
             assertThat( exceptionInFunction ).isInstanceOf( AuthorizationViolationException.class )
-                    .hasMessageStartingWith( "Create node with labels '' is not allowed" );
+                                             .hasMessageStartingWith( "Create node with labels '' is not allowed" );
         }
 
         try ( Transaction transaction = db.beginTx() )
         {
-            try ( Result result = transaction.execute( format("CYPHER runtime=%s MATCH () RETURN count(*) as n", runtime ) ) )
+            try ( Result result = transaction.execute( format( "CYPHER runtime=%s MATCH () RETURN count(*) as n", runtime ) ) )
             {
                 assertThat( result.hasNext() ).isTrue();
                 while ( result.hasNext() )
@@ -593,24 +598,25 @@ class FunctionIT
     {
         // GIVEN
         String[] lines = IntStream.rangeClosed( 1, 100 )
-                .boxed()
-                .map( i -> Integer.toString( i ) )
-                .toArray( String[]::new );
+                                  .boxed()
+                                  .map( i -> Integer.toString( i ) )
+                                  .toArray( String[]::new );
         String url = createCsvFile( lines );
 
         //WHEN
         long value = db.executeTransactionally( "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
-                        "CREATE (n {prop: com.neo4j.procedure.simpleArgument(toInteger(line[0]))}) " + "RETURN n.prop", emptyMap(), result ->
-                {
-                    long counter = 1;
-                    while ( result.hasNext() )
-                    {
-                        var row = result.next();
-                        assertThat( row.get( "n.prop" ) ).isEqualTo( counter++ );
-                    }
-                    return counter;
-                } );
-                // THEN
+                                                "CREATE (n {prop: com.neo4j.procedure.simpleArgument(toInteger(line[0]))}) " + "RETURN n.prop", emptyMap(),
+                                                result ->
+                                                {
+                                                    long counter = 1;
+                                                    while ( result.hasNext() )
+                                                    {
+                                                        var row = result.next();
+                                                        assertThat( row.get( "n.prop" ) ).isEqualTo( counter++ );
+                                                    }
+                                                    return counter;
+                                                } );
+        // THEN
         assertEquals( 101L, value );
         try ( Transaction transaction = db.beginTx() )
         {
@@ -631,13 +637,13 @@ class FunctionIT
         {
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> transaction.execute(
                     "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
-                            "WITH com.neo4j.procedure.simpleArgument(toInteger(line[0])) AS val " + "RETURN val" ) );
+                    "WITH com.neo4j.procedure.simpleArgument(toInteger(line[0])) AS val " + "RETURN val" ) );
             assertThat( exception ).hasMessageStartingWith( "Cannot use periodic commit in a non-updating query" );
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionReturningPaths( String runtime )
     {
         // Given
@@ -648,7 +654,7 @@ class FunctionIT
             Relationship rel = node1.createRelationshipTo( node2, RelationshipType.withName( "KNOWS" ) );
 
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.nodePaths($node) AS path", runtime ), map( "node", node1 ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.nodePaths($node) AS path", runtime ), map( "node", node1 ) );
 
             // Then
             assertTrue( res.hasNext() );
@@ -663,18 +669,18 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldBeAbleToUseUDFForLimit( String runtime )
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( format("CYPHER runtime=%s UNWIND range(0, 100) AS r RETURN r LIMIT com.neo4j.procedure.squareLong(2)", runtime ) );
+            Result res = tx.execute( format( "CYPHER runtime=%s UNWIND range(0, 100) AS r RETURN r LIMIT com.neo4j.procedure.squareLong(2)", runtime ) );
 
             // Then
             List<Object> list =
-                    Iterators.asList( res ).stream().map( m  -> m.get( "r" ) ).collect( Collectors.toList() );
+                    Iterators.asList( res ).stream().map( m -> m.get( "r" ) ).collect( Collectors.toList() );
             assertThat( list ).isEqualTo( Arrays.asList( 0L, 1L, 2L, 3L ) );
         }
     }
@@ -695,34 +701,36 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldHandleAggregationFunctionInFunctionCall( String runtime )
     {
         try ( Transaction tx = db.beginTx() )
         {
             tx.createNode( Label.label( "Person" ) );
             tx.createNode( Label.label( "Person" ) );
-            assertEquals( 2L, tx.execute( format("CYPHER runtime=%s MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument(collect(n)) AS someVal", runtime ) )
-                    .next()
-                    .get( "someVal" ) );
+            assertEquals( 2L, tx.execute(
+                    format( "CYPHER runtime=%s MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument(collect(n)) AS someVal", runtime ) )
+                                .next()
+                                .get( "someVal" ) );
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldHandleNullInList( String runtime )
     {
         try ( Transaction tx = db.beginTx() )
         {
             tx.createNode( Label.label( "Person" ) );
-            assertEquals( 1L, tx.execute( format("CYPHER runtime=%s MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument([n, null]) AS someVal", runtime ) )
-                    .next()
-                    .get( "someVal" ) );
+            assertEquals( 1L, tx.execute(
+                    format( "CYPHER runtime=%s MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument([n, null]) AS someVal", runtime ) )
+                                .next()
+                                .get( "someVal" ) );
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldWorkWhenUsingWithToProjectList( String runtime )
     {
         try ( Transaction tx = db.beginTx() )
@@ -741,7 +749,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldSeeEmptyGraphReadFunctionInAccessTransaction( String runtime )
     {
         // Given
@@ -755,7 +763,7 @@ class FunctionIT
         // When
         try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.EXPLICIT, AnonymousContext.access() ) )
         {
-            Result result = tx.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.nodeCount() AS count", runtime ) );
+            Result result = tx.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.nodeCount() AS count", runtime ) );
 
             // Then
             assertThat( result.next().get( "count" ) ).isEqualTo( 0L );
@@ -764,7 +772,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallProcedureWithAllDefaultArgument( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
@@ -780,13 +788,13 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldHandleNullAsParameter( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
         {
             //Given/When
-            Result res = transaction.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.defaultValues($p) AS result", runtime ), map( "p", null ) );
+            Result res = transaction.execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.defaultValues($p) AS result", runtime ), map( "p", null ) );
 
             // Then
             assertThat( res.next().get( "result" ) ).isEqualTo( "null,42,3.14,true" );
@@ -796,7 +804,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithOneProvidedRestDefaultArgument( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
@@ -812,7 +820,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithTwoProvidedRestDefaultArgument( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
@@ -828,13 +836,14 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithThreeProvidedRestDefaultArgument( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
         {
             //Given/When
-            Result res = transaction.execute( format("CYPHER runtime=%s RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828) AS result", runtime ) );
+            Result res = transaction
+                    .execute( format( "CYPHER runtime=%s RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828) AS result", runtime ) );
 
             // Then
             assertThat( res.next().get( "result" ) ).isEqualTo( "another string,1337,2.72,true" );
@@ -844,7 +853,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithFourProvidedRestDefaultArgument( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
@@ -860,7 +869,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionReturningNull( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
@@ -876,17 +885,16 @@ class FunctionIT
     }
 
     /**
-     * NOTE: this test tests user-defined functions added in this file {@link ClassWithFunctions}. These are not
-     * built-in functions in any shape or form.
+     * NOTE: this test tests user-defined functions added in this file {@link ClassWithFunctions}. These are not built-in functions in any shape or form.
      */
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldListAllFunctions( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
         {
             //Given/When
-            Result res = transaction.execute( format("CYPHER runtime=%s CALL dbms.functions()", runtime ) );
+            Result res = transaction.execute( format( "CYPHER runtime=%s CALL dbms.functions()", runtime ) );
 
             try ( BufferedReader reader = new BufferedReader( new InputStreamReader( FunctionIT.class.getResourceAsStream( "/misc/functions" ) ) ) )
             {
@@ -902,7 +910,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallFunctionWithSameNameAsBuiltIn( String runtime )
     {
         try ( Transaction transaction = db.beginTx() )
@@ -918,7 +926,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldNotSupportParallelRuntime( String runtime )
     {
         // Given
@@ -934,7 +942,7 @@ class FunctionIT
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"INTERPRETED", "SLOTTED", "PIPELINED"})
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldHandleNullPathsAsUDFArguments( String runtime )
     {
         try ( Transaction tx = db.beginTx() )
@@ -945,10 +953,10 @@ class FunctionIT
                         "MERGE (a)-[:KNOWS]->(b)" );
 
             //when
-            Result result = tx.execute( format("CYPHER runtime=%s MATCH p1=(a:User)-[:KNOWS]->(b:User)\n" +
-                                        "OPTIONAL MATCH p2=(b)-[:DOESNTKNOW]->(a)\n" +
-                                        "WITH com.neo4j.procedure.sizeOfPaths(p1, p2) as size\n" +
-                                        "RETURN size", runtime ) );
+            Result result = tx.execute( format( "CYPHER runtime=%s MATCH p1=(a:User)-[:KNOWS]->(b:User)\n" +
+                                                "OPTIONAL MATCH p2=(b)-[:DOESNTKNOW]->(a)\n" +
+                                                "WITH com.neo4j.procedure.sizeOfPaths(p1, p2) as size\n" +
+                                                "RETURN size", runtime ) );
 
             //then
             assertThat( Iterators.asList( result ) ).isEqualTo( List.of( Map.of( "size", 1L ) ) );
@@ -961,8 +969,8 @@ class FunctionIT
         exceptionsInFunction.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent()
-                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.absolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
+                                                                                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.absolutePath() )
+                                                                                .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
@@ -1048,14 +1056,14 @@ class FunctionIT
             Long prev =
                     (Long) transaction
                             .execute( "RETURN com.neo4j.procedure.recursiveSum($order) AS someVal",
-                            map( "order", order - 1 ) )
+                                      map( "order", order - 1 ) )
                             .next().get( "someVal" );
             return order + prev;
         }
 
         @UserFunction
         public long genericArguments( @Name( "strings" ) List<List<String>> stringList,
-                @Name( "longs" ) List<List<List<Long>>> longList )
+                                      @Name( "longs" ) List<List<List<Long>>> longList )
         {
             return stringList.size() + longList.size();
         }
@@ -1123,9 +1131,9 @@ class FunctionIT
         public List<String> listCoolPeopleInDatabase()
         {
             return transaction.findNodes( label( "Person" ) )
-                    .map( node -> (String) node.getProperty( "name" ) )
-                    .stream()
-                    .collect( Collectors.toList() );
+                              .map( node -> (String) node.getProperty( "name" ) )
+                              .stream()
+                              .collect( Collectors.toList() );
         }
 
         @UserFunction
@@ -1174,17 +1182,17 @@ class FunctionIT
         public String unsupportedFunction()
         {
             jobs.submit( () ->
-            {
-                try ( Transaction tx = db.beginTx() )
-                {
-                    tx.createNode();
-                    tx.commit();
-                }
-                catch ( Exception e )
-                {
-                    exceptionsInFunction.add( e );
-                }
-            } );
+                         {
+                             try ( Transaction tx = db.beginTx() )
+                             {
+                                 tx.createNode();
+                                 tx.commit();
+                             }
+                             catch ( Exception e )
+                             {
+                                 exceptionsInFunction.add( e );
+                             }
+                         } );
 
             return "why!?";
         }
