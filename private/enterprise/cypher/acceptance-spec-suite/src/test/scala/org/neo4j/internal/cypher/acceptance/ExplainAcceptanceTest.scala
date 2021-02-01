@@ -61,7 +61,7 @@ class ExplainAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     val plan = result.executionPlanDescription().toString
 
-    plan should include("exists((`perDay`)-[`anon_614`:NEXT*]->(`bknEnd`))")
+    plan should include("exists((`perDay`)-[`anon_613`:NEXT*]->(`bknEnd`))")
   }
 
   test("should handle query with nested collect expression") {
@@ -72,6 +72,6 @@ class ExplainAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
     val result = executeWith(Configs.NestedPlan, query)
     val plan = result.executionPlanDescription().toString
 
-    plan should include("(start)-[`anon_49`:NEXT*]->(`anon_60`:End)")
+    plan should include("(start)-[`anon_48`:NEXT*]->(`anon_59`:End)")
   }
 }

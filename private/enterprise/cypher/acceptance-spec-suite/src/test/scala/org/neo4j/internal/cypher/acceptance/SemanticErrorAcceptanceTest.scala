@@ -604,9 +604,9 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
         |""".stripMargin
 
     val expectedErrorLines = Seq(
-      """Variable `x` already declared in outer scope (line 4, column 10 (offset: 38))""",
+      """Variable `x` already declared in outer scope (line 4, column 10 (offset: 37))""",
       """"  RETURN x // error here"""",
-      """           ^"""
+      """          ^"""
     )
 
     executeAndMatchErrorMessageLines(query, expectedErrorLines)
@@ -627,9 +627,9 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
         |""".stripMargin
 
     val expectedErrorLines = Seq(
-      """Variable `x` already declared in outer scope (line 6, column 12 (offset: 60))""",
+      """Variable `x` already declared in outer scope (line 6, column 12 (offset: 59))""",
       """"    RETURN x // error here"""",
-      """             ^"""
+      """            ^"""
     )
 
     executeAndMatchErrorMessageLines(query, expectedErrorLines)
@@ -671,9 +671,9 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
         |""".stripMargin
 
     val expectedErrorLines = Seq(
-      """Variable `x` already declared in outer scope (line 7, column 17 (offset: 86))""",
+      """Variable `x` already declared in outer scope (line 7, column 17 (offset: 85))""",
       """"  WITH x RETURN x // error here"""",
-      """                  ^"""
+      """                 ^"""
     )
 
     executeAndMatchErrorMessageLines(query, expectedErrorLines)
@@ -723,9 +723,9 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
         |""".stripMargin
 
     val expectedErrorLines = Seq(
-      """Variable `y` already declared in outer scope (line 9, column 19 (offset: 119))""",
+      """Variable `y` already declared in outer scope (line 9, column 19 (offset: 118))""",
       """"    WITH y RETURN y // error here"""",
-      """                    ^"""
+      """                   ^"""
     )
 
     executeAndMatchErrorMessageLines(query, expectedErrorLines)
