@@ -25,12 +25,11 @@ import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.Transaction
 import org.neo4j.driver.exceptions.FatalDiscoveryException
 import org.neo4j.driver.exceptions.TransientException
-import org.neo4j.fabric.FabricDatabaseManager
+import org.neo4j.fabric.config.FabricSettings
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade
 import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.test.rule.TestDirectory.testDirectory
-import org.neo4j.util.FeatureToggles
 
 import java.net.URI
 import java.util.function.BiConsumer
@@ -120,11 +119,12 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     def execute(query: String): List[Map[String, AnyRef]] = t.run(query).list(r => r.asMap().asScala.toMap).asScala.toList
   }
 
-  Seq[Boolean](false, true).foreach(fabricIsEnabled => {
+  Seq[java.lang.Boolean](java.lang.Boolean.FALSE, java.lang.Boolean.TRUE).foreach(fabricIsEnabled => {
 
     test(s"Should get system default database when logging in if no default database is set with fabric: $fabricIsEnabled") {
-      FeatureToggles.set(classOf[FabricDatabaseManager], "fabric_by_default", fabricIsEnabled)
-      initTest()
+      restartWithConfig(
+        databaseConfig() + (FabricSettings.enabled_by_default -> fabricIsEnabled)
+      )
 
       // GIVEN
       selectDatabase(SYSTEM_DATABASE_NAME)
@@ -142,8 +142,9 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     }
 
     test(s"Should get user's default database when logging in and a default database has been set with fabric: $fabricIsEnabled") {
-      FeatureToggles.set(classOf[FabricDatabaseManager], "fabric_by_default", fabricIsEnabled)
-      initTest()
+      restartWithConfig(
+        databaseConfig() + (FabricSettings.enabled_by_default -> fabricIsEnabled)
+      )
 
       // GIVEN
       selectDatabase(SYSTEM_DATABASE_NAME)
@@ -167,8 +168,9 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     }
 
     test(s"Should fail when logging in and a default database has been set but is stopped with fabric: $fabricIsEnabled") {
-      FeatureToggles.set(classOf[FabricDatabaseManager], "fabric_by_default", fabricIsEnabled)
-      initTest()
+      restartWithConfig(
+        databaseConfig() + (FabricSettings.enabled_by_default -> fabricIsEnabled)
+      )
 
       // GIVEN
       selectDatabase(SYSTEM_DATABASE_NAME)
@@ -191,8 +193,9 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     }
 
     test(s"Should fail when logging in and a default database has been set but not created with fabric: $fabricIsEnabled") {
-      FeatureToggles.set(classOf[FabricDatabaseManager], "fabric_by_default", fabricIsEnabled)
-      initTest()
+      restartWithConfig(
+        databaseConfig() + (FabricSettings.enabled_by_default -> fabricIsEnabled)
+      )
 
       // GIVEN
       selectDatabase(SYSTEM_DATABASE_NAME)
@@ -211,8 +214,6 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
   })
 
   test("Updating default database during a user session does not change the default database for that session") {
-    initTest()
-
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"CREATE DATABASE $fooDb")
@@ -248,8 +249,6 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
   }
 
   test("Updating default database during a user session where the default database has not previously been used does not changed it for that session") {
-    initTest()
-
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"CREATE DATABASE $fooDb")
