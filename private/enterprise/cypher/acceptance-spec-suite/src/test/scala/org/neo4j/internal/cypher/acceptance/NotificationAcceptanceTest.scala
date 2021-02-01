@@ -357,7 +357,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   test("should warn for large label scans with merge combined with load csv") {
     1 to 11 foreach { _ => createLabeledNode("A") }
     val result = executeSingle("EXPLAIN LOAD CSV FROM 'file:///ignore/ignore.csv' AS line MERGE (a:A) RETURN *", Map.empty)
-    result.executionPlanDescription() should includeSomewhere.aPlan.withLHS(aPlan("LoadCSV")).withRHS(aPlan("AntiConditionalApply"))
+    result.executionPlanDescription() should includeSomewhere.aPlan.withLHS(aPlan("LoadCSV")).withRHS(aPlan("EitherApply"))
     result.notifications.map(_.getCode) should contain("Neo.ClientNotification.Statement.NoApplicableIndexWarning")
   }
 
@@ -371,7 +371,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   test("should not warn for small label scans with merge combined with load csv") {
     createLabeledNode("A")
     val result = executeSingle("EXPLAIN LOAD CSV FROM 'file:///ignore/ignore.csv' AS line MERGE (a:A) RETURN *", Map.empty)
-    result.executionPlanDescription() should includeSomewhere.aPlan.withLHS(aPlan("LoadCSV")).withRHS(aPlan("AntiConditionalApply"))
+    result.executionPlanDescription() should includeSomewhere.aPlan.withLHS(aPlan("LoadCSV")).withRHS(aPlan("EitherApply"))
     result.notifications.map(_.getCode) should not contain "Neo.ClientNotification.Statement.NoApplicableIndexWarning"
   }
 
