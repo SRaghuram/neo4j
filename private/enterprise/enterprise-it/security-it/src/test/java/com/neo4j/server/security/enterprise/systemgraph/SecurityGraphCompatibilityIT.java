@@ -38,12 +38,14 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 
 class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 {
-    private static final EnterpriseSecurityGraphComponentVersion[] SUPPORTED_VERSIONS = Arrays.stream( EnterpriseSecurityGraphComponentVersion.values() )
-                                                                                              .filter( version -> version.runtimeSupported() )
-                                                                                              .toArray( EnterpriseSecurityGraphComponentVersion[]::new );
+    private static final EnterpriseSecurityGraphComponentVersion[] SUPPORTED_PREVIOUS_VERSIONS =
+            Arrays.stream( EnterpriseSecurityGraphComponentVersion.values() )
+                  .filter( version -> version.runtimeSupported() &&
+                                      version.getVersion() < EnterpriseSecurityGraphComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION )
+                  .toArray( EnterpriseSecurityGraphComponentVersion[]::new );
 
     @ParameterizedTest
-    @MethodSource( "supportedVersions" )
+    @MethodSource( "supportedPreviousVersions" )
     void shouldAuthenticate( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initEnterprise( version );
@@ -71,7 +73,7 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
     }
 
     @ParameterizedTest
-    @MethodSource( "supportedVersions" )
+    @MethodSource( "supportedPreviousVersions" )
     void shouldAuthorize( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initEnterprise( version );
@@ -89,7 +91,7 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
     }
 
     @ParameterizedTest
-    @MethodSource( "supportedVersions" )
+    @MethodSource( "supportedPreviousVersions" )
     void shouldMakeSchemaChanges( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initEnterprise( version );
@@ -143,7 +145,7 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
     }
 
     @ParameterizedTest
-    @MethodSource( "supportedVersions" )
+    @MethodSource( "supportedPreviousVersions" )
     void shouldHaveExecutePrivilegeByDefault( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         initEnterprise( version );
@@ -161,12 +163,12 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
         Function<EnterpriseSecurityGraphComponentVersion,String> actFor =
                 version -> version.equals( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40 ) ? "schema" : "index";
         String[] queries = {"SHOW PRIVILEGES", "SHOW USER neo4j PRIVILEGES", "SHOW ROLE admin PRIVILEGES"};
-        return Arrays.stream( SUPPORTED_VERSIONS )
+        return Arrays.stream( SUPPORTED_PREVIOUS_VERSIONS )
                      .flatMap( version -> Arrays.stream( queries ).map( query -> Arguments.of( version, query, actFor.apply( version ) ) ) );
     }
 
-    private static Stream<Arguments> supportedVersions()
+    private static Stream<Arguments> supportedPreviousVersions()
     {
-        return Arrays.stream( SUPPORTED_VERSIONS ).map( Arguments::of );
+        return Arrays.stream( SUPPORTED_PREVIOUS_VERSIONS ).map( Arguments::of );
     }
 }

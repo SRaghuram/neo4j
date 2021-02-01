@@ -52,7 +52,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTestBase
 {
     @ParameterizedTest
-    @MethodSource( "allVersions" )
+    @MethodSource( "allPreviousVersions" )
     void shouldUpgrade( EnterpriseSecurityGraphComponentVersion version ) throws Exception
     {
         // GIVEN
@@ -227,11 +227,11 @@ class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTes
         assertThat( privileges ).as( "Privileges for %s", role ).containsExactlyInAnyOrderElementsOf( expected );
     }
 
-    private static Stream<Arguments> allVersions()
+    private static Stream<Arguments> allPreviousVersions()
     {
         return Arrays.stream( EnterpriseSecurityGraphComponentVersion.values() )
                      .filter( v -> v.getVersion() >= 0 &&
-                                   v.getVersion() < EnterpriseSecurityGraphComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION )
+                                   v.getVersion() <= EnterpriseSecurityGraphComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION )
                      .map( Arguments::of );
     }
 
