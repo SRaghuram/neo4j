@@ -88,18 +88,18 @@ class SetPropertiesFromMapOperatorTemplate(override val inner: OperatorTaskTempl
 
     block(
       declareAndAssign(entityValueVar, nullCheckIfRequired(entityValue)),
-      ifElse(instanceOf[VirtualNodeValue](load(entityValueVar)))(
+      ifElse(instanceOf[VirtualNodeValue](load[AnyValue](entityValueVar)))(
         setPropertyFromMap(
           isNode = true,
-          invoke(cast[VirtualNodeValue](load(entityValueVar)), method[VirtualNodeValue, Long]("id")),
+          invoke(cast[VirtualNodeValue](load[AnyValue](entityValueVar)), method[VirtualNodeValue, Long]("id")),
           nodeProps,
           removeOtherProps
         )
-      )(ifElse(instanceOf[VirtualRelationshipValue](load(entityValueVar)))
+      )(ifElse(instanceOf[VirtualRelationshipValue](load[AnyValue](entityValueVar)))
       (
         setPropertyFromMap(
           isNode = false,
-          invoke(cast[VirtualRelationshipValue](load(entityValueVar)), method[VirtualRelationshipValue, Long]("id")),
+          invoke(cast[VirtualRelationshipValue](load[AnyValue](entityValueVar)), method[VirtualRelationshipValue, Long]("id")),
           relProps,
           removeOtherProps
         )
@@ -166,7 +166,7 @@ class SetPropertiesFromMapOperatorTemplate(override val inner: OperatorTaskTempl
         ))
         (block(
           invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](releaseLockFunction), arrayOf[Long](id)),
-          fail(load(errorVar))
+          fail(load[Exception](errorVar))
         ))
     )
   }
