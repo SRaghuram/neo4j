@@ -219,7 +219,7 @@ public final class MetricsTestHelper
     public static Path metricsCsv( Path dbDir, String metric )
     {
         Path csvFile = dbDir.resolve( metric + ".csv" );
-        assertEventually( "Metrics file should exist", fileExistAndHasDataLines(csvFile), TRUE, 2, MINUTES );
+        assertEventually( "Metrics file should exist", fileExistAndHasDataLines(csvFile), TRUE, 10, MINUTES );
         return csvFile;
     }
 
