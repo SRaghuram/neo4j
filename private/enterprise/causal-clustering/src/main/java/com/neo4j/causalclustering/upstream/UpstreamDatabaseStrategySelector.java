@@ -30,25 +30,24 @@ public class UpstreamDatabaseStrategySelector
     }
 
     public UpstreamDatabaseStrategySelector( UpstreamDatabaseSelectionStrategy defaultStrategy, Iterable<UpstreamDatabaseSelectionStrategy> otherStrategies,
-            LogProvider logProvider )
+                                             LogProvider logProvider )
     {
         log = logProvider.getLog( getClass() );
         Iterables.addAll( strategies, otherStrategies );
         strategies.add( defaultStrategy );
+        log.debug( "Strategy selector has strategies [%s]", strategies );
     }
 
     public Collection<ServerId> bestUpstreamServersForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
     {
         for ( var strategy : strategies )
         {
-            log.debug( "Trying selection strategy [%s]", strategy );
-
             var upstreamServers = strategy.upstreamServersForDatabase( namedDatabaseId );
             if ( !upstreamServers.isEmpty() )
             {
                 var servers = upstreamServers.stream()
-                        .map( ServerId::toString )
-                        .collect( Collectors.joining( ",", "[", "]" ) );
+                                             .map( ServerId::toString )
+                                             .collect( Collectors.joining( ",", "[", "]" ) );
                 log.debug( "Selected upstream servers %s for database %s", servers, namedDatabaseId.name() );
                 return upstreamServers;
             }
@@ -62,8 +61,6 @@ public class UpstreamDatabaseStrategySelector
         //  Strategy implementations may implement the method returning `Optional<MemberId>` with specific optimisations.
         for ( var strategy : strategies )
         {
-            log.debug( "Trying selection strategy [%s]", strategy );
-
             var upstreamServer = strategy.upstreamServerForDatabase( namedDatabaseId );
             if ( upstreamServer.isPresent() )
             {
