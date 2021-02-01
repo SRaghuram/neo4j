@@ -86,17 +86,23 @@ objectclass: organizationalUnit
 objectclass: top
 ou: users
 
-# Entry 9: ou=users,dc=example,dc=com
+# Entry 9: ou=local,ou=users,dc=example,dc=com
 dn: ou=local,ou=users,dc=example,dc=com
 objectclass: organizationalUnit
 objectclass: top
 ou: local
 
-# Entry 9: ou=users,dc=example,dc=com
+# Entry 9: ou=remote,ou=users,dc=example,dc=com
 dn: ou=remote,ou=users,dc=example,dc=com
 objectclass: organizationalUnit
 objectclass: top
 ou: remote
+
+# Entry 9: ou=wonderland,ou=users,dc=example,dc=com
+dn: ou=wonderland,ou=users,dc=example,dc=com
+objectclass: organizationalUnit
+objectclass: top
+ou: wonderland
 
 # Entry 10: cn=neo4j,ou=users,dc=example,dc=com
 dn: cn=neo4j,ou=users,dc=example,dc=com
@@ -217,7 +223,23 @@ uid: joe
 uidnumber: 1006
 userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
 
-# Entry 18: cn=local.user,ou=local,ou=users,dc=example,dc=com
+# Entry 18: cn=alice,ou=wonderland,ou=users,dc=example,dc=com
+dn: cn=alice,ou=wonderland,ou=users,dc=example,dc=com
+memberOf: cn=publisher,ou=groups,dc=example,dc=com
+cn: alice
+gidnumber: 500
+homedirectory: /home/users/alice
+objectclass: inetOrgPerson
+objectclass: posixAccount
+objectclass: top
+objectclass: simulatedMicrosoftSecurityPrincipal
+samAccountName: alice
+sn: alice
+uid: alice.w
+uidnumber: 1007
+userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
+
+# Entry 19: cn=local.user,ou=local,ou=users,dc=example,dc=com
 dn: cn=local.user,ou=local,ou=users,dc=example,dc=com
 memberOf: cn=admin,ou=groups,dc=example,dc=com
 objectClass: top
@@ -228,7 +250,7 @@ cn: local.user
 sn: local.user
 userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
 
- # Entry 19: cn=remote.user,ou=remote,ou=users,dc=example,dc=com
+ # Entry 20: cn=remote.user,ou=remote,ou=users,dc=example,dc=com
 dn: cn=remote.user,ou=remote,ou=users,dc=example,dc=com
 memberOf: cn=reader,ou=groups,dc=example,dc=com
 objectClass: top

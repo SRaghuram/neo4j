@@ -281,7 +281,6 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
 
         // update the setting
         executeOnSystem( String.format( "CALL dbms.setConfigValue( '%s', '%s' )", ldap_authorization_group_to_role_mapping.name(), "500=publisher" ) );
-        executeOnSystem( "CALL dbms.security.clearAuthCache()" );
 
         try ( Driver driver = connectDriver( boltUri, "neo", "abc123" );
               Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
@@ -294,7 +293,142 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    public void shouldFailIfAuthorizationExpiredWithserLdapContext()
+    public void shouldUpdateUserDnTemplate()
+    {
+        // Given
+        startDatabaseWithSettings( Map.of( SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=users,dc=example,dc=com" ) );
+
+        // when .. then
+        assertAuthFail( boltUri, "alice", "abc123" );
+
+        // when
+        executeOnSystem( String.format( "CALL dbms.setConfigValue( '%s', '%s' )",
+                SecuritySettings.ldap_authentication_user_dn_template.name(), "cn={0},ou=wonderland,ou=users,dc=example,dc=com" ) );
+
+        // then
+        assertAuth( boltUri, "alice", "abc123" );
+    }
+
+    @Test
+    public void shouldUpdateUserSearchAttribute()
+    {
+        // Given
+        startDatabaseWithSettings( Map.of(
+                SecuritySettings.ldap_authentication_user_search_attribute_name, "samaccountname",
+                SecuritySettings.ldap_authorization_use_system_account, true,
+                SecuritySettings.ldap_authentication_use_attribute, true
+
+        ) );
+
+        // when .. then
+        assertAuth( boltUri, "alice", "abc123" );
+
+        // when
+        executeOnSystem( String.format( "CALL dbms.setConfigValue( '%s', '%s' )",
+                SecuritySettings.ldap_authentication_user_search_attribute_name.name(), "uid" ) );
+
+        // then
+        assertAuthFail( boltUri, "alice", "abc123" );
+        assertAuth( boltUri, "alice.w", "abc123" );
+    }
+
+    @Test
+    public void shouldUpdateUserSearchBase()
+    {
+        // Given
+        startDatabaseWithSettings( Map.of(
+                SecuritySettings.ldap_authorization_user_search_base, "ou=wrong,dc=example,dc=com",
+                SecuritySettings.ldap_authorization_use_system_account, true,
+                SecuritySettings.ldap_authentication_use_attribute, true
+        ) );
+
+        // when .. then
+        assertAuthFail( boltUri, "alice", "abc123" );
+
+        // when
+        executeOnSystem( String.format( "CALL dbms.setConfigValue( '%s', '%s' )",
+                SecuritySettings.ldap_authorization_user_search_base.name(), "ou=users,dc=example,dc=com" ) );
+
+        // then
+        assertAuth( boltUri, "alice", "abc123" );
+    }
+
+    @Test
+    public void shouldUpdateUserSearchFilter()
+    {
+        // Given
+        startDatabaseWithSettings( Map.of(
+                SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(samaccountname={0}))",
+                SecuritySettings.ldap_authentication_user_search_attribute_name, "samaccountname",
+                SecuritySettings.ldap_authorization_use_system_account, true,
+                SecuritySettings.ldap_authentication_use_attribute, true
+        ) );
+
+        // when .. then
+        try ( Driver driver = connectDriver( boltUri, "alice", "abc123" );
+              Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // when
+            Record record = session.run( "SHOW CURRENT USER" ).single();
+            // then
+            assertThat( record.get( "roles" ).asList(), equalTo( List.of( "reader", PredefinedRoles.PUBLIC ) ) );
+        }
+
+        // when, need to update both attribute and filter
+        executeOnSystem( String.format( "CALL dbms.setConfigValue( '%s', '%s' )",
+                SecuritySettings.ldap_authorization_user_search_filter.name(), "(&(objectClass=*)(uidnumber={0}))" ) );
+        executeOnSystem( String.format( "CALL dbms.setConfigValue( '%s', '%s' )",
+                SecuritySettings.ldap_authentication_user_search_attribute_name.name(), "uidnumber" ) );
+
+        try ( Driver driver = connectDriver( boltUri, "1007", "abc123" );
+              Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // when
+            Record record = session.run( "SHOW CURRENT USER" ).single();
+            // then
+            assertThat( record.get( "roles" ).asList(), equalTo( List.of( "reader", PredefinedRoles.PUBLIC ) ) );
+        }
+    }
+
+    @Test
+    public void shouldUpdateGroupAttribute()
+    {
+        // Given
+        startDatabaseWithSettings( Map.of(
+                SecuritySettings.ldap_authorization_group_membership_attribute_names, List.of( "gidnumber" ),
+                SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=wonderland,ou=users,dc=example,dc=com",
+                SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(cn={0}))"
+        ) );
+
+        try ( Driver driver = connectDriver( boltUri, "alice", "abc123" );
+              Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // when
+            Record record = session.run( "SHOW CURRENT USER" ).single();
+            // then
+            assertThat( record.get( "roles" ).asList(), equalTo( List.of( "reader", PredefinedRoles.PUBLIC ) ) );
+        }
+
+        // when
+        executeOnSystem( String.format( "CALL dbms.setConfigValue( '%s', '%s' )",
+                SecuritySettings.ldap_authorization_group_membership_attribute_names.name(), "memberOf" ) );
+        // have to change the mapping here to get a result
+        executeOnSystem( String.format( "CALL dbms.setConfigValue( '%s', '%s' )",
+                SecuritySettings.ldap_authorization_group_to_role_mapping.name(), "cn=publisher,ou=groups,dc=example,dc=com=publisher" ) );
+
+        // then
+        try ( Driver driver = connectDriver( boltUri, "alice", "abc123" );
+              Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // when
+            Record record = session.run( "SHOW CURRENT USER" ).single();
+            // then
+            assertThat( record.get( "roles" ).asList(), equalTo( List.of( "publisher", PredefinedRoles.PUBLIC ) ) );
+        }
+    }
+
+    @Test
+    public void shouldFailIfAuthorizationExpiredWithUserLdapContext()
     {
         // Given
         startDatabase();

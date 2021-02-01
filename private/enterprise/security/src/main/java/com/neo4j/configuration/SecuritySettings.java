@@ -20,7 +20,10 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.logging.Level;
 import org.neo4j.string.SecureString;
 
+import static com.neo4j.configuration.SecuritySettingContraints.nonEmpty;
+import static com.neo4j.configuration.SecuritySettingContraints.nonEmptyList;
 import static com.neo4j.configuration.SecuritySettingContraints.validateGroupMapping;
+import static com.neo4j.configuration.SecuritySettingContraints.validateUserTemplate;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static org.neo4j.configuration.SettingConstraints.min;
@@ -121,7 +124,8 @@ public class SecuritySettings implements SettingsDeclaration
                     "authentication token when logging in. The special token {0} is a " +
                     "placeholder where the user principal will be substituted into the DN string." )
     public static final Setting<String> ldap_authentication_user_dn_template =
-            newBuilder( "dbms.security.ldap.authentication.user_dn_template", STRING, "uid={0},ou=users,dc=example,dc=com" ).build();
+            newBuilder( "dbms.security.ldap.authentication.user_dn_template", STRING, "uid={0},ou=users,dc=example,dc=com" )
+                    .addConstraint( validateUserTemplate() ).dynamic().build();
 
     @Description( "Determines if the result of authentication via the LDAP server should be cached or not. " +
             "Caching is used to limit the number of LDAP requests that have to be made over the network " +
@@ -156,7 +160,7 @@ public class SecuritySettings implements SettingsDeclaration
             newBuilder( "dbms.security.ldap.authentication.attribute", STRING, "samaccountname" )
                     .addConstraint( SettingConstraints.matches( "[A-Za-z0-9-]*",
                             "has to be a valid LDAP attribute name, only containing letters [A-Za-z], digits [0-9] and hyphens [-]." ) )
-                    .build();
+                    .dynamic().build();
 
     //-----------------------------------------------------
     // LDAP authorization settings
@@ -197,18 +201,21 @@ public class SecuritySettings implements SettingsDeclaration
             "LDAP authorization is enabled. A common case is that this matches the last part " +
             "of `dbms.security.ldap.authentication.user_dn_template`." )
     public static final Setting<String> ldap_authorization_user_search_base =
-            newBuilder( "dbms.security.ldap.authorization.user_search_base", STRING, "ou=users,dc=example,dc=com" ).build();
+            newBuilder( "dbms.security.ldap.authorization.user_search_base", STRING, "ou=users,dc=example,dc=com" )
+                    .addConstraint( nonEmpty() ).dynamic().build();
 
     @Description( "The LDAP search filter to search for a user principal when LDAP authorization is " +
             "enabled. The filter should contain the placeholder token {0} which will be substituted for the " +
             "user principal." )
     public static final Setting<String> ldap_authorization_user_search_filter =
-            newBuilder( "dbms.security.ldap.authorization.user_search_filter", STRING, "(&(objectClass=*)(uid={0}))" ).build();
+            newBuilder( "dbms.security.ldap.authorization.user_search_filter", STRING, "(&(objectClass=*)(uid={0}))" )
+                    .dynamic().build();
 
     @Description( "A list of attribute names on a user object that contains groups to be used for mapping to roles " +
             "when LDAP authorization is enabled." )
     public static final Setting<List<String>> ldap_authorization_group_membership_attribute_names =
-            newBuilder( "dbms.security.ldap.authorization.group_membership_attributes", listOf( STRING ), List.of( "memberOf" ) ).build();
+            newBuilder( "dbms.security.ldap.authorization.group_membership_attributes", listOf( STRING ), List.of( "memberOf" ) )
+                    .addConstraint( nonEmptyList() ).dynamic().build();
 
     @Description( "An authorization mapping from LDAP group names to Neo4j role names. " +
             "The map should be formatted as a semicolon separated list of key-value pairs, where the " +

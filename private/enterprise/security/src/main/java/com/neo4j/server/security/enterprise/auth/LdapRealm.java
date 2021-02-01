@@ -33,6 +33,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.naming.AuthenticationException;
@@ -114,7 +115,18 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
         this.authorizationEnabled = authorizationEnabled;
         setName( SecuritySettings.LDAP_REALM_NAME );
         configureRealm( config );
-        config.addListener( SecuritySettings.ldap_authorization_group_to_role_mapping, ( before, after ) -> updateGroupToRoleMapping( after ) );
+        config.addListener( SecuritySettings.ldap_authorization_group_to_role_mapping,
+                ( before, after ) -> updateSetting( this::updateGroupToRoleMapping, after ) );
+        config.addListener( SecuritySettings.ldap_authentication_user_dn_template,
+                ( before, after ) -> updateSetting( this::setUserDnTemplate, after ) );
+        config.addListener( SecuritySettings.ldap_authorization_user_search_base,
+                ( before, after ) -> updateSetting( setting -> userSearchBase = setting, after ) );
+        config.addListener( SecuritySettings.ldap_authorization_user_search_filter,
+                ( before, after ) -> updateSetting( setting -> userSearchFilter = setting, after ) );
+        config.addListener( SecuritySettings.ldap_authorization_group_membership_attribute_names,
+                ( before, after ) -> updateSetting( setting -> membershipAttributeNames = setting, after ) );
+        config.addListener( SecuritySettings.ldap_authentication_user_search_attribute_name,
+                ( before, after ) -> updateSetting( setting -> userAttributeName = setting, after ) );
         if ( isAuthenticationCachingEnabled() )
         {
             setCredentialsMatcher( secureHasher.getHashedCredentialsMatcher() );
@@ -469,6 +481,21 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     private void updateGroupToRoleMapping( String groupToRoleMappingString )
     {
         groupToRoleMapping = parseGroupToRoleMapping( groupToRoleMappingString );
+    }
+
+    private <T> void updateSetting( Consumer<T> consumer, T after )
+    {
+        consumer.accept( after );
+        var authenticationCache = getAuthenticationCache();
+        if ( authenticationCache != null )
+        {
+            authenticationCache.clear();
+        }
+        var authorizationCache = getAuthorizationCache();
+        if ( authorizationCache != null )
+        {
+            authorizationCache.clear();
+        }
     }
 
     private Map<String,Collection<String>> parseGroupToRoleMapping( String groupToRoleMappingString )

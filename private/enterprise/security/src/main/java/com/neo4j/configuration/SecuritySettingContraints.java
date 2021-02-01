@@ -5,6 +5,7 @@
  */
 package com.neo4j.configuration;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -54,6 +55,69 @@ final class SecuritySettingContraints
             public String getDescription()
             {
                 return "must be semicolon separated list of key-value pairs or empty";
+            }
+        };
+    }
+
+    static SettingConstraint<String> validateUserTemplate()
+    {
+        return new SettingConstraint<>()
+        {
+            @Override
+            public void validate( String template, Configuration config )
+            {
+                if ( !template.contains( "{0}" ) )
+                {
+                    throw new IllegalArgumentException( format( "'%s' must contain '{0}", template ) );
+                }
+            }
+
+            @Override
+            public String getDescription()
+            {
+                return "Must be a string containing '{0}' to understand where to insert the runtime authentication principal.";
+            }
+        };
+    }
+
+    static SettingConstraint<String> nonEmpty()
+    {
+        return new SettingConstraint<>()
+        {
+            @Override
+            public void validate( String value, Configuration config )
+            {
+                if ( value.isEmpty() )
+                {
+                    throw new IllegalArgumentException( getDescription() );
+                }
+            }
+
+            @Override
+            public String getDescription()
+            {
+                return "Can not be empty";
+            }
+        };
+    }
+
+    static SettingConstraint<List<String>> nonEmptyList()
+    {
+        return new SettingConstraint<>()
+        {
+            @Override
+            public void validate( List<String> value, Configuration config )
+            {
+                if ( value.isEmpty() )
+                {
+                    throw new IllegalArgumentException( getDescription() );
+                }
+            }
+
+            @Override
+            public String getDescription()
+            {
+                return "Can not be empty";
             }
         };
     }
