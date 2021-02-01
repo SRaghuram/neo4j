@@ -9,41 +9,21 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.neo4j.bench.client.cli.ResultsStoreCredentials;
 import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.util.JsonUtil;
 
 import java.io.File;
-import java.net.URI;
+import javax.inject.Inject;
 
 @Command( name = "report-test-run" )
 public class ReportTestRun implements Runnable
 {
-
-    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_RESULTS_STORE_USER},
-            description = "Username for Neo4j database server that stores benchmarking results",
-            title = "Results Store Username" )
+    @Inject
     @Required
-    private String resultsStoreUsername;
-
-    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_RESULTS_STORE_PASSWORD},
-            description = "Password for Neo4j database server that stores benchmarking results",
-            title = "Results Store Password" )
-    @Required
-    private String resultsStorePassword;
-
-    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_RESULTS_STORE_URI},
-            description = "URI to Neo4j database server for storing benchmarking results",
-            title = "Results Store" )
-    @Required
-    private URI resultsStoreUri;
+    private ResultsStoreCredentials resultsStoreCredentials;
 
     private static final String CMD_TEST_RUN_REPORT_FILE = "--test-run-report";
     @Option( type = OptionType.COMMAND,
@@ -87,7 +67,9 @@ public class ReportTestRun implements Runnable
     public void run()
     {
         TestRunReport testRunReport = JsonUtil.deserializeJson( testRunReportFile.toPath(), TestRunReport.class );
-        ResultsReporter resultsReporter = new ResultsReporter( resultsStoreUsername, resultsStorePassword, resultsStoreUri );
+        ResultsReporter resultsReporter = new ResultsReporter( resultsStoreCredentials.username(),
+                                                               resultsStoreCredentials.password(),
+                                                               resultsStoreCredentials.uri() );
         resultsReporter.reportAndUpload( testRunReport, s3Bucket, workDir, awsEndpointURL, errorReportingPolicy );
     }
 }

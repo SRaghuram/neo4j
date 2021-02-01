@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
@@ -28,10 +27,6 @@ public class VerifyStoreSchema implements Query<Void>
 
     private static final Logger LOG = LoggerFactory.getLogger( VerifyStoreSchema.class );
 
-    public VerifyStoreSchema()
-    {
-    }
-
     @Override
     public Void execute( Driver driver )
     {
@@ -41,12 +36,6 @@ public class VerifyStoreSchema implements Query<Void>
         Duration duration = Duration.between( start, Instant.now() );
         LOG.debug( format( "Verified in %s", BenchmarkUtil.durationToString( duration ) ) );
         return null;
-    }
-
-    @Override
-    public Optional<String> nonFatalError()
-    {
-        return Optional.empty();
     }
 
     private void verifyStoreSchema( Driver driver )
@@ -110,8 +99,8 @@ public class VerifyStoreSchema implements Query<Void>
             assertManyToOne( "PlanTree nodes connect to Operator nodes correctly",
                              "(:PlanTree)", "-[:HAS_OPERATORS]->", "(:Operator)", session );
 
-            assertManyToMany( "BenchmarkGroup nodes connect to BenchmarkTool correctly",
-                              "(:BenchmarkTool)", "-[:IMPLEMENTS]->", "(:BenchmarkGroup)", session );
+            assertManyToOne( "BenchmarkGroup nodes connect to BenchmarkTool correctly",
+                             "(:BenchmarkGroup)", "<-[:IMPLEMENTS]-", "(:BenchmarkTool)", session );
 
             assertEqual( "Metrics & TestRun nodes connect to Annotation nodes correctly",
                          patternCountInStore( "(:Annotation)", session ),

@@ -25,10 +25,6 @@ import static org.apache.commons.lang3.StringUtils.appendIfMissing;
 
 public class ResultsReporter
 {
-    public static final String CMD_RESULTS_STORE_USER = "--results-store-user";
-    public static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
-    public static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
-
     private final String resultsStoreUsername;
     private final String resultsStorePassword;
     private final URI resultsStoreUri;

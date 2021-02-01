@@ -9,7 +9,8 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
+import com.neo4j.bench.client.cli.ResultsStoreCredentials;
 import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.client.queries.report.CsvHeader;
 import com.neo4j.bench.client.queries.report.CsvRow;
@@ -28,6 +29,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import javax.inject.Inject;
 
 @Command( name = "compare-versions" )
 public class CompareVersionsCommand implements Runnable
@@ -40,29 +42,9 @@ public class CompareVersionsCommand implements Runnable
     static final String LDBC_COMPARISON_FILENAME = "ldbc_comparison.csv";
     static final String MACRO_COMPARISON_FILENAME = "macro_comparison.csv";
 
-    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_USER},
-             description = "Username for Neo4j database server that stores benchmarking results",
-             title = "Results Store Username" )
+    @Inject
     @Required
-    private String resultsStoreUsername;
-
-    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_PASSWORD},
-             description = "Password for Neo4j database server that stores benchmarking results",
-             title = "Results Store Password" )
-    @Required
-    private String resultsStorePassword;
-
-    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_URI},
-             description = "URI to Neo4j database server for storing benchmarking results",
-             title = "Results Store" )
-    @Required
-    private URI resultsStoreUri;
+    private ResultsStoreCredentials resultsStoreCredentials;
 
     private static final String CMD_OLD_VERSION = "--old-version";
     @Option( type = OptionType.COMMAND,
@@ -99,7 +81,9 @@ public class CompareVersionsCommand implements Runnable
     public void run()
     {
         BenchmarkUtil.assertDirectoryExists( outputDir.toPath() );
-        try ( StoreClient client = StoreClient.connect( resultsStoreUri, resultsStoreUsername, resultsStorePassword ) )
+        try ( StoreClient client = StoreClient.connect( resultsStoreCredentials.uri(),
+                                                        resultsStoreCredentials.username(),
+                                                        resultsStoreCredentials.password() ) )
         {
             LOG.debug( "Writing results to: " + outputDir.getAbsolutePath() );
 
@@ -138,21 +122,18 @@ public class CompareVersionsCommand implements Runnable
             double minimumDifference,
             Path outputDir )
     {
-        return Lists.newArrayList( "compare-versions",
-                                   CMD_RESULTS_STORE_USER,
-                                   resultsStoreUsername,
-                                   CMD_RESULTS_STORE_PASSWORD,
-                                   resultsStorePassword,
-                                   CMD_RESULTS_STORE_URI,
-                                   resultsStoreUri.toString(),
-                                   CMD_OLD_VERSION,
-                                   oldNeo4jVersion,
-                                   CMD_NEW_VERSION,
-                                   newNeo4jVersion,
-                                   CMD_MINIMUM_DIFFERENCE,
-                                   Double.toString( minimumDifference ),
-                                   CMD_OUTPUT_DIRECTORY,
-                                   outputDir.toAbsolutePath().toString() );
+        return ImmutableList.<String>builder()
+                .add( "compare-versions",
+                      CMD_OLD_VERSION,
+                      oldNeo4jVersion,
+                      CMD_NEW_VERSION,
+                      newNeo4jVersion,
+                      CMD_MINIMUM_DIFFERENCE,
+                      Double.toString( minimumDifference ),
+                      CMD_OUTPUT_DIRECTORY,
+                      outputDir.toAbsolutePath().toString() )
+                .addAll( ResultsStoreCredentials.argsFor( resultsStoreUsername, resultsStorePassword, resultsStoreUri ) )
+                .build();
     }
 
     private <CSV_ROW extends CsvRow, QUERY extends Query<List<CSV_ROW>> & CsvHeader> void toCsv( Path csvFile,

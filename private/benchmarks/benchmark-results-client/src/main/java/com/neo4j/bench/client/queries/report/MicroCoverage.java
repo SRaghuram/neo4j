@@ -12,7 +12,6 @@ import com.neo4j.bench.model.model.Repository;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.neo4j.driver.Driver;
 
@@ -65,12 +64,6 @@ public class MicroCoverage implements Query<List<MicroCoverageResult>>, CsvHeade
                                     } )
                               .sorted( new ResultComparator() )
                               .collect( toList() );
-    }
-
-    @Override
-    public Optional<String> nonFatalError()
-    {
-        return Optional.empty();
     }
 
     private static Change computeChange( double minImprovement, double maxImprovement )

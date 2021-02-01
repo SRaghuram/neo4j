@@ -10,8 +10,6 @@ import com.neo4j.bench.common.util.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
-
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 
@@ -41,11 +39,5 @@ public class CreateSchema implements Query<Void>
             }
         }
         return null;
-    }
-
-    @Override
-    public Optional<String> nonFatalError()
-    {
-        return Optional.empty();
     }
 }

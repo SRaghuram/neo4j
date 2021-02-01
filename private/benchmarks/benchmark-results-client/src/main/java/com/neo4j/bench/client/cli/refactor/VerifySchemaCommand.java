@@ -3,22 +3,23 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client;
+package com.neo4j.bench.client.cli.refactor;
 
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.ImmutableList;
+import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.cli.ResultsStoreCredentials;
-import com.neo4j.bench.client.queries.schema.CreateSchema;
-import com.neo4j.bench.client.queries.schema.DropSchema;
 
 import java.net.URI;
 import java.util.List;
 import javax.inject.Inject;
 
-@Command( name = "index" )
-public class ReIndexStoreCommand implements Runnable
+@Command( name = "verify" )
+public class VerifySchemaCommand implements Runnable
 {
+    private static final int RETRIES = 0;
+
     @Inject
     @Required
     private ResultsStoreCredentials resultsStoreCredentials;
@@ -28,14 +29,10 @@ public class ReIndexStoreCommand implements Runnable
     {
         try ( StoreClient client = StoreClient.connect( resultsStoreCredentials.uri(),
                                                         resultsStoreCredentials.username(),
-                                                        resultsStoreCredentials.password() ) )
+                                                        resultsStoreCredentials.password(),
+                                                        RETRIES ) )
         {
-            client.execute( new DropSchema() );
-            client.execute( new CreateSchema() );
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( "Error re-indexing results store: " + resultsStoreCredentials.uri(), e );
+            // verify is called when connecting to store
         }
     }
 
@@ -44,7 +41,8 @@ public class ReIndexStoreCommand implements Runnable
                                         URI resultsStoreUri )
     {
         return ImmutableList.<String>builder()
-                .add( "index" )
+                .add( "refactor",
+                      "verify" )
                 .addAll( ResultsStoreCredentials.argsFor( resultsStoreUsername, resultsStorePassword, resultsStoreUri ) )
                 .build();
     }

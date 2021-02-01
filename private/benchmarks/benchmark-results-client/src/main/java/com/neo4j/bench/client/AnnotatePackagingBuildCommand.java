@@ -10,6 +10,7 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
+import com.neo4j.bench.client.cli.ResultsStoreCredentials;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotations;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotationsResult;
@@ -23,6 +24,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import javax.inject.Inject;
 
 import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.METRICS;
 import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.TEST_RUN;
@@ -35,29 +37,9 @@ public class AnnotatePackagingBuildCommand implements Runnable
 {
     private static final Logger LOG = LoggerFactory.getLogger( AnnotatePackagingBuildCommand.class );
 
-    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_USER},
-             description = "Username for Neo4j database server that stores benchmarking results",
-             title = "Results Store Username" )
+    @Inject
     @Required
-    private String resultsStoreUsername;
-
-    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_PASSWORD},
-             description = "Password for Neo4j database server that stores benchmarking results",
-             title = "Results Store Password" )
-    @Required
-    private String resultsStorePassword;
-
-    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_URI},
-             description = "URI to Neo4j database server for storing benchmarking results",
-             title = "Results Store" )
-    @Required
-    private URI resultsStoreUri;
+    private ResultsStoreCredentials resultsStoreCredentials;
 
     private static final String CMD_PACKAGING_BUILD_ID = "--packaging-build-id";
     @Option( type = OptionType.COMMAND,
@@ -119,7 +101,9 @@ public class AnnotatePackagingBuildCommand implements Runnable
         {
             throw new IllegalArgumentException( "Command only supports annotating standard Neo4j branches. Branch is not standard: " + neo4jSeries );
         }
-        try ( StoreClient client = StoreClient.connect( resultsStoreUri, resultsStoreUsername, resultsStorePassword ) )
+        try ( StoreClient client = StoreClient.connect( resultsStoreCredentials.uri(),
+                                                        resultsStoreCredentials.username(),
+                                                        resultsStoreCredentials.password() ) )
         {
             List<Repository> benchmarkTools = benchmarkToolNames == null
                                               // create annotation for all (supported) tools
@@ -172,12 +156,6 @@ public class AnnotatePackagingBuildCommand implements Runnable
     {
         ArrayList<String> args = Lists.newArrayList( "annotate",
                                                      "packaging",
-                                                     CMD_RESULTS_STORE_USER,
-                                                     resultsStoreUsername,
-                                                     CMD_RESULTS_STORE_PASSWORD,
-                                                     resultsStorePassword,
-                                                     CMD_RESULTS_STORE_URI,
-                                                     resultsStoreUri.toString(),
                                                      CMD_PACKAGING_BUILD_ID,
                                                      Long.toString( packagingBuildId ),
                                                      CMD_ANNOTATION_COMMENT,
@@ -186,6 +164,8 @@ public class AnnotatePackagingBuildCommand implements Runnable
                                                      annotationAuthor,
                                                      CMD_NEO4J_SERIES,
                                                      neo4jSeries );
+        args.addAll( ResultsStoreCredentials.argsFor( resultsStoreUsername, resultsStorePassword, resultsStoreUri ) );
+
         if ( !benchmarkTools.isEmpty() )
         {
             args.add( CMD_BENCHMARK_TOOLS );

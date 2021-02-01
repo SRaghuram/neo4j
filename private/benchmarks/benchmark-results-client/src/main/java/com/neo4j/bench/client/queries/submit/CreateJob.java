@@ -10,7 +10,6 @@ import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.model.Job;
 
 import java.util.Objects;
-import java.util.Optional;
 
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Result;
@@ -44,7 +43,7 @@ public class CreateJob implements Query<Boolean>
     @Override
     public Boolean execute( Driver driver )
     {
-        return driver.session().writeTransaction( tx -> createBatchJob( tx ) );
+        return driver.session().writeTransaction( this::createBatchJob );
     }
 
     private Boolean createBatchJob( org.neo4j.driver.Transaction tx )
@@ -56,11 +55,5 @@ public class CreateJob implements Query<Boolean>
                         "testRunId", testRunId
                 ) );
         return result.consume().counters().nodesCreated() == 1;
-    }
-
-    @Override
-    public Optional<String> nonFatalError()
-    {
-        return Optional.empty();
     }
 }

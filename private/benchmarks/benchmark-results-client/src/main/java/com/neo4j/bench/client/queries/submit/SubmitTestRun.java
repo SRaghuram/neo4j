@@ -165,7 +165,7 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
     @Override
     public Optional<String> nonFatalError()
     {
-        return (null == nonFatalError) ? Optional.empty() : Optional.of( nonFatalError );
+        return Optional.ofNullable( nonFatalError );
     }
 
     @Override

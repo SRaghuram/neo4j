@@ -9,6 +9,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.SyntheticStoreGenerator.GenerationResult;
 import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
+import com.neo4j.bench.client.cli.refactor.MoveBenchmarkCommand;
+import com.neo4j.bench.client.cli.refactor.VerifySchemaCommand;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.client.queries.schema.SetStoreVersion;
@@ -164,7 +166,7 @@ public class CommandsSmokeTestIT
     private void runAnnotateCommand( Long packagingBuildId,
                                      List<Repository> benchmarkTools,
                                      String neo4jSeries,
-                                     Set<AnnotationTarget> annotationTargets ) throws Exception
+                                     Set<AnnotationTarget> annotationTargets )
     {
         List<String> args = AnnotatePackagingBuildCommand.argsFor( USERNAME,
                                                                    PASSWORD,
@@ -175,7 +177,7 @@ public class CommandsSmokeTestIT
                                                                    neo4jSeries,
                                                                    benchmarkTools,
                                                                    annotationTargets );
-        Main.main( args.stream().toArray( String[]::new ) );
+        Main.main( args.toArray( new String[0] ) );
     }
 
     private long testRunAnnotationCount()
@@ -246,6 +248,28 @@ public class CommandsSmokeTestIT
                     equalTo( generationResult.benchmarksInToolAndGroups( MACRO_BENCH.projectName(),
                                                                          MACRO_COMPAT_GROUP_1.name(),
                                                                          MACRO_COMPAT_GROUP_2.name() ) + 1L /*header*/ ) );
+    }
+
+    @Test
+    public void shouldRunMoveBenchmarkCommand()
+    {
+        List<String> args = MoveBenchmarkCommand.argsFor( USERNAME,
+                                                          PASSWORD,
+                                                          boltUri,
+                                                          "benchmarkToolName",
+                                                          "oldGroupName",
+                                                          "newGroupName",
+                                                          "benchmarkName" );
+        Main.main( args.toArray( new String[0] ) );
+    }
+
+    @Test
+    public void shouldRunVerifyCommand()
+    {
+        List<String> args = VerifySchemaCommand.argsFor( USERNAME,
+                                                         PASSWORD,
+                                                         boltUri );
+        Main.main( args.toArray( new String[0] ) );
     }
 
     private static long fileCount( Path folder ) throws IOException

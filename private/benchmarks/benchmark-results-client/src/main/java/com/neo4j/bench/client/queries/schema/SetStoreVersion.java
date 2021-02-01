@@ -7,8 +7,6 @@ package com.neo4j.bench.client.queries.schema;
 
 import com.neo4j.bench.client.queries.Query;
 
-import java.util.Optional;
-
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
@@ -33,11 +31,5 @@ public class SetStoreVersion implements Query<Void>
             session.run( "MERGE (ss:StoreSchema) SET ss.version=$version", singletonMap( "version", version ) );
         }
         return null;
-    }
-
-    @Override
-    public Optional<String> nonFatalError()
-    {
-        return Optional.empty();
     }
 }

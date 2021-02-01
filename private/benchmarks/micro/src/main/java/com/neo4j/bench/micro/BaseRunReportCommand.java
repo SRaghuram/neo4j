@@ -10,6 +10,7 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
+import com.neo4j.bench.client.cli.ResultsStoreCredentials;
 import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.ParameterVerifier;
 import com.neo4j.bench.common.profiling.ProfilerType;
@@ -174,7 +175,7 @@ public abstract class BaseRunReportCommand implements Runnable
             String resultStorePass,
             String s3Bucket )
     {
-        ArrayList<String> commandArgs = Lists.newArrayList(
+        List<String> commandArgs = Lists.newArrayList(
                 "run-export",
                 CMD_NEO4J_COMMIT,
                 neo4jCommit,
@@ -206,15 +207,10 @@ public abstract class BaseRunReportCommand implements Runnable
                 triggeredBy,
                 CMD_PROFILERS,
                 ProfilerType.serializeProfilers( profilers ),
-                ResultsReporter.CMD_RESULTS_STORE_PASSWORD,
-                resultStorePass,
-                ResultsReporter.CMD_RESULTS_STORE_USER,
-                resultStoreUser,
                 RunReportCommand.CMD_S3_BUCKET,
-                s3Bucket,
-                ResultsReporter.CMD_RESULTS_STORE_URI,
-                resultStoreUri
+                s3Bucket
         );
+        commandArgs.addAll( ResultsStoreCredentials.argsFor( resultStoreUser, resultStorePass, resultStoreUri ) );
         if ( jvm.hasPath() )
         {
             commandArgs.add( CMD_JVM_PATH );

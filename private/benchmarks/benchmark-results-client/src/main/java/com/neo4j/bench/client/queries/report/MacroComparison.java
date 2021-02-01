@@ -16,7 +16,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.driver.Driver;
@@ -86,12 +85,6 @@ public class MacroComparison implements Query<List<MacroComparisonResult>>, CsvH
         {
             throw new RuntimeException( "Error retrieving benchmark results", e );
         }
-    }
-
-    @Override
-    public Optional<String> nonFatalError()
-    {
-        return Optional.empty();
     }
 
     @Override

@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.driver.Driver;
@@ -122,11 +121,5 @@ public class CreateAnnotations implements Query<CreateAnnotationsResult>
     public String toString()
     {
         return "Params:\n" + MapPrinter.prettyPrint( params() ) + ANNOTATE_TEST_RUNS;
-    }
-
-    @Override
-    public Optional<String> nonFatalError()
-    {
-        return Optional.empty();
     }
 }

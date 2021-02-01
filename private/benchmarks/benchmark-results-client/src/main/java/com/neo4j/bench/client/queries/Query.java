@@ -13,5 +13,8 @@ public interface Query<RESULT>
 {
     RESULT execute( Driver driver );
 
-    Optional<String> nonFatalError();
+    default Optional<String> nonFatalError()
+    {
+        return Optional.empty();
+    }
 }
