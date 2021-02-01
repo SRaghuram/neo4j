@@ -663,6 +663,18 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     result.toList should be(List(defaultUniquenessBriefConstraintOutput(2L)))
   }
 
+  test("should show constraint with brief output (deprecated)") {
+    // GIVEN
+    createDefaultUniquenessConstraint()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS BRIEF")
+
+    // THEN
+    result.toList should be(List(defaultUniquenessBriefConstraintOutput(2L)))
+  }
+
   test("should show constraints in alphabetic order") {
     // GIVEN
     graph.createNodeKeyConstraintWithName("poppy", label2, prop)
@@ -816,6 +828,32 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     val options: List[Object] = result.columnAs("options").toList
     options should be(List(null))
     withoutColumns(result.toList, List("options")) should equal(List(defaultRelExistsVerboseConstraintOutput(1L)))
+  }
+
+  test("should show all constraints with verbose output (deprecated)") {
+    // GIVEN
+    createDefaultUniquenessConstraint()
+    createDefaultNodeKeyConstraint()
+    createDefaultNodeExistsConstraint()
+    createDefaultRelExistsConstraint()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS VERBOSE")
+
+    // THEN
+    val options: List[Object] = result.columnAs("options").toList
+    assertCorrectOptionsMap(options(0), defaultBtreeOptionsMap) // constraint1
+    assertCorrectOptionsMap(options(1), defaultBtreeOptionsMap) // constraint2
+    options(2) should be(null) // constraint3
+    options(3) should be(null) // constraint4
+
+    withoutColumns(result.toList, List("options")) should equal(List(
+      defaultUniquenessVerboseConstraintOutput(2L), // constraint1
+      defaultNodeKeyVerboseConstraintOutput(4L), // constraint2
+      defaultNodeExistsVerboseConstraintOutput(5L), // constraint3
+      defaultRelExistsVerboseConstraintOutput(6L), // constraint4
+    ))
   }
 
   test("should show correct options for unique constraint with random options") {
