@@ -30,6 +30,7 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade
 import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.test.rule.TestDirectory.testDirectory
+import org.scalatest.BeforeAndAfterAll
 
 import java.net.URI
 import java.util.function.BiConsumer
@@ -38,7 +39,7 @@ import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.mapAsScalaMapConverter
 import scala.util.Random
 
-class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
+class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport with BeforeAndAfterAll {
   private val username = "foo"
   private val password = "bar"
   private val fooDb = "foodb"
@@ -66,6 +67,17 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
       (GraphDatabaseSettings.auth_enabled -> true)
       )
       .asInstanceOf[Map[Setting[_], Object]]
+  }
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    cluster = ClusterConfig.createCluster(testDir.directory(Random.alphanumeric.take(8).mkString("")), clusterConfig)
+    cluster.start()
+  }
+
+  override def afterAll(): Unit = {
+    cluster.shutdown()
+    super.afterAll()
   }
 
   private def withDriver(f: Transaction => Unit, databaseName: Option[String] = None): Unit = {
@@ -106,13 +118,10 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
   }
 
   private def withCluster(clusterTest: Cluster => Unit): Unit = {
-    cluster = ClusterConfig.createCluster(testDir.directory(Random.alphanumeric.take(8).mkString("")), clusterConfig)
-    cluster.start()
-    try {
+      // make sure cluster is up
+      cluster should not be null
+      cluster.awaitLeader()
       clusterTest(cluster)
-    } finally {
-      cluster.shutdown()
-    }
   }
 
   implicit class TransactionExtension(t: Transaction) {
@@ -288,9 +297,9 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     // GIVEN
     withCluster(cluster => {
       cluster.systemTx((_, tx) => {
-        tx.execute(s"CREATE DATABASE $fooDb WAIT").close()
-        tx.execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE $fooDb").close()
-        tx.execute(s"CREATE ROLE $fooDbRole").close()
+        tx.execute(s"CREATE OR REPLACE DATABASE $fooDb WAIT").close()
+        tx.execute(s"CREATE OR REPLACE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE $fooDb").close()
+        tx.execute(s"CREATE OR REPLACE ROLE $fooDbRole").close()
         tx.execute(s"GRANT ROLE $fooDbRole TO $username").close()
         tx.execute(s"GRANT ALL ON DATABASE $fooDb TO $fooDbRole").close()
         tx.execute(s"GRANT ALL ON GRAPH $fooDb TO $fooDbRole").close()
@@ -320,9 +329,9 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     // GIVEN
     withCluster(cluster => {
       cluster.systemTx((_, tx) => {
-        tx.execute(s"CREATE DATABASE $fooDb WAIT").close()
-        tx.execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE $fooDb").close()
-        tx.execute(s"CREATE ROLE $fooDbRole").close()
+        tx.execute(s"CREATE OR REPLACE DATABASE $fooDb WAIT").close()
+        tx.execute(s"CREATE OR REPLACE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE $fooDb").close()
+        tx.execute(s"CREATE OR REPLACE ROLE $fooDbRole").close()
         tx.execute(s"GRANT ROLE $fooDbRole TO $username").close()
         tx.execute(s"GRANT ALL ON DEFAULT DATABASE TO $fooDbRole").close()
         tx.execute(s"GRANT ALL ON DEFAULT GRAPH TO $fooDbRole").close()
