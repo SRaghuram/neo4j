@@ -35,7 +35,6 @@ public class ResultsCopy
                                                                                        RecordingType.HEAP_DUMP,
                                                                                        RecordingType.TRACE_STRACE,
                                                                                        RecordingType.TRACE_MPSTAT,
-                                                                                       RecordingType.TRACE_VMSTAT,
                                                                                        RecordingType.TRACE_IOSTAT,
                                                                                        RecordingType.TRACE_JVM );
 

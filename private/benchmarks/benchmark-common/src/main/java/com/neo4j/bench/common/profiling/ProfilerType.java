@@ -6,6 +6,7 @@
 package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.Sets;
+import com.neo4j.bench.common.profiling.vmstat.VmStatTracer;
 import com.neo4j.bench.model.profiling.RecordingType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +66,7 @@ public enum ProfilerType
             SecondaryRecordingCreator.NONE ),
     VM_STAT(
             VmStatTracer.class,
-            RecordingType.TRACE_VMSTAT,
+            RecordingType.TRACE_VMSTAT_CHART,
             // requires no environment variables
             Sets.newHashSet(),
             SecondaryRecordingCreator.NONE ),

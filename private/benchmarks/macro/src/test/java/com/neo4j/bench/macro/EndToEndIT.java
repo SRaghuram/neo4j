@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.macro;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Planner;
@@ -34,6 +36,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -48,6 +51,7 @@ import static java.util.stream.Collectors.joining;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.io.FileMatchers.anExistingFile;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EndToEndIT extends BaseEndToEndIT
 {
@@ -55,6 +59,8 @@ class EndToEndIT extends BaseEndToEndIT
     private static final String LOAD_CSV_WORKLOAD = "cineasts_csv";
     private static final String WRITE_WORKLOAD = "pokec_write";
     private static final String READ_WORKLOAD = "zero";
+    private static final String SCRIPT_NAME = "run-report-benchmarks.sh";
+    private static final Path JAR = Paths.get( "target/macro.jar" );
 
     private ExpectedRecordings expectedRecordingsFor( List<ProfilerType> profilers, ExecutionMode executionMode, Deployment deployment, int forks )
     {
@@ -67,92 +73,39 @@ class EndToEndIT extends BaseEndToEndIT
     @Test
     public void runReadWorkloadEmbedded() throws Exception
     {
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = READ_WORKLOAD;
         ExecutionMode executionMode = ExecutionMode.CARDINALITY;
         int recordingDirsCount = 1;
         int forks = 1;
 
-        Path resourcesPath = temporaryFolder.resolve( "resources" );
-        Files.createDirectories( resourcesPath );
-        try ( Resources resources = new Resources( resourcesPath ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
     @Disabled( "long running test" )
     @Test
     public void runWriteWorkloadForkedWithEmbedded() throws Exception
     {
-
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = WRITE_WORKLOAD;
         ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int recordingDirsCount = 1;
         int forks = 1;
-        Path resourcesPath = temporaryFolder.resolve( "resources" );
-        Files.createDirectories( resourcesPath );
-        try ( Resources resources = new Resources( resourcesPath ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
     @Disabled( "timed out after 20 minutes" )
     @Test
     public void executeLoadCsvWorkloadForkedWithEmbedded() throws Exception
     {
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = LOAD_CSV_WORKLOAD;
         ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int recordingDirsCount = 1;
         int forks = 1;
-        Path resourcesPath = temporaryFolder.resolve( "resources" );
-        Files.createDirectories( resourcesPath );
-        try ( Resources resources = new Resources( resourcesPath ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
     // <><><><><><><><><><><><> Forked - Server <><><><><><><><><><><><>
@@ -160,93 +113,39 @@ class EndToEndIT extends BaseEndToEndIT
     @Test
     public void executeReadWorkloadForkedWithServer() throws Exception
     {
-
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
-        Deployment deployment = Deployment.server( getNeo4jDir() );
+        Deployment deployment = serverDeployment();
         String workloadName = READ_WORKLOAD;
         ExecutionMode executionMode = ExecutionMode.CARDINALITY;
         int recordingDirsCount = 1;
         int forks = 1;
-        Path resourcesPath = temporaryFolder.resolve( "resources" );
-        Files.createDirectories( resourcesPath );
-        try ( Resources resources = new Resources( resourcesPath ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
     @Disabled( "long running test" )
     @Test
     public void executeWriteWorkloadsForkedWithServer() throws Exception
     {
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
-        Deployment deployment = Deployment.server( getNeo4jDir() );
+        Deployment deployment = serverDeployment();
         String workloadName = WRITE_WORKLOAD;
         ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int recordingDirsCount = 1;
         int forks = 1;
 
-        Path resourcesPath = temporaryFolder.resolve( "resources" );
-        Files.createDirectories( resourcesPath );
-        try ( Resources resources = new Resources( resourcesPath ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
     @Disabled( "Executing queries that use periodic commit in an open transaction is not possible" )
     @Test
     public void executeLoadCsvWorkloadsForkedWithServer() throws Exception
     {
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
-        Deployment deployment = Deployment.server( getNeo4jDir() );
+        Deployment deployment = serverDeployment();
         String workloadName = LOAD_CSV_WORKLOAD;
         ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int recordingDirsCount = 1;
         int forks = 1;
 
-        Path resourcesPath = temporaryFolder.resolve( "resources" );
-        Files.createDirectories( resourcesPath );
-        try ( Resources resources = new Resources( resourcesPath ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
     // <><><><><><><><><><><><> In-process - Embedded <><><><><><><><><><><><>
@@ -254,206 +153,145 @@ class EndToEndIT extends BaseEndToEndIT
     @Test
     public void executeReadWorkloadInProcessWithEmbedded() throws Exception
     {
-
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = READ_WORKLOAD;
         ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int recordingDirsCount = 0;
         int forks = 0;
 
-        Path resourcesPath = temporaryFolder.resolve( "resources" );
-        Files.createDirectories( resourcesPath );
-        try ( Resources resources = new Resources( resourcesPath ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
     @Disabled( "long running test" )
     @Test
     public void executeWriteWorkloadInProcessWithEmbedded() throws Exception
     {
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = WRITE_WORKLOAD;
         ExecutionMode executionMode = ExecutionMode.EXECUTE;
-        int forks = 0;
         int recordingDirsCount = 0;
+        int forks = 0;
 
-        try ( Resources resources = new Resources( temporaryFolder.resolve( "resources" ) ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
     @Disabled( "timed out after 20 minutes" )
     @Test
     public void executeLoadCsvWorkloadInProcessWithEmbedded() throws Exception
     {
-
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = LOAD_CSV_WORKLOAD;
         ExecutionMode executionMode = ExecutionMode.EXECUTE;
-        int forks = 0;
         int recordingDirsCount = 0;
+        int forks = 0;
 
-        try ( Resources resources = new Resources( temporaryFolder.resolve( "resources" ) ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
     // <><><><><><><><><><><><> In-process - Server <><><><><><><><><><><><>
     @Test
     public void executeReadWorkloadInProcessWithServer() throws Exception
     {
-
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
-        Deployment deployment = Deployment.server( getNeo4jDir() );
+        Deployment deployment = serverDeployment();
         String workloadName = READ_WORKLOAD;
         ExecutionMode executionMode = ExecutionMode.CARDINALITY;
-        int forks = 0;
         int recordingDirsCount = 1;
-        Path resourcesPath = temporaryFolder.resolve( "resources" );
-        Files.createDirectories( resourcesPath );
-        try ( Resources resources = new Resources( resourcesPath ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+        int forks = 0;
+
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
     @Disabled( "long running test" )
     @Test
     public void executeWriteWorkloadInProcessWithServer() throws Exception
     {
-
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
-        Deployment deployment = Deployment.server( getNeo4jDir() );
+        Deployment deployment = serverDeployment();
         String workloadName = WRITE_WORKLOAD;
         ExecutionMode executionMode = ExecutionMode.EXECUTE;
-        int forks = 0;
         int recordingDirsCount = 0;
+        int forks = 0;
 
-        try ( Resources resources = new Resources( temporaryFolder.resolve( "resources" ) ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
     @Disabled( "Executing queries that use periodic commit in an open transaction is not possible" )
     @Test
     public void executeLoadCsvWorkloadInProcessWithServer() throws Exception
     {
-
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
-        Deployment deployment = Deployment.server( getNeo4jDir() );
+        Deployment deployment = serverDeployment();
         String workloadName = LOAD_CSV_WORKLOAD;
-        int forks = 0;
+        ExecutionMode executionMode = ExecutionMode.EXECUTE;
         int recordingDirsCount = 0;
+        int forks = 0;
 
-        try ( Resources resources = new Resources( temporaryFolder.resolve( "resources" ) ) )
-        {
-            ExecutionMode executionMode = ExecutionMode.EXECUTE;
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( resources,
-                                              profilers,
-                                              workloadName,
-                                              deployment,
-                                              forks,
-                                              executionMode ),
-                                 assertOnRecordings( deployment, workloadName, forks, executionMode ),
-                                 recordingDirsCount,
-                                 expectedRecordingsFor( profilers, executionMode, deployment, forks ) );
-        }
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
-    private static String scriptName()
+    private Deployment serverDeployment()
     {
-        return "run-report-benchmarks.sh";
-    }
-
-    private static Path getJar()
-    {
-        return Paths.get( "target/macro.jar" );
+        return Deployment.server( getNeo4jDir() );
     }
 
     private String neo4jDirPathString;
 
-    private String getNeo4jDir() throws IOException
+    private String getNeo4jDir()
     {
         if ( neo4jDirPathString == null )
         {
             Path neo4jDir = Paths.get( System.getenv( "NEO4J_DIR" ) );
             Path tempNeo4jDir = temporaryFolder.resolve( format( "neo4jDir-%s", UUID.randomUUID().toString() ) );
-            FileUtils.copyDirectory( neo4jDir.toFile(), tempNeo4jDir.toFile() );
+            try
+            {
+                FileUtils.copyDirectory( neo4jDir.toFile(), tempNeo4jDir.toFile() );
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
             neo4jDirPathString = tempNeo4jDir.toAbsolutePath().toString();
         }
         return neo4jDirPathString;
+    }
+
+    // <><><><><><><><><><><><> VmStat profiler <><><><><><><><><><><><>
+
+    @Test
+    public void executeWithVmStatProfiler() throws Exception
+    {
+        Deployment deployment = Deployment.embedded();
+        String workloadName = READ_WORKLOAD;
+        ExecutionMode executionMode = ExecutionMode.EXECUTE;
+        int recordingDirsCount = 1;
+        int forks = 1;
+
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks, Collections.singletonList( ProfilerType.VM_STAT ) );
+    }
+
+    private void test( Deployment deployment, String workloadName, ExecutionMode executionMode, int recordingDirsCount, int forks ) throws Exception
+    {
+        test( deployment, workloadName, executionMode, recordingDirsCount, forks, asList( ProfilerType.JFR, ProfilerType.GC ) );
+    }
+
+    private void test( Deployment deployment,
+                       String workloadName,
+                       ExecutionMode executionMode,
+                       int recordingDirsCount,
+                       int forks,
+                       List<ProfilerType> profilers ) throws Exception
+    {
+        ExpectedRecordings expectedRecordings = expectedRecordingsFor( profilers, executionMode, deployment, forks );
+        Path resourcesPath = temporaryFolder.resolve( "resources" );
+        Files.createDirectories( resourcesPath );
+        try ( Resources resources = new Resources( resourcesPath ) )
+        {
+            runReportBenchmarks( SCRIPT_NAME,
+                                 JAR,
+                                 profilers,
+                                 processArgs( resources, profilers, workloadName, deployment, forks, executionMode ),
+                                 assertOnRecordings( resources, deployment, workloadName, forks, executionMode ),
+                                 recordingDirsCount,
+                                 expectedRecordings );
+        }
     }
 
     private List<String> processArgs( Resources resources,
@@ -463,7 +301,6 @@ class EndToEndIT extends BaseEndToEndIT
                                       int forks,
                                       ExecutionMode executionMode ) throws IOException
     {
-
         Jvm jvm = Jvm.defaultJvmOrFail();
         String awsEndpointUrl = getAWSEndpointURL();
         ResultStoreCredentials resultStoreCredentials = getResultStoreCredentials();
@@ -473,7 +310,7 @@ class EndToEndIT extends BaseEndToEndIT
 
         // create empty store
         Path dbPath = temporaryFolder.resolve( "db" );
-        Files.createDirectories(dbPath);
+        Files.createDirectories( dbPath );
         Workload workload = Workload.fromName( workloadName, resources, deployment );
         Store emptyStoreFor = StoreTestUtil.createEmptyStoreFor( workload,
                                                                  dbPath, // store
@@ -481,7 +318,7 @@ class EndToEndIT extends BaseEndToEndIT
 
         Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( deployment );
 
-        return asList( "./" + scriptName(),
+        return asList( "./" + SCRIPT_NAME,
                        // workload
                        workloadName,
                        // db
@@ -535,12 +372,13 @@ class EndToEndIT extends BaseEndToEndIT
                        //Batch Job id
                        "123",
                        // AWS endpoint URL
-                       "--aws-endpoint-url", awsEndpointUrl );
+                       "--aws-endpoint-url",
+                       awsEndpointUrl );
     }
 
-    protected AssertOnRecordings assertOnRecordings( Deployment deployment, String workloadName, int forks, ExecutionMode executionMode )
+    protected AssertOnRecordings assertOnRecordings( Resources resources, Deployment deployment, String workloadName, int forks, ExecutionMode executionMode )
     {
-        return ( Path recordingDir, List<ProfilerType> profilers, Resources resources ) ->
+        return ( Path recordingDir, List<ProfilerType> profilers ) ->
         {
             Workload workload = Workload.fromName( workloadName, resources, deployment );
             // should find at least one recording per profiler per benchmark -- there may be more, due to secondary recordings
@@ -568,24 +406,42 @@ class EndToEndIT extends BaseEndToEndIT
                             File file = recordingDir.resolve( profilerArtifactFilename ).toFile();
                             assertThat( "File not found: " + file.getAbsolutePath(), file, anExistingFile() );
                         }
+                        if ( profilerType == ProfilerType.VM_STAT )
+                        {
+                            assertVmStatRecordings( profilerRecordingDescriptor, recordingDir );
+                        }
                     }
                 }
-
-                Parameters clientParameters = clientParameters( deployment.deploymentModes() ); // ASCII plans are only created on client side
                 if ( executionMode.equals( ExecutionMode.CARDINALITY ) )
                 {
-                    RecordingDescriptor recordingDescriptor = new RecordingDescriptor( FullBenchmarkName.from( query.benchmarkGroup(), query.benchmark() ),
-                                                                                       RunPhase.MEASUREMENT,
-                                                                                       RecordingType.ASCII_PLAN,
-                                                                                       clientParameters,
-                                                                                       Collections.emptySet(),
-                                                                                       true /*every fork will produce plans recording*/ );
-                    String profilerArtifactFilename = recordingDescriptor.filename();
-                    File file = recordingDir.resolve( profilerArtifactFilename ).toFile();
-                    assertThat( "File not found: " + file.getAbsolutePath(), file, anExistingFile() );
+                    assertCardinalityRecordings( deployment, recordingDir, query );
                 }
             }
         };
+    }
+
+    private void assertVmStatRecordings( ProfilerRecordingDescriptor profilerRecordingDescriptor, Path recordingDir ) throws IOException
+    {
+        RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.TRACE_VMSTAT_CHART );
+        String profilerArtifactFilename = recordingDescriptor.filename();
+        File file = recordingDir.resolve( profilerArtifactFilename ).toFile();
+        assertThat( "File not found: " + file.getAbsolutePath(), file, anExistingFile() );
+        JsonNode chart = new ObjectMapper().readTree( file );
+        assertTrue( chart.isArray(), "Chart file should be a JSON array" );
+    }
+
+    private void assertCardinalityRecordings( Deployment deployment, Path recordingDir, Query query )
+    {
+        Parameters clientParameters = clientParameters( deployment.deploymentModes() ); // ASCII plans are only created on client side
+        RecordingDescriptor recordingDescriptor = new RecordingDescriptor( FullBenchmarkName.from( query.benchmarkGroup(), query.benchmark() ),
+                                                                           RunPhase.MEASUREMENT,
+                                                                           RecordingType.ASCII_PLAN,
+                                                                           clientParameters,
+                                                                           Collections.emptySet(),
+                                                                           true /*every fork will produce plans recording*/ );
+        String profilerArtifactFilename = recordingDescriptor.filename();
+        File file = recordingDir.resolve( profilerArtifactFilename ).toFile();
+        assertThat( "File not found: " + file.getAbsolutePath(), file, anExistingFile() );
     }
 
     private static Parameters clientParameters( DeploymentModes deploymentModes )

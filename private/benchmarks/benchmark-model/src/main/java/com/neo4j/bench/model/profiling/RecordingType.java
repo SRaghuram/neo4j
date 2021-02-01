@@ -22,7 +22,7 @@ public enum RecordingType
     // tracing
     TRACE_STRACE( "strace", ".strace.log" ),
     TRACE_MPSTAT( "mpstat", ".mpstat.log" ),
-    TRACE_VMSTAT( "vmstat", ".vmstat.log" ),
+    TRACE_VMSTAT_CHART( "vmstat", ".vmstat.json" ),
     TRACE_IOSTAT( "iostat", ".iostat.log" ),
     TRACE_JVM( "jvm_log", ".jvm.log" ),
     NMT_SUMMARY( "nmt_summary", ".nmt.summary.csv" ),

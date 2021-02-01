@@ -9,7 +9,6 @@ import com.google.common.collect.ImmutableSet;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
@@ -34,23 +33,18 @@ class EndToEndIT extends BaseEndToEndIT
     @Test
     public void runReportBenchmark() throws Exception
     {
-
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
 
-        try ( Resources resources = new Resources( Files.createDirectory( temporaryFolder.resolve( "resources" ) ) ) )
-        {
-            runReportBenchmarks( resources,
-                                 scriptName(),
-                                 getJar(),
-                                 profilers,
-                                 processArgs( profilers,
-                                              getAWSEndpointURL(),
-                                              Jvm.defaultJvmOrFail(),
-                                              getResultStoreCredentials() ),
-                                 this::assertOnRecordings,
-                                 1,
-                                 ExpectedRecordings.from( profilers ) );
-        }
+        runReportBenchmarks( scriptName(),
+                             getJar(),
+                             profilers,
+                             processArgs( profilers,
+                                          getAWSEndpointURL(),
+                                          Jvm.defaultJvmOrFail(),
+                                          getResultStoreCredentials() ),
+                             this::assertOnRecordings,
+                             1,
+                             ExpectedRecordings.from( profilers ) );
     }
 
     protected String scriptName()
@@ -111,7 +105,7 @@ class EndToEndIT extends BaseEndToEndIT
                        endpointUrl );
     }
 
-    protected void assertOnRecordings( Path recordingDir, List<ProfilerType> profilers, Resources resources ) throws Exception
+    protected void assertOnRecordings( Path recordingDir, List<ProfilerType> profilers ) throws Exception
     {
         // all recordings
         List<Path> recordings = Files.list( recordingDir ).collect( Collectors.toList() );

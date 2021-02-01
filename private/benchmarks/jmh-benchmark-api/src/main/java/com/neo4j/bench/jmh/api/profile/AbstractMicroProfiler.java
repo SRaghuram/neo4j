@@ -52,6 +52,8 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             return GcProfiler.class;
         case NO_OP:
             return NoOpProfiler.class;
+        case VM_STAT:
+            return VmStatTracer.class;
         default:
             throw new RuntimeException( "There is no JMH profiler for profiler type: " + profilerType );
         }

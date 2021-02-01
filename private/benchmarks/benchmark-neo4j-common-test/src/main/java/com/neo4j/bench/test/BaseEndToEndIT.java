@@ -15,7 +15,6 @@ import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.profiling.ProfilerRecordings;
 import com.neo4j.bench.model.profiling.RecordingType;
@@ -91,11 +90,8 @@ public abstract class BaseEndToEndIT
          *
          * @param recordingDir folder containing profiler recordings
          * @param profilers list of profilers that were used
-         * @param resources utility for retrieving files located in resources/ folder
          */
-        void assertOnRecordings( Path recordingDir,
-                                 List<ProfilerType> profilers,
-                                 Resources resources ) throws Exception;
+        void assertOnRecordings( Path recordingDir, List<ProfilerType> profilers ) throws Exception;
     }
 
     @RegisterExtension
@@ -207,8 +203,6 @@ public abstract class BaseEndToEndIT
     /**
      * Executes run report benchmarks test.
      *
-     * @param recordingDirsCount
-     * @param resources
      * @param scriptName name of the run script
      * @param toolJar path to tool toolJar
      * @param profilers list of profilers to run with
@@ -217,8 +211,7 @@ public abstract class BaseEndToEndIT
      * @param recordingDirsCount number of recording directories
      * @param expectedRecording profiler recordings that should be uploaded to S3 and written to results store
      */
-    public void runReportBenchmarks( Resources resources,
-                                     String scriptName,
+    public void runReportBenchmarks( String scriptName,
                                      Path toolJar,
                                      List<ProfilerType> profilers,
                                      List<String> processArgs,
@@ -269,7 +262,7 @@ public abstract class BaseEndToEndIT
             assertEquals( 0, processExitCode,
                           scriptName + " finished with non-zero code\n" + FileUtils.readFileToString( outputLog, Charset.defaultCharset() ) );
             assertStoreSchema( boltUri );
-            assertRecordingFilesExist( s3Path, profilers, resources, recordingsAssertion, recordingDirsCount );
+            assertRecordingFilesExist( s3Path, profilers, recordingsAssertion, recordingDirsCount );
             assertProfilingNodesAreSameAsS3( boltUri, s3Path, expectedRecording.expectedRecordingKeys() );
         }
         finally
@@ -336,7 +329,6 @@ public abstract class BaseEndToEndIT
 
     private void assertRecordingFilesExist( Path s3Path,
                                             List<ProfilerType> profilers,
-                                            Resources resources,
                                             AssertOnRecordings recordingsAssertion,
                                             int recordingDirsCount ) throws Exception
     {
@@ -369,7 +361,7 @@ public abstract class BaseEndToEndIT
                     recordingFiles.forEach( file -> LOG.debug( file.toAbsolutePath().toString() ) );
                 }
 
-                recordingsAssertion.assertOnRecordings( recordingDir, profilers, resources );
+                recordingsAssertion.assertOnRecordings( recordingDir, profilers );
             }
         }
     }

@@ -72,8 +72,7 @@ public class EndToEndIT extends BaseEndToEndIT
         Files.createDirectories(resourcesPath);
         try ( Resources resources = new Resources( resourcesPath ) )
         {
-            runReportBenchmarks( resources,
-                                 scriptName(),
+            runReportBenchmarks( scriptName(),
                                  getJar(),
                                  profilers,
                                  processArgs( resources,
@@ -176,7 +175,7 @@ public class EndToEndIT extends BaseEndToEndIT
                        endpointUrl );
     }
 
-    protected void assertOnRecordings( Path recordingDir, List<ProfilerType> profilers, Resources resources ) throws Exception
+    protected void assertOnRecordings( Path recordingDir, List<ProfilerType> profilers ) throws Exception
     {
         // should find at least one recording per profiler per benchmark (LDBC is 1 benchmark) -- there may be more, due to secondary recordings
         int profilerRecordingCount = (int) Files.list( recordingDir ).count();
