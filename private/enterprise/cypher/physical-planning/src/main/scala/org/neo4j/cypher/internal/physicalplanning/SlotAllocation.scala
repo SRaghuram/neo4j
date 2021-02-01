@@ -43,6 +43,7 @@ import org.neo4j.cypher.internal.logical.plans.DetachDeletePath
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipTypeScan
 import org.neo4j.cypher.internal.logical.plans.Eager
+import org.neo4j.cypher.internal.logical.plans.EitherApply
 import org.neo4j.cypher.internal.logical.plans.EmptyResult
 import org.neo4j.cypher.internal.logical.plans.ErrorPlan
 import org.neo4j.cypher.internal.logical.plans.ExhaustiveLimit
@@ -72,6 +73,7 @@ import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
 import org.neo4j.cypher.internal.logical.plans.NodeLogicalLeafPlan
 import org.neo4j.cypher.internal.logical.plans.NonFuseable
 import org.neo4j.cypher.internal.logical.plans.NonPipelined
+import org.neo4j.cypher.internal.logical.plans.OnMatchApply
 import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.OptionalExpand
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
@@ -281,6 +283,15 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           allocations.set(current.id, slots)
           resultStack.push(slots)
 
+        case (Some(left), Some(right)) if (comingFrom eq left) && current.isInstanceOf[EitherApply] =>
+          planStack.push((nullable, current))
+          val argumentSlots = resultStack.getFirst
+          val previousArgument: SlotsAndArgument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots) else argumentStack.getFirst
+          val lhsSlots = allocations.get(left.id)
+          allocateExpressionsTwoChild(current, lhsSlots, semanticTable, comingFromLeft = true)
+          argumentStack.push(SlotsAndArgument(argumentSlots, previousArgument.argumentSize, current.id))
+          populate(right, nullable)
+
         case (Some(left), Some(right)) if (comingFrom eq left) && current.isInstanceOf[ApplyPlan] =>
           planStack.push((nullable, current))
           val argumentSlots = resultStack.getFirst
@@ -295,8 +306,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
         case (Some(left), Some(right)) if comingFrom eq left =>
           planStack.push((nullable, current))
-          val previousArgument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots) else argumentStack.getFirst
           if (argumentRowIdSlotForCartesianProductNeeded(current)) {
+            val previousArgument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots) else argumentStack.getFirst
             // We put a new argument on the argument stack, but in contrast to Apply, we create a copy of the previous argument, because
             // the RHS does not need any slots from the LHS.
             val newArgument = previousArgument.slotConfiguration.copy().newArgument(current.id)
@@ -634,10 +645,13 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         nodes.foreach(n => slots.newLong(n.idName, nullable = false, CTNode))
         relationships.foreach(r => slots.newLong(r.idName, nullable = config.lenientCreateRelationship, CTRelationship))
 
-      case _:MergeCreateNode =>
-      // The variable name should already have been allocated by the NodeLeafPlan
+      case MergeCreateNode(_, name, _, _) =>
+      //TODO why changed
+        // The variable name should already have been allocated by the NodeLeafPlan
+      //slots.newLong(name, nullable = false, CTNode)
 
       case MergeCreateRelationship(_, name, _, _, _, _) =>
+        //TODO remove
         slots.newLong(name, nullable = false, CTRelationship)
 
       case _: EmptyResult |
@@ -892,6 +906,12 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         result
 
       case _: AssertSameNode =>
+        lhs
+
+      case _: OnMatchApply =>
+        lhs
+
+      case _: EitherApply =>
         lhs
 
       case p =>
