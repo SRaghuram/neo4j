@@ -37,6 +37,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     private final MultiDatabaseManager<?> databaseManager;
     private final LocalDbmsOperator localOperator;
     protected final SystemGraphDbmsOperator systemOperator;
+    private final StartupOperator startupOperator;
     private final ShutdownOperator shutdownOperator;
     private final StandaloneInternalDbmsOperator internalDbmsOperator;
     private final SystemDatabaseCommitEventListener systemCommitListener;
@@ -61,6 +62,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         this.databaseIdRepository = databaseManager.databaseIdRepository();
         this.localOperator = new LocalDbmsOperator( databaseIdRepository );
         this.reconciledTxTracker = reconciledTxTracker;
+        this.startupOperator = new StartupOperator( dbmsModel, globalModule.getGlobalConfig(), internalLogProvider );
         this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, reconciledTxTracker, internalLogProvider );
         this.shutdownOperator = new ShutdownOperator( databaseManager, globalModule.getGlobalConfig() );
         this.internalDbmsOperator = new StandaloneInternalDbmsOperator( globalModule.getLogService().getInternalLogProvider() );
@@ -86,25 +88,27 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     }
 
     /**
-     * Blocking call. Just syntactic sugar around a trigger. Used to transition default databases to
+     * Blocking call. Just syntactic sugar around a {@link StartupOperator}. Used to transition default databases to
      * desired initial states at DatabaseManager startup
      */
     private void startInitialDatabases() throws DatabaseManagementException
     {
         // Initially trigger system operator to start system db, it always desires the system db to be STARTED
-        systemOperator.trigger( ReconcilerRequest.simple() ).join( NAMED_SYSTEM_DATABASE_ID );
+        startupOperator.startSystem();
 
+        // As soon we have system started grab the last tx id
         var systemDatabase = getSystemDatabase( databaseManager );
         long lastClosedTxId = getLastClosedTransactionId( systemDatabase );
 
-        // Manually kick off the reconciler to start all other databases in the system database, now that the system database is started
-        systemOperator.updateDesiredStates();
-        systemOperator.trigger( ReconcilerRequest.simple() ).awaitAll();
+        // Let's startup the rest
+        startupOperator.startAllNonSystem();
 
         // More state changes might have been committed into the system database and been reconciled before
         // the following call, and those will independently and concurrently call offerReconciledTransactionId
         // from the transactional threads.
         reconciledTxTracker.enable( lastClosedTxId );
+
+        systemOperator.updateDesiredStates();
     }
 
     /**
@@ -130,7 +134,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
 
     protected Stream<DbmsOperator> operators()
     {
-        return Stream.of( localOperator, systemOperator, shutdownOperator, internalDbmsOperator );
+        return Stream.of( localOperator, systemOperator, startupOperator, shutdownOperator, internalDbmsOperator );
     }
 
     protected void registerWithListenerService( GlobalModule globalModule )

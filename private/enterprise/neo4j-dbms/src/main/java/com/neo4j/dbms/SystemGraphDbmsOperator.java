@@ -28,7 +28,6 @@ class SystemGraphDbmsOperator extends DbmsOperator
     {
         this.dbmsModel = dbmsModel;
         this.reconciledTxTracker = reconciledTxTracker;
-        this.desired.put( NAMED_SYSTEM_DATABASE_ID.name(), new EnterpriseDatabaseState( NAMED_SYSTEM_DATABASE_ID, STARTED ) );
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -91,6 +90,9 @@ class SystemGraphDbmsOperator extends DbmsOperator
     {
         Map<String,EnterpriseDatabaseState> systemStates = dbmsModel.getDatabaseStates();
         systemStates.forEach( desired::put );
+        // Always set system database's state to STARTED,
+        //   even if somehow it gets stopped or dropped in the system graph it is made sure that it is in STARTED state
+        desired.put( NAMED_SYSTEM_DATABASE_ID.name(), new EnterpriseDatabaseState( NAMED_SYSTEM_DATABASE_ID, STARTED ) );
     }
 
     private DatabaseUpdates extractUpdatedDatabases( TransactionData transactionData )
