@@ -377,7 +377,7 @@ class AggregationFunctionIT
         {
             Map<String,Object> result =
                     Iterators.single( transaction.execute(
-                            format( "CYPHER runtime=%s UNWIND range(1,100) AS i RETURN com.neo4j.procedure.count() AS count", "PIPELINED" ) ) );
+                            format( "CYPHER runtime=%s UNWIND range(1,100) AS i RETURN com.neo4j.procedure.count() AS count", "PIPELINED", runtime ) ) );
 
             // Then
             assertThat( result ).isEqualTo( Map.of( "count", 100L ) );
