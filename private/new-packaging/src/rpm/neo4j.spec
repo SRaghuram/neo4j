@@ -8,7 +8,7 @@ License: ${LICENSE}
 URL: http://neo4j.com/
 #Source: https://github.com/neo4j/neo4j/archive/%{version}.tar.gz
 
-Requires: cypher-shell >= 1.2, jre-11
+Requires: cypher-shell < ${NEXT_NEO4J_BRANCH}, cypher-shell >= ${NEO4J_BRANCH}, jre-11
 
 BuildArch: noarch
 
@@ -36,7 +36,7 @@ if [ "$PACKAGE_NAME" = "neo4j-enterprise" ]; then
     if [ "$NEO4J_ACCEPT_LICENSE_AGREEMENT" != "yes" ]; then
         if ! whiptail --title "Neo4j License Agreement" --defaultno --yesno "\
 
-(c) Neo4j Sweden AB.  2019.  All Rights Reserved.
+(c) Neo4j Sweden AB.  2021.  All Rights Reserved.
 Use of this Software without a proper commercial license with Neo4j,
 Inc. or its affiliates is prohibited.
 

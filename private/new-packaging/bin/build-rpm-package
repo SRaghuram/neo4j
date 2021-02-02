@@ -36,6 +36,8 @@ echo "Release: ${rpm_release}"
 parse_pkgname ${tarball}
 
 echo "Package name: ${package_name}"
+echo "Branch number: ${branch_version}"
+echo "Next branch number: ${next_branch_version}"
 
 # Figure out which license
 parse_license ${tarball}
@@ -61,7 +63,9 @@ cp ${common_directory}/neo4j.service ${sources_directory}/
 cp ${common_directory}/neo4j.init ${sources_directory}/
 cp ${common_directory}/neo4j.default ${sources_directory}/
 
-DISTRIBUTION=${distribution} DATE=`date -R` PACKAGE_NAME=${package_name} VERSION=${rpm_version} RELEASE=${rpm_release} LICENSE=${license} envsubst '${DATE} ${DISTRIBUTION} ${PACKAGE_NAME} ${VERSION} ${RELEASE} ${LICENSE}' < ${spec_directory}/neo4j.spec > ${package_directory}/SPECS/neo4j.spec
+DISTRIBUTION=${distribution} DATE=`date -R` PACKAGE_NAME=${package_name} \
+VERSION=${rpm_version} RELEASE=${rpm_release} LICENSE=${license} \
+NEO4J_BRANCH=${branch_version} NEXT_NEO4J_BRANCH=${next_branch_version} envsubst '${DATE} ${DISTRIBUTION} ${PACKAGE_NAME} ${VERSION} ${RELEASE} ${LICENSE} ${NEO4J_BRANCH} ${NEXT_NEO4J_BRANCH}' < ${spec_directory}/neo4j.spec > ${package_directory}/SPECS/neo4j.spec
 
 # Make the Neo4j wrapper scripts available
 scripts_directory=${sources_directory}/server/scripts

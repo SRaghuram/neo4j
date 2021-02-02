@@ -11,7 +11,7 @@ Architecture: all
 Section: database
 Priority: optional
 Pre-Depends: dpkg (>= 1.15.7.2), debconf (>= 0.2.17)
-Depends: ${misc:Depends}, daemon, adduser, psmisc, lsb-base, openjdk-11-jre-headless | java11-runtime-headless, cypher-shell (>= 1.2)
+Depends: ${misc:Depends}, daemon, adduser, psmisc, lsb-base, openjdk-11-jre-headless | java11-runtime-headless, cypher-shell (>= 1:${NEO4J_BRANCH}), cypher-shell (<< 1:${NEXT_NEO4J_BRANCH})
 Conflicts:
 Replaces: ${REPLACES}, neo4j-advanced
 Description: graph database server

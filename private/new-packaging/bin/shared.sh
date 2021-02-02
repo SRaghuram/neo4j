@@ -35,10 +35,13 @@ parse_version() {
   if [ -z ${version_label} ]; then
     # Release version
     rpm_release="1"
+    branch_version=${version%.*}
   else
     # Pre-release version
     rpm_release="0.${version_label}.1"
+    branch_version=${version%.0-${version_label}}
   fi
+  next_branch_version=$(echo ${branch_version} '+ 0.1' | bc)
 
   export version
   export version_label
@@ -46,6 +49,8 @@ parse_version() {
   export deb_version_full
   export rpm_version
   export rpm_release
+  export branch_version
+  export next_branch_version
 }
 
 # Parse the version from a neo4j tarball like 'neo4j-community-3.2.0-SNAPSHOT-unix.tar.gz'

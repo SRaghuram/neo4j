@@ -30,6 +30,8 @@ echo "Deb version: ${deb_version_full}"
 parse_pkgname ${tarball}
 
 echo "Package name: ${package_name}"
+echo "Branch number: ${branch_version}"
+echo "Next branch number: ${next_branch_version}"
 
 # Extract tarball and prepare workspace
 mkdir -p "${package_directory}/server"
@@ -63,7 +65,7 @@ fi
 DISTRIBUTION=${distribution} DATE=`date -R` PACKAGE_NAME=${package_name} VERSION=${deb_version_full} envsubst '${DATE} ${DISTRIBUTION} ${PACKAGE_NAME} ${VERSION}' < src/debian/changelog > ${package_directory}/debian/changelog
 DISTRIBUTION=${distribution} DATE=`date -R` PACKAGE_NAME=${package_name} VERSION=${deb_version_full} envsubst '${DATE} ${DISTRIBUTION} ${PACKAGE_NAME} ${VERSION}' < src/debian/NEWS.Debian > ${package_directory}/debian/NEWS.Debian
 [[ ${package_name} = "neo4j" ]] && replaces="neo4j-enterprise" || replaces="neo4j"
-PACKAGE_NAME=${package_name} REPLACES=${replaces} envsubst '${PACKAGE_NAME} ${REPLACES}' < src/debian/control > ${package_directory}/debian/control
+PACKAGE_NAME=${package_name} REPLACES=${replaces} NEO4J_BRANCH=${branch_version} NEXT_NEO4J_BRANCH=${next_branch_version} envsubst '${PACKAGE_NAME} ${REPLACES} ${NEO4J_BRANCH} ${NEXT_NEO4J_BRANCH}' < src/debian/control > ${package_directory}/debian/control
 PACKAGE_NAME=${package_name} envsubst '${PACKAGE_NAME}' < src/debian/package.lintian-overrides > ${package_directory}/debian/${package_name}.lintian-overrides
 
 # Make the Neo4j wrapper scripts available to debuild
