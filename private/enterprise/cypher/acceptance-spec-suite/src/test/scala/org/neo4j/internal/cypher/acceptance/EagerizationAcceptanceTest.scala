@@ -3170,6 +3170,70 @@ class EagerizationAcceptanceTest
     result.toList shouldBe empty
   }
 
+  test("should delete all matching paths in tail") {
+    executeSingle(
+      """UNWIND range(1, 3) AS i
+        |CREATE (:Start {prop: i})-[:REL]->()""".stripMargin)
+
+    val query =
+      """MATCH (n:Start)
+        |WITH n AS start
+        |MATCH p=(start)-->()
+        |WHERE ({prop: 1})-->() AND
+        |      ({prop: 2})-->() AND
+        |      ({prop: 3})-->()
+        |DELETE p
+        |RETURN *""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    assertStats(result, nodesDeleted = 6, relationshipsDeleted = 3)
+  }
+
+  test("should detach delete all matching paths in tail") {
+    executeSingle("CREATE (a)-[:REL]->(b)-[:REL]->(c)")
+
+    val query =
+      """MATCH (n)
+        |WITH n AS start
+        |MATCH p=(start)-->()
+        |DETACH DELETE p
+        |RETURN *""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    assertStats(result, nodesDeleted = 3, relationshipsDeleted = 2)
+  }
+
+  test("should delete all matching paths in tail when path variable is aliased") {
+    executeSingle(
+      """UNWIND range(1, 3) AS i
+        |CREATE ({prop: i})-[:REL]->()""".stripMargin)
+
+    val query =
+      """MATCH p=(n)-->(m)
+        |WHERE ({prop: 1})-->() AND
+        |      ({prop: 2})-->() AND
+        |      ({prop: 3})-->()
+        |WITH p AS path
+        |DELETE path
+        |RETURN *""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    assertStats(result, nodesDeleted = 6, relationshipsDeleted = 3)
+  }
+
+  test("should detach delete all matching paths in tail when path variable is aliased") {
+    executeSingle("CREATE (a)-[:REL]->(b)-[:REL]->(c)")
+
+    val query =
+      """MATCH p=(n)-[r]->(m)
+        |WITH p AS path
+        |DETACH DELETE path
+        |RETURN path""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    assertStats(result, nodesDeleted = 3, relationshipsDeleted = 2)
+  }
+
   private def testEagerPlanComparisonStrategy(expectedEagerCount: Int,
                                               expectPlansToFailPredicate: TestConfiguration = TestConfiguration.empty,
                                               optimalEagerCount: Int = -1): PlanComparisonStrategy = {
