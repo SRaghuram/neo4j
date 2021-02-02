@@ -32,7 +32,7 @@ fi
 settings_file=$(realpath "private/benchmarks/settings.xml")
 
 # list of directories we want to deploy from
-declare -a dirs=("benchmark-model" "benchmark-common" "benchmark-results-client" "benchmark-infra/benchmark-infra-common" "jmh-benchmark-api" "benchmark-infra/benchmark-infra-worker" "benchmark-infra/benchmark-infra-scheduler")
+declare -a dirs=("benchmark-model" "benchmark-common" "benchmark-results-client" "benchmark-results-client-cli" "benchmark-infra/benchmark-infra-common" "jmh-benchmark-api" "benchmark-infra/benchmark-infra-worker" "benchmark-infra/benchmark-infra-scheduler")
 
 # get modules names
 modules_names=()

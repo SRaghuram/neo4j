@@ -3,10 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client;
+package com.neo4j.bench.client.cli;
 
 import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
+import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.client.queries.schema.DropSchema;
 import com.neo4j.bench.common.command.ResultsStoreArgs;

@@ -4,17 +4,15 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>benchmarks</artifactId>
-        <version>4.3.0-SNAPSHOT</version>
+        <version>3.5.27-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>benchmark-results-client</artifactId>
+    <artifactId>benchmark-results-client-cli</artifactId>
     <packaging>jar</packaging>
-    <name>Neo4j - Benchmarks Results Store Client</name>
+    <name>Neo4j - Benchmarks Results Store Client CLI</name>
 
     <properties>
-        <moduleName>com.neo4j.bench.client</moduleName>
-        <uberjar.name>benchmark-results-client</uberjar.name>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
 
@@ -25,38 +23,22 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-compress</artifactId>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-model</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-s3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-results-client</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.neo4j.driver</groupId>
-            <artifactId>neo4j-java-driver</artifactId>
-        </dependency>
-
-        <dependency>
-        	<groupId>com.github.chewiebug</groupId>
-        	<artifactId>gcviewer</artifactId>
-        	<version>1.36-SNAPSHOT</version>
+            <groupId>com.github.rvesse</groupId>
+            <artifactId>airline</artifactId>
         </dependency>
 
         <dependency>
@@ -66,34 +48,7 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-batch</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>io-test-utils</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <scope>test</scope>
+            <scope>runtime</scope>
         </dependency>
     </dependencies>
 
@@ -125,10 +80,16 @@
                         </goals>
                         <configuration>
                             <finalName>${project.artifactId}</finalName>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.neo4j.bench.client.cli.Main</mainClass>
+                                </transformer>
+                            </transformers>
                             <filters>
                                 <filter>
                                     <!--
-                                        Shading signded JARs will fail without this.
+                                        Shading signed JARs will fail without this.
                                         http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar
                                     -->
                                     <artifact>*:*</artifact>
@@ -147,12 +108,12 @@
     </build>
 
     <profiles>
-		<profile>
-			<properties>
-				<benchmarks.deploy.skip>false</benchmarks.deploy.skip>
-			</properties>
-			<id>benchmarksDeploy</id>
-		</profile>
+        <profile>
+            <properties>
+                <benchmarks.deploy.skip>false</benchmarks.deploy.skip>
+            </properties>
+            <id>benchmarksDeploy</id>
+        </profile>
     </profiles>
 
 </project>

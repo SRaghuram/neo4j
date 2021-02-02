@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client;
+package com.neo4j.bench.client.cli;
 
 import com.github.rvesse.airline.annotations.Command;
 import com.neo4j.bench.client.reporter.ResultsReporter;

@@ -3,11 +3,12 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client;
+package com.neo4j.bench.client.cli;
 
 import com.github.rvesse.airline.Cli;
 import com.github.rvesse.airline.builder.CliBuilder;
 import com.github.rvesse.airline.help.Help;
+import com.neo4j.bench.client.cli.annotate.AnnotatePackagingBuildCommand;
 import com.neo4j.bench.client.cli.refactor.MoveBenchmarkCommand;
 import com.neo4j.bench.client.cli.refactor.VerifySchemaCommand;
 

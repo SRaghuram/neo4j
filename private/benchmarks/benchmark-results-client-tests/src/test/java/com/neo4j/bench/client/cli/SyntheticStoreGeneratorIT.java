@@ -3,10 +3,12 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client;
+package com.neo4j.bench.client.cli;
 
-import com.neo4j.bench.client.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
-import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
+import com.neo4j.bench.client.QueryRetrier;
+import com.neo4j.bench.client.StoreClient;
+import com.neo4j.bench.client.cli.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
+import com.neo4j.bench.client.cli.SyntheticStoreGenerator.ToolBenchGroup;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 import com.neo4j.bench.model.model.Benchmark;

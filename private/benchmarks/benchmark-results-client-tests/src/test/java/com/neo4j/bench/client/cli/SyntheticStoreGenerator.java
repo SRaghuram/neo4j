@@ -3,10 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client;
+package com.neo4j.bench.client.cli;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.neo4j.bench.client.QueryRetrier;
+import com.neo4j.bench.client.StoreClient;
+import com.neo4j.bench.client.SubmitTestRunsAndPlansIT;
 import com.neo4j.bench.client.queries.annotation.AttachMetricsAnnotation;
 import com.neo4j.bench.client.queries.annotation.AttachTestRunAnnotation;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
@@ -409,9 +412,9 @@ public class SyntheticStoreGenerator
                     Map<Instance,Long> instances = new HashMap();
                     for ( int i = 0; i < RNG.nextInt( 1, 4 ); i++ )
                     {
-                        instances.put( new Instance( servers[RNG.nextInt( 0, servers.length )],
-                                                     Instance.Kind.Server,
-                                                     operatingSystems[RNG.nextInt( 0, operatingSystems.length )],
+                        instances.put( new Instance( randomFrom( servers ),
+                                                     Instance.Kind.AWS,
+                                                     randomFrom( operatingSystems ),
                                                      i,
                                                      1024 ), 1L );
                     }
@@ -642,8 +645,8 @@ public class SyntheticStoreGenerator
     static class GenerationResult
     {
         private final int expectedTotalTestRuns;
-        private final Set<List<String>> benchmarkGroups = new HashSet<>();
-        private final Set<List<String>> benchmarks = new HashSet<>();
+        private Set<List<String>> benchmarkGroups = new HashSet<>();
+        private Set<List<String>> benchmarks = new HashSet<>();
         private int testRuns;
         private final List<Long> packagingBuildIds = new ArrayList<>();
         private final Set<Environment> environments = new HashSet<>();
@@ -751,6 +754,11 @@ public class SyntheticStoreGenerator
         int testRuns()
         {
             return testRuns;
+        }
+
+        int environments()
+        {
+            return environments.size();
         }
 
         int javas()
