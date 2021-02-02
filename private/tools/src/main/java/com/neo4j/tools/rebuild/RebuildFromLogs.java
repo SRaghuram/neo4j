@@ -288,7 +288,8 @@ class RebuildFromLogs
                     ConsistencyCheckService.defaultConsistencyCheckThreadsNumber(), ConsistencyFlags.DEFAULT, tuningConfiguration, false,
                     NodeBasedMemoryLimiter.DEFAULT );
 
-            ConsistencySummaryStatistics summaryStatistics = fullCheck.execute( pageCache, stores, () -> (CountsStore) storageEngine.countsAccessor(),
+            ConsistencySummaryStatistics summaryStatistics = fullCheck.execute( pageCache, stores,
+                    () -> (CountsStore) storageEngine.countsAccessor(), storageEngine::relationshipGroupDegreesStore,
                     null, pageCacheTracer, EmptyMemoryTracker.INSTANCE,
                     new Log4jLogProvider( System.err ).getLog( getClass() ) );
             if ( !summaryStatistics.isConsistent() )
