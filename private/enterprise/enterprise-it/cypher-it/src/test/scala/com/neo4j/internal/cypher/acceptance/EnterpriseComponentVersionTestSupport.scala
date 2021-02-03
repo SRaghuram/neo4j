@@ -29,7 +29,6 @@ import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D6
 import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D7
 import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42P1
 import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D1
-import org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D2
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.scalactic.source
@@ -40,9 +39,9 @@ import org.scalatest.mockito.MockitoSugar
 trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLike {
   self: AdministrationCommandAcceptanceTestBase =>
 
-  val CURRENT_VERSION: String = VERSION_43D2
+  val CURRENT_VERSION: String = VERSION_43D1
   val allSystemGraphVersions: Array[String] = Array(VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D4, VERSION_42D6, VERSION_42D7, VERSION_42P1,
-    VERSION_43D1, VERSION_43D2)
+    VERSION_43D1)
   var _configSupplier: () => Config = () => Config.defaults()
   var _version: Option[String] = None
   var _expectToFailWith: Option[Class[_]] = None
@@ -99,7 +98,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
         granted(constraintManagement).role("admin").map,
         granted(adminAction("admin")).role("admin").map
       )
-      case VERSION_43D1 | VERSION_43D2 => defaultRolePrivileges
+      case VERSION_43D1 => defaultRolePrivileges
       case _            => throw new IllegalArgumentException(s"Unsupported version: $version")
     }
     adminPrivileges.foldLeft(Set.empty[Map[String, AnyRef]]) {

@@ -426,7 +426,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW CURRENT USER") should have size 0
   }
 
-  test("should show current user with default database") {
+  ignore("should show current user with default database") {
     // GIVEN
     setup()
     setupUserWithCustomRole()
@@ -614,7 +614,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin("foo", "password", AuthenticationResult.FAILURE)
   }
 
-  test("should create user with all parameters") {
+  ignore("should create user with all parameters") {
     // WHEN
     execute(s"CREATE USER foo SET PLAINTEXT PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED SET DEFAULT DATABASE $DEFAULT_DATABASE_NAME")
 
@@ -863,7 +863,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  test("should create user with default database") {
+  ignore("should create user with default database") {
     // GIVEN
     val username = "foo"
     execute("CREATE DATABASE bar")
@@ -876,7 +876,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  test("should create user with default database that does not exist") {
+  ignore("should create user with default database that does not exist") {
     // GIVEN
     val username = "foo"
 
@@ -1544,7 +1544,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  test("should alter users default database") {
+  ignore("should alter users default database") {
     // GIVEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
     execute("CREATE DATABASE bar")
@@ -1562,7 +1562,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     }) should be (1)
   }
 
-  test("should alter users default database with parameter") {
+  ignore("should alter users default database with parameter") {
     // GIVEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
     execute("CREATE DATABASE bar")
@@ -1580,7 +1580,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     }) should be (1)
   }
 
-  test("should alter users default database to non-existent database") {
+  ignore("should alter users default database to non-existent database") {
     // GIVEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
 
@@ -2140,7 +2140,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       })
   }
 
-  test("should set default database and connect to that database") {
+  ignore("should set default database and connect to that database") {
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -2153,7 +2153,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       })
   }
 
-  test("should retain privileges granted on default database when the default database is changed") {
+  ignore("should retain privileges granted on default database when the default database is changed") {
 
     // GIVEN
     execute("CREATE DATABASE foo")

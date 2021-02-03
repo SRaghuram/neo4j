@@ -141,7 +141,7 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
       withDriver(tx => tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set())
     }
 
-    test(s"Should get user's default database when logging in and a default database has been set with fabric: $fabricIsEnabled") {
+    ignore(s"Should get user's default database when logging in and a default database has been set with fabric: $fabricIsEnabled") {
       restartWithConfig(
         databaseConfig() + (FabricSettings.enabled_by_default -> fabricIsEnabled)
       )
@@ -167,7 +167,7 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
       withDriver(tx => tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "foo")))
     }
 
-    test(s"Should fail when logging in and a default database has been set but is stopped with fabric: $fabricIsEnabled") {
+    ignore(s"Should fail when logging in and a default database has been set but is stopped with fabric: $fabricIsEnabled") {
       restartWithConfig(
         databaseConfig() + (FabricSettings.enabled_by_default -> fabricIsEnabled)
       )
@@ -192,7 +192,7 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
       } should have message s"Database '$fooDb' is unavailable."
     }
 
-    test(s"Should fail when logging in and a default database has been set but not created with fabric: $fabricIsEnabled") {
+    ignore(s"Should fail when logging in and a default database has been set but not created with fabric: $fabricIsEnabled") {
       restartWithConfig(
         databaseConfig() + (FabricSettings.enabled_by_default -> fabricIsEnabled)
       )
@@ -213,7 +213,7 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     }
   })
 
-  test("Updating default database during a user session does not change the default database for that session") {
+  ignore("Updating default database during a user session does not change the default database for that session") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"CREATE DATABASE $fooDb")
@@ -248,7 +248,7 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     }
   }
 
-  test("Updating default database during a user session where the default database has not previously been used does not changed it for that session") {
+  ignore("Updating default database during a user session where the default database has not previously been used does not changed it for that session") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"CREATE DATABASE $fooDb")
@@ -284,7 +284,7 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     }
   }
 
-  test("Should get user's default database when logging onto a cluster") {
+  ignore("Should get user's default database when logging onto a cluster") {
     // GIVEN
     withCluster(cluster => {
       cluster.systemTx((_, tx) => {
@@ -316,7 +316,7 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     })
   }
 
-  test("Should get user's default database and permissions when logging onto a cluster using fabric routing") {
+  ignore("Should get user's default database and permissions when logging onto a cluster using fabric routing") {
     // GIVEN
     withCluster(cluster => {
       cluster.systemTx((_, tx) => {

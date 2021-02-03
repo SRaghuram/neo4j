@@ -19,7 +19,6 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT DROP USER ON DBMS TO custom")
     execute("GRANT SHOW USER ON DBMS TO custom")
     execute("GRANT SET USER STATUS ON DBMS TO custom")
-    execute("GRANT SET USER DEFAULT DATABASE ON DBMS TO custom")
     execute("GRANT SET PASSWORDS ON DBMS TO custom")
     execute("GRANT ALTER USER ON DBMS TO custom")
     execute("GRANT USER MANAGEMENT ON DBMS TO custom")
@@ -34,7 +33,6 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
       granted(adminAction("show_user")).role("custom").map,
       granted(adminAction("set_user_status")).role("custom").map,
       granted(adminAction("set_passwords")).role("custom").map,
-      granted(adminAction("set_user_default_database")).role("custom").map,
       granted(adminAction("alter_user")).role("custom").map
     ))
   }
@@ -335,7 +333,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
   Seq("user management", "alter user", "set user default database").foreach {
     privilege =>
-      test(s"should enforce privilege for setting user default database with $privilege") {
+      ignore(s"should enforce privilege for setting user default database with $privilege") {
         // GIVEN
         setupUserWithCustomRole("foo", "123")
         execute("CREATE DATABASE bar")
@@ -359,7 +357,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         } should have message PERMISSION_DENIED_SET_USER_DEFAULT_DATABASE
       }
 
-      test(s"should fail setting user default database when denied $privilege") {
+      ignore(s"should fail setting user default database when denied $privilege") {
         // GIVEN
         setupUserWithCustomAdminRole("foo", "bar")
 
@@ -377,7 +375,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
   Seq("user management", "create user").foreach {
     privilege =>
-      test(s"should enforce privilege when creating a user with a default database with $privilege") {
+      ignore(s"should enforce privilege when creating a user with a default database with $privilege") {
         // GIVEN
         setupUserWithCustomRole("foo", password)
         execute("CREATE DATABASE bar")
@@ -517,9 +515,6 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "ALTER USER foo SET PASSWORD 'abc'")
     } should have message PERMISSION_DENIED_SET_PASSWORDS
-    the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "ALTER USER foo SET DEFAULT DATABASE abc")
-    } should have message PERMISSION_DENIED_SET_USER_DEFAULT_DATABASE
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW USERS")
     } should have message PERMISSION_DENIED_SHOW_USER

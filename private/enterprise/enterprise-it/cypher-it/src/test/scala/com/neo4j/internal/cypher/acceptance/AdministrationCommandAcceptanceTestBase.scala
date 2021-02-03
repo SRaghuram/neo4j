@@ -388,7 +388,6 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "DROP USER" -> adminAction("drop_user"),
     "SHOW USER" -> adminAction("show_user"),
     "SET USER STATUS" -> adminAction("set_user_status"),
-    "SET USER DEFAULT DATABASE" -> adminAction("set_user_default_database"),
     "SET PASSWORDS" -> adminAction("set_passwords"),
     "ALTER USER" -> adminAction("alter_user"),
     "USER MANAGEMENT" -> adminAction("user_management"),

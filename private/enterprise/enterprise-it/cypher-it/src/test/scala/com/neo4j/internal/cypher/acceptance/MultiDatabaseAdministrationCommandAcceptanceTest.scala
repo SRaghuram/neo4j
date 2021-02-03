@@ -481,7 +481,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.head("name") shouldBe "neo4j"
   }
 
-  test("should show default DBMS database for user with custom default database") {
+  ignore("should show default DBMS database for user with custom default database") {
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
@@ -507,7 +507,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.toList.head should be (Map("name" -> "neo4j"))
   }
 
-  test("should show default database where multiple databases exist") {
+  ignore("should show default database where multiple databases exist") {
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
@@ -904,7 +904,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result2.toList should be(empty)
   }
 
-  test("should show user specific default database") {
+  ignore("should show user specific default database") {
     // GIVEN
     val config = Config.defaults()
     config.set[java.lang.Boolean](GraphDatabaseSettings.auth_enabled, true)
@@ -930,7 +930,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     }) should be (1)
   }
 
-  test("should show default database when default database is stopped in SHOW USERS") {
+  ignore("should show default database when default database is stopped in SHOW USERS") {
     // GIVEN
     val config = Config.defaults()
     config.set[java.lang.Boolean](GraphDatabaseSettings.auth_enabled, true)
@@ -947,7 +947,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.toSet should be(Set(user("bar", defaultDatabase = "foo")))
   }
 
-  test("should retain user default database when database is created") {
+  ignore("should retain user default database when database is created") {
     // GIVEN
     val config = Config.defaults()
     config.set[java.lang.Boolean](GraphDatabaseSettings.auth_enabled, true)
@@ -966,7 +966,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  test("should retain user default database when database is dropped") {
+  ignore("should retain user default database when database is dropped") {
     // GIVEN
     val config = Config.defaults()
     config.set[java.lang.Boolean](GraphDatabaseSettings.auth_enabled, true)

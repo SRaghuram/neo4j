@@ -292,10 +292,6 @@ abstract class SecurityGraphCompatibilityTestBase
             new PrivilegeCommand( "SHOW CONSTRAINT ON DATABASE *", GRANT_DENY_REVOKE )
     );
 
-    static Set<PrivilegeCommand> PRIVILEGES_ADDED_IN_43D2 = Set.of(
-            new PrivilegeCommand( "SET USER DEFAULT DATABASE ON DBMS", GRANT_DENY_REVOKE )
-    );
-
     static Set<PrivilegeCommand> ALL_PRIVILEGES = new HashSet<>();
 
     static
@@ -306,7 +302,6 @@ abstract class SecurityGraphCompatibilityTestBase
         ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_42D4 );
         ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_42D6 );
         ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_42D7 );
-        ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_43D2 );
     }
 
     static class PrivilegeCommand

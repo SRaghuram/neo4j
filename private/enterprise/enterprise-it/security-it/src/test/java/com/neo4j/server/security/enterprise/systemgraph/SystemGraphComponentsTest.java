@@ -81,7 +81,6 @@ import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D
 import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D7;
 import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42P1;
 import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D1;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D2;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.CURRENT;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE;
@@ -257,8 +256,7 @@ class SystemGraphComponentsTest
                 Arguments.arguments( VERSION_42D6, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_42D7, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_42P1, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_43D1, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_43D2, CURRENT )
+                Arguments.arguments( VERSION_43D1, CURRENT )
         );
     }
 
