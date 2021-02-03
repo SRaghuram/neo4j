@@ -234,17 +234,14 @@ class PipelinedNodeIndexSeekTest extends NodeIndexSeekTestBase(FUSING, PIPELINED
                                  with NodeLockingUniqueIndexSeekTestBase[EnterpriseRuntimeContext]
                                  with EnterpriseNodeIndexSeekTestBase[EnterpriseRuntimeContext]
                                  with PipelinedSpecSuite
-
 class PipelinedNodeIndexSeekNoFusingTest extends NodeIndexSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
                                          with NodeLockingUniqueIndexSeekTestBase[EnterpriseRuntimeContext]
                                          with EnterpriseNodeIndexSeekTestBase[EnterpriseRuntimeContext]
                                          with PipelinedSpecSuite
 class PipelinedRuntimeNodeIndexStartsWithSeekTest extends NodeIndexStartsWithSeekTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedRuntimeNodeIndexStartsWithSeekNoFusingTest extends NodeIndexStartsWithSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
-
 class PipelinedPointDistanceSeekTest extends NodeIndexPointDistanceSeekTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedPointDistanceSeekNoFusingTest extends NodeIndexPointDistanceSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-
 class PipelinedMultiNodeIndexSeekTest extends MultiNodeIndexSeekTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedMultiNodeIndexSeekNoFusingTest extends MultiNodeIndexSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedMultiNodeIndexSeekRewriterTest extends MultiNodeIndexSeekRewriterTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

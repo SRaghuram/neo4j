@@ -288,7 +288,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               stringEndsWithScan,
               ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
-        case plan@plans.NodeUniqueIndexSeek(node, label, properties, valueExpr, _, order) if readOnly =>
+        case plan@plans.NodeUniqueIndexSeek(node, label, properties, valueExpr, _, order)  =>
             indexSeek(node, label, properties, valueExpr, asKernelIndexOrder(order), unique = true, plan)
 
         case plan@plans.NodeIndexSeek(node, label, properties, valueExpr, _, order) =>
@@ -1063,7 +1063,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                         plan: LogicalPlan): Option[NewTemplate] = {
     val needsLockingUnique = !readOnly && unique
     valueExpr match {
-      case SingleQueryExpression(expr) if !needsLockingUnique =>
+      case SingleQueryExpression(expr) =>
         require(properties.length == 1)
         ctx: TemplateContext =>
           val slottedIndexedProperties = properties.map(SlottedIndexedProperty(node, _, ctx.slots))
@@ -1076,10 +1076,11 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
             property,
             ctx.compileExpression(expr, plan.id),
             ctx.indexRegistrator.registerQueryIndex(label, properties),
-            ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+            ctx.argumentSizes(plan.id),
+            needsLockingUnique)(ctx.expressionCompiler)
 
       //MATCH (n:L) WHERE n.prop = 1337 OR n.prop = 42
-      case ManyQueryExpression(expr) if !needsLockingUnique =>
+      case ManyQueryExpression(expr) =>
         require(properties.length == 1)
         ctx: TemplateContext =>
           val slottedIndexedProperties = properties.map(SlottedIndexedProperty(node, _, ctx.slots))
@@ -1092,7 +1093,8 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
             SeekExpression(Seq(ctx.compileExpression(expr, plan.id)), in => manyExactSeek(property.propertyKeyId, in.head)),
             ctx.indexRegistrator.registerQueryIndex(label, properties),
             order,
-            ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+            ctx.argumentSizes(plan.id),
+            needsLockingUnique)(ctx.expressionCompiler)
 
       case RangeQueryExpression(rangeWrapper) if !needsLockingUnique =>
         require(properties.length == 1)
@@ -1123,13 +1125,14 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                     seek,
                     ctx.indexRegistrator.registerQueryIndex(label, properties),
                     order,
-                    ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+                    ctx.argumentSizes(plan.id),
+                  false)(ctx.expressionCompiler)
               }
             }
           }
         )
 
-      case CompositeQueryExpression(parts) if !needsLockingUnique =>
+      case CompositeQueryExpression(parts) =>
         require(parts.lengthCompare(properties.length) == 0)
         val predicates = parts.zip(properties).flatMap {
           case (e, p) => computeCompositeQueries(e, p, plan.id)
@@ -1147,7 +1150,8 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               predicates.map(predicate => predicate(ctx)),
               ctx.indexRegistrator.registerQueryIndex(label, properties),
               order,
-              ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+              ctx.argumentSizes(plan.id),
+              needsLockingUnique)(ctx.expressionCompiler)
         }
 
       case ExistenceQueryExpression() =>
