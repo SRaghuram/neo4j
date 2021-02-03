@@ -27,6 +27,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   private val usesExpandInto = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Expand(Into)"))
   private val usesAntiSemiApply = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("AntiSemiApply").or(includeSomewhere.aPlan("Anti")))
   private val noTriadic = ComparePlansWithAssertion(_ should not(includeTriadicSelection))
+
   test("find friends of others") {
     // given
     execute( """CREATE (a:Person{name:"a"}), (b:Person{name:"b"}), (c:Person{name:"c"}), (d:Person{name:"d"})
