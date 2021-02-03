@@ -218,15 +218,13 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
     @Description( "Threshold in Mb for when a downloaded batch of transactions for a read replicas should be incrementally applied. " +
                   "When a read replica has pulled transaction data overseeing this value they will be applied to the store" )
     public static final Setting<Integer> read_replica_transaction_applier_batch_size =
-            newBuilder( "causal_clustering.read_replica_transaction_applier_batch_size", INT, 4 )
-                    .dynamic()
+            newBuilder( "causal_clustering.read_replica_transaction_applier_batch_size", INT, 1 )
                     .addConstraint( min( 1 ) ).build();
 
     @Internal
     @Description( "Maximum queued transactions to be applied. A pull request will abort if this limit is reached" )
     public static final Setting<Integer> read_replica_transaction_applier_max_queue_size =
-            newBuilder( "causal_clustering.read_replica_transaction_applier_max_queue_size", INT, 1024 )
-                    .dynamic()
+            newBuilder( "causal_clustering.read_replica_transaction_applier_max_queue_size", INT, 10 )
                     .addConstraint( min( 1 ) ).build();
 
     @Internal
