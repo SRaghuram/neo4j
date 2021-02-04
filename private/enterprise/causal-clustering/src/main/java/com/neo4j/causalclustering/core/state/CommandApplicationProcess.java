@@ -27,6 +27,7 @@ import com.neo4j.causalclustering.helper.scheduling.SingleElementJobsQueue;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 import org.neo4j.logging.Log;
@@ -34,7 +35,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.util.locks.CriticalSection;
 
 import static java.lang.Math.max;
 import static java.lang.String.format;
@@ -62,8 +62,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
     private final ApplierState applierState = new ApplierState();
     private volatile boolean hasPanicked;
 
-    private final CriticalSection control = new CriticalSection();
-    private final CriticalSection data = new CriticalSection();
+    private final ReentrantLock data = new ReentrantLock();
 
     public CommandApplicationProcess( RaftLog raftLog, int maxBatchSize, int flushEvery, LogProvider logProvider, ProgressTracker progressTracker,
                                       SessionTracker sessionTracker, CoreState coreState, InFlightCache inFlightCache, Monitors monitors,
@@ -93,15 +92,12 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         }
     }
 
-    private void scheduleJob()
+    private synchronized void scheduleJob()
     {
-        control.lock( () ->
-                      {
-                          if ( pauseCount == 0 && !hasPanicked )
-                          {
-                              scheduler.offerJob( this::applyJob );
-                          }
-                      } );
+        if ( pauseCount == 0 && !hasPanicked )
+        {
+            scheduler.offerJob( this::applyJob );
+        }
     }
 
     @Override
@@ -201,17 +197,14 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
      *
      * @param coreSnapshot The snapshot to install.
      */
-    void installSnapshot( CoreSnapshot coreSnapshot )
+    synchronized void installSnapshot( CoreSnapshot coreSnapshot )
     {
-        control.lock( () ->
-                      {
-                          if ( pauseCount <= 0 )
-                          {
-                              throw new IllegalStateException( "Must be paused when installing a snapshot" );
-                          }
-                          lastFlushed.set( coreSnapshot.prevIndex() );
-                          applierState.setLastApplied( coreSnapshot.prevIndex() );
-                      } );
+        if ( pauseCount <= 0 )
+        {
+            throw new IllegalStateException( "Must be paused when installing a snapshot" );
+        }
+        lastFlushed.set( coreSnapshot.prevIndex() );
+        applierState.setLastApplied( coreSnapshot.prevIndex() );
     }
 
     private void applyBatch( long lastIndex, List<DistributedOperation> batch ) throws Exception
@@ -223,15 +216,20 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
         batchStat.collect( batch.size() );
 
-        data.lock( () ->
-                   {
-                       long startIndex = lastIndex - batch.size() + 1;
-                       long lastHandledIndex = handleOperations( startIndex, batch );
-                       assert lastHandledIndex == lastIndex;
-                       applierState.setLastApplied( lastIndex );
+        data.lock();
+        try
+        {
+            long startIndex = lastIndex - batch.size() + 1;
+            long lastHandledIndex = handleOperations( startIndex, batch );
+            assert lastHandledIndex == lastIndex;
+            applierState.setLastApplied( lastIndex );
 
-                       maybeFlushToDisk();
-                   } );
+            maybeFlushToDisk();
+        }
+        finally
+        {
+            data.unlock();
+        }
     }
 
     private long handleOperations( long commandIndex, List<DistributedOperation> operations )
@@ -271,102 +269,92 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
     private long doFlush() throws IOException
     {
-        return data.lock( () ->
-                          {
-                              long flushIndex = applierState.lastApplied;
-                              if ( flushIndex > NOTHING )
-                              {
-                                  coreState.flush( flushIndex );
-                                  lastFlushed.set( flushIndex );
-                              }
-                              return flushIndex;
-                          } );
+        data.lock();
+        try
+        {
+            long flushIndex = applierState.lastApplied;
+            if ( flushIndex > NOTHING )
+            {
+                coreState.flush( flushIndex );
+                lastFlushed.set( flushIndex );
+            }
+            return flushIndex;
+        }
+        finally
+        {
+            data.unlock();
+        }
     }
 
-    public long flush() throws IOException
+    public synchronized long flush() throws IOException
     {
-        return control.lock( () ->
-                             {
-                                 if ( pauseCount > 0 )
-                                 {
-                                     return NOTHING;
-                                 }
-                                 return doFlush();
-                             } );
+        if ( pauseCount > 0 )
+        {
+            return NOTHING;
+        }
+        return doFlush();
     }
 
-    public void start() throws Exception
+    public synchronized void start() throws Exception
     {
-        control.lock( () ->
-                      {
-                          lastFlushed.compareAndSet( NOTHING, coreState.getLastFlushed() );
-                          applierState.setLastApplied( lastFlushed.get() );
+        lastFlushed.compareAndSet( NOTHING, coreState.getLastFlushed() );
+        applierState.setLastApplied( lastFlushed.get() );
 
-                          log.info( format( "Restoring last applied index to %d", lastFlushed.get() ) );
-                          sessionTracker.start();
+        log.info( format( "Restoring last applied index to %d", lastFlushed.get() ) );
+        sessionTracker.start();
 
-                          /* Considering the order in which state is flushed, the state machines will
-                           * always be furthest ahead and indicate the furthest possible state to
-                           * which we must replay to reach a consistent state. */
-                          long lastPossiblyApplying = max( coreState.getLastAppliedIndex(), applierState.getLastSeenCommitIndex() );
+        /* Considering the order in which state is flushed, the state machines will
+         * always be furthest ahead and indicate the furthest possible state to
+         * which we must replay to reach a consistent state. */
+        long lastPossiblyApplying = max( coreState.getLastAppliedIndex(), applierState.getLastSeenCommitIndex() );
 
-                          if ( lastPossiblyApplying > applierState.lastApplied )
-                          {
-                              log.info( "Applying up to: " + lastPossiblyApplying );
-                              applyUpTo( lastPossiblyApplying );
-                          }
+        if ( lastPossiblyApplying > applierState.lastApplied )
+        {
+            log.info( "Applying up to: " + lastPossiblyApplying );
+            applyUpTo( lastPossiblyApplying );
+        }
 
-                          resumeApplier( "startup" );
-                      } );
+        resumeApplier( "startup" );
     }
 
-    public void stop() throws IOException
+    public synchronized void stop() throws IOException
     {
-        control.lock( () ->
-                      {
-                          pauseApplier( "shutdown" );
-                          doFlush();
-                      } );
+        pauseApplier( "shutdown" );
+        doFlush();
     }
 
-    public void pauseApplier( String reason )
+    public synchronized void pauseApplier( String reason )
     {
-        control.lock( () ->
-                      {
-                          if ( pauseCount < 0 )
-                          {
-                              throw new IllegalStateException( "Unmatched pause/resume" );
-                          }
+        if ( pauseCount < 0 )
+        {
+            throw new IllegalStateException( "Unmatched pause/resume" );
+        }
 
-                          pauseCount++;
-                          log.info( format( "Pausing due to %s (count = %d)", reason, pauseCount ) );
+        pauseCount++;
+        log.info( format( "Pausing due to %s (count = %d)", reason, pauseCount ) );
 
-                          if ( scheduler != null )
-                          {
-                              scheduler.stopAndFlush();
-                              scheduler = null;
-                          }
-                      } );
+        if ( scheduler != null )
+        {
+            scheduler.stopAndFlush();
+            scheduler = null;
+        }
     }
 
-    public void resumeApplier( String reason )
+    public synchronized void resumeApplier( String reason )
     {
-        control.lock( () ->
-                      {
-                          if ( pauseCount <= 0 )
-                          {
-                              throw new IllegalStateException( "Unmatched pause/resume" );
-                          }
+        if ( pauseCount <= 0 )
+        {
+            throw new IllegalStateException( "Unmatched pause/resume" );
+        }
 
-                          pauseCount--;
-                          log.info( format( "Resuming after %s (count = %d)", reason, pauseCount ) );
+        pauseCount--;
+        log.info( format( "Resuming after %s (count = %d)", reason, pauseCount ) );
 
-                          if ( pauseCount == 0 )
-                          {
-                              assert scheduler == null;
-                              scheduler = schedulerSupplier.get();
-                              scheduleJob();
-                          }
-                      } );
+        if ( pauseCount == 0 )
+        {
+            assert scheduler == null;
+            scheduler = schedulerSupplier.get();
+            scheduleJob();
+        }
     }
 }
