@@ -6,9 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 
-import java.lang.Boolean.FALSE
-import java.lang.Long.valueOf
-
 import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -17,6 +14,9 @@ import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.Path
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+
+import java.lang.Boolean.FALSE
+import java.lang.Long.valueOf
 
 class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -691,7 +691,8 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | ) AS weight
         |ORDER BY weight DESC""".stripMargin
 
-    val result = executeWith(Configs.NestedPlan, query)
+    // Pipeline fused expected to succeed since nested plan expression is part of an operator that isn't fused
+    val result = executeWith(Configs.NestedPlan + Configs.PipelinedFused, query)
 
     // Four shortest path with the same weight
     result.toList should equal(List(Map("weight" -> 2.0), Map("weight" -> 2.0), Map("weight" -> 2.0), Map("weight" -> 2.0)))
@@ -710,7 +711,8 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | ) AS weight
         |ORDER BY weight DESC""".stripMargin
 
-    val result = executeWith(Configs.NestedPlan, query)
+    // Pipeline fused expected to succeed since nested plan expression is part of an operator that isn't fused
+    val result = executeWith(Configs.NestedPlan + Configs.PipelinedFused, query)
 
     // Four shortest path with the same weight
     result.toList should equal(List(Map("weight" -> 2.0), Map("weight" -> 2.0), Map("weight" -> 2.0), Map("weight" -> 2.0)))

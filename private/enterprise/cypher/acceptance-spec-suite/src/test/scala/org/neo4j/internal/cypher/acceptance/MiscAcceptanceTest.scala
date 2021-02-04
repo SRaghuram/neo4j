@@ -5,9 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.util
-import java.util.concurrent.TimeUnit
-
 import com.neo4j.cypher.RunWithConfigTestSupport
 import org.neo4j.configuration.GraphDatabaseInternalSettings.cypher_idp_solver_duration_threshold
 import org.neo4j.configuration.GraphDatabaseInternalSettings.cypher_idp_solver_table_threshold
@@ -15,6 +12,9 @@ import org.neo4j.configuration.GraphDatabaseInternalSettings.cypher_pipelined_ba
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+
+import java.util
+import java.util.concurrent.TimeUnit
 
 class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport with RunWithConfigTestSupport {
 
@@ -249,7 +249,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   test("should get degree of node from a parameter") {
     val node = createLabeledNode("Item")
     relate(createNode(), node, "CONTAINS")
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "UNWIND $param as p MATCH (p:Item) RETURN size((p)<-[:CONTAINS]-()) as total", params = Map("param" -> List(node)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused, "UNWIND $param as p MATCH (p:Item) RETURN size((p)<-[:CONTAINS]-()) as total", params = Map("param" -> List(node)))
     result.toList should equal(List(Map("total" -> 1)))
   }
 

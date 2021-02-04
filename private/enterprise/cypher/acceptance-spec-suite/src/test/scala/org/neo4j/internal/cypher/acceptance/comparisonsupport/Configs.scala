@@ -16,6 +16,10 @@ object Configs {
 
   def Pipelined: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel, Runtimes.PipelinedFused, Runtimes.PipelinedNonFused))
 
+  def PipelinedNonFused: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.PipelinedNonFused))
+
+  def PipelinedFused: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.PipelinedFused))
+
   def Parallel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel))
 
   def InterpretedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Interpreted))
@@ -64,6 +68,6 @@ object Configs {
   val Create                : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
   val ProcedureCallWrite    : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
-  val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
+  val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedNonFused
   val ProcedureCallRead     : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
 }

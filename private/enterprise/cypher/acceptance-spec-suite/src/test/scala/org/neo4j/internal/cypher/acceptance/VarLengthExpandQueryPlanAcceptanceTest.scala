@@ -430,7 +430,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         |RETURN path
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused, query,
       planComparisonStrategy =
         ComparePlansWithAssertion( plan => {
           plan shouldNot includeSomewhere.aPlan("RollUpApply")
@@ -460,7 +460,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         |MATCH (etat:EtatElementHTA) -[:EST_ETAT_DE]-> (element)
         |RETURN element""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused, query)
 
     result.toList shouldBe empty
   }

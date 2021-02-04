@@ -614,7 +614,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(anotherNode, createNode(), "HAS_CATEGORY")
 
     // THEN
-    profile(Configs.InterpretedAndSlottedAndPipelined,
+    profile(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused,
       """MATCH (cat:Category)
         |WITH collect(cat) as categories
         |MATCH (m:Entity)

@@ -259,7 +259,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2, "T", Map("x" -> 1))
     relate(n2, n3, "T", Map("x" -> 2))
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "WHERE all(r IN relationships(p) WHERE r:T)" +
@@ -284,7 +284,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2, "S", Map("x" -> 1))
     relate(n2, n3, "T", Map("x" -> 2))
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "WHERE all(r IN relationships(p) WHERE r:T)" +
@@ -343,7 +343,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2, "T", Map("x" -> 1))
     relate(n2, n3, "T", Map("x" -> 2))
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "WHERE any(r IN relationships(p) WHERE r:T) " +
@@ -414,7 +414,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2, "T", Map("x" -> 1))
     relate(n2, n3, "T", Map("x" -> 2))
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "WHERE none(r IN relationships(p) WHERE r:Fake) " +
