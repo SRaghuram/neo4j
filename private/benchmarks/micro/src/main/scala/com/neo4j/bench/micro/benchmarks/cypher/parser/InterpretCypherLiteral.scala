@@ -13,8 +13,8 @@ import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
 import com.neo4j.bench.micro.benchmarks.RNGState
 import org.neo4j.cypher.internal.ast.factory.ASTExceptionFactory
-import org.neo4j.cypher.internal.ast.factory.LiteralInterpreter
 import org.neo4j.cypher.internal.evaluator.Evaluator
+import org.neo4j.cypher.internal.literal.interpreter.LiteralInterpreter
 import org.neo4j.cypher.internal.parser.javacc
 import org.neo4j.cypher.internal.parser.javacc.CypherCharStream
 import org.neo4j.exceptions.SyntaxException
