@@ -22,7 +22,7 @@ import org.neo4j.values.AnyValue
 
 import scala.math.round
 
-class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFileTestSupport with CypherComparisonSupport {
+class EffectiveCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFileTestSupport with CypherComparisonSupport {
 
   test("should estimate rows when parameterized") {
     (0 until 100).map(_ => createLabeledNode("Person"))
@@ -148,7 +148,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 10
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n) RETURN n LIMIT $limit")
+    val result = executeSingle(s"EXPLAIN MATCH (n) RETURN n LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
@@ -162,7 +162,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 10
     (0 until nodeCount).foreach(_ => createNode())
 
-    val query = s"CYPHER MATCH (n), (m) RETURN n, m LIMIT $limit"
+    val query = s"EXPLAIN MATCH (n), (m) RETURN n, m LIMIT $limit"
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query,
@@ -190,7 +190,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 5
     (0 until nodeCount / 2).foreach(i => executeSingle(s"CREATE ({ind: $i})-[:REL]->({ind: ${i + nodeCount / 2}})"))
 
-    val result = executeSingle(s"MATCH (n)--(m) USING JOIN ON m RETURN m LIMIT $limit")
+    val result = executeSingle(s"EXPLAIN MATCH (n)--(m) USING JOIN ON m RETURN m LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
@@ -209,7 +209,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 50
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n) CREATE (m:M) RETURN n LIMIT $limit")
+    val result = executeSingle(s"EXPLAIN MATCH (n) CREATE (m:M) RETURN n LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("ExhaustiveLimit").withEstimatedRows(limit)
@@ -225,7 +225,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 49
     (0 until nodeCount).foreach(_ => createNode())
 
-    val query = s"profile MATCH (n), (m) WITH n, m RETURN n, m ORDER BY m LIMIT $limit"
+    val query = s"EXPLAIN MATCH (n), (m) WITH n, m RETURN n, m ORDER BY m LIMIT $limit"
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query,
@@ -256,7 +256,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 50
     (0 until nodeCount).foreach(_ => createNode())
 
-    val query = s"MATCH (n), (m) RETURN n, m ORDER BY n, m LIMIT $limit"
+    val query = s"EXPLAIN MATCH (n), (m) RETURN n, m ORDER BY n, m LIMIT $limit"
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query,
@@ -285,7 +285,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     (0 until nodeCount).foreach(i => createLabeledNode(Map("idx" -> i), "Person"))
     graph.createIndex("Person", "idx")
 
-    val result = executeSingle(s"MATCH (n:Person) WHERE exists(n.idx) RETURN n.idx, n.b ORDER BY n.idx, n.b LIMIT $limit")
+    val result = executeSingle(s"EXPLAIN MATCH (n:Person) WHERE exists(n.idx) RETURN n.idx, n.b ORDER BY n.idx, n.b LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("PartialTop").withEstimatedRows(limit)
@@ -302,7 +302,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     (0 until nodeCount).foreach(i => createLabeledNode(Map("idx" -> 1), "Person"))
     graph.createIndex("Person", "idx")
 
-    val result = executeSingle(s"MATCH (n:Person) WHERE exists(n.idx) WITH n ORDER BY n.idx, n.b LIMIT $highLimit RETURN * LIMIT $lowLimit")
+    val result = executeSingle(s"EXPLAIN MATCH (n:Person) WHERE exists(n.idx) WITH n ORDER BY n.idx, n.b LIMIT $highLimit RETURN * LIMIT $lowLimit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
       .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
@@ -321,7 +321,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val highLimit = 20
     (0 until nodeCount).foreach(_ => createNode())
 
-    val query = s"MATCH (n), (m) WITH n, m LIMIT $lowLimit RETURN n, m LIMIT $highLimit"
+    val query = s"EXPLAIN MATCH (n), (m) WITH n, m LIMIT $lowLimit RETURN n, m LIMIT $highLimit"
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query,
@@ -353,7 +353,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val highLimit = 200000
     (0 until nodeCount).foreach(_ => createNode())
 
-    val query = s"MATCH (n), (m) WITH n, m LIMIT $highLimit RETURN n, m LIMIT $lowLimit"
+    val query = s"EXPLAIN MATCH (n), (m) WITH n, m LIMIT $highLimit RETURN n, m LIMIT $lowLimit"
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query,
@@ -386,7 +386,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val unwindFactor = 100
     (0 until nodeCount).foreach(_ => createNode())
 
-    val query = s"PROFILE MATCH (n), (m) WITH n, m LIMIT $highLimit UNWIND range(1, $unwindFactor) AS i RETURN n, m, $$x LIMIT $lowLimit"
+    val query = s"EXPLAIN MATCH (n), (m) WITH n, m LIMIT $highLimit UNWIND range(1, $unwindFactor) AS i RETURN n, m, $$x LIMIT $lowLimit"
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query,
@@ -421,7 +421,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val highLimit = 200000
     (0 until nodeCount).foreach(_ => createNode())
 
-    val query = s"MATCH (n), (m) WITH n, m LIMIT $highLimit WHERE n.prop > 5 RETURN n, m LIMIT $lowLimit"
+    val query = s"EXPLAIN MATCH (n), (m) WITH n, m LIMIT $highLimit WHERE n.prop > 5 RETURN n, m LIMIT $lowLimit"
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query,
@@ -456,7 +456,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val unwindFactor = 100
     (0 until nodeCount).foreach(_ => createNode())
 
-    val query = s"MATCH (n), (m) WITH n, m LIMIT $lowLimit UNWIND range(1, $unwindFactor) AS i RETURN n, m, $$x LIMIT $highLimit"
+    val query = s"EXPLAIN MATCH (n), (m) WITH n, m LIMIT $lowLimit UNWIND range(1, $unwindFactor) AS i RETURN n, m, $$x LIMIT $highLimit"
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query,
@@ -491,7 +491,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val highLimit = 200000
     (0 until nodeCount).foreach(_ => createNode())
 
-    val query = s"MATCH (n), (m) WITH n, m LIMIT $lowLimit WHERE n.prop > 5 RETURN n, m LIMIT $highLimit"
+    val query = s"EXPLAIN MATCH (n), (m) WITH n, m LIMIT $lowLimit WHERE n.prop > 5 RETURN n, m LIMIT $highLimit"
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query,
@@ -523,7 +523,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 20
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n) RETURN DISTINCT n LIMIT $limit")
+    val result = executeSingle(s"EXPLAIN MATCH (n) RETURN DISTINCT n LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
@@ -538,7 +538,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 20
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n) WITH n ORDER BY n RETURN DISTINCT n LIMIT $limit")
+    val result = executeSingle(s"EXPLAIN MATCH (n) WITH n ORDER BY n RETURN DISTINCT n LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
@@ -555,7 +555,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 20
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n) RETURN n, collect(n) LIMIT $limit")
+    val result = executeSingle(s"EXPLAIN MATCH (n) RETURN n, collect(n) LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
@@ -570,8 +570,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 5
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n) WITH n ORDER BY n RETURN n, collect(n) LIMIT $limit")
-
+    val result = executeSingle(s"EXPLAIN MATCH (n) WITH n ORDER BY n RETURN n, collect(n) LIMIT $limit")
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
         .withLHS(aPlan("OrderedAggregation").withEstimatedRows(limit)
@@ -587,7 +586,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 100
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n) WITH n SKIP 5 RETURN n LIMIT $limit")
+    val result = executeSingle(s"EXPLAIN MATCH (n) WITH n SKIP 5 RETURN n LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit - PlannerDefaults.DEFAULT_SKIP_ROW_COUNT)
       .withLHS(aPlan("Limit").withEstimatedRows(limit - PlannerDefaults.DEFAULT_SKIP_ROW_COUNT)
@@ -602,7 +601,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 5
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n) WITH n SKIP 5 RETURN n LIMIT $limit")
+    val result = executeSingle(s"EXPLAIN MATCH (n) WITH n SKIP 5 RETURN n LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
@@ -629,7 +628,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
       }
     }
 
-    val result = executeSingle(s"MATCH (n) CALL my.first.proc() RETURN n LIMIT $limit")
+    val result = executeSingle(s"EXPLAIN MATCH (n) CALL my.first.proc() RETURN n LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
@@ -645,7 +644,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   test("semiApply with increasing cardinality in rhs") {
     createNodesAndRels(nodeCount = 100, relCount = 1000)
 
-    val result = executeSingle(s"CYPHER runtime=slotted MATCH (n) WHERE (n)-->() RETURN n")
+    val result = executeSingle(s"CYPHER runtime=slotted EXPLAIN MATCH (n) WHERE (n)-->() RETURN n")
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("SemiApply")
@@ -660,7 +659,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   test("antiSemiApply with increasing cardinality in rhs") {
     createNodesAndRels(nodeCount = 100, relCount = 1000)
 
-    val result = executeSingle(s"CYPHER runtime=slotted MATCH (n) WHERE NOT (n)-->() RETURN n")
+    val result = executeSingle(s"CYPHER runtime=slotted EXPLAIN MATCH (n) WHERE NOT (n)-->() RETURN n")
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("AntiSemiApply")
@@ -676,7 +675,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     createNodesAndRels(100, 1000)
     val limit = 5
 
-    val result = executeSingle(s"CYPHER runtime=slotted MATCH (n) WHERE (n)-->() RETURN n LIMIT $limit")
+    val result = executeSingle(s"CYPHER runtime=slotted EXPLAIN MATCH (n) WHERE (n)-->() RETURN n LIMIT $limit")
 
     result.executionPlanDescription() should includeSomewhere
        // original: 75, fraction: 5/75
@@ -695,7 +694,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     // 1000x (:A)-->(:B)
     createAsAndBs(aNodes = 10, bNodes = 12, abRelsPerPair = 100)
 
-    val result = executeSingle(s"CYPHER runtime=slotted MATCH (a:A) WHERE (a)-->(:B) RETURN a")
+    val result = executeSingle(s"CYPHER runtime=slotted EXPLAIN MATCH (a:A) WHERE (a)-->(:B) RETURN a")
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("SemiApply").withEstimatedRows(7)
@@ -713,7 +712,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     // 1000x (:A)-->(:B)
     createAsAndBs(aNodes = 10, bNodes = 12, abRelsPerPair = 100)
 
-    val result = executeSingle(s"CYPHER runtime=slotted MATCH (a:A) WHERE (a)-[{x: 1}]->(:B) RETURN a")
+    val result = executeSingle(s"CYPHER runtime=slotted EXPLAIN MATCH (a:A) WHERE (a)-[{x: 1}]->(:B) RETURN a")
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("SemiApply").withEstimatedRows(7)
@@ -732,7 +731,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     // 12x :B
     // 1000x (:A)-->(:B)
     createAsAndBs(aNodes = 10, bNodes = 12, abRelsPerPair = 100)
-    val result = executeSingle(s"CYPHER runtime=slotted MATCH (a:A) WHERE (a)-[{x: 1}]->(:B) RETURN a LIMIT 5")
+    val result = executeSingle(s"CYPHER runtime=slotted EXPLAIN MATCH (a:A) WHERE (a)-[{x: 1}]->(:B) RETURN a LIMIT 5")
 
     result.executionPlanDescription() should includeSomewhere
       // original: 7.5, fraction: 5/7.5
@@ -760,8 +759,9 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     graph.createIndex("Person", "name")
 
     val query =
-      """CYPHER runtime=pipelined profile MATCH (p0:Person),
-        |      (p1:Person)
+      """CYPHER runtime=pipelined profile
+        |EXPLAIN
+        |MATCH (p0:Person), (p1:Person)
         |OPTIONAL MATCH (p0)-->(p0_1)-->(p0_2)
         |RETURN * ORDER BY p1.name
         |""".stripMargin
@@ -773,6 +773,38 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     .aPlan("Apply").withEstimatedRows(nodes * nodes)
       .withRHS(aPlan("NodeByLabelScan").withEstimatedRows(nodes * nodes))
       .withLHS(aPlan().withEstimatedRows(nodes))
+  }
+
+  test("Should estimate unnested plans from tail correctly") {
+    val count = 100
+    for(_ <- 0 until count) relate(createLabeledNode("N"), createLabeledNode("M"))
+
+    val result = executeSingle("EXPLAIN MATCH (n:N) WITH n, 1 AS foo MATCH (n)-->(m:M) RETURN m.prop")
+    result.executionPlanDescription() should includeSomewhere.
+      aPlan("Projection").withEstimatedRows(count).withLHS(
+      aPlan("Filter").withEstimatedRows(count).withLHS(
+        aPlan("Expand(All)").withEstimatedRows(count).withLHS(
+          aPlan("Projection").withEstimatedRows(count).withLHS(
+            aPlan("NodeByLabelScan").withEstimatedRows(count)
+          )
+        )
+      )
+    )
+  }
+
+  test("Should estimate unnested plans from correlated subquery correctly") {
+    val count = 100
+    for(_ <- 0 until count) relate(createLabeledNode("N"), createLabeledNode("M"))
+
+    val result = executeSingle("EXPLAIN MATCH (n:N) CALL { WITH n MATCH (n)-->(m:M) RETURN m } RETURN m.prop")
+    result.executionPlanDescription() should includeSomewhere.
+      aPlan("Projection").withEstimatedRows(count).withLHS(
+      aPlan("Filter").withEstimatedRows(count).withLHS(
+        aPlan("Expand(All)").withEstimatedRows(count).withLHS(
+          aPlan("NodeByLabelScan").withEstimatedRows(count)
+        )
+      )
+    )
   }
 
   private def createNodesAndRels(nodeCount: Int, relCount: Int) = {
