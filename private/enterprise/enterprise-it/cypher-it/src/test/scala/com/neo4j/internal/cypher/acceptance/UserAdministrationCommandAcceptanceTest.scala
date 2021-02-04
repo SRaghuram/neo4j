@@ -372,7 +372,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       row.get("roles") should be(Array("custom", "PUBLIC"))
       row.get("passwordChangeRequired") shouldBe false
       row.get("suspended") shouldBe false
-      row.get("defaultDatabase") shouldBe DEFAULT_DATABASE_NAME
     }) should be(1)
   }
 
@@ -404,7 +403,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
         row.get("roles") should be(Array("custom", "PUBLIC"))
         row.get("passwordChangeRequired") shouldBe false
         row.get("suspended") shouldBe false
-        row.get("defaultDatabase") shouldBe DEFAULT_DATABASE_NAME
       }) should be(1)
   }
 
@@ -443,7 +441,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
         row.get("defaultDatabase") shouldBe "foo"
       }) should be(1)
   }
-
 
   // Tests for creating users
 

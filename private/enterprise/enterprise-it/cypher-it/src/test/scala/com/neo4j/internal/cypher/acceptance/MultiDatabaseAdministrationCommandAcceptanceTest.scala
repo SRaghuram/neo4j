@@ -458,55 +458,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.toList should be(List(Map("count(*)" -> 4)))
   }
 
-  test("should show default DBMS database") {
-    // GIVEN
-    setup()
-
-    // WHEN
-    val result = execute("SHOW DEFAULT DBMS DATABASE")
-
-    // THEN
-    result.head("name") shouldBe "neo4j"
-  }
-
-  test("should show default DBMS database even when it is stopped") {
-    // GIVEN
-    setup()
-    execute(s"STOP DATABASE $DEFAULT_DATABASE_NAME")
-
-    // WHEN
-    val result = execute("SHOW DEFAULT DBMS DATABASE")
-
-    // THEN
-    result.head("name") shouldBe "neo4j"
-  }
-
-  ignore("should show default DBMS database for user with custom default database") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
-    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED SET DEFAULT DATABASE foo")
-
-    // WHEN
-    executeOnSystem("user", "123", "SHOW DEFAULT DBMS DATABASE", resultHandler = (row, _) => {
-      // THEN
-      row.get("name") should be ("neo4j")
-    }) should be (1)
-  }
-
-  test("should show default DBMS database with YIELD and WHERE") {
-    // GIVEN
-    setup()
-
-    // WHEN
-    val result = execute("SHOW DEFAULT DBMS DATABASE YIELD name WHERE name = 'neo4j'")
-
-    // THEN
-    result.size should be (1)
-    result.toList.head should be (Map("name" -> "neo4j"))
-  }
-
   ignore("should show default database where multiple databases exist") {
     // GIVEN
     setup()

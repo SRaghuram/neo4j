@@ -121,7 +121,7 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
 
   Seq[java.lang.Boolean](java.lang.Boolean.FALSE, java.lang.Boolean.TRUE).foreach(fabricIsEnabled => {
 
-    test(s"Should get system default database when logging in if no default database is set with fabric: $fabricIsEnabled") {
+    ignore(s"Should get system default database when logging in if no default database is set with fabric: $fabricIsEnabled") {
       restartWithConfig(
         databaseConfig() + (FabricSettings.enabled_by_default -> fabricIsEnabled)
       )

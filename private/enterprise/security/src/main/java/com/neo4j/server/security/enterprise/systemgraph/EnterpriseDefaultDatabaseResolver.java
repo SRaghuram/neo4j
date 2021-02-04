@@ -50,9 +50,9 @@ public class EnterpriseDefaultDatabaseResolver extends CommunityDefaultDatabaseR
                 try ( Transaction tx = getSystemDb().beginTx() )
                 {
                     Node userNode = tx.findNode( Label.label( "User" ), "name", u );
-                    if ( userNode != null && userNode.hasProperty( "defaultDatabase" ) )
+                    if ( userNode != null && userNode.hasProperty( "homeDatabase" ) )
                     {
-                        defaultDatabase = (String) userNode.getProperty( "defaultDatabase" );
+                        defaultDatabase = (String) userNode.getProperty( "homeDatabase" );
                     }
                     else
                     {

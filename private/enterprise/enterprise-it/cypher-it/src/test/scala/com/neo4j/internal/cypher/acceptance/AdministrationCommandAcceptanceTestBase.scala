@@ -206,14 +206,12 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false,
            passwordChangeRequired: Boolean = true, defaultDatabase: String = DEFAULT_DATABASE_NAME): Map[String, Any] = {
     val rolesWithPublic = roles.sorted :+ PredefinedRoles.PUBLIC
-    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired,
-      "defaultDatabase" -> defaultDatabase)
+    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
   }
 
   def adminUser(username: String, passwordChangeRequired: Boolean = true, defaultDatabase: String = DEFAULT_DATABASE_NAME): Map[String, Any] = {
     val rolesWithPublic = Seq(PredefinedRoles.ADMIN, PredefinedRoles.PUBLIC)
-    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> false, "passwordChangeRequired" -> passwordChangeRequired,
-      "defaultDatabase" -> defaultDatabase)
+    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> false, "passwordChangeRequired" -> passwordChangeRequired)
   }
 
   def db(name: String, status: String = onlineStatus, default: Boolean = false, systemDefault: Boolean = false): Map[String, Any] =
@@ -223,8 +221,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
       "requestedStatus" -> status,
       "currentStatus" -> status,
       "error" -> "",
-      "default" -> default,
-      "systemDefault" -> systemDefault)
+      "default" -> systemDefault)
 
   def defaultDb(name: String = DEFAULT_DATABASE_NAME, status: String = onlineStatus): Map[String, String] =
     Map("name" -> name,

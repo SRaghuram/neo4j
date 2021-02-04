@@ -224,11 +224,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role)
           |WITH u, r.name as roleNames ORDER BY roleNames
           |WITH u, collect(roleNames) as roles
-          |MATCH (systemDefaultDatabase:Database)
-          |WHERE systemDefaultDatabase.default = true
           |WITH u.name as user, roles + 'PUBLIC' as roles, u.passwordChangeRequired AS passwordChangeRequired,
-          |u.suspended AS suspended,
-          |coalesce(u.defaultDatabase, systemDefaultDatabase.name) as defaultDatabase
+          |u.suspended AS suspended
           ${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
           |""".stripMargin,
         VirtualValues.EMPTY_MAP,
@@ -248,10 +245,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |WHERE user <> ""
            |OPTIONAL MATCH (u:User)
            |WHERE u.name = $$`$currentUserKey`
-           |MATCH (systemDefaultDatabase:Database)
-           |WHERE systemDefaultDatabase.default = true
-           |WITH user, roles, passwordChangeRequired, coalesce(u.suspended, false) AS suspended,
-           |coalesce(u.defaultDatabase, systemDefaultDatabase.name) as defaultDatabase
+           |WITH user, roles, passwordChangeRequired, coalesce(u.suspended, false) AS suspended
            |${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
            |""".stripMargin,
         VirtualValues.EMPTY_MAP,

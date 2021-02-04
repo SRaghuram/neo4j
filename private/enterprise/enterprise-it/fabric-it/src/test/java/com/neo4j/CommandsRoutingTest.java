@@ -236,7 +236,7 @@ class CommandsRoutingTest
         } );
 
         assertThat( r.size() ).isGreaterThanOrEqualTo( 1 );
-        assertThat( r.get( 0 ).keys() ).containsExactly( "user", "roles", "passwordChangeRequired", "suspended", "defaultDatabase");
+        assertThat( r.get( 0 ).keys() ).containsExactly( "user", "roles", "passwordChangeRequired", "suspended");
     }
 
     @Test
