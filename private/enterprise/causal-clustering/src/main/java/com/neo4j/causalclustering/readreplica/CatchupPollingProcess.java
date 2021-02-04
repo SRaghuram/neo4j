@@ -190,6 +190,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
             public void onFailure( Exception e )
             {
                 panic( e );
+                latch.release();
             }
 
             @Override
