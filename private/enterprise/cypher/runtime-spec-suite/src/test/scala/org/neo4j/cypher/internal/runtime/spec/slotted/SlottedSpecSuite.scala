@@ -35,7 +35,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EagerLimitProfileRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EagerTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.EitherApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.EitherTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EmptyResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseNodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EsotericAssertSameNodeTestBase
@@ -251,7 +251,7 @@ class SlottedForeachApplyTest extends ForeachApplyTestBase(ENTERPRISE.DEFAULT, S
 class SlottedSetPropertiesFromMapNodeTest extends SetPropertiesFromMapNodeTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSetPropertiesFromMapRelationshipTest extends SetPropertiesFromMapRelationshipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLockNodesTest extends LockNodesTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
-class SlottedEitherApplyTest extends EitherApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedEitherTest extends EitherTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedOnMatchApplyTest extends OnMatchApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
 class SlottedDeleteNodeTest extends DeleteNodeTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)

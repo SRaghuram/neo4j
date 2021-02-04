@@ -43,7 +43,7 @@ import org.neo4j.cypher.internal.logical.plans.DetachDeletePath
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipTypeScan
 import org.neo4j.cypher.internal.logical.plans.Eager
-import org.neo4j.cypher.internal.logical.plans.EitherApply
+import org.neo4j.cypher.internal.logical.plans.Either
 import org.neo4j.cypher.internal.logical.plans.EmptyResult
 import org.neo4j.cypher.internal.logical.plans.ErrorPlan
 import org.neo4j.cypher.internal.logical.plans.ExhaustiveLimit
@@ -283,7 +283,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           allocations.set(current.id, slots)
           resultStack.push(slots)
 
-        case (Some(left), Some(right)) if (comingFrom eq left) && current.isInstanceOf[EitherApply] =>
+        case (Some(left), Some(right)) if (comingFrom eq left) && current.isInstanceOf[Either] =>
           planStack.push((nullable, current))
           val argumentSlots = resultStack.getFirst
           val previousArgument: SlotsAndArgument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots) else argumentStack.getFirst
@@ -911,7 +911,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case _: OnMatchApply =>
         lhs
 
-      case _: EitherApply =>
+      case _: Either =>
         lhs
 
       case p =>
