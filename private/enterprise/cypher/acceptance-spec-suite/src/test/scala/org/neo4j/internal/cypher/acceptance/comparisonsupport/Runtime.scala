@@ -6,7 +6,9 @@
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
 import org.neo4j.codegen.api.CodeGeneration.GENERATE_JAVA_SOURCE_DEBUG_OPTION
+import org.neo4j.cypher.internal.compiler.CodeGenerationFailedNotification
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.util.InternalNotification
 
 case class Runtimes(runtimes: Runtime*)
 
@@ -29,7 +31,13 @@ object Runtimes {
   object Parallel extends Runtime("PARALLEL", false, "runtime=parallel")
 
   object PipelinedFused extends Runtime("PIPELINED", true, "runtime=pipelined operatorEngine=compiled" +
-    (if (DebugSupport.DEBUG_GENERATED_SOURCE_CODE) s" debug=$GENERATE_JAVA_SOURCE_DEBUG_OPTION" else ""))
+    (if (DebugSupport.DEBUG_GENERATED_SOURCE_CODE) s" debug=$GENERATE_JAVA_SOURCE_DEBUG_OPTION" else "")) {
+    override def checkNotificationsForWarnings(notifications: Seq[InternalNotification]): Option[String] = {
+      val errorStrings = notifications
+        .collect { case n: CodeGenerationFailedNotification => n.msg }
+      if (errorStrings.isEmpty) None else Some(s"Fusing failed with '${errorStrings.mkString(", ")}'")
+    }
+  }
 
   object PipelinedNonFused extends Runtime("PIPELINED", true, "runtime=pipelined operatorEngine=interpreted")
 
@@ -41,4 +49,6 @@ case class Runtime(name: String, schema: Boolean, preparserOption: String) {
 
   def isDefinedBy(preParserArgs: Array[String]): Boolean =
     preparserOption.split(" ").forall(preParserArgs.contains(_))
+
+  def checkNotificationsForWarnings(notifications: Seq[InternalNotification]): Option[String] = None
 }

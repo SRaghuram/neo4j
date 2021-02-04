@@ -33,10 +33,16 @@ case class TestScenario(planner: Planner, runtime: Runtime) extends Assertions {
   def checkResultForSuccess(query: String, internalExecutionResult: RewindableExecutionResult, silentUnexpectedSuccess: Boolean): Unit = {
     val ScenarioConfig(reportedRuntime, reportedPlanner) = extractConfiguration(internalExecutionResult)
     if (!silentUnexpectedSuccess) {
-      if (!runtime.acceptedRuntimeNames.contains(reportedRuntime))
+      if (!runtime.acceptedRuntimeNames.contains(reportedRuntime)) {
         fail(s"did not use ${runtime.acceptedRuntimeNames} runtime - instead $reportedRuntime was used. Scenario $name")
-      if (!planner.acceptedPlannerNames.contains(reportedPlanner))
+      }
+      if (!planner.acceptedPlannerNames.contains(reportedPlanner)) {
         fail(s"did not use ${planner.acceptedPlannerNames} planner - instead $reportedPlanner was used. Scenario $name")
+      }
+      runtime.checkNotificationsForWarnings(internalExecutionResult.internalNotifications) match {
+        case Some(error) => fail(s"Scenario $name succeeded but got unexpected notification: $error. ")
+        case _ =>
+      }
     }
   }
 
@@ -61,12 +67,15 @@ case class TestScenario(planner: Planner, runtime: Runtime) extends Assertions {
           && planner.acceptedPlannerNames.contains(reportedPlannerName)) {
 
           if (!silentUnexpectedSuccess) {
-            fail(s"""Unexpectedly succeeded using $name for query:
-                    |
-                    |$query
-                    |
-                    |(Actually executed with $reportedRuntimeName runtime and $reportedPlannerName planner)
-                    |""".stripMargin)
+            runtime.checkNotificationsForWarnings(result.internalNotifications) match {
+              case None => fail(s"""Unexpectedly succeeded using $name for query:
+                                |
+                                |$query
+                                |
+                                |(Actually executed with $reportedRuntimeName runtime and $reportedPlannerName planner)
+                                |""".stripMargin)
+              case _ => // expected to get an error
+            }
           }
         }
     }

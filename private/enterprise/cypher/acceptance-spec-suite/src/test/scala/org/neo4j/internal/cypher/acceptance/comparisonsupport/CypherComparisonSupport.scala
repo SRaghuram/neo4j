@@ -5,8 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import java.lang.Boolean.TRUE
-
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import cypher.features.Phase
 import org.apache.commons.lang3.exception.ExceptionUtils
@@ -15,6 +13,8 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.ExecutionEngineHelper.asJavaMapDeep
 import org.neo4j.cypher.internal.RewindableExecutionResult
+import org.neo4j.cypher.internal.result.ClosingExecutionResult
+import org.neo4j.cypher.internal.result.StandardInternalExecutionResult
 import org.neo4j.cypher.internal.runtime.ResourceManager
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.debug.SaveGeneratedSource
@@ -36,6 +36,7 @@ import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
+import java.lang.Boolean.TRUE
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.mapAsScalaMapConverter
@@ -460,7 +461,14 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     val context = transactionalContext(tx, queryText -> params)
     val queryContext = new TransactionBoundQueryContext(TransactionalContextWrapper(context), new ResourceManager())(mock[IndexSearchMonitor])
     val innerResult = eengineExecute(queryText, ValueUtils.asParameterMapValue(asJavaMapDeep(params)), context, subscriber)
-    RewindableExecutionResult(innerResult, queryContext, subscriber)
+    val internalNotifications = innerResult match {
+      case closingIR: ClosingExecutionResult  => closingIR.inner match {
+        case ir: StandardInternalExecutionResult => ir.internalNotifications
+        case _ => Seq.empty
+      }
+      case _ => Seq.empty
+    }
+    RewindableExecutionResult(innerResult, queryContext, subscriber, internalNotifications)
   }
 }
 
