@@ -646,12 +646,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         relationships.foreach(r => slots.newLong(r.idName, nullable = config.lenientCreateRelationship, CTRelationship))
 
       case MergeCreateNode(_, name, _, _) =>
-      //TODO why changed
         // The variable name should already have been allocated by the NodeLeafPlan
-      //slots.newLong(name, nullable = false, CTNode)
 
       case MergeCreateRelationship(_, name, _, _, _, _) =>
-        //TODO remove
         slots.newLong(name, nullable = false, CTRelationship)
 
       case _: EmptyResult |
