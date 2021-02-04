@@ -422,7 +422,7 @@ public class StoreCopy
             Dependencies deps = new Dependencies();
             Monitors monitors = new Monitors();
             deps.satisfyDependencies( fs, config, fromPageCache, NullLogService.getInstance(), monitors, RecoveryCleanupWorkCollector.immediate(),
-                                      pageCacheTracer );
+                                      pageCacheTracer, from );
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( from, DbmsInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
             DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );

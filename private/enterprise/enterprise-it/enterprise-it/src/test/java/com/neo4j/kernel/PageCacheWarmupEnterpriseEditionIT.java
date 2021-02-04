@@ -421,9 +421,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         HostnamePort address = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class ).getLocalAddress( BACKUP_SERVER_NAME );
 
         final var context = OnlineBackupContext.builder()
-                                               .withAddress( address.getHost(), address.getPort() )
-                                               .withBackupDirectory( backupDir )
-                                               .withReportsDirectory( backupDir );
+                .withAddress( address.getHost(), address.getPort() )
+                .withBackupDirectory( backupDir )
+                .withReportsDirectory( backupDir )
+                .withDatabaseNamePattern( db.databaseName() );
 
         OnlineBackupExecutor.buildDefault().executeBackups( context.build());
     }

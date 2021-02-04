@@ -96,5 +96,7 @@ class EnterpriseDbmsExtensionInjectionTest
 
         assertSame( db, dbApi );
         assertEquals( testDirectory.homePath(), neo4jLayout.homeDirectory() );
+        assertEquals( db.databaseName(), databaseLayout.getDatabaseName() );
+        assertEquals( databaseLayout.getNeo4jLayout(), neo4jLayout );
     }
 }
