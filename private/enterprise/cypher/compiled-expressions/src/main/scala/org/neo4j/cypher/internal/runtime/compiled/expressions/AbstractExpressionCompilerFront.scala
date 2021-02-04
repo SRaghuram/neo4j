@@ -201,7 +201,7 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
-import org.neo4j.cypher.internal.runtime.ast.RuntimeLiteral
+import org.neo4j.cypher.internal.runtime.ast.DefaultValueLiteral
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTBoolean
 import org.neo4j.cypher.internal.util.symbols.CTDate
@@ -416,7 +416,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           compiled.values.flatMap(_.variables).toSeq, Set.empty, requireNullCheck = false))
       }
 
-    case RuntimeLiteral(value) =>
+    case DefaultValueLiteral(value) =>
       val constant = staticConstant[AnyValue](namer.nextVariableName(), value)
       Some(IntermediateExpression(getStatic(constant), Seq(constant), Seq.empty, Set.empty, requireNullCheck = false))
 

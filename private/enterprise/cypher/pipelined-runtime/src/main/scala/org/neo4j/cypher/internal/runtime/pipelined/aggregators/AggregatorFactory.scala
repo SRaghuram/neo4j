@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.ast.IsEmpty
 import org.neo4j.cypher.internal.physicalplanning.ast.NonEmpty
-import org.neo4j.cypher.internal.runtime.ast.RuntimeLiteral
+import org.neo4j.cypher.internal.runtime.ast.DefaultValueLiteral
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.SyntaxException
 
@@ -105,7 +105,7 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
       case ResolvedFunctionInvocation(_, Some(signature), callArguments) if !parallelExecution =>
         val input = callArguments.map(Some(_)).zipAll(signature.inputSignature.map(_.default), None, None).map {
           case (Some(given), _) => given
-          case (None, defaultValue) => RuntimeLiteral(defaultValue.get)
+          case (None, defaultValue) => DefaultValueLiteral(defaultValue.get)
         }
         (UserDefinedAggregator(signature), input.toArray)
 
