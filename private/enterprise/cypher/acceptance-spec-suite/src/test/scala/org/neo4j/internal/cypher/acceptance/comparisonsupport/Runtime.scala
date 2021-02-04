@@ -24,7 +24,13 @@ object Runtimes {
 
   object SlottedWithInterpretedExpressions extends Runtime("SLOTTED", true, "runtime=slotted expressionEngine=interpreted")
 
-  object SlottedWithCompiledExpressions extends Runtime("SLOTTED", true, "runtime=slotted expressionEngine=compiled")
+  object SlottedWithCompiledExpressions extends Runtime("SLOTTED", true, "runtime=slotted expressionEngine=compiled") {
+    override def checkNotificationsForWarnings(notifications: Seq[InternalNotification]): Option[String] = {
+      val errorStrings = notifications
+        .collect { case n: CodeGenerationFailedNotification => n.msg }
+      if (errorStrings.isEmpty) None else Some(s"Expression compilation failed with '${errorStrings.mkString(", ")}'")
+    }
+  }
 
   object Interpreted extends Runtime("INTERPRETED", true, "runtime=interpreted")
 
@@ -39,7 +45,13 @@ object Runtimes {
     }
   }
 
-  object PipelinedNonFused extends Runtime("PIPELINED", true, "runtime=pipelined operatorEngine=interpreted")
+  object PipelinedNonFused extends Runtime("PIPELINED", true, "runtime=pipelined operatorEngine=interpreted") {
+    override def checkNotificationsForWarnings(notifications: Seq[InternalNotification]): Option[String] = {
+      val errorStrings = notifications
+        .collect { case n: CodeGenerationFailedNotification => n.msg }
+      if (errorStrings.isEmpty) None else Some(s"Expression compilation failed with '${errorStrings.mkString(", ")}'")
+    }
+  }
 
   object PipelinedFull extends Runtime("PIPELINED", true, "runtime=pipelined interpretedPipesFallback=all")
 }
