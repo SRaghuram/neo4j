@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica.tx;
 
-import com.neo4j.causalclustering.catchup.FlowControl;
+import com.neo4j.causalclustering.catchup.IncomingResponseValve;
 import com.neo4j.causalclustering.catchup.tx.ReceivedTxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.verify;
 
 class PullUpdatesJobTest
 {
-    private final FlowControl flowControl = mock( FlowControl.class );
+    private final IncomingResponseValve incomingResponseValve = mock( IncomingResponseValve.class );
 
     @Test
     void trailingTaskShouldBeIgnoredAfterFailure()
@@ -44,7 +44,7 @@ class PullUpdatesJobTest
 
         var signal = new CompletableFuture<TxStreamFinishedResponse>();
         catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), batchSize ),
-                flowControl );
+                incomingResponseValve );
         assertThat( batchingTxApplier.queuedTxs ).hasSize( 1 );
         assertThat( errors.getValue() ).isEqualTo( 1 );
         assertThat( signal.isCompletedExceptionally() );
@@ -63,12 +63,15 @@ class PullUpdatesJobTest
                         shouldAbort::booleanValue );
 
         var signal = new CompletableFuture<TxStreamFinishedResponse>();
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ), flowControl );
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ), flowControl );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ),
+                incomingResponseValve );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ),
+                incomingResponseValve );
 
         // enable abort signal
         shouldAbort.setTrue();
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ), flowControl );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ),
+                incomingResponseValve );
 
         assertThat( batchingTxApplier.queuedTxs ).hasSize( 3 );
         assertThat( errors.getValue() ).isEqualTo( 0 );
@@ -87,19 +90,26 @@ class PullUpdatesJobTest
         var catchupJob = new PullUpdatesJob( 100, batchSize, new ErrorIncrementingHandler( errors ), batchingTxApplier, NullLog.getInstance(), () -> false );
 
         var signal = new CompletableFuture<TxStreamFinishedResponse>();
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ), flowControl );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ),
+                incomingResponseValve );
         assertThat( batchingTxApplier.appliedCalls ).isEqualTo( 0 );
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 2 ), flowControl );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 2 ),
+                incomingResponseValve );
         assertThat( batchingTxApplier.appliedCalls ).isEqualTo( 1 );
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ), flowControl );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ),
+                incomingResponseValve );
         assertThat( batchingTxApplier.appliedCalls ).isEqualTo( 1 );
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ), flowControl );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ),
+                incomingResponseValve );
         assertThat( batchingTxApplier.appliedCalls ).isEqualTo( 1 );
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ), flowControl );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ),
+                incomingResponseValve );
         assertThat( batchingTxApplier.appliedCalls ).isEqualTo( 2 );
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 5 ), flowControl );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 5 ),
+                incomingResponseValve );
         assertThat( batchingTxApplier.appliedCalls ).isEqualTo( 3 );
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ), flowControl );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ),
+                incomingResponseValve );
         assertThat( batchingTxApplier.appliedCalls ).isEqualTo( 3 );
         assertThat( batchingTxApplier.queuedTxs ).hasSize( 7 );
         assertThat( errors.getValue() ).isEqualTo( 0 );
@@ -119,14 +129,18 @@ class PullUpdatesJobTest
                 new PullUpdatesJob( queueSize, batchSize, new ErrorIncrementingHandler( errors ), batchingTxApplier, NullLog.getInstance(), () -> false );
 
         var signal = new CompletableFuture<TxStreamFinishedResponse>();
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ), flowControl );
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 2 ), flowControl );
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ), flowControl );
-        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ), flowControl );
-        verify( flowControl ).stopReading();
-        verify( flowControl, never() ).continueReading();
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ),
+                incomingResponseValve );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 2 ),
+                incomingResponseValve );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ),
+                incomingResponseValve );
+        catchupJob.onTxPullResponse( signal, new ReceivedTxPullResponse( StoreId.UNKNOWN, mock( CommittedTransactionRepresentation.class ), 1 ),
+                incomingResponseValve );
+        verify( incomingResponseValve ).shut();
+        verify( incomingResponseValve, never() ).open();
         batchingTxApplier.startResponding();
-        verify( flowControl ).continueReading();
+        verify( incomingResponseValve ).open();
     }
 
     private static class ErrorIncrementingHandler implements AsyncTaskEventHandler

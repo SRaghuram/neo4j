@@ -7,21 +7,21 @@ package com.neo4j.causalclustering.catchup;
 
 import io.netty.channel.Channel;
 
-public class FlowControl
+public class IncomingResponseValve
 {
     private final Channel channel;
 
-    public FlowControl( Channel channel )
+    public IncomingResponseValve( Channel channel )
     {
         this.channel = channel;
     }
 
-    public void stopReading()
+    public void shut()
     {
         channel.config().setAutoRead( false );
     }
 
-    public void continueReading()
+    public void open()
     {
         channel.config().setAutoRead( true );
     }

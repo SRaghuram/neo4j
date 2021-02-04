@@ -34,7 +34,7 @@ class TrackingResponseHandler implements CatchupResponseHandler
     private static final long NO_RESPONSE_TIME = 1;
 
     private final Clock clock;
-    private final FlowControl flowControl;
+    private final IncomingResponseValve incomingResponseValve;
 
     private CatchupResponseCallback delegate;
     private CompletableFuture<?> requestOutcomeSignal;
@@ -43,7 +43,7 @@ class TrackingResponseHandler implements CatchupResponseHandler
     TrackingResponseHandler( Clock clock, Channel flowControl )
     {
         this.clock = clock;
-        this.flowControl = new FlowControl( flowControl );
+        this.incomingResponseValve = new IncomingResponseValve( flowControl );
         clearResponseHandler();
     }
 
@@ -89,7 +89,7 @@ class TrackingResponseHandler implements CatchupResponseHandler
     @Override
     public void onTxPullResponse( ReceivedTxPullResponse tx )
     {
-        ifNotCancelled( () -> delegate.onTxPullResponse( requestOutcomeSignal, tx, flowControl ) );
+        ifNotCancelled( () -> delegate.onTxPullResponse( requestOutcomeSignal, tx, incomingResponseValve ) );
     }
 
     @Override

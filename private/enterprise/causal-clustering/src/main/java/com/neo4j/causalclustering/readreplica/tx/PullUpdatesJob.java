@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.readreplica.tx;
 
 import com.neo4j.causalclustering.catchup.CatchupErrorResponse;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
-import com.neo4j.causalclustering.catchup.FlowControl;
+import com.neo4j.causalclustering.catchup.IncomingResponseValve;
 import com.neo4j.causalclustering.catchup.tx.ReceivedTxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 
@@ -30,7 +30,7 @@ public class PullUpdatesJob extends CatchupResponseAdaptor<TxStreamFinishedRespo
     private final Log log;
     private final Aborter cancelSignal;
     private final TrackingFailureHandler trackingFailureHandler = new TrackingFailureHandler();
-    private Backpressure backpressure;
+    private IncomingResponseValveController incomingResponseValveController;
     private int currentBatchSize;
 
     public PullUpdatesJob( long maxQueueSize, long maxBatchSize, AsyncTaskEventHandler applyFailureHandler, BatchingTxApplier batchingTxApplier, Log log,
@@ -46,11 +46,12 @@ public class PullUpdatesJob extends CatchupResponseAdaptor<TxStreamFinishedRespo
     }
 
     @Override
-    public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, ReceivedTxPullResponse response, FlowControl flowControl )
+    public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, ReceivedTxPullResponse response,
+            IncomingResponseValve incomingResponseValve )
     {
-        if ( backpressure == null )
+        if ( incomingResponseValveController == null )
         {
-            backpressure = new Backpressure( upperWatermark, lowerWatermark, flowControl );
+            incomingResponseValveController = new IncomingResponseValveController( upperWatermark, lowerWatermark, incomingResponseValve );
         }
         batchingTxApplier.queue( response.tx() );
         currentBatchSize += response.txSize();
@@ -61,7 +62,7 @@ public class PullUpdatesJob extends CatchupResponseAdaptor<TxStreamFinishedRespo
         }
         else if ( currentBatchSize >= maxBatchSize )
         {
-            backpressure.scheduledJob();
+            incomingResponseValveController.scheduledJob();
             batchingTxApplier.applyBatchAsync( ongoingJobEventHandler( signal ) );
             currentBatchSize = 0;
         }
@@ -87,6 +88,7 @@ public class PullUpdatesJob extends CatchupResponseAdaptor<TxStreamFinishedRespo
 
     private AsyncTaskEventHandler ongoingJobEventHandler( CompletableFuture<TxStreamFinishedResponse> signal )
     {
-        return new CompositeAsyncEventHandler( List.of( backpressure, applyFailureHandler, trackingFailureHandler, keepRunning( signal ) ) );
+        return new CompositeAsyncEventHandler(
+                List.of( incomingResponseValveController, applyFailureHandler, trackingFailureHandler, keepRunning( signal ) ) );
     }
 }

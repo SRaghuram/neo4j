@@ -30,7 +30,7 @@ public interface CatchupResponseCallback<T>
 
     void onFileStreamingComplete( CompletableFuture<T> signal, StoreCopyFinishedResponse response );
 
-    void onTxPullResponse( CompletableFuture<T> signal, ReceivedTxPullResponse tx, FlowControl flowControl );
+    void onTxPullResponse( CompletableFuture<T> signal, ReceivedTxPullResponse tx, IncomingResponseValve incomingResponseValve );
 
     void onTxStreamFinishedResponse( CompletableFuture<T> signal, TxStreamFinishedResponse response );
 

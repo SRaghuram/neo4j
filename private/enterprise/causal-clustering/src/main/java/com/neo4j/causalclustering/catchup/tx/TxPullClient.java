@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.catchup.tx;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupErrorResponse;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
-import com.neo4j.causalclustering.catchup.FlowControl;
+import com.neo4j.causalclustering.catchup.IncomingResponseValve;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -43,7 +43,8 @@ public class TxPullClient
         CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<>()
         {
             @Override
-            public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, ReceivedTxPullResponse response, FlowControl flowControl )
+            public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, ReceivedTxPullResponse response,
+                    IncomingResponseValve incomingResponseValve )
             {
                 txPullResponseListener.onTxReceived( response );
             }
