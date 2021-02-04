@@ -27,12 +27,12 @@ class IncomingResponseValveControllerTest
     {
         for ( int i = 0; i < highWaterMark - 1; i++ )
         {
-            incomingResponseValveController.scheduledJob();
+            incomingResponseValveController.increment();
         }
         verify( incomingResponseValve, never() ).shut();
-        incomingResponseValveController.scheduledJob(); // incremented to upper limit
+        incomingResponseValveController.increment(); // incremented to upper limit
         verify( incomingResponseValve, times( 1 ) ).shut();
-        incomingResponseValveController.scheduledJob(); // incremented above upper limit
+        incomingResponseValveController.increment(); // incremented above upper limit
         verify( incomingResponseValve, times( 1 ) ).shut(); // only trigger once still
     }
 
@@ -41,10 +41,10 @@ class IncomingResponseValveControllerTest
     {
         for ( int i = 0; i < highWaterMark; i++ )
         {
-            incomingResponseValveController.scheduledJob();
+            incomingResponseValveController.increment();
         }
         verify( incomingResponseValve, times( 1 ) ).shut();
-        incomingResponseValveController.scheduledJob(); // upper limit +1
+        incomingResponseValveController.increment(); // upper limit +1
         incomingResponseValveController.onSuccess(); // decremented to upper limit
         verify( incomingResponseValve, times( 1 ) ).shut(); // only trigger once still
     }
@@ -54,7 +54,7 @@ class IncomingResponseValveControllerTest
     {
         for ( int i = 0; i < lowWaterMark; i++ )
         {
-            incomingResponseValveController.scheduledJob();
+            incomingResponseValveController.increment();
         }
         // incremented to lower watermark...
         verify( incomingResponseValve, never() ).shut(); //... does not trigger
@@ -65,9 +65,9 @@ class IncomingResponseValveControllerTest
     {
         for ( int i = 0; i < lowWaterMark; i++ )
         {
-            incomingResponseValveController.scheduledJob();
+            incomingResponseValveController.increment();
         }
-        incomingResponseValveController.scheduledJob(); // incremented above lower limit
+        incomingResponseValveController.increment(); // incremented above lower limit
         incomingResponseValveController.onSuccess(); // decremented to lower limit ...
         verify( incomingResponseValve, times( 1 ) ).open(); // does trigger
         incomingResponseValveController.onSuccess(); // decremented below lower limit ...

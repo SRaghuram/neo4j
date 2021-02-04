@@ -25,7 +25,7 @@ class IncomingResponseValveController implements AsyncTaskEventHandler
         this.upperLimit = upperLimit;
     }
 
-    synchronized void scheduledJob()
+    synchronized void increment()
     {
         if ( ++currentValue == upperLimit )
         {
@@ -33,7 +33,7 @@ class IncomingResponseValveController implements AsyncTaskEventHandler
         }
     }
 
-    private synchronized void release()
+    private synchronized void decrement()
     {
         if ( --currentValue == lowerLimit )
         {
@@ -44,12 +44,12 @@ class IncomingResponseValveController implements AsyncTaskEventHandler
     @Override
     public void onFailure( Exception e )
     {
-        release();
+        decrement();
     }
 
     @Override
     public void onSuccess()
     {
-        release();
+        decrement();
     }
 }

@@ -62,7 +62,7 @@ public class PullUpdatesJob extends CatchupResponseAdaptor<TxStreamFinishedRespo
         }
         else if ( currentBatchSize >= maxBatchSize )
         {
-            incomingResponseValveController.scheduledJob();
+            incomingResponseValveController.increment();
             batchingTxApplier.applyBatchAsync( ongoingJobEventHandler( signal ) );
             currentBatchSize = 0;
         }
