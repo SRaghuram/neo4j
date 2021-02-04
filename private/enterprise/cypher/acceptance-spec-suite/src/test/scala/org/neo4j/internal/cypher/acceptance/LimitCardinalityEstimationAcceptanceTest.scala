@@ -6,6 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.collection.RawIterator
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.compiler.planner.logical.PlannerDefaults
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
@@ -154,18 +155,19 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   }
 
   test("should estimate rows with selectivity through CartesianProduct") {
+    val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
     val limit = 10
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n), (m) RETURN n, m LIMIT $limit")
+    val result = executeSingle(s"CYPHER MATCH (n), (m) RETURN n, m LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
         .withLHS(aPlan("CartesianProduct").withEstimatedRows(limit)
           .withChildren(
-            aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(limit))),
-            aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(limit)))
+            aPlan("AllNodesScan").withEstimatedRows(batchSize),
+            aPlan("AllNodesScan").withEstimatedRows(batchSize)
           )
         )
       )
@@ -206,25 +208,27 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   }
 
   test("should estimate rows with reset selectivity through sort") {
+    val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 5000
     val limit = 49
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"PROFILE MATCH (n), (m) WITH n, m ORDER BY m RETURN n, m LIMIT $limit")
+    val result = executeSingle(s"MATCH (n), (m) WITH n, m ORDER BY m RETURN n, m LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
         .withLHS(aPlan("CartesianProduct").withEstimatedRows(limit)
           .withChildren(
-            aPlan("Sort").withEstimatedRows(round(math.sqrt(limit)))
+            aPlan("Sort").withEstimatedRows(batchSize)
               .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount)),
-            aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(limit)))
+            aPlan("AllNodesScan").withEstimatedRows(batchSize * batchSize)
           )
         )
       )
   }
 
   test("should estimate rows with reset selectivity through top") {
+    val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
     val limit = 50
     (0 until nodeCount).foreach(_ => createNode())
@@ -236,7 +240,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
         .withLHS(aPlan("CartesianProduct").withEstimatedRows(nodeCount * nodeCount)
           .withChildren(
             aPlan("AllNodesScan").withEstimatedRows(nodeCount),
-            aPlan("AllNodesScan").withEstimatedRows(nodeCount)
+            aPlan("AllNodesScan").withEstimatedRows(nodeCount * nodeCount / batchSize)
           )
         )
       )
@@ -278,6 +282,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   }
 
   test("should estimate rows with lowest limit selectivity when lowest limit is earliest") {
+    val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
     val lowLimit = 9
     val highLimit = 20
@@ -290,8 +295,8 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
         .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
           .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
               .withChildren(
-                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit))),
-                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit)))
+                aPlan("AllNodesScan").withEstimatedRows(batchSize),
+                aPlan("AllNodesScan").withEstimatedRows(batchSize)
               )
           )
         )
@@ -299,6 +304,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   }
 
   test("should estimate rows with lowest limit selectivity when lowest limit is latest") {
+    val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
     val lowLimit = 5
     val highLimit = 200000
@@ -311,8 +317,8 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
         .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
           .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
               .withChildren(
-                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit))),
-                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit)))
+                aPlan("AllNodesScan").withEstimatedRows(batchSize),
+                aPlan("AllNodesScan").withEstimatedRows(batchSize)
               )
           )
         )
@@ -320,6 +326,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   }
 
   test("should estimate rows with lowest limit selectivity when lowest limit is latest and cardinality is increased between limits") {
+    val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
     val lowLimit = 500
     val highLimit = 200000
@@ -335,8 +342,8 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
           .withLHS(aPlan("Limit").withEstimatedRows(round(lowLimit / unwindFactor.toDouble))
             .withLHS(aPlan("CartesianProduct").withEstimatedRows(round(lowLimit / unwindFactor.toDouble))
               .withChildren(
-                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit / unwindFactor.toDouble))),
-                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit / unwindFactor.toDouble)))
+                aPlan("AllNodesScan").withEstimatedRows(batchSize),
+                aPlan("AllNodesScan").withEstimatedRows(batchSize)
               )
             )
           )
@@ -345,6 +352,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   }
 
   test("should estimate rows with lowest limit selectivity when lowest limit is latest and cardinality is decreased between limits") {
+    val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
     val lowLimit = 25
     val highLimit = 200000
@@ -358,8 +366,8 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
           .withLHS(aPlan("Limit").withEstimatedRows(round((lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor)))
             .withLHS(aPlan("CartesianProduct").withEstimatedRows(round((lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor)))
               .withChildren(
-                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))),
-                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor)))
+                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(batchSize),
+                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(batchSize * 6)
               )
             )
           )
@@ -368,6 +376,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   }
 
   test("should estimate rows with lowest limit selectivity when lowest limit is earliest and cardinality is increased between limits") {
+    val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
     val lowLimit = 5
     val highLimit = 200000
@@ -383,8 +392,8 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
           .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
             .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
               .withChildren(
-                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit))),
-                aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit)))
+                aPlan("AllNodesScan").withEstimatedRows(batchSize),
+                aPlan("AllNodesScan").withEstimatedRows(batchSize)
               )
             )
           )
@@ -393,6 +402,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   }
 
   test("should estimate rows with lowest limit selectivity when lowest limit is earliest and cardinality is decreased between limits") {
+    val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
     val lowLimit = 25
     val highLimit = 200000
@@ -406,8 +416,8 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
           .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
             .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
               .withChildren(
-                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit))),
-                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(round(math.sqrt(lowLimit)))
+                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(batchSize),
+                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(batchSize * 2)
               )
             )
           )
@@ -526,7 +536,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
       }
     }
 
-    val result = executeSingle(s"profile MATCH (n) CALL my.first.proc() RETURN n LIMIT $limit")
+    val result = executeSingle(s"MATCH (n) CALL my.first.proc() RETURN n LIMIT $limit")
 
     result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
       .withLHS(aPlan("Limit").withEstimatedRows(limit)
