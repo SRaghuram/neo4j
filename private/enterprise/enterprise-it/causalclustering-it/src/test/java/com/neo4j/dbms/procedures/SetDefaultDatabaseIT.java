@@ -272,7 +272,7 @@ public class SetDefaultDatabaseIT
     {
         List<ShowDatabasesResultRow> rows = CausalClusteringTestHelpers.showDatabases( cluster );
         Set<String> defaultDbs = rows.stream()
-                                     .filter( ShowDatabasesResultRow::isSystemDefault )
+                                     .filter( ShowDatabasesResultRow::isDefault )
                                      .map( ShowDatabasesResultRow::name )
                                      .collect( Collectors.toSet() );
         assertThat( defaultDbs ).containsOnly( databaseName );

@@ -311,7 +311,7 @@ class CommandsRoutingTest
         } );
 
         assertThat( r.size() ).isGreaterThanOrEqualTo( 1 );
-        assertThat( r.get( 0 ).keys() ).containsExactly( "name", "address", "role", "requestedStatus", "currentStatus", "error", "default", "systemDefault" );
+        assertThat( r.get( 0 ).keys() ).containsExactly( "name", "address", "role", "requestedStatus", "currentStatus", "error", "default" );
     }
 
     @Test
@@ -343,7 +343,7 @@ class CommandsRoutingTest
 
         assertThat( r.size() ).isEqualTo( 1 );
         assertThat( r ).extracting( stringColumn( "name" ) ).containsExactly( "my-db" );
-        assertThat( r.get( 0 ).keys() ).containsExactly( "name", "address", "role", "requestedStatus", "currentStatus", "error", "default", "systemDefault" );
+        assertThat( r.get( 0 ).keys() ).containsExactly( "name", "address", "role", "requestedStatus", "currentStatus", "error", "default" );
     }
 
     @Test
