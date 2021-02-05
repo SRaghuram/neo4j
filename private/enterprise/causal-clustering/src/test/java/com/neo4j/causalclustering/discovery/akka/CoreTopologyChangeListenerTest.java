@@ -45,7 +45,7 @@ class CoreTopologyChangeListenerTest
     private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
     private final ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forTest( 0 );
     private final JobScheduler jobScheduler = new ThreadPoolJobScheduler( Executors.newSingleThreadExecutor() );
-    private DatabaseStateService databaseStateService = new StubDatabaseStateService( dbId -> new EnterpriseDatabaseState( dbId, STARTED ) );
+    private final DatabaseStateService databaseStateService = new StubDatabaseStateService( dbId -> new EnterpriseDatabaseState( dbId, STARTED ) );
 
     private final ActorSystemLifecycle actorSystemLifecycle = Mockito.mock( ActorSystemLifecycle.class );
 
@@ -57,7 +57,7 @@ class CoreTopologyChangeListenerTest
             NullLogProvider.getInstance(),
             catchupAddressRetryStrategy,
             actorSystemRestarter,
-            TestCoreServerSnapshot::factory,
+            TestCoreServerSnapshot.factory( myIdentity ),
             jobScheduler,
             Clocks.systemClock(),
             new Monitors(),

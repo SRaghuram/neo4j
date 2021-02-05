@@ -91,15 +91,16 @@ class AkkaCoreTopologyMisConfiguredIT
         Map<NamedDatabaseId,DatabaseState> states = Map.of( databaseIdRepository.defaultDatabase(),
                 new EnterpriseDatabaseState( databaseIdRepository.defaultDatabase(), STARTED ) );
         var databaseStateService = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
+        var myIdentity = new InMemoryCoreServerIdentity();
         var service = new AkkaCoreTopologyService(
                 config,
-                new InMemoryCoreServerIdentity(),
+                myIdentity,
                 actorSystemLifecycle,
                 logProvider,
                 logProvider,
                 new NoRetriesStrategy(),
                 ActorSystemRestarter.forTest( 2 ),
-                TestCoreServerSnapshot::new,
+                TestCoreServerSnapshot.factory( myIdentity ),
                 jobScheduler,
                 Clocks.systemClock(),
                 new Monitors(),

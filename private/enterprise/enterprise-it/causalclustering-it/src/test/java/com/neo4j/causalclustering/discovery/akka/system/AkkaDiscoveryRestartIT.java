@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.ActorSystemRestarter;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
-import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
@@ -135,7 +134,7 @@ public class AkkaDiscoveryRestartIT
         public TestAkkaCoreTopologyService coreTopologyService(
                 Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler, LogProvider logProvider, LogProvider userLogProvider,
                 RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy, SslPolicyLoader sslPolicyLoader,
-                CoreServerSnapshotFactory serverSnapshotFactory, DiscoveryFirstStartupDetector firstStartupDetector, Monitors monitors, Clock clock,
+                ServerSnapshotFactory serverSnapshotFactory, DiscoveryFirstStartupDetector firstStartupDetector, Monitors monitors, Clock clock,
                 DatabaseStateService databaseStateService, Panicker panicker )
         {
             ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forConfig( config);
@@ -189,7 +188,7 @@ public class AkkaDiscoveryRestartIT
         TestAkkaCoreTopologyService(
                 Config config, CoreServerIdentity identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
                 LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, ActorSystemRestarter actorSystemRestarter,
-                CoreServerSnapshotFactory serverSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
+                ServerSnapshotFactory serverSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
                 DatabaseStateService databaseStateService, Panicker panicker )
         {
             super( config, identityModule, actorSystemLifecycle, logProvider, userLogProvider, catchupAddressRetryStrategy, actorSystemRestarter,

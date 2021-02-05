@@ -21,11 +21,17 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.discovery.member.DefaultServerSnapshot.DISCOVERABLE_DATABASE_STATES;
 
+
 public class TestCoreServerSnapshot implements ServerSnapshot
 {
     private final Map<DatabaseId,DatabaseState> databaseStates;
     private final Map<DatabaseId,RaftMemberId> databaseMemberships;
     private final Map<DatabaseId,LeaderInfo> databaseLeaderships;
+
+    public static ServerSnapshotFactory factory( CoreServerIdentity myIdentity )
+    {
+        return ( databaseStateService, databaseLeaderships ) -> new TestCoreServerSnapshot( myIdentity, databaseStateService, databaseLeaderships );
+    }
 
     public TestCoreServerSnapshot( CoreServerIdentity myIdentity,
             DatabaseStateService databaseStateService,
@@ -55,7 +61,7 @@ public class TestCoreServerSnapshot implements ServerSnapshot
                              .collect( Collectors.toMap( entry -> entry.getKey().databaseId(), Map.Entry::getValue ) );
     }
 
-    public static TestCoreServerSnapshot factory( CoreServerIdentity myIdentity, DatabaseStateService databaseStateService,
+    public static ServerSnapshot factory( CoreServerIdentity myIdentity, DatabaseStateService databaseStateService,
             Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
         return new TestCoreServerSnapshot( myIdentity, databaseStateService, databaseLeaderships );

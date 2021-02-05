@@ -64,8 +64,9 @@ public class CoreDiscoveryModule
             DatabaseStateService databaseStateService, Panicker panicker )
     {
         RemoteMembersResolver remoteMembersResolver = chooseResolver( config, logService );
+        var serverSnapshotFactory = DefaultServerSnapshot.factoryFor( myIdentity );
         CoreTopologyService topologyService = discoveryServiceFactory.coreTopologyService( config, myIdentity, jobScheduler, debugLog, userLog,
-                remoteMembersResolver, resolveStrategy( config ), sslPolicyLoader, DefaultServerSnapshot::coreSnapshot, firstStartupDetector, monitors, clock,
+                remoteMembersResolver, resolveStrategy( config ), sslPolicyLoader, serverSnapshotFactory, firstStartupDetector, monitors, clock,
                 databaseStateService, panicker );
 
         globalLife.add( topologyService );

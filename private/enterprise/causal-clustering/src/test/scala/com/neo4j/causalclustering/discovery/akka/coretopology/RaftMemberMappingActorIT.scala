@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.common.RaftMemberKnownMessage
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseServer
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory
 import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
@@ -132,8 +131,7 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
     val namedDatabaseIds = Set("system", "not_system").map(databaseIdRepository.getRaw)
     val raftMemberIds = namedDatabaseIds.map(identityModule.raftMemberId)
     val stateService = databaseStateService(namedDatabaseIds)
-    val serverSnapshotFactory: CoreServerSnapshotFactory = TestCoreServerSnapshot.factory _
-    val snapshot = serverSnapshotFactory.createSnapshot(identityModule, stateService, Map.empty[DatabaseId, LeaderInfo].asJava)
+    val snapshot = new TestCoreServerSnapshot(identityModule, stateService, Map.empty[DatabaseId, LeaderInfo].asJava)
 
     val replicatedDataActorRef = system.actorOf(RaftMemberMappingActor.props(
       cluster, replicator.ref, coreTopologyProbe.ref, identityModule, monitor))

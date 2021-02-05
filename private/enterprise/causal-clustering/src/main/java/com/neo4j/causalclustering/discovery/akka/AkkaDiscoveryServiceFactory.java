@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
-import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory;
+import com.neo4j.causalclustering.discovery.member.DefaultServerSnapshot;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
@@ -39,7 +39,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
     public final AkkaCoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler,
                                                               LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
                                                               RetryStrategy catchupAddressRetryStrategy,
-                                                              SslPolicyLoader sslPolicyLoader, CoreServerSnapshotFactory serverSnapshotFactory,
+                                                              SslPolicyLoader sslPolicyLoader, ServerSnapshotFactory serverSnapshotFactory,
                                                               DiscoveryFirstStartupDetector firstStartupDetector,
                                                               Monitors monitors, Clock clock, DatabaseStateService databaseStateService,
                                                               Panicker panicker )
@@ -73,7 +73,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
                 logProvider,
                 myIdentity,
                 actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, new ReadReplicaDiscoveryFirstStartupDetector() ),
-                serverSnapshotFactory,
+                DefaultServerSnapshot::rrSnapshot,
                 clock,
                 jobScheduler,
                 databaseStateService );

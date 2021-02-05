@@ -82,8 +82,9 @@ public class AkkaDiscoverySystemHelper
         var databaseStateService = new StubDatabaseStateService( databaseStates, EnterpriseDatabaseState::unknown );
         var panicker = DummyPanicService.PANICKER;
 
+        var serverSnapshotFactory = TestCoreServerSnapshot.factory( identityModule );
         return discoveryServiceFactory.coreTopologyService( config, identityModule, createInitialisedScheduler(), logProvider,
-                                                            logProvider, membersResolver, retryStrategy, sslPolicyLoader, TestCoreServerSnapshot::factory,
+                                                            logProvider, membersResolver, retryStrategy, sslPolicyLoader, serverSnapshotFactory,
                                                             firstStartupDetector, monitors, Clocks.systemClock(), databaseStateService, panicker );
     }
 }

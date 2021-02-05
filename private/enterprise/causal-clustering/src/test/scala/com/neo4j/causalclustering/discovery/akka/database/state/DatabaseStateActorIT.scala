@@ -19,7 +19,7 @@ import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DatabaseStateUpdateSink
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory
+
 import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot
 import com.neo4j.causalclustering.identity.IdFactory.randomServerId
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
@@ -98,12 +98,11 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
       )
       val stateService = databaseStateService(states)
 
-      val snapshotFactory: CoreServerSnapshotFactory = TestCoreServerSnapshot.factory _
       val replicatorProbe = TestProbe("replicatorProbe")
       val actor = system.actorOf(DatabaseStateActor.props(cluster, replicatorProbe.ref, discoverySink, rrTopologyProbe.ref, monitor, myself))
 
       When("PublishInitialData request received")
-      actor ! new PublishInitialData(snapshotFactory.createSnapshot(identityModule, stateService, Map.empty[DatabaseId,LeaderInfo].asJava))
+      actor ! new PublishInitialData(new TestCoreServerSnapshot(identityModule, stateService, Map.empty[DatabaseId,LeaderInfo].asJava))
 
       Then("the initial state should be published")
       val update = expectReplicatorUpdates(replicatorProbe, dataKey)

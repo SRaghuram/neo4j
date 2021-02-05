@@ -19,7 +19,6 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseStateActor
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory
 import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
@@ -52,7 +51,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       val databaseStates = Map(
         systemDatabaseId -> new EnterpriseDatabaseState(systemDatabaseId, EnterpriseOperatorState.STOPPED),
         notSystemDatabaseId -> new EnterpriseDatabaseState(notSystemDatabaseId, EnterpriseOperatorState.INITIAL) )
-      val serverSnapshot = serverSnapshotFactory.createSnapshot(identityModule, databaseStateService(databaseStates), Map.empty[DatabaseId,LeaderInfo].asJava)
+      val serverSnapshot = new TestCoreServerSnapshot(identityModule, databaseStateService(databaseStates), Map.empty[DatabaseId,LeaderInfo].asJava)
 
       When("PublishInitialData request received")
       replicatedDataActorRef ! new PublishInitialData( serverSnapshot )
@@ -161,9 +160,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     val notSystemDatabaseId = databaseIdRepository.getRaw("not_system")
     val namedDatabaseIds = Set(systemDatabaseId,notSystemDatabaseId)
     val stateService = databaseStateService(namedDatabaseIds)
-    val serverSnapshotFactory: CoreServerSnapshotFactory = TestCoreServerSnapshot.factory _
-    val snapshot = serverSnapshotFactory.createSnapshot(identityModule, stateService, Map.empty[DatabaseId, LeaderInfo].asJava)
-
+    val snapshot = new TestCoreServerSnapshot(identityModule, stateService, Map.empty[DatabaseId, LeaderInfo].asJava);
     val coreServerInfo = TestTopology.addressesForCore(0, (Set.empty[DatabaseId] ++ namedDatabaseIds.map(_.databaseId())).asJava)
 
     val config = {

@@ -272,15 +272,16 @@ class AkkaCoreTopologyDowningIT
                                                             new EnterpriseDatabaseState( databaseIdRepository.defaultDatabase(), STARTED ) );
         DatabaseStateService databaseStateService = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
 
+        var myIdentity = new InMemoryCoreServerIdentity();
         AkkaCoreTopologyService service = new AkkaCoreTopologyService(
                 config,
-                new InMemoryCoreServerIdentity(),
+                myIdentity,
                 actorSystemLifecycle,
                 logProvider,
                 logProvider,
                 new NoRetriesStrategy(),
                 ActorSystemRestarter.forTest( 1 ),
-                TestCoreServerSnapshot::factory,
+                TestCoreServerSnapshot.factory( myIdentity ),
                 jobSchedulerFactory.create(),
                 Clocks.systemClock(),
                 new Monitors(),

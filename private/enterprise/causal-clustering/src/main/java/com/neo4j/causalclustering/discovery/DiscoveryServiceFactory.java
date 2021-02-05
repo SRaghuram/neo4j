@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
@@ -25,7 +24,7 @@ public interface DiscoveryServiceFactory
     CoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler, LogProvider logProvider,
                                              LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
                                              RetryStrategy topologyServiceRetryStrategy,
-                                             SslPolicyLoader sslPolicyLoader, CoreServerSnapshotFactory serverSnapshotFactory,
+                                             SslPolicyLoader sslPolicyLoader, ServerSnapshotFactory serverSnapshotFactory,
                                              DiscoveryFirstStartupDetector firstStartupDetector, Monitors monitors,
                                              Clock clock, DatabaseStateService databaseStateService, Panicker panicker );
 

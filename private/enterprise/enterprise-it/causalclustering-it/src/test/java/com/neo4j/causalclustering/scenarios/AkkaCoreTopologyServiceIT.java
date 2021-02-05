@@ -64,9 +64,10 @@ class AkkaCoreTopologyServiceIT
         var databaseStateService = new StubDatabaseStateService( dbId -> new EnterpriseDatabaseState( dbId, EnterpriseOperatorState.STARTED ) );
         var panicker = DummyPanicService.PANICKER;
 
+        var serverSnapshotFactory = TestCoreServerSnapshot.factory( identityModule );
         service = new AkkaDiscoveryServiceFactory().coreTopologyService( config, identityModule, jobScheduler, logProvider, logProvider,
                                                                          initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader,
-                                                                         TestCoreServerSnapshot::factory, firstStartupDetector,
+                                                                         serverSnapshotFactory, firstStartupDetector,
                                                                          new Monitors(), Clocks.systemClock(), databaseStateService, panicker );
     }
 

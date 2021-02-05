@@ -116,7 +116,7 @@ class AkkaCoreTopologyServiceTest
                 userLogProvider,
                 catchupAddressretryStrategy,
                 actorSystemRestarter,
-                TestCoreServerSnapshot::factory,
+                TestCoreServerSnapshot.factory( myIdentity ),
                 new JobSchedulerAdapter(),
                 clock,
                 new Monitors(),

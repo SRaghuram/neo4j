@@ -40,10 +40,9 @@ public final class DefaultServerSnapshot implements ServerSnapshot
         this.databaseLeaderships = databaseLeaderships;
     }
 
-    public static DefaultServerSnapshot coreSnapshot( CoreServerIdentity identityModule,
-            DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships )
+    public static ServerSnapshotFactory factoryFor( CoreServerIdentity identityModule )
     {
-        return new DefaultServerSnapshot( databaseMemberships( databaseStateService, identityModule ),
+        return ( databaseStateService, databaseLeaderships ) -> new DefaultServerSnapshot( databaseMemberships( databaseStateService, identityModule ),
                                            databaseStates( databaseStateService ), Map.copyOf( databaseLeaderships ) );
     }
 
