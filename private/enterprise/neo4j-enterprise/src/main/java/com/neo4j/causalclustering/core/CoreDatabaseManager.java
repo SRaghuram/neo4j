@@ -103,7 +103,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
             DatabaseConfig databaseConfig, DatabaseLogService databaseLogService )
     {
         Config config = globalModule.getGlobalConfig();
-        var coreDatabaseComponents = new CoreDatabaseComponents( config, edition, kernelComponents, databaseLogService );
+        var coreDatabaseComponents = new CoreDatabaseComponents( edition, kernelComponents );
         var globalProcedures = parentDependencies.resolveDependency( GlobalProcedures.class );
         return new ModularDatabaseCreationContext( namedDatabaseId, globalModule, parentDependencies, parentMonitors,
                 coreDatabaseComponents, globalProcedures, versionContextSupplier, databaseConfig, kernelComponents.leaseService() );

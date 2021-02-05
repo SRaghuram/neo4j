@@ -678,7 +678,7 @@ public class ForsetiClient implements Locks.Client
     }
 
     @Override
-    public void prepare()
+    public void prepareForCommit()
     {
         stateHolder.prepare( this );
     }

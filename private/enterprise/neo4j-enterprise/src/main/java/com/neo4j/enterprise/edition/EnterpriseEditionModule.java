@@ -70,9 +70,6 @@ import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
-import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
-import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.LogProvider;
@@ -151,12 +148,6 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     protected ConstraintSemantics createSchemaRuleVerifier()
     {
         return new EnterpriseConstraintSemantics();
-    }
-
-    @Override
-    protected StatementLocksFactory createStatementLocksFactory( Locks locks, Config config, LogService logService )
-    {
-        return new StatementLocksFactorySelector( locks, config, logService ).select();
     }
 
     @Override

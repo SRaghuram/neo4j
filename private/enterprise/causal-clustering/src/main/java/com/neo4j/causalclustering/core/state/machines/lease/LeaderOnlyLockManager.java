@@ -139,9 +139,9 @@ public class LeaderOnlyLockManager implements Locks
         }
 
         @Override
-        public void prepare()
+        public void prepareForCommit()
         {
-            localClient.prepare();
+            localClient.prepareForCommit();
         }
 
         @Override

@@ -23,12 +23,9 @@ import org.neo4j.kernel.impl.api.ReadOnlyTransactionCommitProcess;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.AccessCapabilityFactory;
 import org.neo4j.kernel.impl.factory.ReadOnly;
-import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
-import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.ReadOnlyTokenCreator;
 import org.neo4j.token.TokenHolders;
@@ -37,7 +34,6 @@ import org.neo4j.token.api.TokenHolder;
 public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
 {
     private final Locks locksManager;
-    private final StatementLocksFactory statementLocksFactory;
     private final DatabaseIdContext idContext;
     private final TokenHolders tokenHolders;
     private final CommitProcessFactory commitProcessFactory;
@@ -50,8 +46,6 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
         this.editionModule = editionModule;
         this.locksManager = new ReadReplicaLockManager();
         Config globalConfig = globalModule.getGlobalConfig();
-        DatabaseLogService databaseLogService = new DatabaseLogService( namedDatabaseId, globalModule.getLogService() );
-        this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, globalConfig, databaseLogService ).select();
 
         IdContextFactory idContextFactory = IdContextFactoryBuilder.of( globalModule.getFileSystem(), globalModule.getJobScheduler(),
                 globalConfig, globalModule.getTracers().getPageCacheTracer() ).build();
@@ -106,12 +100,6 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
     public Locks getLocks()
     {
         return locksManager;
-    }
-
-    @Override
-    public StatementLocksFactory getStatementLocksFactory()
-    {
-        return statementLocksFactory;
     }
 
     @Override

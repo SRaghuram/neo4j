@@ -87,7 +87,7 @@ public class ReadReplicaLockManager implements Locks
         }
 
         @Override
-        public void prepare()
+        public void prepareForCommit()
         {
         }
 
