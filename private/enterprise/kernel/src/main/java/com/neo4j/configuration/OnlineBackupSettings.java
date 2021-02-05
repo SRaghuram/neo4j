@@ -28,10 +28,10 @@ public class OnlineBackupSettings implements SettingsDeclaration
     public static final Setting<Boolean> online_backup_enabled = newBuilder( "dbms.backup.enabled", BOOL, true ).build();
 
     @Description( "Strategy for incremental backup. StartTime means that this server will send transactions until the time of when the backup started has " +
-                  "been reached. Aggressive will keep sending until all committed transactions have been sent, even if they where committed after the backup " +
+                  "been reached. Unbounded will keep sending until all committed transactions have been sent, even if they where committed after the backup " +
                   "job started. " )
     public static final Setting<TransactionStreamingStrategy> incremental_backup_strategy =
-            newBuilder( "dbms.backup.incremental.strategy", ofEnum( TransactionStreamingStrategy.class ), TransactionStreamingStrategy.Aggressive ).dynamic()
+            newBuilder( "dbms.backup.incremental.strategy", ofEnum( TransactionStreamingStrategy.class ), TransactionStreamingStrategy.Unbounded ).dynamic()
                     .build();
 
     @Description( "Network interface and port for the backup server to listen on." )

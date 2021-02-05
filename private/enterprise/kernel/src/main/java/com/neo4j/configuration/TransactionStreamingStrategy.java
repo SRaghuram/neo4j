@@ -10,6 +10,6 @@ import org.neo4j.annotations.api.PublicApi;
 @PublicApi
 public enum TransactionStreamingStrategy
 {
-    Aggressive,
+    Unbounded,
     StartTime
 }

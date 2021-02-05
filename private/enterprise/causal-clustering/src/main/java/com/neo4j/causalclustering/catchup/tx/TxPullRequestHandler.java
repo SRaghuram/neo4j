@@ -154,7 +154,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         {
         case StartTime:
             return new TxStreamingConstraint.Limited( lastCommitTxId );
-        case Aggressive:
+        case Unbounded:
             return new TxStreamingConstraint.Unbounded();
         default:
             throw new IllegalArgumentException( " Unknown strategy " + txStreamingStrategy );

@@ -59,7 +59,7 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
             FileSystemAbstraction fs, int maxChunkSize, LogProvider logProvider, DependencyResolver dependencyResolver )
     {
         return new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, logProvider, dependencyResolver,
-                () -> TransactionStreamingStrategy.Aggressive );
+                () -> TransactionStreamingStrategy.Unbounded );
     }
 
     private MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, DatabaseStateService databaseStateService,
