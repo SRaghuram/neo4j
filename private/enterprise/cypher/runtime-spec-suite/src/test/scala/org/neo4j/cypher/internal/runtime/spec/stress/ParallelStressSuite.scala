@@ -76,9 +76,9 @@ abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], r
   def init(): Unit = {
     nodes = given {
       try {
-        index("Label", "prop")
-        index("Label", "text")
-        index("Label", "propWithDuplicates")
+        nodeIndex("Label", "prop")
+        nodeIndex("Label", "text")
+        nodeIndex("Label", "propWithDuplicates")
       } catch {
         case e: IllegalStateException =>
           // TODO This is to investigate flaky tests

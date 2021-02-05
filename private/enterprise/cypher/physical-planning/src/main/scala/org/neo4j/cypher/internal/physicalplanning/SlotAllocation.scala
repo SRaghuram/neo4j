@@ -52,7 +52,6 @@ import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
 import org.neo4j.cypher.internal.logical.plans.FindShortestPaths
 import org.neo4j.cypher.internal.logical.plans.ForeachApply
-import org.neo4j.cypher.internal.logical.plans.IndexLeafPlan
 import org.neo4j.cypher.internal.logical.plans.Input
 import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.LetAntiSemiApply
@@ -70,6 +69,7 @@ import org.neo4j.cypher.internal.logical.plans.NestedPlanCollectExpression
 import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
 import org.neo4j.cypher.internal.logical.plans.NodeCountFromCountStore
 import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
+import org.neo4j.cypher.internal.logical.plans.NodeIndexLeafPlan
 import org.neo4j.cypher.internal.logical.plans.NodeLogicalLeafPlan
 import org.neo4j.cypher.internal.logical.plans.NonFuseable
 import org.neo4j.cypher.internal.logical.plans.NonPipelined
@@ -497,7 +497,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           allocations.set(p.id, slots)
         }
 
-      case leaf: IndexLeafPlan =>
+      case leaf: NodeIndexLeafPlan =>
         slots.newLong(leaf.idName, nullable, CTNode)
         leaf.cachedProperties.foreach(cp => slots.newCachedProperty(cp.runtimeKey))
 

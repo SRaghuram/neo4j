@@ -31,7 +31,7 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
       Array[Any](i.toLong, i.toLong)
     }.toArray: _*)
 
-    index("Label", "prop")
+    nodeIndex("Label", "prop")
     given {
       nodePropertyGraph(nValues, {
         case i: Int => Map("prop" -> (nValues + 3 - i) % nValues) // Reverse and offset when creating the values so we do not accidentally get them in order
@@ -74,7 +74,7 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
       Array[Any](i.toLong, i.toLong)
     }.toArray: _*)
 
-    index("Label", "prop")
+    nodeIndex("Label", "prop")
     given {
       nodePropertyGraph(nValues, {
         case i: Int => Map("prop" -> (nValues + 3 - i) % nValues) // Reverse and offset when creating the values so we do not accidentally get them in order
@@ -116,7 +116,7 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
       Array[Any](i.toLong, i.toLong)
     }.toArray: _*)
 
-    index("Label", "prop")
+    nodeIndex("Label", "prop")
     given {
       nodePropertyGraph(nValues, {
         case i: Int => Map("prop" -> (nValues + 3 - i) % nValues) // Reverse and offset when creating the values so we do not accidentally get them in order
