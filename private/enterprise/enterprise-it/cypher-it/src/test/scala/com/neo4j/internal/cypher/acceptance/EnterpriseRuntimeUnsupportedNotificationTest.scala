@@ -19,16 +19,16 @@ import org.neo4j.graphdb.impl.notification.NotificationDetail
 class EnterpriseRuntimeUnsupportedNotificationTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
 
   test("Should give specific error message why pipelined does not support a query") {
-    val result = execute("CYPHER runtime=pipelined EXPLAIN MATCH (n) DELETE n")
+    val result = execute("CYPHER runtime=pipelined EXPLAIN MATCH (n) SET n:German")
     result.notifications should contain(RUNTIME_UNSUPPORTED.notification(InputPosition.empty,
-      NotificationDetail.Factory.message("Runtime unsupported", "Pipelined does not yet support the plans including `DeleteNode`, use another runtime.")))
+      NotificationDetail.Factory.message("Runtime unsupported", "Pipelined does not yet support the plans including `SetLabels`, use another runtime.")))
   }
 
   test("can also be configured to fail hard") {
     restartWithConfig(Map(GraphDatabaseSettings.cypher_hints_error -> TRUE))
     eengine = createEngine(graph)
 
-    val exception = intercept[RuntimeUnsupportedException](execute("CYPHER runtime=pipelined EXPLAIN MATCH (n) DELETE n"))
-    exception.getMessage should be("Pipelined does not yet support the plans including `DeleteNode`, use another runtime.")
+    val exception = intercept[RuntimeUnsupportedException](execute("CYPHER runtime=pipelined EXPLAIN MATCH (n) SET n:German"))
+    exception.getMessage should be("Pipelined does not yet support the plans including `SetLabels`, use another runtime.")
   }
 }

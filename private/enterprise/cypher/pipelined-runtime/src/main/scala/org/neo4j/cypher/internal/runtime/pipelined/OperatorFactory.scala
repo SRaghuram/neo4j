@@ -78,6 +78,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOper
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalApplyOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteType
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipTypeScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator
@@ -1013,6 +1015,27 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             converters.toCommandExpression(id, propertyValue),
             needsExclusiveLock = internal.expressions.Expression.hasPropertyReadDependency(idName, propertyValue, propertyKey)
           )))
+
+      case plans.DeleteNode(_, expression) if !parallelExecution =>
+        Some(new DeleteOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, expression), DeleteType.Node))
+
+      case plans.DetachDeleteNode(_, expression) if !parallelExecution =>
+        Some(new DeleteOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, expression), DeleteType.DetachNode))
+
+      case plans.DeleteRelationship(_, expression) if !parallelExecution =>
+        Some(new DeleteOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, expression), DeleteType.Relationship))
+
+      case plans.DeletePath(_, expression) if !parallelExecution =>
+        Some(new DeleteOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, expression), DeleteType.Path))
+
+      case plans.DetachDeletePath(_, expression) if !parallelExecution =>
+        Some(new DeleteOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, expression), DeleteType.DetachPath))
+
+      case plans.DeleteExpression(_, expression) if !parallelExecution =>
+        Some(new DeleteOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, expression), DeleteType.Expression))
+
+      case plans.DetachDeleteExpression(_, expression) if !parallelExecution =>
+        Some(new DeleteOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, expression), DeleteType.DetachExpression))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)

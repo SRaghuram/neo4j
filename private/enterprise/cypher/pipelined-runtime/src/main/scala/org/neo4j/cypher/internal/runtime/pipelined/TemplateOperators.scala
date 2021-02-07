@@ -66,6 +66,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateNodeFusedComm
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateRelationshipFusedCommand
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteType
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.EmptyResultOperatorTemplate
@@ -888,6 +890,34 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
           ctx: TemplateContext =>
             new SetPropertiesFromMapOperatorTemplate(ctx.inner, plan.id, entity.toString, ctx.compileExpression(entity, plan.id), expression.toString,
               ctx.compileExpression(expression, plan.id), removeOtherProps)(ctx.expressionCompiler)
+
+        case plan@plans.DeleteNode(_, expression) if !parallelExecution =>
+          ctx: TemplateContext =>
+            new DeleteOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(expression, plan.id), DeleteType.Node)(ctx.expressionCompiler)
+
+        case plan@plans.DetachDeleteNode(_, expression) if !parallelExecution =>
+          ctx: TemplateContext =>
+            new DeleteOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(expression, plan.id), DeleteType.DetachNode)(ctx.expressionCompiler)
+
+        case plan@plans.DeleteRelationship(_, expression) if !parallelExecution =>
+          ctx: TemplateContext =>
+            new DeleteOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(expression, plan.id), DeleteType.Relationship)(ctx.expressionCompiler)
+
+        case plan@plans.DeletePath(_, expression) if !parallelExecution =>
+          ctx: TemplateContext =>
+            new DeleteOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(expression, plan.id), DeleteType.Path)(ctx.expressionCompiler)
+
+        case plan@plans.DetachDeletePath(_, expression) if !parallelExecution =>
+          ctx: TemplateContext =>
+            new DeleteOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(expression, plan.id), DeleteType.DetachPath)(ctx.expressionCompiler)
+
+        case plan@plans.DeleteExpression(_, expression) if !parallelExecution =>
+          ctx: TemplateContext =>
+            new DeleteOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(expression, plan.id), DeleteType.Expression)(ctx.expressionCompiler)
+
+        case plan@plans.DetachDeleteExpression(_, expression) if !parallelExecution =>
+          ctx: TemplateContext =>
+            new DeleteOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(expression, plan.id), DeleteType.DetachExpression)(ctx.expressionCompiler)
 
         case plan@plans.LockNodes(_, nodesToLock) =>
           ctx: TemplateContext =>

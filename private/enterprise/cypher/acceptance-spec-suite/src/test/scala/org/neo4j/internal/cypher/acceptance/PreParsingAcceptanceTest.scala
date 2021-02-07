@@ -81,7 +81,7 @@ class PreParsingAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGr
     val query2 = "CYPHER runtime=pipelined MATCH (n:L) DELETE n RETURN 1"
 
     execute(query1).executionPlanDescription() should haveRuntime("PIPELINED")
-    execute(query2).executionPlanDescription() shouldNot haveRuntime("PIPELINED")
+    execute(query2).executionPlanDescription() should haveRuntime("PIPELINED")
   }
 
   test("should allow known debug options") {

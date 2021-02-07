@@ -41,6 +41,14 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrde
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CreateTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteDetachExpressionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteDetachNodeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteDetachPathTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteExpressionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteNodeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeletePathTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteRelationshipTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteTypeSafetyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EagerTestBase
@@ -677,6 +685,37 @@ class PipelinedDynamicLimitPropagationTest extends RuntimeTestSuite[EnterpriseRu
 // LOCK NODES
 class PipelinedLockNodesTest extends LockNodesTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedLockNodesNoFusingTest extends LockNodesTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// DELETE NODES
+class PipelinedDeleteNodeTest extends DeleteNodeTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedDeleteNoFusingNodeTest extends DeleteNodeTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// DETACH DELETE NODES
+class PipelinedDetachDeleteNodeTest extends DeleteDetachNodeTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedDetachDeleteNoFusingNodeTest extends DeleteDetachNodeTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// DELETE RELATIONSHIPS
+class PipelinedDeleteRelationshipTest extends DeleteRelationshipTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedDeleteRelationshipNoFusingTest extends DeleteRelationshipTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// DELETE PATHS
+class PipelinedDeletePathTest extends DeletePathTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedDeletePathNoFusingTest extends DeletePathTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// DETACH DELETE PATHS
+class PipelinedDeleteDetachPathTest extends DeleteDetachPathTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedDeleteDetachPathNoFusingTest extends DeleteDetachPathTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// DELETE EXPRESSION
+class PipelinedDeleteExpressionTest extends DeleteExpressionTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedDeleteExpressionNoFusingTest extends DeleteExpressionTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// DETACH DELETE EXPRESSION
+class PipelinedDeleteDetachExpressionTest extends DeleteDetachExpressionTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedDeleteDetachExpressionNoFusingTest extends DeleteDetachExpressionTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+class PipelinedDeleteTypeSafetyTest extends DeleteTypeSafetyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedDeleteTypeSafetyNoFusingTest extends DeleteTypeSafetyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 object PipelinedDynamicLimitPropagationTest {
   val CONFIGURED_MORSEL_SIZE: Int = 100

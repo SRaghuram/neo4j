@@ -161,7 +161,7 @@ class EagerizationAcceptanceTest
         |RETURN count(*)
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query = query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query = query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     result.columnAs[Long]("count(*)").next should equal(2)
@@ -174,7 +174,7 @@ class EagerizationAcceptanceTest
     relate(a, b, "T")
     val query = "MATCH (a)-[t:T]-(b) DELETE t RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query = query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query = query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, relationshipsDeleted = 1)
@@ -187,7 +187,7 @@ class EagerizationAcceptanceTest
     relate(a, b, "T")
     val query = "MATCH (a)-[t:T]-(b) DELETE t RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query = query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query = query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, relationshipsDeleted = 1)
@@ -200,7 +200,7 @@ class EagerizationAcceptanceTest
     relate(a, b, "T")
     val query = "MATCH (a)-[t:T]->(b) DELETE t RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query = query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query = query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(1)
     assertStats(result, relationshipsDeleted = 1)
@@ -212,7 +212,7 @@ class EagerizationAcceptanceTest
     val r = relate(a, b, "T")
     val query = s"MATCH (a)-[t:T]-(b) WHERE id(t) = ${r.getId} DELETE t RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query = query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query = query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, relationshipsDeleted = 1)
@@ -224,7 +224,7 @@ class EagerizationAcceptanceTest
     val r = relate(a, b, "T")
     val query = s"MATCH (a)-[t:T]->(b) WHERE id(t) = ${r.getId} DELETE t RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query = query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query = query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(1)
     assertStats(result, relationshipsDeleted = 1)
@@ -463,7 +463,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH p=(:L)-[*]-() DELETE p RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, relationshipsDeleted = 1, nodesDeleted = 2)
@@ -476,7 +476,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH p=(:L)-[*]-() DETACH DELETE p RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, relationshipsDeleted = 1, nodesDeleted = 2)
@@ -486,7 +486,7 @@ class EagerizationAcceptanceTest
     graph.withTx( tx => tx.execute("CREATE (a:Person {id: 42})-[:FRIEND_OF]->(b:Person {id:42}), (b)-[:FRIEND_OF]->(a), (:Person)-[:FRIEND_OF]->(b)"))
 
     val query = "MATCH (p1:Person {id: 42})-[r:FRIEND_OF]->(p2:Person {id:42}) DETACH DELETE r, p1, p2 RETURN count(*) AS count"
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, relationshipsDeleted = 3, nodesDeleted = 2)
@@ -496,7 +496,7 @@ class EagerizationAcceptanceTest
     graph.withTx( tx => tx.execute("CREATE (a:Person {id: 42})-[:FRIEND_OF]->(b:Person {id:42}), (b)-[:FRIEND_OF]->(a), (:Person)-[:FRIEND_OF]->(b)"))
 
     val query = "MATCH p = (p1:Person {id: 42})-[r:FRIEND_OF]->(p2:Person {id:42}) DETACH DELETE p RETURN count(*) AS count"
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, relationshipsDeleted = 3, nodesDeleted = 2)
@@ -1079,7 +1079,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a:Person), (m:Movie) DELETE a, m RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Long]("count(*)").next shouldBe 4
     assertStats(result, nodesDeleted = 4)
@@ -1092,7 +1092,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a:Person) DELETE a RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStats(result, nodesDeleted = 2)
@@ -1103,7 +1103,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a)-[r]-(b) DELETE r,a,b RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStats(result, nodesDeleted = 2, relationshipsDeleted = 1)
@@ -1116,7 +1116,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a)-[r]-(b) DELETE r, a, b RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.toList should equal(List(Map("count" -> 2)))
     assertStats(result, nodesDeleted = 2, relationshipsDeleted = 1)
@@ -1129,7 +1129,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a)-[r {prop : 3}]-(b) DELETE r, a, b RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStats(result, nodesDeleted = 2, relationshipsDeleted = 1)
@@ -1143,7 +1143,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a)-[r]->(b) DETACH DELETE a, b RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     result.toList should equal(List(Map("count(*)" -> 2)))
@@ -1158,7 +1158,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a)-[r]->(b) DELETE r RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
 
     result.toList should equal(List(Map("count(*)" -> 2)))
@@ -1171,7 +1171,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a:A)-[r]->(b:B) DELETE r, a, b RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
     result.toList should equal(List(Map("count(*)" -> 2)))
     assertStats(result, nodesDeleted = 4, relationshipsDeleted = 2)
@@ -1183,7 +1183,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (b:B)<-[r]-(a:A) DELETE r, a, b RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
     result.toList should equal(List(Map("count(*)" -> 2)))
     assertStats(result, nodesDeleted = 4, relationshipsDeleted = 2)
@@ -1197,7 +1197,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a)-[r {prop : 3}]->(b) DELETE r, a, b RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
     result.toList should equal(List(Map("count(*)" -> 4)))
     assertStats(result, nodesDeleted = 8, relationshipsDeleted = 4)
@@ -1213,7 +1213,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a)-[r]-(b) DELETE r, a, b RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.toList should equal(List(Map("count(*)" -> 12)))
     assertStats(result, nodesDeleted = 12, relationshipsDeleted = 6)
@@ -1226,7 +1226,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a:A)-[r]-(b) DELETE r, a, b RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.toList should equal(List(Map("count(*)" -> 4)))
     assertStats(result, nodesDeleted = 6, relationshipsDeleted = 3)
@@ -1240,7 +1240,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a)-[r {prop : 3}]-(b) DELETE r, a, b RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.toList should equal(List(Map("count(*)" -> 8)))
     assertStats(result, nodesDeleted = 8, relationshipsDeleted = 4)
@@ -1255,7 +1255,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a)-[r1]->(b)-[r2]->(c) DELETE r1, r2, a, b, c RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.toList should equal(List(Map("count(*)" -> 4)))
     assertStats(result, nodesDeleted = 5, relationshipsDeleted = 4)
@@ -1270,7 +1270,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a)-[r*]->(b) DETACH DELETE a, b RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.toList should equal(List(Map("count(*)" -> 8)))
     assertStats(result, nodesDeleted = 5, relationshipsDeleted = 4)
@@ -1280,7 +1280,7 @@ class EagerizationAcceptanceTest
   test("create directional relationship with property, match and delete relationship and nodes within same query should be eager and work") {
     val query = "CREATE ()-[:T {prop: 3}]->() WITH * MATCH (a)-[r {prop : 3}]->(b) DELETE r, a, b RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Long]("count(*)").next shouldBe 1
     assertStats(result, nodesCreated = 2, relationshipsCreated = 1, propertiesWritten = 1, nodesDeleted = 2, relationshipsDeleted = 1)
@@ -1327,7 +1327,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a:Person) OPTIONAL MATCH (a)-[r1]-() DELETE a, r1 RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Long]("count(*)").next shouldBe 7
     assertStats(result, nodesDeleted = 2, relationshipsDeleted = 7)
@@ -1360,7 +1360,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (a:Person) OPTIONAL MATCH (a)-[r1]-(), (m:Movie)-[r2]-() DELETE a, r1, m, r2 RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Long]("count(*)").next shouldBe 6
     assertStats(result, nodesDeleted = 3, relationshipsDeleted = 4)
@@ -1512,7 +1512,7 @@ class EagerizationAcceptanceTest
         |RETURN count(*)
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     assertStats(result, nodesDeleted = 2, relationshipsDeleted = 2)
     result.columnAs[Long]("count(*)").next shouldBe 2
@@ -2448,7 +2448,7 @@ class EagerizationAcceptanceTest
     // Relationship match is non-directional, so should give 2 rows
     val query = "MATCH (a)-[t:T]-(b) UNWIND [1] as i DELETE t RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, relationshipsDeleted = 1)
@@ -2463,7 +2463,7 @@ class EagerizationAcceptanceTest
     // Relationship match is non-directional, so should give 2 rows
     val query = "CREATE () WITH * MATCH (a)-[t:T]-(b) UNWIND [1] as i DELETE t RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, nodesCreated = 1, relationshipsDeleted = 1)
@@ -2478,7 +2478,7 @@ class EagerizationAcceptanceTest
     // Relationship match is non-directional, so should give 2 rows
     val query = "CREATE () WITH * CREATE () WITH * MATCH (a)-[t:T]-(b) UNWIND [1] as i DELETE t RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(2, optimalEagerCount = 1))
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, nodesCreated = 2, relationshipsDeleted = 1)
@@ -2565,7 +2565,7 @@ class EagerizationAcceptanceTest
     //val query = "UNWIND [0] as u MATCH (a), (b) FOREACH(i in range(0, 1) | DELETE a) RETURN count(*)"
     val query = "MATCH (a), (b) FOREACH(i in range(0, 1) | DELETE a) RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Long]("count(*)").next() should equal(4)
     assertStats(result, nodesDeleted = 2)
@@ -2776,7 +2776,7 @@ class EagerizationAcceptanceTest
         |RETURN d, c2""".stripMargin
 
     cookies.foreach { case (name, node) =>
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
         planComparisonStrategy = testEagerPlanComparisonStrategy(2),
         params = Map("cookie" -> name))
       assertStats(result, nodesDeleted = 1, relationshipsDeleted = 2)
@@ -2792,7 +2792,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (c:Cookie) DELETE c WITH 1 as t MATCH (x:Cookie) RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     result.columnAs[Int]("count").next should equal(0)
@@ -2808,7 +2808,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH p=(:Cookie) DELETE p WITH 1 as t MATCH (x:Cookie) RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     result.columnAs[Int]("count").next should equal(0)

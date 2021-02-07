@@ -70,7 +70,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   test("deletes single node") {
     val a = createNode().getId
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (a) where id(a) = 0 delete a")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a) where id(a) = 0 delete a")
     assertStats(result, nodesDeleted = 1)
 
     result.toList shouldBe empty
@@ -80,7 +80,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   test("multiple deletes should not break anything") {
     (1 to 4).foreach(_ => createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (a), (b) where id(a) = 0 AND id(b) IN [1, 2, 3] delete a")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a), (b) where id(a) = 0 AND id(b) IN [1, 2, 3] delete a")
     assertStats(result, nodesDeleted = 1)
 
     result.toList shouldBe empty
@@ -96,7 +96,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     relate(a, c)
     relate(a, d)
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (a) where id(a) = 0 match (a)-[r]->() delete r")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a) where id(a) = 0 match (a)-[r]->() delete r")
     assertStats( result, relationshipsDeleted = 3  )
 
     graph.withTx( tx => {
@@ -169,13 +169,13 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     relate(a, b, "LOVES")
 
     val msg = "Cannot delete node<0>, because it still has relationships. To delete this node, you must first delete its relationships."
-    failWithError(Configs.InterpretedAndSlotted, "match (n) where id(n) = 0 match (n)-[r:HATES]->() delete n,r", msg)
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "match (n) where id(n) = 0 match (n)-[r:HATES]->() delete n,r", msg)
   }
 
   test("delete and return") {
     val a = createNode()
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where id(n) = 0 delete n return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) where id(n) = 0 delete n return n")
 
     result.toList should equal(List(Map("n" -> a)))
   }
@@ -249,7 +249,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     val b = createNode()
     relate(a,b)
 
-    executeWith(Configs.InterpretedAndSlotted, """match (n) optional match (n)-[r]-() delete n,r""")
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, """match (n) optional match (n)-[r]-() delete n,r""")
 
     graph.withTx( tx => {
       tx.getAllNodes.asScala shouldBe empty
@@ -261,7 +261,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     val b = createNode()
     relate(a,b)
 
-    executeWith(Configs.InterpretedAndSlotted, """match (n) where id(n) = 0 match p=(n)-->() delete p""")
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, """match (n) where id(n) = 0 match p=(n)-->() delete p""")
 
     graph.withTx( tx => {
       tx.getAllNodes.asScala shouldBe empty
@@ -300,7 +300,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
 
   test("delete and delete again") {
     createNode()
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (a) where id(a) = 0 delete a foreach( x in [1] | delete a)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a) where id(a) = 0 delete a foreach( x in [1] | delete a)")
 
     assertStats(result, nodesDeleted = 1)
   }
@@ -364,7 +364,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
 
   test("complete graph") {
     val result =
-      executeWith(Configs.InterpretedAndSlotted, """CREATE (center { count:0 })
+      executeWith(Configs.InterpretedAndSlottedAndPipelined, """CREATE (center { count:0 })
                  FOREACH (x IN range(1,6) | CREATE (leaf { count : x }),(center)-[:X]->(leaf))
                  WITH center
                  MATCH (leaf1)<--(center)-->(leaf2)
@@ -390,7 +390,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   }
 
   test("should be possible to remove nodes created in the same query") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """CREATE (a)-[:FOO]->(b)
          WITH *
          MATCH (x)-[r]-(y)

@@ -603,26 +603,26 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("index-backed property values should be removed on node delete") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 DETACH DELETE n RETURN n.prop1"
-    failWithError(Configs.InterpretedAndSlotted, query, /* Node with id 4 */ "has been deleted in this transaction")
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, query, /* Node with id 4 */ "has been deleted in this transaction")
   }
 
   test("index-backed property values should not exist after node deleted") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 DETACH DELETE n RETURN exists(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("exists(n.prop1)" -> false)))
   }
 
   test("index-backed property values should not exist after node deleted - optional match case") {
     val query = "OPTIONAL MATCH (n:Awesome) WHERE n.prop1 = 42 DETACH DELETE n RETURN exists(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("exists(n.prop1)" -> false)))
   }
 
   test("existance of index-backed property values of optional node from an empty index, where the node is deleted") {
     val query = "OPTIONAL MATCH (n:Awesome) WHERE n.emptyProp = 42 DETACH DELETE n RETURN exists(n.emptyProp)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     assertIndexSeekWithValues(result, "n.emptyProp")
     result.toList should equal(List(Map("exists(n.emptyProp)" -> null)))
   }

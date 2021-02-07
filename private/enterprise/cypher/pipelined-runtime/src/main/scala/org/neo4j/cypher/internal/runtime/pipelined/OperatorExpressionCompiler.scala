@@ -521,6 +521,14 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
 
   override def cursorFor(name: String): Option[CursorRepresentation] = cursors.get(name)
 
+  /**
+   * Removes all registered cursors
+   */
+  def clearRegisteredCursors(): Unit = {
+    cursors.clear()
+  }
+
+
   override def registerMemoryTracker(id: Id): IntermediateRepresentation = {
     loadField(_memoryTracker.getOrElseUpdate(id, field[MemoryTracker](namer.nextVariableName(s"memoryTrackerFor${id.x}"))))
   }

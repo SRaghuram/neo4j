@@ -170,7 +170,7 @@ abstract class VarExpandCursor(val fromNode: Long,
     val previousCursor = selectionCursors.getOrNull(pathLength)
 
     if (!nodeCursor.next()) {
-      if (previousCursor != null) {
+      if (previousCursor != null && previousCursor != emptyRelationCursor) {
         cursorPools.relationshipTraversalCursorPool.free(previousCursor)
       }
       selectionCursors.set(pathLength, emptyRelationCursor)
@@ -262,7 +262,11 @@ abstract class VarExpandCursor(val fromNode: Long,
   def free(cursorPools: CursorPools): Unit = {
     cursorPools.nodeCursorPool.free(nodeCursor)
     if (!selectionCursors.isClosed()) {
-      selectionCursors.foreach(cursor => cursorPools.relationshipTraversalCursorPool.free(cursor))
+      selectionCursors.foreach { cursor =>
+        if (cursor != emptyRelationCursor) {
+          cursorPools.relationshipTraversalCursorPool.free(cursor)
+        }
+      }
       selectionCursors.close()
     }
     if (idSet != null) {

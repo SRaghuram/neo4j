@@ -16,6 +16,13 @@ import org.neo4j.cypher.internal.logical.plans.CacheProperties
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.Create
+import org.neo4j.cypher.internal.logical.plans.DeleteExpression
+import org.neo4j.cypher.internal.logical.plans.DeleteNode
+import org.neo4j.cypher.internal.logical.plans.DeletePath
+import org.neo4j.cypher.internal.logical.plans.DeleteRelationship
+import org.neo4j.cypher.internal.logical.plans.DetachDeleteExpression
+import org.neo4j.cypher.internal.logical.plans.DetachDeleteNode
+import org.neo4j.cypher.internal.logical.plans.DetachDeletePath
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipTypeScan
 import org.neo4j.cypher.internal.logical.plans.Distinct
@@ -219,7 +226,14 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy[Ne
            _: SetRelationshipProperty |
            _: SetProperty |
            _: SetPropertiesFromMap |
-           _: SetNodeProperty
+           _: SetNodeProperty |
+           _: DeleteNode |
+           _: DetachDeleteNode |
+           _: DeleteRelationship |
+           _: DeletePath |
+           _: DetachDeletePath |
+           _: DeleteExpression |
+           _: DetachDeleteExpression
         => (false, fuseIndex)
 
       // 2 child operators

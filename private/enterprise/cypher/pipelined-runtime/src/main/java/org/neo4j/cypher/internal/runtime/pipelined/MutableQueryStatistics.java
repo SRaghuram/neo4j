@@ -31,6 +31,11 @@ public class MutableQueryStatistics implements QueryStatistics
         deletedRelationships++;
     }
 
+    public void deleteRelationships( int deleteCount )
+    {
+        deletedRelationships += deleteCount;
+    }
+
     public void setProperty()
     {
         setProperties++;

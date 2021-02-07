@@ -24,6 +24,13 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrde
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CreateTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteDetachExpressionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteDetachNodeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteDetachPathTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteExpressionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteNodeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeletePathTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DeleteRelationshipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EagerLimitProfileRowsTestBase
@@ -243,3 +250,10 @@ class SlottedSetPropertiesFromMapNodeTest extends SetPropertiesFromMapNodeTestBa
 class SlottedSetPropertiesFromMapRelationshipTest extends SetPropertiesFromMapRelationshipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLockNodesTest extends LockNodesTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
+class SlottedDeleteNodeTest extends DeleteNodeTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedDetachDeleteNodeTest extends DeleteDetachNodeTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedDeleteRelationshipTest extends DeleteRelationshipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedDeletePathTest extends DeletePathTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedDeleteDetachPathTest extends DeleteDetachPathTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedDeleteExpressionTest extends DeleteExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedDeleteDetachExpressionTest extends DeleteDetachExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
