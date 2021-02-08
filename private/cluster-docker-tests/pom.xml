@@ -39,6 +39,11 @@
             <artifactId>assertj-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>eu.michael-simons.neo4j</groupId>
             <artifactId>junit-jupiter-causal-cluster-testcontainer-extension</artifactId>
             <version>${causal-cluster-testcontainer-extension.version}</version>
