@@ -300,7 +300,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
 
   test("delete and delete again") {
     createNode()
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a) where id(a) = 0 delete a foreach( x in [1] | delete a)")
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (a) where id(a) = 0 delete a foreach( x in [1] | delete a)")
 
     assertStats(result, nodesDeleted = 1)
   }
@@ -364,7 +364,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
 
   test("complete graph") {
     val result =
-      executeWith(Configs.InterpretedAndSlottedAndPipelined, """CREATE (center { count:0 })
+      executeWith(Configs.InterpretedAndSlotted, """CREATE (center { count:0 })
                  FOREACH (x IN range(1,6) | CREATE (leaf { count : x }),(center)-[:X]->(leaf))
                  WITH center
                  MATCH (leaf1)<--(center)-->(leaf2)
