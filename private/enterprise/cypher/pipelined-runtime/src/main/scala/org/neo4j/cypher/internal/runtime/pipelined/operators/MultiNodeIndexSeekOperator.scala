@@ -12,8 +12,8 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.EntityIndexSeeker
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexSeekParameters
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
@@ -260,7 +260,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
   }
 }
 
-class IndexSeeker(parameters: NodeIndexSeekParameters) extends NodeIndexSeeker {
+class IndexSeeker(parameters: NodeIndexSeekParameters) extends EntityIndexSeeker {
   override val indexMode: IndexSeekMode = parameters.indexSeekMode
 
   override val valueExpr: QueryExpression[Expression] = parameters.valueExpression

@@ -53,11 +53,11 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.EntityIndexSeeker
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExactSeek
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeek
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LockingUniqueIndexSeek
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekByRange
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -153,7 +153,7 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
                         argumentSize: SlotConfiguration.Size,
                         val propertyIds: Array[Int],
                         val valueExpr: QueryExpression[Expression],
-                        val indexMode: IndexSeekMode = IndexSeek) extends InputLoopTask(inputMorsel) with NodeIndexSeeker {
+                        val indexMode: IndexSeekMode = IndexSeek) extends InputLoopTask(inputMorsel) with EntityIndexSeeker {
 
   private var nodeCursor: NodeValueIndexCursor = _
   private var cursorsToClose: Array[NodeValueIndexCursor] = _
@@ -599,7 +599,7 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
         case IndexOrder.ASCENDING => "ascending"
         case IndexOrder.DESCENDING => "descending"
       }
-    method[CompositeValueIndexCursor, NodeValueIndexCursor, Array[NodeValueIndexCursor]](methodName)
+    method[CompositeValueIndexCursor[_], NodeValueIndexCursor, Array[NodeValueIndexCursor]](methodName)
   }
 
   private def setupCursors: IntermediateRepresentation = {

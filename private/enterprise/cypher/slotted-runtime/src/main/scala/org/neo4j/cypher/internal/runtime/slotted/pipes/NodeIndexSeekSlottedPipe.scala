@@ -13,9 +13,9 @@ import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.EntityIndexSeeker
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeek
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -28,7 +28,7 @@ case class NodeIndexSeekSlottedPipe(ident: String,
                                     indexMode: IndexSeekMode = IndexSeek,
                                     indexOrder: IndexOrder,
                                     slots: SlotConfiguration)
-                                   (val id: Id = Id.INVALID_ID) extends Pipe with NodeIndexSeeker with IndexSlottedPipeWithValues {
+                                   (val id: Id = Id.INVALID_ID) extends Pipe with EntityIndexSeeker with IndexSlottedPipeWithValues {
 
   override val offset: Int = slots.getLongOffsetFor(ident)
 
