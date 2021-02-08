@@ -31,6 +31,7 @@ import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
 import org.neo4j.cypher.internal.logical.plans.ForeachApply
 import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
+import org.neo4j.cypher.internal.logical.plans.IndexSeek.nodeIndexSeek
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
 import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
@@ -516,7 +517,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     // given
     val lhs = NodeByLabelScan("x", label, Set.empty, IndexOrderNone)
     val labelToken = LabelToken("label2", LabelId(0))
-    val rhs = plans.IndexSeek("z:label2(prop = 42)", argumentIds = Set("x"))
+    val rhs = nodeIndexSeek("z:label2(prop = 42)", argumentIds = Set("x"))
     val apply = Apply(lhs, rhs)
 
     // when
@@ -652,7 +653,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
 
   test("NodeIndexScan should yield a NodeIndexScanSlottedPipe") {
     // given
-    val leaf = plans.IndexSeek("n:Awesome(prop)")
+    val leaf = nodeIndexSeek("n:Awesome(prop)")
 
     // when
     val pipe = build(leaf)

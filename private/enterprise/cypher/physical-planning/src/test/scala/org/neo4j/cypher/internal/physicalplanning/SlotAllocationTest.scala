@@ -88,7 +88,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
 
   test("index seek without values") {
     // given
-    val plan = IndexSeek("x:label2(prop = 42)", DoNotGetValue)
+    val plan = IndexSeek.nodeIndexSeek("x:label2(prop = 42)", DoNotGetValue)
 
     // when
     val allocations = SlotAllocation.allocateSlots(plan, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS, config).slotConfigurations
@@ -101,7 +101,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
 
   test("index seek with values") {
     // given
-    val plan = IndexSeek("x:label2(prop = 42)", GetValue)
+    val plan = IndexSeek.nodeIndexSeek("x:label2(prop = 42)", GetValue)
 
     // when
     val allocations = SlotAllocation.allocateSlots(plan, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS, config).slotConfigurations
@@ -365,7 +365,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
   test("all we need is to apply ourselves") {
     // given
     val lhs = NodeByLabelScan("x", LABEL, Set.empty, IndexOrderNone)
-    val rhs = IndexSeek("z:label2(prop = 42)", argumentIds = Set("x"))
+    val rhs = IndexSeek.nodeIndexSeek("z:label2(prop = 42)", argumentIds = Set("x"))
     val apply = Apply(lhs, rhs)
 
     // when
@@ -688,8 +688,8 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
 
   test("left joins should remember cached node properties from both sides") {
     // given
-    val lhs = IndexSeek("x:L(lhsProp = 42)", GetValue)
-    val rhs = IndexSeek("x:B(rhsProp = 42)", GetValue)
+    val lhs = IndexSeek.nodeIndexSeek("x:L(lhsProp = 42)", GetValue)
+    val rhs = IndexSeek.nodeIndexSeek("x:B(rhsProp = 42)", GetValue)
 
     val leftJoins =
       List(
@@ -717,8 +717,8 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
 
   test("right outer join should remember cached node properties from both sides") {
     // given
-    val lhs = IndexSeek("x:L(lhsProp = 42)", GetValue)
-    val rhs = IndexSeek("x:B(rhsProp = 42)", GetValue)
+    val lhs = IndexSeek.nodeIndexSeek("x:L(lhsProp = 42)", GetValue)
+    val rhs = IndexSeek.nodeIndexSeek("x:B(rhsProp = 42)", GetValue)
     val join = RightOuterHashJoin(Set("x"), lhs, rhs)
 
     // when
@@ -735,9 +735,9 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
 
   test("left joins should correctly handle cached node property argument") {
     // given
-    val lhs = IndexSeek("x:L(lhsProp = 42)", GetValue)
-    val rhs = IndexSeek("x:B(rhsProp = 42)", GetValue)
-    val arg = IndexSeek("x:A(argProp = 42)", GetValue)
+    val lhs = IndexSeek.nodeIndexSeek("x:L(lhsProp = 42)", GetValue)
+    val rhs = IndexSeek.nodeIndexSeek("x:B(rhsProp = 42)", GetValue)
+    val arg = IndexSeek.nodeIndexSeek("x:A(argProp = 42)", GetValue)
 
     val joins =
       List(
@@ -767,9 +767,9 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
 
   test("right outer join should correctly handle cached node property argument") {
     // given
-    val lhs = IndexSeek("x:L(lhsProp = 42)", GetValue)
-    val rhs = IndexSeek("x:B(rhsProp = 42)", GetValue)
-    val arg = IndexSeek("x:A(argProp = 42)", GetValue)
+    val lhs = IndexSeek.nodeIndexSeek("x:L(lhsProp = 42)", GetValue)
+    val rhs = IndexSeek.nodeIndexSeek("x:B(rhsProp = 42)", GetValue)
+    val arg = IndexSeek.nodeIndexSeek("x:A(argProp = 42)", GetValue)
 
     val join = RightOuterHashJoin(Set("x"), lhs, rhs)
 

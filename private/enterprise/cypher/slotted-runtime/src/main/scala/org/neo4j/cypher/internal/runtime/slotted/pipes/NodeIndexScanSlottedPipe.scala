@@ -32,6 +32,6 @@ case class NodeIndexScanSlottedPipe(ident: String,
 
   protected def internalCreateResults(state: QueryState): ClosingIterator[CypherRow] = {
     val cursor = state.query.nodeIndexScan(state.queryIndexes(queryIndexId), needsValues, indexOrder)
-    new SlottedIndexIterator(state, cursor)
+    new SlottedNodeIndexIterator(state, cursor)
   }
 }

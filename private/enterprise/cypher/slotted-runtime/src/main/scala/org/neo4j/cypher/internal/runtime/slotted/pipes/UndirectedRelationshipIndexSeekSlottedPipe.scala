@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.neo4j.cypher.internal.expressions.LabelToken
+import org.neo4j.cypher.internal.expressions.RelationshipTypeToken
 import org.neo4j.cypher.internal.logical.plans.IndexOrder
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
@@ -20,15 +20,17 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 
-case class NodeIndexSeekSlottedPipe(ident: String,
-                                    label: LabelToken,
-                                    properties: IndexedSeq[SlottedIndexedProperty],
-                                    queryIndexId: Int,
-                                    valueExpr: QueryExpression[Expression],
-                                    indexMode: IndexSeekMode = IndexSeek,
-                                    indexOrder: IndexOrder,
-                                    slots: SlotConfiguration)
-                                   (val id: Id = Id.INVALID_ID) extends Pipe with EntityIndexSeeker with IndexSlottedPipeWithValues {
+case class UndirectedRelationshipIndexSeekSlottedPipe(ident: String,
+                                                      startNode: String,
+                                                      endNode: String,
+                                                      relType: RelationshipTypeToken,
+                                                      properties: IndexedSeq[SlottedIndexedProperty],
+                                                      queryIndexId: Int,
+                                                      valueExpr: QueryExpression[Expression],
+                                                      indexMode: IndexSeekMode = IndexSeek,
+                                                      indexOrder: IndexOrder,
+                                                      slots: SlotConfiguration)
+                                                     (val id: Id = Id.INVALID_ID) extends Pipe with EntityIndexSeeker with IndexSlottedPipeWithValues {
 
   override val offset: Int = slots.getLongOffsetFor(ident)
 
@@ -41,25 +43,6 @@ case class NodeIndexSeekSlottedPipe(ident: String,
   protected def internalCreateResults(state: QueryState): ClosingIterator[CypherRow] = {
     val index = state.queryIndexes(queryIndexId)
     val context = state.newRowWithArgument(rowFactory)
-    new SlottedNodeIndexIterator(state, indexSeek(state, index, needsValues, indexOrder, context))
-  }
-
-  def canEqual(other: Any): Boolean = other.isInstanceOf[NodeIndexSeekSlottedPipe]
-
-  override def equals(other: Any): Boolean = other match {
-    case that: NodeIndexSeekSlottedPipe =>
-      (that canEqual this) &&
-        ident == that.ident &&
-        label == that.label &&
-        (properties == that.properties) &&
-        valueExpr == that.valueExpr &&
-        indexMode == that.indexMode &&
-        slots == that.slots
-    case _ => false
-  }
-
-  override def hashCode(): Int = {
-    val state = Seq(ident, label, properties, valueExpr, indexMode, slots)
-    state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
+    new SlottedUndirectedRelationshipIndexIterator(state, slots.getLongOffsetFor(startNode), slots.getLongOffsetFor(endNode), relationshipIndexSeek(state, index, needsValues, indexOrder, context))
   }
 }

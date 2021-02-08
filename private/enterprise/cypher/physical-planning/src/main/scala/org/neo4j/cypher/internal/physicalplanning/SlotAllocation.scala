@@ -40,8 +40,6 @@ import org.neo4j.cypher.internal.logical.plans.DeleteRelationship
 import org.neo4j.cypher.internal.logical.plans.DetachDeleteExpression
 import org.neo4j.cypher.internal.logical.plans.DetachDeleteNode
 import org.neo4j.cypher.internal.logical.plans.DetachDeletePath
-import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipByIdSeek
-import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipTypeScan
 import org.neo4j.cypher.internal.logical.plans.Eager
 import org.neo4j.cypher.internal.logical.plans.EitherPlan
 import org.neo4j.cypher.internal.logical.plans.EmptyResult
@@ -88,6 +86,8 @@ import org.neo4j.cypher.internal.logical.plans.ProjectEndpoints
 import org.neo4j.cypher.internal.logical.plans.ProjectingPlan
 import org.neo4j.cypher.internal.logical.plans.PruningVarExpand
 import org.neo4j.cypher.internal.logical.plans.RelationshipCountFromCountStore
+import org.neo4j.cypher.internal.logical.plans.RelationshipIndexLeafPlan
+import org.neo4j.cypher.internal.logical.plans.RelationshipLogicalLeafPlan
 import org.neo4j.cypher.internal.logical.plans.RemoveLabels
 import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.logical.plans.RightOuterHashJoin
@@ -107,8 +107,6 @@ import org.neo4j.cypher.internal.logical.plans.Top1WithTies
 import org.neo4j.cypher.internal.logical.plans.TriadicBuild
 import org.neo4j.cypher.internal.logical.plans.TriadicFilter
 import org.neo4j.cypher.internal.logical.plans.TriadicSelection
-import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipByIdSeek
-import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipTypeScan
 import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.logical.plans.UnwindCollection
 import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
@@ -501,30 +499,21 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         slots.newLong(leaf.idName, nullable, CTNode)
         leaf.cachedProperties.foreach(cp => slots.newCachedProperty(cp.runtimeKey))
 
+      case leaf: RelationshipIndexLeafPlan =>
+        slots.newLong(leaf.idName, nullable, CTRelationship)
+        slots.newLong(leaf.leftNode, nullable, CTNode)
+        slots.newLong(leaf.rightNode, nullable, CTNode)
+        leaf.cachedProperties.foreach(cp => slots.newCachedProperty(cp.runtimeKey))
+
       case leaf: NodeLogicalLeafPlan =>
         slots.newLong(leaf.idName, nullable, CTNode)
 
-      case _:Argument =>
-
-      case leaf: DirectedRelationshipByIdSeek =>
-        slots.newLong(leaf.idName, nullable, CTRelationship)
-        slots.newLong(leaf.startNode, nullable, CTNode)
-        slots.newLong(leaf.endNode, nullable, CTNode)
-
-      case leaf: UndirectedRelationshipByIdSeek =>
+      case leaf: RelationshipLogicalLeafPlan =>
         slots.newLong(leaf.idName, nullable, CTRelationship)
         slots.newLong(leaf.leftNode, nullable, CTNode)
         slots.newLong(leaf.rightNode, nullable, CTNode)
 
-      case leaf: DirectedRelationshipTypeScan =>
-        slots.newLong(leaf.idName, nullable, CTRelationship)
-        slots.newLong(leaf.startNode, nullable, CTNode)
-        slots.newLong(leaf.endNode, nullable, CTNode)
-
-      case leaf: UndirectedRelationshipTypeScan =>
-        slots.newLong(leaf.idName, nullable, CTRelationship)
-        slots.newLong(leaf.startNode, nullable, CTNode)
-        slots.newLong(leaf.endNode, nullable, CTNode)
+      case _:Argument =>
 
       case leaf: NodeCountFromCountStore =>
         slots.newReference(leaf.idName, false, CTInteger)
