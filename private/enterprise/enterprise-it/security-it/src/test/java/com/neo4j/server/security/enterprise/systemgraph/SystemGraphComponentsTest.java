@@ -338,7 +338,7 @@ class SystemGraphComponentsTest
 
     private void initEnterprise( EnterpriseSecurityGraphComponentVersion version, List<String> roles ) throws Exception
     {
-        KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version.getDescription() );
+        KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version );
         inTx( tx -> enterpriseComponent.initializeSystemGraphConstraints( tx ) );
         inTx( tx -> builder.initializePrivileges( tx, roles, Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) ) ) );
     }

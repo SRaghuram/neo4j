@@ -183,7 +183,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
     val roleRepository = new InMemoryRoleRepository
     val enterpriseComponent = new EnterpriseSecurityGraphComponent(mock[Log], roleRepository, userRepository, config)
     initializeSystemGraphConstraints(enterpriseComponent)
-    val builder = enterpriseComponent.findSecurityGraphComponentVersion(version.getDescription)
+    val builder = enterpriseComponent.findSecurityGraphComponentVersion(version)
     val tx = graphOps.beginTx
     try {
       val users = new util.HashSet[String]()

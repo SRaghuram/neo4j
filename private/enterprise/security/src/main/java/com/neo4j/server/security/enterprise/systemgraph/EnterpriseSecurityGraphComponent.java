@@ -34,6 +34,7 @@ import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.AbstractSystemGraphComponent;
+import org.neo4j.dbms.database.ComponentVersion;
 import org.neo4j.dbms.database.KnownSystemComponentVersions;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -165,9 +166,9 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         component.assertUpdateWithAction( action, specialDatabase, segment );
     }
 
-    public KnownEnterpriseSecurityComponentVersion findSecurityGraphComponentVersion( String substring )
+    public KnownEnterpriseSecurityComponentVersion findSecurityGraphComponentVersion( ComponentVersion componentVersion )
     {
-        return knownSecurityComponentVersions.findComponentVersion( substring );
+        return knownSecurityComponentVersions.findComponentVersion( componentVersion );
     }
 
     @Override

@@ -136,7 +136,7 @@ abstract class SecurityGraphCompatibilityTestBase
 
     private void initEnterprise( EnterpriseSecurityGraphComponentVersion version, List<String> roles ) throws Exception
     {
-        KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version.getDescription() );
+        KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version );
         try ( Transaction tx = system.beginTx() )
         {
             enterpriseComponent.initializeSystemGraphConstraints( tx );

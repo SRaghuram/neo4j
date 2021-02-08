@@ -17,6 +17,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,15 +52,6 @@ import static org.neo4j.dbms.database.SystemGraphComponent.Status.CURRENT;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_36;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D4;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D6;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D7;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42P1;
-import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D1;
 
 @TestDirectoryExtension
 @TestInstance( PER_CLASS )
@@ -124,7 +116,7 @@ class EnterpriseSecurityGraphComponentTest
 
     @ParameterizedTest
     @MethodSource( "versionRolesAndStatus" )
-    void shouldDetectStatus( String version, List<String> roles, SystemGraphComponent.Status expectedStatus ) throws Exception
+    void shouldDetectStatus( EnterpriseSecurityGraphComponentVersion version, List<String> roles, SystemGraphComponent.Status expectedStatus ) throws Exception
     {
         // GIVEN
         initializeSystemAndUsers();
@@ -144,17 +136,27 @@ class EnterpriseSecurityGraphComponentTest
 
     private static Stream<Arguments> versionRolesAndStatus()
     {
-        return Stream.of(
-                Arguments.of( VERSION_36, List.of( ADMIN ), UNSUPPORTED_BUT_CAN_UPGRADE ),
-                Arguments.of( VERSION_40, List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER ), REQUIRES_UPGRADE ),
-                Arguments.of( VERSION_41D1, PredefinedRoles.roles, REQUIRES_UPGRADE ),
-                Arguments.of( VERSION_41, PredefinedRoles.roles, REQUIRES_UPGRADE ),
-                Arguments.of( VERSION_42D4, PredefinedRoles.roles, REQUIRES_UPGRADE ),
-                Arguments.of( VERSION_42D6, PredefinedRoles.roles, REQUIRES_UPGRADE ),
-                Arguments.of( VERSION_42D7, PredefinedRoles.roles, REQUIRES_UPGRADE ),
-                Arguments.of( VERSION_42P1, PredefinedRoles.roles, REQUIRES_UPGRADE ),
-                Arguments.of( VERSION_43D1, PredefinedRoles.roles, CURRENT )
-        );
+        ArrayList<Arguments> arguments = new ArrayList<>();
+        for ( var version : EnterpriseSecurityGraphComponentVersion.values() )
+        {
+            switch ( version )
+            {
+            case ENTERPRISE_SECURITY_35:
+                break;
+            case ENTERPRISE_SECURITY_36:
+                arguments.add( Arguments.of( version, List.of( ADMIN ), UNSUPPORTED_BUT_CAN_UPGRADE ) );
+                break;
+            case ENTERPRISE_SECURITY_40:
+                arguments.add( Arguments.of( version, List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER ), REQUIRES_UPGRADE ) );
+                break;
+            default:
+                if ( version.runtimeSupported() )
+                {
+                    arguments.add( Arguments.of( version, PredefinedRoles.roles, version.isCurrent() ? CURRENT : REQUIRES_UPGRADE ) );
+                }
+            }
+        }
+        return arguments.stream();
     }
 
     private EnterpriseSecurityGraphComponent getComponent()
