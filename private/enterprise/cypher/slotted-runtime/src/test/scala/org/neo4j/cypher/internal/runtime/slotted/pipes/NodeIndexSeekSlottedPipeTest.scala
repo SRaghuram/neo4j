@@ -34,7 +34,7 @@ class NodeIndexSeekSlottedPipeTest extends CypherFunSuite {
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
 
     val cursor = new StubNodeValueIndexCursor().withNode(0)
-    when(state.query.indexSeek(any[IndexReadSession], any[Boolean], any[IndexOrder], any[Seq[PropertyIndexQuery]])).thenAnswer((_: InvocationOnMock) => {
+    when(state.query.nodeIndexSeek(any[IndexReadSession], any[Boolean], any[IndexOrder], any[Seq[PropertyIndexQuery]])).thenAnswer((_: InvocationOnMock) => {
       //NOTE: this is what is done in TransactionBoundQueryContext
       resourceManager.trace(cursor)
       cursor
@@ -62,7 +62,7 @@ class NodeIndexSeekSlottedPipeTest extends CypherFunSuite {
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
 
     val cursor = new StubNodeValueIndexCursor().withNode(0)
-    when(state.query.indexSeek(any[IndexReadSession], any[Boolean], any[IndexOrder], any[Seq[PropertyIndexQuery]])).thenAnswer((_: InvocationOnMock) => {
+    when(state.query.nodeIndexSeek(any[IndexReadSession], any[Boolean], any[IndexOrder], any[Seq[PropertyIndexQuery]])).thenAnswer((_: InvocationOnMock) => {
       //NOTE: this is what is done in TransactionBoundQueryContext
       resourceManager.trace(cursor)
       cursor

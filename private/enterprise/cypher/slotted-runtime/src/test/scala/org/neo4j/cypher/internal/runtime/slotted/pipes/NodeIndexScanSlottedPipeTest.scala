@@ -30,7 +30,7 @@ class NodeIndexScanSlottedPipeTest extends CypherFunSuite {
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
 
     val cursor = new StubNodeValueIndexCursor().withNode(0)
-    when(state.query.indexScan(any[IndexReadSession], any[Boolean], any[IndexOrder])).thenAnswer((_: InvocationOnMock) => {
+    when(state.query.nodeIndexScan(any[IndexReadSession], any[Boolean], any[IndexOrder])).thenAnswer((_: InvocationOnMock) => {
       //NOTE: this is what is done in TransactionBoundQueryContext
       resourceManager.trace(cursor)
       cursor
@@ -56,7 +56,7 @@ class NodeIndexScanSlottedPipeTest extends CypherFunSuite {
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
 
     val cursor = new StubNodeValueIndexCursor().withNode(0)
-    when(state.query.indexScan(any[IndexReadSession], any[Boolean], any[IndexOrder])).thenAnswer((_: InvocationOnMock) => {
+    when(state.query.nodeIndexScan(any[IndexReadSession], any[Boolean], any[IndexOrder])).thenAnswer((_: InvocationOnMock) => {
       //NOTE: this is what is done in TransactionBoundQueryContext
       resourceManager.trace(cursor)
       cursor
