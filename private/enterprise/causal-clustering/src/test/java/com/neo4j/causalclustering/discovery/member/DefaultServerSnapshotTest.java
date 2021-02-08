@@ -72,7 +72,7 @@ class DefaultServerSnapshotTest
         allStates.putAll( discoverableDatabaseStates );
 
         var databaseStates = new StubDatabaseStateService( allStates, EnterpriseDatabaseState::unknown );
-        var coreSnapshot = DefaultServerSnapshot.factoryFor( identityModule)
+        var coreSnapshot = DefaultServerSnapshot.coreSnapshotFactory( identityModule)
                                                 .createSnapshot( databaseStates, Map.of() );
 
         var expected = discoverableDatabaseStates.keySet().stream()
@@ -87,7 +87,7 @@ class DefaultServerSnapshotTest
         var databaseId1 = databaseIdRepository.getRaw( "one" );
         var databaseId2 = databaseIdRepository.getRaw( "two" );
         var databaseStates = new StubDatabaseStateService( EnterpriseDatabaseState::unknown );
-        var coreSnapshot = DefaultServerSnapshot.factoryFor( identityModule).createSnapshot( databaseStates, Map.of() );
+        var coreSnapshot = DefaultServerSnapshot.coreSnapshotFactory( identityModule).createSnapshot( databaseStates, Map.of() );
 
         assertSame( coreSnapshot.databaseStates(), coreSnapshot.databaseStates() );
         assertThat( coreSnapshot.databaseStates() ).isEmpty();
