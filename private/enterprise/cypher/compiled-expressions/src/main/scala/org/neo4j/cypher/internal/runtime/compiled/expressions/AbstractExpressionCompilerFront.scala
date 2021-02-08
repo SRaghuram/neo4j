@@ -84,8 +84,10 @@ import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.GreaterThan
 import org.neo4j.cypher.internal.expressions.GreaterThanOrEqual
 import org.neo4j.cypher.internal.expressions.HasLabels
+import org.neo4j.cypher.internal.expressions.HasLabelsOrTypes
 import org.neo4j.cypher.internal.expressions.In
 import org.neo4j.cypher.internal.expressions.IntegerLiteral
+import org.neo4j.cypher.internal.expressions.LabelOrRelTypeName
 import org.neo4j.cypher.internal.expressions.LessThan
 import org.neo4j.cypher.internal.expressions.LessThanOrEqual
 import org.neo4j.cypher.internal.expressions.ListComprehension
@@ -229,6 +231,7 @@ import org.neo4j.cypher.operations.CypherMath
 import org.neo4j.cypher.operations.PathValueBuilder
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InternalException
+import org.neo4j.exceptions.ParameterWrongTypeException
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
@@ -1580,15 +1583,38 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     case HasLabels(nodeExpression, labels) if labels.nonEmpty =>
       for (node <- compileExpression(nodeExpression, id)) yield {
-        val (tokenFields, inits) = tokenFieldsForLabels(labels.map(_.name))
+        hasLabels(labels.map(_.name), node)
+      }
 
-        val predicate: IntermediateRepresentation = ternary(and(tokenFields.map { token =>
-          invokeStatic(method[CypherFunctions, Boolean, AnyValue, Int, DbAccess, NodeCursor]("hasLabel"),
-                       node.ir, loadField(token), DB_ACCESS, NODE_CURSOR)
-        }), trueValue, falseValue)
+    case HasLabelsOrTypes(entityExpr: Expression, labelsOrTypes: Seq[LabelOrRelTypeName]) =>
+      for (entity <- compileExpression(entityExpr, id)) yield {
+        val entityName = namer.nextVariableName("entity")
+        val retVal = namer.nextVariableName("hasLabelsAndTypes")
+        val hasLabelsExpression = hasLabels(labelsOrTypes.map(_.name), entity)
+        val hasTypesExpression = hasTypes(labelsOrTypes.map(_.name), entity)
 
-        IntermediateExpression(block(inits :+ predicate:_*),
-                               node.fields ++ tokenFields, node.variables :+ vNODE_CURSOR, node.nullChecks)
+        val ir = block(
+          declareAndAssign(typeRefOf[AnyValue], entityName, entity.ir),
+          declare(typeRefOf[BooleanValue], retVal),
+          ifElse(IntermediateRepresentation.instanceOf[VirtualNodeValue](load[AnyValue](entityName)))(
+            assign(retVal, hasLabelsExpression.ir)
+          )(
+            ifElse(IntermediateRepresentation.instanceOf[VirtualRelationshipValue](load[AnyValue](entityName)))(
+              assign(retVal, hasTypesExpression.ir)
+            )(
+              fail(newInstance(constructor[ParameterWrongTypeException, String], constant("Expected a node or relationship when checking types or labels.")))
+            )
+          ),
+          load[BooleanValue](retVal)
+        )
+
+        IntermediateExpression(
+          ir,
+          hasLabelsExpression.fields ++ hasTypesExpression.fields,
+          hasLabelsExpression.variables ++ hasTypesExpression.variables,
+          hasLabelsExpression.nullChecks ++ hasTypesExpression.nullChecks,
+          hasLabelsExpression.requireNullCheck || hasTypesExpression.requireNullCheck
+        )
       }
 
     case NodeFromSlot(offset, name) =>
@@ -1759,6 +1785,37 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                                   Seq.empty, Seq.empty, Set.empty))
 
     case _ => None
+  }
+
+  private def hasLabels(labelNames: Seq[String],
+                        node: IntermediateExpression) = {
+    val (tokenFields, inits) = tokenFieldsForLabels(labelNames)
+
+    val predicate: IntermediateRepresentation = ternary(and(tokenFields.map { token =>
+      invokeStatic(method[CypherFunctions, Boolean, AnyValue, Int, DbAccess, NodeCursor]("hasLabel"),
+        node.ir, loadField(token), DB_ACCESS, NODE_CURSOR)
+    }), trueValue, falseValue)
+
+    IntermediateExpression(block(inits :+ predicate: _*),
+      node.fields ++ tokenFields, node.variables :+ vNODE_CURSOR, node.nullChecks)
+  }
+
+  private def hasTypes(types: Seq[String],
+                       relationship: IntermediateExpression) = {
+    val (tokenFields, inits) = tokenFieldsForTypes(types)
+
+    val predicate: IntermediateRepresentation = ternary(
+      and(tokenFields.map { tokenId =>
+        invoke(
+          DB_ACCESS,
+          method[DbAccess, Boolean, Int, Long, RelationshipScanCursor]("isTypeSetOnRelationship"),
+          loadField(tokenId),
+          invoke(cast[VirtualRelationshipValue](relationship.ir), method[VirtualRelationshipValue, Long]("id")), // TODO: cast outside function
+          RELATIONSHIP_CURSOR)
+      }), trueValue, falseValue)
+
+    IntermediateExpression(block(inits :+ predicate: _*),
+      relationship.fields ++ tokenFields, relationship.variables :+ vRELATIONSHIP_CURSOR, relationship.nullChecks)
   }
 
   private def tokenFieldsForLabels(labels: Seq[String]): (Seq[InstanceField], Seq[IntermediateRepresentation]) = {
