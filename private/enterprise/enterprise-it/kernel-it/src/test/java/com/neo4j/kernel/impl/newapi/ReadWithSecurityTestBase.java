@@ -9,13 +9,13 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.IndexQuery;
@@ -26,6 +26,7 @@ import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
+import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor;
 import org.neo4j.internal.kernel.api.Scan;
 import org.neo4j.internal.kernel.api.Token;
 import org.neo4j.internal.kernel.api.TokenRead;
@@ -42,10 +43,7 @@ import org.neo4j.kernel.impl.newapi.KernelAPIReadTestSupport;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.RelationshipSelection;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -57,12 +55,12 @@ import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
 public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSupport> extends KernelAPIReadTestBase<G>
 {
-    private static long foo, bar, baz, barBaz;
-    private static long fooAbar, fooBbar, barAfoo, fooCbar, fooAbaz;
-    private static int fooLabel, barLabel, bazLabel;
-    private static int aType, bType, cType;
-    private static int prop1Key, prop2Key;
-    private static AuthManager authManager;
+    protected long foo, bar, baz, barBaz;
+    protected long fooAbar, fooBbar, barAfoo, fooCbar, fooAbaz;
+    protected int fooLabel, barLabel, bazLabel;
+    protected int aType, bType, cType;
+    protected int prop1Key, prop2Key;
+    protected AuthManager authManager;
 
     @Override
     public void createTestGraph( GraphDatabaseService graphDb )
@@ -72,6 +70,9 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
             tx.schema().indexFor( label( "Bar" ) ).on( "prop1" ).withName( "barIndex" ).create();
             tx.schema().indexFor( label( "Baz" ) ).on( "prop1" ).withName( "bazIndex" ).create();
             tx.schema().constraintFor( label( "Bar" ) ).assertPropertyIsUnique( "prop2" ).withName( "distinctBarIndex" ).create();
+            tx.schema().indexFor( RelationshipType.withName( "A" ) ).on( "prop1" ).withName( "aIndex" ).create();
+            tx.schema().indexFor( RelationshipType.withName( "C" ) ).on( "prop1" ).withName( "cIndex" ).create();
+            tx.schema().indexFor( RelationshipType.withName( "A" ) ).on( "prop2" ).withName( "ap2Index" ).create();
             tx.commit();
         }
 
@@ -98,15 +99,28 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
             barbazNode.setProperty( "prop2", 4 );
 
             // Traversable relationships
-            fooAbar = fooNode.createRelationshipTo( barNode, RelationshipType.withName( "A" ) ).getId();
-            fooBbar = fooNode.createRelationshipTo( barNode, RelationshipType.withName( "B" ) ).getId();
-            barAfoo = barNode.createRelationshipTo( fooNode, RelationshipType.withName( "A" ) ).getId();
+            Relationship fooAbarRel = fooNode.createRelationshipTo( barNode, RelationshipType.withName( "A" ) );
+            Relationship fooBbarRel = fooNode.createRelationshipTo( barNode, RelationshipType.withName( "B" ) );
+            Relationship barAfooRel = barNode.createRelationshipTo( fooNode, RelationshipType.withName( "A" ) );
 
             // Not traversable relationship type
-            fooCbar = fooNode.createRelationshipTo( barNode, RelationshipType.withName( "C" ) ).getId();
+            Relationship fooCbarRel = fooNode.createRelationshipTo( barNode, RelationshipType.withName( "C" ) );
 
             // Not traversable end node
-            fooAbaz = fooNode.createRelationshipTo( bazNode, RelationshipType.withName( "A" ) ).getId();
+            Relationship fooAbazRel = fooNode.createRelationshipTo( bazNode, RelationshipType.withName( "A" ) );
+
+            fooAbarRel.setProperty( "prop1", 1 );
+            fooAbarRel.setProperty( "prop2", 3 );
+            barAfooRel.setProperty( "prop1", 1 );
+            barAfooRel.setProperty( "prop2", 4 );
+            fooCbarRel.setProperty( "prop1", 1 );
+            fooAbazRel.setProperty( "prop1", 1 );
+
+            fooAbar = fooAbarRel.getId();
+            fooBbar = fooBbarRel.getId();
+            barAfoo = barAfooRel.getId();
+            fooCbar = fooCbarRel.getId();
+            fooAbaz = fooAbazRel.getId();
 
             foo = fooNode.getId();
             bar = barNode.getId();
@@ -151,6 +165,8 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
             tx.execute( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A, B TO testRole" );
             tx.execute( "DENY TRAVERSE ON GRAPH * NODES Baz TO testRole" );
             tx.execute( "GRANT READ {prop1,prop2} ON GRAPH * NODES Bar TO testRole" );
+            tx.execute( "GRANT READ {prop1} ON GRAPH * RELATIONSHIPS A TO testRole" );
+            tx.execute( "GRANT CONSTRAINT MANAGEMENT ON DATABASE * TO testRole" );
 
             tx.commit();
         }
@@ -176,7 +192,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( foo, bar ) );
+        assertThat( ids ).containsExactlyInAnyOrder( foo, bar );
     }
 
     @Test
@@ -197,7 +213,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( foo, bar ) );
+        assertThat( ids ).containsExactlyInAnyOrder( foo, bar );
     }
 
     @Test
@@ -217,9 +233,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        ArrayList<Long> expected = new ArrayList<>();
-        expected.add( bar );
-        assertEquals( expected, ids );
+        assertThat( ids ).containsExactlyInAnyOrder( bar );
     }
 
     @Test
@@ -240,9 +254,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        ArrayList<Long> expected = new ArrayList<>();
-        expected.add( bar );
-        assertEquals( expected, ids );
+        assertThat( ids ).containsExactlyInAnyOrder( bar );
     }
 
     @Test
@@ -255,7 +267,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         long nodesCount = read.nodesGetCount();
 
         // then
-        assertThat( nodesCount, equalTo( 2L ) );
+        assertThat( nodesCount ).isEqualTo( 2L );
     }
 
     @Test
@@ -268,7 +280,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         long nodesCount = read.countsForNode( TokenRead.ANY_LABEL );
 
         // then
-        assertThat( nodesCount, equalTo( 2L ) );
+        assertThat( nodesCount ).isEqualTo( 2L );
     }
 
     @Test
@@ -281,7 +293,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         long nodesCount = read.countsForNode( barLabel );
 
         // then
-        assertThat( nodesCount, equalTo( 1L ) );
+        assertThat( nodesCount ).isEqualTo( 1L );
     }
 
     @Test
@@ -294,7 +306,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         long nodesCount = read.countsForNodeWithoutTxState( TokenRead.ANY_LABEL );
 
         // then
-        assertThat( nodesCount, equalTo( 2L ) );
+        assertThat( nodesCount ).isEqualTo( 2L );
     }
 
     @Test
@@ -307,7 +319,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         long nodesCount = read.countsForNodeWithoutTxState( barLabel );
 
         // then
-        assertThat( nodesCount, equalTo( 1L ) );
+        assertThat( nodesCount ).isEqualTo( 1L );
     }
 
     @Test
@@ -340,7 +352,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( foo ) );
+        assertThat( ids ).containsExactlyInAnyOrder( foo );
     }
 
     @Test
@@ -360,7 +372,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, equalTo( Collections.emptyList() ) );
+        assertThat( ids ).isEmpty();
     }
 
     @Test
@@ -381,7 +393,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( bar ) );
+        assertThat( ids ).containsExactlyInAnyOrder( bar );
     }
 
     @Test
@@ -399,7 +411,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( NO_ID, bar ) );
+        assertThat( ids ).containsExactlyInAnyOrder( NO_ID, bar );
     }
 
     @Test
@@ -420,7 +432,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( bar ) );
+        assertThat( ids ).containsExactlyInAnyOrder( bar );
     }
 
     // Tests for relationships
@@ -442,7 +454,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( fooAbar, fooBbar, barAfoo ) );
+        assertThat( ids ).containsExactlyInAnyOrder( fooAbar, fooBbar, barAfoo );
     }
 
     @Test
@@ -463,7 +475,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( fooAbar, fooBbar, barAfoo ) );
+        assertThat( ids ).containsExactlyInAnyOrder( fooAbar, fooBbar, barAfoo );
     }
 
     @Test
@@ -483,7 +495,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( fooAbar, barAfoo ) );
+        assertThat( ids ).containsExactlyInAnyOrder( fooAbar, barAfoo );
     }
 
     @Test
@@ -496,7 +508,20 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         long relCount = read.countsForRelationship( fooLabel, ANY_RELATIONSHIP_TYPE, ANY_LABEL );
 
         // then
-        assertThat( relCount, equalTo( 2L ) );
+        assertThat( relCount ).isEqualTo( 2L );
+    }
+
+    @Test
+    void countsForRelationshipWithType() throws Throwable
+    {
+        // given
+        changeUser( getLoginContext() );
+
+        // when
+        long relCount = read.countsForRelationship( ANY_LABEL, aType, ANY_LABEL );
+
+        // then
+        assertThat( relCount ).isEqualTo( 2L );
     }
 
     @Test
@@ -509,7 +534,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         long relCount = read.countsForRelationship( fooLabel, aType, ANY_LABEL );
 
         // then
-        assertThat( relCount, equalTo( 1L ) );
+        assertThat( relCount ).isEqualTo( 1L );
     }
 
     @Test
@@ -522,7 +547,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         long relCount = read.countsForRelationship( ANY_LABEL, ANY_RELATIONSHIP_TYPE, fooLabel );
 
         // then
-        assertThat( relCount, equalTo( 1L ) );
+        assertThat( relCount ).isEqualTo( 1L );
     }
 
     @Test
@@ -535,7 +560,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         long relCount = read.relationshipsGetCount();
 
         // then
-        assertThat( relCount, equalTo( 3L ) );
+        assertThat( relCount ).isEqualTo( 3L );
     }
 
     @Test
@@ -569,7 +594,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( fooAbar ) );
+        assertThat( ids ).containsExactlyInAnyOrder( fooAbar );
     }
 
     @Test
@@ -589,7 +614,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, equalTo( Collections.emptyList() ) );
+        assertThat( ids ).isEmpty();
     }
 
     @Test
@@ -609,12 +634,12 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, equalTo( Collections.emptyList() ) );
+        assertThat( ids ).isEmpty();
     }
 
     // Node + relationships
     @Test
-    void nodeAllRelationships() throws Throwable
+    void nodeAllRelationshipsTraversal() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
@@ -635,11 +660,11 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( fooAbar, fooBbar, barAfoo ) );
+        assertThat( ids ).containsExactlyInAnyOrder( fooAbar, fooBbar, barAfoo );
     }
 
     @Test
-    void relationships() throws Throwable
+    void relationshipsTraversal() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
@@ -661,10 +686,83 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( fooAbar, fooBbar ) );
+        assertThat( ids ).containsExactlyInAnyOrder( fooAbar, fooBbar );
     }
 
-    private LoginContext getLoginContext() throws InvalidAuthTokenException
+    @Test
+    void relationshipIndexScan() throws Throwable
+    {
+        // given
+        changeUser( getLoginContext() );
+
+        IndexDescriptor index = schemaRead.indexGetForName( "aIndex" );
+        IndexReadSession indexSession = read.indexReadSession( index );
+
+        List<Long> ids = new ArrayList<>();
+        try ( RelationshipValueIndexCursor rels = cursors.allocateRelationshipValueIndexCursor( NULL, tx.memoryTracker() ) )
+        {
+            // when
+            read.relationshipIndexScan( indexSession, rels, IndexQueryConstraints.unconstrained() );
+            while ( rels.next() )
+            {
+                ids.add( rels.relationshipReference() );
+            }
+        }
+
+        // then
+        assertThat( ids ).containsExactlyInAnyOrder( fooAbar, barAfoo );
+    }
+
+    @Test
+    void relationshipIndexScanDeniedType() throws Throwable
+    {
+        // given
+        changeUser( getLoginContext() );
+
+        IndexDescriptor index = schemaRead.indexGetForName( "cIndex" );
+        IndexReadSession indexSession = read.indexReadSession( index );
+
+        List<Long> ids = new ArrayList<>();
+        try ( RelationshipValueIndexCursor rels = cursors.allocateRelationshipValueIndexCursor( NULL, tx.memoryTracker() ) )
+        {
+            // when
+            read.relationshipIndexScan( indexSession, rels, IndexQueryConstraints.unconstrained() );
+            while ( rels.next() )
+            {
+                ids.add( rels.relationshipReference() );
+            }
+        }
+
+        // then
+        assertThat( ids ).isEmpty();
+    }
+
+    @Test
+    void relationshipIndexScanDeniedProperty() throws Throwable
+    {
+        // given
+        changeUser( getLoginContext() );
+
+        IndexDescriptor index = schemaRead.indexGetForName( "ap2Index" );
+        IndexReadSession indexSession = read.indexReadSession( index );
+
+        List<Long> ids = new ArrayList<>();
+        try ( RelationshipValueIndexCursor rels = cursors.allocateRelationshipValueIndexCursor( NULL, tx.memoryTracker() ) )
+        {
+            // when
+            read.relationshipIndexScan( indexSession, rels, IndexQueryConstraints.unconstrained() );
+            while ( rels.next() )
+            {
+                ids.add( rels.relationshipReference() );
+            }
+        }
+
+        // then
+        // not allowed to read prop2 on rel A
+        assertThat( ids ).isEmpty();
+    }
+
+    protected LoginContext getLoginContext() throws InvalidAuthTokenException
     {
         return authManager.login( Map.of( "principal", "testUser", "credentials", "abc123".getBytes( StandardCharsets.UTF_8 ), "scheme", "basic" ) );
     }

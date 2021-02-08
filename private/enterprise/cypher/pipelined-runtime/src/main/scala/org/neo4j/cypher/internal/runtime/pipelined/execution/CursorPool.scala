@@ -40,7 +40,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
   private[this] val _relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = CursorPool[RelationshipScanCursor](
     () => cursorFactory.allocateRelationshipScanCursor(pageCursorTracer), scopedMemoryTracker)
   private[this] val _relationshipTypeIndexCursorPool: CursorPool[RelationshipTypeIndexCursor] = CursorPool[RelationshipTypeIndexCursor](
-    () => cursorFactory.allocateRelationshipTypeIndexCursor(), scopedMemoryTracker)
+    () => cursorFactory.allocateRelationshipTypeIndexCursor(pageCursorTracer), scopedMemoryTracker)
   private[this] val _nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = CursorPool[NodeValueIndexCursor](
     () => cursorFactory.allocateNodeValueIndexCursor(pageCursorTracer, memoryTracker), scopedMemoryTracker)
   private[this] val _nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = CursorPool[NodeLabelIndexCursor](
@@ -116,7 +116,9 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def allocateRelationshipValueIndexCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): RelationshipValueIndexCursor = fail("RelationshipValueIndexCursor")
 
-  override def allocateRelationshipTypeIndexCursor(): RelationshipTypeIndexCursor = _relationshipTypeIndexCursorPool.allocate()
+  override def allocateRelationshipTypeIndexCursor(cursorTracer: PageCursorTracer): RelationshipTypeIndexCursor = _relationshipTypeIndexCursorPool.allocate()
+
+  override def allocateFullAccessRelationshipTypeIndexCursor(): RelationshipTypeIndexCursor = fail("FullAccessRelationshipTypeIndexCursor")
 
   private def fail(cursor: String) = throw new IllegalStateException(s"This cursor pool doesn't support allocating $cursor")
 }
