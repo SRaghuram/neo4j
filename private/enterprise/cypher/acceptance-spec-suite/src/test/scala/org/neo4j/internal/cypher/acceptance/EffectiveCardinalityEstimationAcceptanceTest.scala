@@ -922,7 +922,7 @@ class EffectiveCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSui
               .withRHS(aPlan("SetProperty").withEstimatedRows(count * count))
           )
       )
-      .withLHS(aPlan("NodeByLabelScan").withEstimatedRows(count))
+      .withLHS(includeSomewhere.aPlan("NodeByLabelScan").withEstimatedRows(count))
   }
 
   test("Should estimate plans nested under ForeachApply correctly") {
