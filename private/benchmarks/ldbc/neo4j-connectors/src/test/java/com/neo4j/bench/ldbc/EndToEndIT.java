@@ -172,7 +172,7 @@ public class EndToEndIT extends BaseEndToEndIT
                        profilers.stream().map( ProfilerType::name ).collect( joining( "," ) ),
                        "triggered_by",
                        // AWS endpoint URL
-                       endpointUrl );
+                       "--aws-endpoint-url",endpointUrl );
     }
 
     protected void assertOnRecordings( Path recordingDir, List<ProfilerType> profilers ) throws Exception

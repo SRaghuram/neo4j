@@ -14,11 +14,9 @@ import com.neo4j.bench.common.ParameterVerifier;
 import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.micro.RunReportParams;
-import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.model.model.BranchAndVersion;
-import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.options.Edition;
 
 import java.io.File;
@@ -26,7 +24,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_BENCHMARK_CONFIG;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_BRANCH_OWNER;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_ERROR_POLICY;

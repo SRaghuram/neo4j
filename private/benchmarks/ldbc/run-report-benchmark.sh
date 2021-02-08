@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2002-2020 "Neo4j,"
+# Copyright (c) "Neo4j"
 # Neo4j Sweden AB [http://neo4j.com]
 # This file is part of Neo4j internal tooling.
 #
@@ -46,12 +46,29 @@ jvm_path="${27}"
 profilers="${28}"
 triggered_by="${29}"
 
-# here we are checking for optional AWS endpoint URL,
-# this is required for end to end testing, where we mock s3
+# parse optional arguments
+all_args=("$@")
+optional_args=("${all_args[@]:29}")
 aws_endpoint_url=
-if [[ $# -eq 30 ]]; then
-	aws_endpoint_url="${30}"
-fi
+recordings_base_uri=
+
+while ((${#optional_args[@]})); do
+  arg=${optional_args[0]}
+  optional_args=("${optional_args[@]:1}")
+  case "$arg" in
+  --aws-endpoint-url)
+    aws_endpoint_url=${optional_args[0]}
+    optional_args=("${optional_args[@]:1}")
+    ;;
+   --recordings-base-uri)
+    recordings_base_uri=${optional_args[0]}
+    optional_args=("${optional_args[@]:1}")
+    ;;
+  --)
+    break
+    ;;
+  esac
+done
 
 if [[ -z "$JAVA_HOME" ]]; then
  echo "JAVA_HOME not set, bye, bye"
@@ -149,6 +166,6 @@ ${jvm_path} -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --output-
   --results-store-uri "${results_store_uri}" \
   --results-store-user "${results_store_user}" \
   --results-store-pass "${results_store_pass}" \
-  ${recordings_base_uri:+--recordings-base-uri $recordings_base_uri} \
+  ${recordings_base_uri:+--recordings-base-uri "$recordings_base_uri"} \
   --aws-region "eu-north-1" \
-  ${aws_endpoint_url:+--aws-endpoint-url $aws_endpoint_url}
+  ${aws_endpoint_url:+--aws-endpoint-url "$aws_endpoint_url"}
