@@ -23,6 +23,8 @@ import com.neo4j.bench.model.model.PlanOperator;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.common.util.TestSupport;
 import org.apache.commons.io.FileUtils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +53,7 @@ import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Result;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
@@ -59,14 +62,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @TestDirectoryExtension
 class PlannerDescriptionIT
 {
-    // avoids running into the "port already bound" error in Macro EndToEndIT, which will run with the default bolt port of 7687
-    private static final int BOLT_PORT = 7688;
     private static final Logger LOG = LoggerFactory.getLogger( PlannerDescriptionIT.class );
+    private static final int BOLT_PORT = PortAuthority.allocatePort();
+    private static final int HTTP_PORT = PortAuthority.allocatePort();
     private static final String QUERY = "PROFILE MATCH (a:A), (b:B) WHERE a.x = b.x AND b.y='foo' AND (a)--(b) RETURN count(a)";
     private static final String EXPECTED_ASCII_PLAN = "+--------------------+------------------------+----------------+------+\n" +
                                                       "| Operator           | Details                | Estimated Rows | Rows |\n" +
@@ -116,40 +118,42 @@ class PlannerDescriptionIT
                                                              "| +NodeByLabelScan@neo4j   | b:B                    |             10 |    0 |\n" +
                                                              "+--------------------------+------------------------+----------------+------+\n";
 
+    private final String randId = UUID.randomUUID().toString();
+
     @Inject
     private TestDirectory temporaryFolder;
-
-    private Path getNeo4jDirCopy() throws IOException
-    {
-        Path neo4jDir = Paths.get( System.getenv( "NEO4J_DIR" ) );
-        Path tempNeo4jDir = temporaryFolder.file( format( "neo4jDir-%s", UUID.randomUUID().toString() ) );
-        FileUtils.copyDirectory( neo4jDir.toFile(), tempNeo4jDir.toFile() );
-        return tempNeo4jDir;
-    }
+    private Path neo4jDir;
 
     private static Jvm getJvm()
     {
         return Jvm.defaultJvmOrFail();
     }
 
-    @Test
-    public void shouldExtractPlansViaEmbedded() throws IOException
+    @BeforeEach
+    public void copyNeo4j() throws Exception
     {
-        String randId = UUID.randomUUID().toString();
-        Path neo4jConfigFile = Files.createTempFile( temporaryFolder.absolutePath(), format( "neo4j-%s", randId ), ".conf" );
-        Neo4jConfigBuilder.withDefaults()
-                          // NOTE: Bolt & HTTP only disabled for StoreTestUtil, to avoid port binding clashes.
-                          .withSetting( BoltConnector.enabled, FALSE )
-                          .withSetting( HttpConnector.enabled, FALSE )
-                          .writeToFile( neo4jConfigFile );
+        Path originalDir = Paths.get( System.getenv( "NEO4J_DIR" ) );
+        this.neo4jDir = temporaryFolder.directory( format( "neo4jDir-%s", randId ) );
+        FileUtils.copyDirectory( originalDir.toFile(), neo4jDir.toFile() );
+    }
+
+    @AfterEach
+    public void deleteTemporaryNeo4j() throws IOException
+    {
+        FileUtils.deleteDirectory( neo4jDir.toFile() );
+    }
+
+    @Test
+    public void shouldExtractPlansViaEmbedded()
+    {
+        Path neo4jConfigFile = writeEmbeddedNeo4jConfig();
         try ( Resources resources = new Resources( temporaryFolder.directory( format( "resources-%s", randId ) ) ) )
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
                 LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
-                try ( Store store = StoreTestUtil.createTemporaryEmptyStoreFor( workload,
-                                                                                temporaryFolder.directory( format( "store-%s-%s", workload.name(), randId ) ),
-                                                                                neo4jConfigFile );
+                Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), randId ) );
+                try ( Store store = StoreTestUtil.createTemporaryEmptyStoreFor( workload, storePath, neo4jConfigFile );
                       EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
                 {
                     for ( Query query : workload.queries() )
@@ -162,7 +166,7 @@ class PlannerDescriptionIT
                             PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootPlanDescription );
                             assertPlansEqual( rootPlanOperator, rootPlanDescription, new EmbeddedPlanDescriptionAccessors() );
                         }
-                        catch ( Throwable e )
+                        catch ( Exception e )
                         {
                             throw new RuntimeException( format( "Plans comparison failed!\n" +
                                                                 "Workload: %s\n" +
@@ -178,7 +182,6 @@ class PlannerDescriptionIT
     public void shouldExtractPlansViaDriver() throws IOException, TimeoutException
     {
         Jvm jvm = getJvm();
-        String randId = UUID.randomUUID().toString();
 
         try ( Resources resources = new Resources( temporaryFolder.directory( format( "resources-%s", randId ) ) ) )
         {
@@ -188,26 +191,16 @@ class PlannerDescriptionIT
                 Redirect outputRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-out-%s-%s.log", workload.name(), randId ) ).toFile() );
                 Redirect errorRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-error-%s-%s.log", workload.name(), randId ) ).toFile() );
                 Path logsDir = Files.createDirectories( temporaryFolder.directory( format( "logs-%s-%s", workload.name(), randId ) ) );
-                Path neo4jDir = getNeo4jDirCopy();
-                Path neo4jConfigFile = temporaryFolder.file( format( "neo4j-%s.conf", randId ) );
-                Neo4jConfigBuilder.withDefaults()
-                                  .mergeWith( Neo4jConfigBuilder.fromFile( neo4jDir.resolve( "conf/neo4j.conf" ) ).build() )
-                                  // NOTE: Bolt & HTTP only disabled for StoreTestUtil, to avoid port binding clashes. ServerDatabase enables what it needs.
-                                  .withSetting( BoltConnector.enabled, FALSE )
-                                  .withSetting( HttpConnector.enabled, FALSE )
-                                  .writeToFile( neo4jConfigFile );
-                try ( Store store = StoreTestUtil.createTemporaryEmptyStoreFor( workload,
-                                                                                temporaryFolder.directory( format( "store-%s-%s", workload.name(), randId ) )
-                                                                                               ,
-                                                                                neo4jConfigFile );
+                Path neo4jConfigFile = writeServerNeo4jConfig( workload.name() );
+                Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), randId ) );
+                try ( Store store = StoreTestUtil.createEmptyStoreFor( workload, storePath, neo4jConfigFile );
                       ServerDatabase database = ServerDatabase.startServer( jvm,
                                                                             neo4jDir,
                                                                             store,
                                                                             neo4jConfigFile,
                                                                             outputRedirect,
                                                                             errorRedirect,
-                                                                            logsDir,
-                                                                            BOLT_PORT ) )
+                                                                            logsDir ) )
                 {
                     for ( Query query : workload.queries() )
                     {
@@ -218,7 +211,7 @@ class PlannerDescriptionIT
                             PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootDriverPlan );
                             assertPlansEqual( rootPlanOperator, rootDriverPlan, new DriverPlanAccessors() );
                         }
-                        catch ( Throwable e )
+                        catch ( Exception e )
                         {
                             throw new RuntimeException( format( "Plans comparison failed!\n" +
                                                                 "Workload: %s\n" +
@@ -226,7 +219,6 @@ class PlannerDescriptionIT
                         }
                     }
                 }
-                FileUtils.deleteDirectory( neo4jDir.toFile() );
             }
         }
     }
@@ -234,13 +226,7 @@ class PlannerDescriptionIT
     @Test
     public void shouldRenderAsciiPlanFromEmbedded()
     {
-        String randId = UUID.randomUUID().toString();
-        Path neo4jConfigFile = temporaryFolder.file( format( "neo4j-%s.conf", randId ) );
-        Neo4jConfigBuilder.withDefaults()
-                          // NOTE: Bolt & HTTP only disabled for StoreTestUtil, to avoid port binding clashes.
-                          .withSetting( BoltConnector.enabled, FALSE )
-                          .withSetting( HttpConnector.enabled, FALSE )
-                          .writeToFile( neo4jConfigFile );
+        Path neo4jConfigFile = writeEmbeddedNeo4jConfig();
         try ( Store store = TestSupport.createTemporaryEmptyStore( temporaryFolder.directory( format( "store-%s", randId ) ), neo4jConfigFile );
               EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile );
               org.neo4j.graphdb.Transaction tx = database.inner().beginTx() )
@@ -257,16 +243,8 @@ class PlannerDescriptionIT
     @Test
     public void shouldRenderAsciiPlanFromDriver() throws Exception
     {
-        Path neo4jDir = getNeo4jDirCopy();
         Jvm jvm = getJvm();
-        String randId = UUID.randomUUID().toString();
-        Path neo4jConfigFile = temporaryFolder.file( format( "neo4j-%s.conf", randId ) );
-        Neo4jConfigBuilder.withDefaults()
-                          .mergeWith( Neo4jConfigBuilder.fromFile( neo4jDir.resolve( "conf/neo4j.conf" ) ).build() )
-                          // NOTE: Bolt & HTTP only disabled for StoreTestUtil, to avoid port binding clashes. ServerDatabase enables what it needs.
-                          .withSetting( BoltConnector.enabled, FALSE )
-                          .withSetting( HttpConnector.enabled, FALSE )
-                          .writeToFile( neo4jConfigFile );
+        Path neo4jConfigFile = writeServerNeo4jConfig( "ascii" );
 
         Redirect outputRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-out-%s.log", randId ) ).toFile() );
         Redirect errorRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-error-%s.log", randId ) ).toFile() );
@@ -279,8 +257,7 @@ class PlannerDescriptionIT
                                                                     neo4jConfigFile,
                                                                     outputRedirect,
                                                                     errorRedirect,
-                                                                    logsDir,
-                                                                    BOLT_PORT );
+                                                                    logsDir );
               Transaction tx = database.session().beginTransaction() )
         {
             org.neo4j.driver.Result result = tx.run( QUERY );
@@ -289,6 +266,25 @@ class PlannerDescriptionIT
             String asciiPlan = PlannerDescription.toAsciiPlan( rootPlanOperator );
             assertThat( asciiPlan, equalTo( EXPECTED_ASCII_PLAN_SERVER ) );
         }
+    }
+
+    private Path writeEmbeddedNeo4jConfig()
+    {
+        Path neo4jConfigFile = neo4jDir.resolve( "conf" ).resolve( format( "neo4j-%s.conf", randId ) );
+        Neo4jConfigBuilder.withDefaults()
+                          .writeToFile( neo4jConfigFile );
+        return neo4jConfigFile;
+    }
+
+    private Path writeServerNeo4jConfig( String name )
+    {
+        Path neo4jConfigFile = neo4jDir.resolve( "conf" ).resolve( format( "neo4j-%s-%s.conf", name, randId ) );
+        Neo4jConfigBuilder.withDefaults()
+                          .withSetting( BoltConnector.listen_address, ":" + BOLT_PORT )
+                          .withSetting( HttpConnector.enabled, "true" )
+                          .withSetting( HttpConnector.listen_address, ":" + HTTP_PORT )
+                          .writeToFile( neo4jConfigFile );
+        return neo4jConfigFile;
     }
 
     private static final String ERROR_IN_TEST_CODE = "Error is probably in test code that traverses logical plan";

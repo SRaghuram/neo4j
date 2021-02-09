@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import static java.lang.ProcessBuilder.Redirect;
-import static org.neo4j.configuration.connectors.BoltConnector.DEFAULT_PORT;
 
 public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
 {
@@ -236,7 +235,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                               .addJvmArgs( additionalJvmArgs )
                               .writeToFile( neo4jConfigFile );
             Path copyLogsToOnClose = Paths.get( forkDirectory.toAbsolutePath() );
-            return ServerDatabase.startServer( jvm, neo4jDir, store, neo4jConfigFile, outputRedirect, errorRedirect, copyLogsToOnClose, DEFAULT_PORT );
+            return ServerDatabase.startServer( jvm, neo4jDir, store, neo4jConfigFile, outputRedirect, errorRedirect, copyLogsToOnClose );
         }
 
         @Override

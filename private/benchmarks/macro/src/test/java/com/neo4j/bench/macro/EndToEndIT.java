@@ -31,18 +31,23 @@ import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.test.BaseEndToEndIT;
 import org.apache.commons.io.FileUtils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.test.ports.PortAuthority;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -55,12 +60,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EndToEndIT extends BaseEndToEndIT
 {
-
+    private static final int BOLT_PORT = PortAuthority.allocatePort();
+    private static final int HTTP_PORT = PortAuthority.allocatePort();
     private static final String LOAD_CSV_WORKLOAD = "cineasts_csv";
     private static final String WRITE_WORKLOAD = "pokec_write";
     private static final String READ_WORKLOAD = "zero";
     private static final String SCRIPT_NAME = "run-report-benchmarks.sh";
     private static final Path JAR = Paths.get( "target/macro.jar" );
+
+    private Path neo4jDir;
+
+    @BeforeEach
+    public void copyNeo4j() throws Exception
+    {
+        Path originalDir = Paths.get( System.getenv( "NEO4J_DIR" ) );
+        this.neo4jDir = temporaryFolder.resolve( format( "neo4jDir-%s", UUID.randomUUID().toString() ) );
+        FileUtils.copyDirectory( originalDir.toFile(), neo4jDir.toFile() );
+    }
+
+    @AfterEach
+    public void deleteTemporaryNeo4j() throws IOException
+    {
+        FileUtils.deleteDirectory( neo4jDir.toFile() );
+    }
 
     private ExpectedRecordings expectedRecordingsFor( List<ProfilerType> profilers, ExecutionMode executionMode, Deployment deployment, int forks )
     {
@@ -229,28 +251,7 @@ class EndToEndIT extends BaseEndToEndIT
 
     private Deployment serverDeployment()
     {
-        return Deployment.server( getNeo4jDir() );
-    }
-
-    private String neo4jDirPathString;
-
-    private String getNeo4jDir()
-    {
-        if ( neo4jDirPathString == null )
-        {
-            Path neo4jDir = Paths.get( System.getenv( "NEO4J_DIR" ) );
-            Path tempNeo4jDir = temporaryFolder.resolve( format( "neo4jDir-%s", UUID.randomUUID().toString() ) );
-            try
-            {
-                FileUtils.copyDirectory( neo4jDir.toFile(), tempNeo4jDir.toFile() );
-            }
-            catch ( IOException e )
-            {
-                throw new UncheckedIOException( e );
-            }
-            neo4jDirPathString = tempNeo4jDir.toAbsolutePath().toString();
-        }
-        return neo4jDirPathString;
+        return Deployment.server( neo4jDir.toString() );
     }
 
     // <><><><><><><><><><><><> VmStat profiler <><><><><><><><><><><><>
@@ -306,7 +307,10 @@ class EndToEndIT extends BaseEndToEndIT
         ResultStoreCredentials resultStoreCredentials = getResultStoreCredentials();
         // prepare neo4j config file
         Path neo4jConfig = temporaryFolder.resolve( "neo4j.config" );
-        Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfig );
+        Neo4jConfigBuilder.withDefaults()
+                          .withSetting( BoltConnector.listen_address, ":" + BOLT_PORT )
+                          .withSetting( HttpConnector.listen_address, ":" + HTTP_PORT )
+                          .writeToFile( neo4jConfig );
 
         // create empty store
         Path dbPath = temporaryFolder.resolve( "db" );

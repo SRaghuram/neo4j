@@ -21,8 +21,6 @@ import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
@@ -36,7 +34,6 @@ import org.neo4j.driver.Transaction;
 
 import static java.lang.ProcessBuilder.Redirect;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class ServerDatabase implements Database
 {
@@ -46,15 +43,11 @@ public class ServerDatabase implements Database
                                               Path neo4jConfigFile,
                                               Redirect outputRedirect,
                                               Redirect errorRedirect,
-                                              Path copyLogsToOnClose,
-                                              int port )
+                                              Path copyLogsToOnClose )
     {
         DatabaseName databaseName = store.databaseName();
 
         Neo4jConfigBuilder.fromFile( neo4jConfigFile )
-                          .withSetting( BoltConnector.enabled, TRUE )
-                          .withSetting( BoltConnector.listen_address, ":" + port )
-                          .withSetting( HttpConnector.enabled, FALSE )
                           .withSetting( GraphDatabaseSettings.auth_enabled, FALSE )
                           .withSetting( GraphDatabaseInternalSettings.databases_root_path,
                                         store.topLevelDirectory().resolve( "data" ).resolve( "databases" ).toString() )
