@@ -25,7 +25,6 @@ import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_LABEL
 import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_PROPERTY_NAME
 import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_REL_TYPE
 import org.neo4j.graphdb.impl.notification.NotificationCode.REPEATED_REL_IN_PATTERN_EXPRESSION
-import org.neo4j.graphdb.impl.notification.NotificationCode.RUNTIME_UNSUPPORTED
 import org.neo4j.graphdb.impl.notification.NotificationCode.SUBOPTIMAL_INDEX_FOR_CONTAINS_QUERY
 import org.neo4j.graphdb.impl.notification.NotificationCode.SUBOPTIMAL_INDEX_FOR_ENDS_WITH_QUERY
 import org.neo4j.graphdb.impl.notification.NotificationCode.SUBQUERY_VARIABLE_SHADOWING
@@ -357,7 +356,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   test("should warn for large label scans with merge combined with load csv") {
     1 to 11 foreach { _ => createLabeledNode("A") }
     val result = executeSingle("EXPLAIN LOAD CSV FROM 'file:///ignore/ignore.csv' AS line MERGE (a:A) RETURN *", Map.empty)
-    result.executionPlanDescription() should includeSomewhere.aPlan.withLHS(aPlan("LoadCSV")).withRHS(aPlan("EitherApply"))
+    result.executionPlanDescription() should includeSomewhere.aPlan.withLHS(aPlan("LoadCSV")).withRHS(aPlan("Either"))
     result.notifications.map(_.getCode) should contain("Neo.ClientNotification.Statement.NoApplicableIndexWarning")
   }
 
@@ -371,7 +370,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   test("should not warn for small label scans with merge combined with load csv") {
     createLabeledNode("A")
     val result = executeSingle("EXPLAIN LOAD CSV FROM 'file:///ignore/ignore.csv' AS line MERGE (a:A) RETURN *", Map.empty)
-    result.executionPlanDescription() should includeSomewhere.aPlan.withLHS(aPlan("LoadCSV")).withRHS(aPlan("EitherApply"))
+    result.executionPlanDescription() should includeSomewhere.aPlan.withLHS(aPlan("LoadCSV")).withRHS(aPlan("Either"))
     result.notifications.map(_.getCode) should not contain "Neo.ClientNotification.Statement.NoApplicableIndexWarning"
   }
 
