@@ -81,6 +81,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteType
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipIndexSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipTypeScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctPrimitiveOperator
@@ -145,6 +146,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicBuildOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicFilterOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipIndexSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipTypeScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperator
@@ -296,6 +298,36 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           slots.getLongOffsetFor(column),
           converters.toCommandSeekArgs(id, nodeIds),
           physicalPlan.argumentSizes(id))
+
+      case plans.DirectedRelationshipIndexSeek(column, start, end, typeToken, properties, valueExpr, _, indexOrder) =>
+        val argumentSize = physicalPlan.argumentSizes(id)
+        val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
+
+        new DirectedRelationshipIndexSeekOperator(WorkIdentity.fromPlan(plan),
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(start),
+          slots.getLongOffsetFor(end),
+          properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+          indexRegistrator.registerQueryIndex(typeToken, properties),
+          asKernelIndexOrder(indexOrder),
+          argumentSize,
+          valueExpr.map(converters.toCommandExpression(id, _)),
+          indexSeekMode)
+
+      case plans.UndirectedRelationshipIndexSeek(column, start, end, typeToken, properties, valueExpr, _, indexOrder) =>
+        val argumentSize = physicalPlan.argumentSizes(id)
+        val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
+
+        new UndirectedRelationshipIndexSeekOperator(WorkIdentity.fromPlan(plan),
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(start),
+          slots.getLongOffsetFor(end),
+          properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+          indexRegistrator.registerQueryIndex(typeToken, properties),
+          asKernelIndexOrder(indexOrder),
+          argumentSize,
+          valueExpr.map(converters.toCommandExpression(id, _)),
+          indexSeekMode)
 
       case plans.DirectedRelationshipByIdSeek(column, relIds, startNode, endNode, _) =>
         new DirectedRelationshipByIdSeekOperator(WorkIdentity.fromPlan(plan),

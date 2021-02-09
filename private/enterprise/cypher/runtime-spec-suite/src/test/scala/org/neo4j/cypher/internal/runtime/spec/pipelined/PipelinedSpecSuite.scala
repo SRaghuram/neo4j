@@ -62,7 +62,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoWithOtherOperators
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionWithTxStateChangesTests
 import org.neo4j.cypher.internal.runtime.spec.tests.FilterTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.ForeachApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LeftOuterHashJoinTestBase
@@ -117,6 +116,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBa
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipTypeScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RemoveLabelsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
@@ -249,6 +249,8 @@ class PipelinedMultiNodeIndexSeekRewriterTest extends MultiNodeIndexSeekRewriter
 class PipelinedMultiNodeIndexSeekRewriterNoFusingTest extends MultiNodeIndexSeekRewriterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedAssertSameNodeRewriterTest extends AssertSameNodeRewriterTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedAssertSameNodeRewriterNoFusingTest extends AssertSameNodeRewriterTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
+class PipelinedRelationshipIndexSeekTest extends RelationshipIndexSeekTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedRelationshipIndexSeekNoFusingTest extends RelationshipIndexSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // INDEX SCAN
 class PipelinedNodeIndexScanTest extends NodeIndexScanTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

@@ -44,6 +44,8 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
     () => cursorFactory.allocateRelationshipTypeIndexCursor(pageCursorTracer), scopedMemoryTracker)
   private[this] val _nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = CursorPool[NodeValueIndexCursor](
     () => cursorFactory.allocateNodeValueIndexCursor(pageCursorTracer, memoryTracker), scopedMemoryTracker)
+  private[this] val _relationshipValueIndexCursorPool: CursorPool[RelationshipValueIndexCursor] = CursorPool[RelationshipValueIndexCursor](
+    () => cursorFactory.allocateRelationshipValueIndexCursor(pageCursorTracer, memoryTracker), scopedMemoryTracker)
   private[this] val _nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = CursorPool[NodeLabelIndexCursor](
     () => cursorFactory.allocateNodeLabelIndexCursor(pageCursorTracer), scopedMemoryTracker)
   private[this] val _propertyCursorPool: CursorPool[PropertyCursor] = CursorPool[PropertyCursor](
@@ -55,6 +57,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
   def relationshipTraversalCursorPool: CursorPool[RelationshipTraversalCursor] = _relationshipTraversalCursorPool
   def relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = _relationshipScanCursorPool
   def relationshipTypeIndexCursorPool: CursorPool[RelationshipTypeIndexCursor] = _relationshipTypeIndexCursorPool
+  def relationshipValueIndexCursorPool: CursorPool[RelationshipValueIndexCursor] = _relationshipValueIndexCursorPool
   def nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = _nodeValueIndexCursorPool
   def nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = _nodeLabelIndexCursorPool
   def propertyCursorPool: CursorPool[PropertyCursor] = _propertyCursorPool
@@ -65,6 +68,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
     _relationshipTraversalCursorPool.setKernelTracer(tracer)
     _relationshipScanCursorPool.setKernelTracer(tracer)
     _relationshipTypeIndexCursorPool.setKernelTracer(tracer)
+    _relationshipValueIndexCursorPool.setKernelTracer(tracer)
     _nodeValueIndexCursorPool.setKernelTracer(tracer)
     _nodeLabelIndexCursorPool.setKernelTracer(tracer)
     _propertyCursorPool.setKernelTracer(tracer)
@@ -75,6 +79,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
       _relationshipTraversalCursorPool,
       _relationshipScanCursorPool,
       _relationshipTypeIndexCursorPool,
+      _relationshipValueIndexCursorPool,
       _nodeValueIndexCursorPool,
       _nodeLabelIndexCursorPool,
       _propertyCursorPool)
@@ -86,6 +91,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
     liveCounts.relationshipTraversalCursorPool += _relationshipTraversalCursorPool.getLiveCount
     liveCounts.relationshipScanCursorPool += _relationshipScanCursorPool.getLiveCount
     liveCounts.relationshipTypeIndexCursorPool += _relationshipTypeIndexCursorPool.getLiveCount
+    liveCounts.relationshipValueIndexCursorPool += _relationshipValueIndexCursorPool.getLiveCount
     liveCounts.nodeValueIndexCursorPool += _nodeValueIndexCursorPool.getLiveCount
     liveCounts.nodeLabelIndexCursorPool += _nodeLabelIndexCursorPool.getLiveCount
     liveCounts.propertyCursorPool += _propertyCursorPool.getLiveCount
@@ -115,7 +121,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def allocateFullAccessNodeLabelIndexCursor(cursorTracer: PageCursorTracer): NodeLabelIndexCursor = fail("FullAccessNodeLabelIndexCursor")
 
-  override def allocateRelationshipValueIndexCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): RelationshipValueIndexCursor = fail("RelationshipValueIndexCursor")
+  override def allocateRelationshipValueIndexCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): RelationshipValueIndexCursor =  _relationshipValueIndexCursorPool.allocate()
 
   override def allocateRelationshipTypeIndexCursor(cursorTracer: PageCursorTracer): RelationshipTypeIndexCursor = _relationshipTypeIndexCursorPool.allocate()
 
@@ -129,6 +135,7 @@ class LiveCounts(var nodeCursorPool: Long = 0,
                  var relationshipTraversalCursorPool: Long = 0,
                  var relationshipScanCursorPool: Long = 0,
                  var relationshipTypeIndexCursorPool: Long = 0,
+                 var relationshipValueIndexCursorPool: Long = 0,
                  var nodeValueIndexCursorPool: Long = 0,
                  var nodeLabelIndexCursorPool: Long = 0,
                  var propertyCursorPool: Long = 0) {
@@ -145,6 +152,8 @@ class LiveCounts(var nodeCursorPool: Long = 0,
       reportLeak(relationshipGroupCursorPool, "relationshipGroupCursorPool"),
       reportLeak(relationshipTraversalCursorPool, "relationshipTraversalCursorPool"),
       reportLeak(relationshipScanCursorPool, "relationshipScanCursorPool"),
+      reportLeak(relationshipTypeIndexCursorPool, "relationshipTypeIndexCursorPool"),
+      reportLeak(relationshipValueIndexCursorPool, "relationshipValueIndexCursorPool"),
       reportLeak(nodeValueIndexCursorPool, "nodeValueIndexCursorPool"),
       reportLeak(propertyCursorPool, "propertyCursorPool"),
       reportLeak(nodeLabelIndexCursorPool, "nodeLabelIndexCursorPool")).flatten
