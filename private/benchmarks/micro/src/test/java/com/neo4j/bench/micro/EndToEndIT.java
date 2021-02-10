@@ -102,7 +102,7 @@ class EndToEndIT extends BaseEndToEndIT
                        "triggered_by",
                        // work_dir
                        workDir.getAbsolutePath(),
-                       endpointUrl );
+                       "--aws-endpoint-url", endpointUrl );
     }
 
     protected void assertOnRecordings( Path recordingDir, List<ProfilerType> profilers ) throws Exception

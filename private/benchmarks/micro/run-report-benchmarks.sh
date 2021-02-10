@@ -4,11 +4,7 @@
 # Neo4j Sweden AB [http://neo4j.com]
 # This file is part of Neo4j internal tooling.
 #
-
-
-set -e
-set -u
-set -x
+set -eux
 
 if [ $# -lt 17 ] ; then
     echo "Expected at least 17 arguments, but got $#"
@@ -38,10 +34,29 @@ recordings_base_uri=
 
 # here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
+# parse optional arguments
+all_args=("$@")
+optional_args=("${all_args[@]:17}")
 aws_endpoint_url=
-if [[ $# -eq 18 ]]; then
-	aws_endpoint_url="${18}"
-fi
+recordings_base_uri=
+
+while ((${#optional_args[@]})); do
+  arg=${optional_args[0]}
+  optional_args=("${optional_args[@]:1}")
+  case "$arg" in
+  --aws-endpoint-url)
+    aws_endpoint_url=${optional_args[0]}
+    optional_args=("${optional_args[@]:1}")
+    ;;
+   --recordings-base-uri)
+    recordings_base_uri=${optional_args[0]}
+    optional_args=("${optional_args[@]:1}")
+    ;;
+  --)
+    break
+    ;;
+  esac
+done
 
 if [[ -z "$JAVA_HOME" ]]; then
  echo "JAVA_HOME not set, bye, bye"
