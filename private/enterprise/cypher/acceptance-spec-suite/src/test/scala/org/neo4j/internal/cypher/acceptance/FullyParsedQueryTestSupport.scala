@@ -9,12 +9,10 @@ import org.neo4j.cypher.internal.FullyParsedQuery
 import org.neo4j.cypher.internal.QueryOptions
 import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.MultipleDatabases
-import org.neo4j.cypher.internal.ast.semantics.SemanticState
 import org.neo4j.cypher.internal.compiler.phases.CompilationPhases
 import org.neo4j.cypher.internal.compiler.phases.CompilationPhases.ParsingConfig
 import org.neo4j.cypher.internal.compiler.test_helpers.ContextHelper
 import org.neo4j.cypher.internal.frontend.phases.AstRewriting
-import org.neo4j.cypher.internal.frontend.phases.BaseContains
 import org.neo4j.cypher.internal.frontend.phases.InitialState
 import org.neo4j.cypher.internal.frontend.phases.LiteralExtraction
 import org.neo4j.cypher.internal.frontend.phases.SemanticAnalysis
@@ -40,7 +38,7 @@ trait FullyParsedQueryTestSupport {
     )
 
   private val semanticAnalysis =
-    SemanticAnalysis(warn = true, MultipleDatabases).adds(BaseContains[SemanticState]) andThen
+    SemanticAnalysis(warn = true, MultipleDatabases) andThen
       AstRewriting(innerVariableNamer = new GeneratingNamer()) andThen
       LiteralExtraction(IfNoParameter)
 
