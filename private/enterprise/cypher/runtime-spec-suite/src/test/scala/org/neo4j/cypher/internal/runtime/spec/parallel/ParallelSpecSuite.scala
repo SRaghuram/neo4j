@@ -29,6 +29,7 @@ import org.neo4j.cypher.internal.runtime.spec.stress.AggregationStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress.AllNodeScanStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress.ApplyStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress.ArgumentStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.CartesianProductStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress.DistinctStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress.ExpandAllStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress.ExpressionStressTestBase
@@ -372,6 +373,7 @@ class ParallelRuntimeOptionalNoFusingTest extends OptionalTestBase(NO_FUSING, PA
 
 // CARTESIAN PRODUCT
 class ParallelRuntimeCartesianProductTest extends CartesianProductTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeCartesianProductStressTest extends CartesianProductStressTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // APPLY

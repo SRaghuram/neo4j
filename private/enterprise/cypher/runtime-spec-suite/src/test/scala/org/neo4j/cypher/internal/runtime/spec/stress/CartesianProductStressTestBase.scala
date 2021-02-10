@@ -38,7 +38,7 @@ abstract class CartesianProductStressTestBase(edition: Edition[EnterpriseRuntime
     runtimeResult should beColumns("a", "b", "c").withRows(expected)
   }
 
-  ignore("should support Cartesian Product on RHS of apply") {
+  test("should support Cartesian Product on RHS of apply") {
     // given
     init()
 
