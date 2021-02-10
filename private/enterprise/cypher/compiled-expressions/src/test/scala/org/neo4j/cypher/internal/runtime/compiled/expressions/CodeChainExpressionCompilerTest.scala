@@ -45,6 +45,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.NODE_PROPERTY
@@ -82,12 +83,13 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
   val namer: VariableNamer = new VariableNamer {
     override def nextVariableName(suffix: String): String = suffix
   }
+  private val tokenContext = TokenContext.EMPTY
 
   test("literal") {
     val slots = SlotConfiguration.empty
       .newReference("nullable", nullable = true, CTAny)
       .newReference("nonNullable", nullable = false, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val expr = literalFloat(1.28)
 
     assertCompilesTo(testCompiler, expr, slots, getStatic[DoubleValue]("DOUBLELIT"))
@@ -97,7 +99,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val slots = SlotConfiguration.empty
       .newReference("nullable", nullable = true, CTAny)
       .newReference("nonNullable", nullable = false, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, new VariableNamer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, new VariableNamer, tokenContext)
     val offset = 1
     val expr = refFromSlot(offset, slots)
 
@@ -114,7 +116,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val nodeName = "nullable"
     val slots = SlotConfiguration.empty
       .newLong(nodeName, nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val propToken = 1
 
     val offset = slots.getLongOffsetFor(nodeName)
@@ -132,7 +134,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val x = "nonNullable"
     val slots = SlotConfiguration.empty
       .newReference(x, nullable = false, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
 
     val offset = slots.getReferenceOffsetFor(x)
     val ref = getRefAt(offset)
@@ -154,7 +156,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val x = "nullable"
     val slots = SlotConfiguration.empty
       .newReference(x, nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
 
     val offset = slots.getReferenceOffsetFor(x)
     val ref = getRefAt(offset)
@@ -176,7 +178,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val x = "nullable"
     val slots = SlotConfiguration.empty
       .newReference(x, nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val offset = slots.getReferenceOffsetFor(x)
 
     // AST
@@ -218,7 +220,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val slots = SlotConfiguration.empty
       .newReference("x", nullable = true, CTAny)
       .newReference("y", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val xOffset = slots.getReferenceOffsetFor("x")
     val yOffset = slots.getReferenceOffsetFor("y")
 
@@ -255,7 +257,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val slots = SlotConfiguration.empty
       .newReference("x", nullable = true, CTAny)
       .newReference("y", nullable = false, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val xOffset = slots.getReferenceOffsetFor("x")
     val yOffset = slots.getReferenceOffsetFor("y")
 
@@ -290,7 +292,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val slots = SlotConfiguration.empty
       .newReference("x", nullable = false, CTAny)
       .newReference("y", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val xOffset = slots.getReferenceOffsetFor("x")
     val yOffset = slots.getReferenceOffsetFor("y")
 
@@ -321,7 +323,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val slots = SlotConfiguration.empty
       .newReference("x", nullable = false, CTAny)
       .newReference("y", nullable = false, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val xOffset = slots.getReferenceOffsetFor("x")
     val yOffset = slots.getReferenceOffsetFor("y")
 
@@ -357,7 +359,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val slots = SlotConfiguration.empty
       .newReference("x", nullable = true, CTAny)
       .newReference("y", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val xOffset = slots.getReferenceOffsetFor("x")
     val yOffset = slots.getReferenceOffsetFor("y")
 
@@ -411,7 +413,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
       .newReference("x", nullable = true, CTAny)
       .newReference("y", nullable = true, CTAny)
       .newReference("z", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val xOffset = slots.getReferenceOffsetFor("x")
     val yOffset = slots.getReferenceOffsetFor("y")
     val zOffset = slots.getReferenceOffsetFor("z")
@@ -473,7 +475,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
   test("(n.prop1+n.prop2)-n.prop3 - n nullable") {
     val slots = SlotConfiguration.empty
       .newLong("n", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val nOffset = slots.getLongOffsetFor("n")
 
     // AST
@@ -520,7 +522,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
   test("(n.prop1) IS NOT NULL - n nullable") {
     val slots = SlotConfiguration.empty
       .newLong("n", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val nOffset = slots.getLongOffsetFor("n")
 
     // AST
@@ -575,7 +577,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val slots = SlotConfiguration.empty
       .newReference("x", nullable = true, CTAny)
       .newReference("y", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val xOffset = slots.getReferenceOffsetFor("x")
     val yOffset = slots.getReferenceOffsetFor("y")
 
@@ -661,7 +663,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
   test("or(x.prop, x.prop) - both nullable") {
     val slots = SlotConfiguration.empty
       .newLong("x", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val xOffset = slots.getLongOffsetFor("x")
 
     // AST
@@ -743,7 +745,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val slots = SlotConfiguration.empty
       .newReference("x", nullable = false, CTAny)
       .newReference("y", nullable = false, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val xOffset = slots.getReferenceOffsetFor("x")
     val yOffset = slots.getReferenceOffsetFor("y")
 
@@ -819,7 +821,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
   test("or(n.prop1, n.prop2) - both nullable") {
     val slots = SlotConfiguration.empty
       .newLong("n", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val nOffset = slots.getLongOffsetFor("n")
 
     // AST
@@ -903,7 +905,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
     val slots = SlotConfiguration.empty
       .newReference("x", nullable = true, CTAny)
       .newReference("y", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val xOffset = slots.getReferenceOffsetFor("x")
     val yOffset = slots.getReferenceOffsetFor("y")
 
@@ -979,7 +981,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
   test("[ a IN as | a + 42 ] - as nullable") {
     val slots = SlotConfiguration.empty
       .newReference("as", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val asOffset = slots.getReferenceOffsetFor("as")
 
     val exprVariable = ExpressionVariable(3, "a")
@@ -1062,7 +1064,7 @@ retVal1
   test("reduce(as, sum, 0) - as nullable") {
     val slots = SlotConfiguration.empty
       .newReference("as", nullable = true, CTAny)
-    val testCompiler = new CodeChainExpressionCompiler(slots, namer)
+    val testCompiler = new CodeChainExpressionCompiler(slots, namer, tokenContext)
     val asOffset = slots.getReferenceOffsetFor("as")
 
     val accumulatorVariable = ExpressionVariable(2, "a")
@@ -1226,7 +1228,7 @@ retVal1
                                expected: IntermediateRepresentation): Unit = {
 
     val (got, _, _) = compiler.exprToIntermediateRepresentation(ast)
-    val oldExpressionCompiler = new DefaultExpressionCompilerFront(slots, false, new VariableNamer)
+    val oldExpressionCompiler = new DefaultExpressionCompilerFront(slots, false, new VariableNamer, compiler.tokenContext)
     val defaultExpressionCompilerIR = ExpressionCompilation.nullCheckIfRequired(oldExpressionCompiler.compileExpression(ast, id).get)
     val clues = Seq(
       "------------ DefaultExpressionCompilerFront --------------\n",

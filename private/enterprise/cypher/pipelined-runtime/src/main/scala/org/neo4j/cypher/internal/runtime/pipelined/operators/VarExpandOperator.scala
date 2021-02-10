@@ -492,7 +492,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     //use the provided OperatorExpressionCompiler since it will try to read from local variables instead of accessing the context.
     //Here we assume we are always running as start operator of a pipeline and will always read from context unless we are
     //accessing fromNode and toNode which we already have stored in fields.
-    val newScopeExpressionCompiler = new DefaultExpressionCompilerFront(codeGen.slots, codeGen.readOnly, codeGen.namer) with OverrideDefaultCompiler {
+    val newScopeExpressionCompiler = new DefaultExpressionCompilerFront(codeGen.slots, codeGen.readOnly, codeGen.namer, codeGen.tokenContext) with OverrideDefaultCompiler {
 
       override protected def fallBack(expression: expressions.Expression, id: Id): Option[IntermediateExpression] =
         super[DefaultExpressionCompilerFront].compileExpression(expression, id)

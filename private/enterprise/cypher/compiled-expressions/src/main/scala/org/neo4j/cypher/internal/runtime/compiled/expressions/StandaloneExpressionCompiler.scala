@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
@@ -54,9 +55,10 @@ object StandaloneExpressionCompiler {
   def default(slots: SlotConfiguration,
               readOnly: Boolean,
               codeGenerationMode: CodeGeneration.CodeGenerationMode,
-              compiledExpressionsContext: CompiledExpressionContext
+              compiledExpressionsContext: CompiledExpressionContext,
+              tokenContext: TokenContext
              ): StandaloneExpressionCompiler = {
-    val front = new DefaultExpressionCompilerFront(slots, readOnly, new VariableNamer)
+    val front = new DefaultExpressionCompilerFront(slots, readOnly, new VariableNamer, tokenContext)
     withFront(front, codeGenerationMode, compiledExpressionsContext)
   }
 
@@ -80,9 +82,10 @@ object StandaloneExpressionCompiler {
                 readOnly: Boolean,
                 codeGenerationMode: CodeGeneration.CodeGenerationMode,
                 compiledExpressionsContext: CompiledExpressionContext,
+                tokenContext: TokenContext,
                 fallback: AbstractExpressionCompilerFront): StandaloneExpressionCompiler = {
     val front = new CodeChainExpressionCompiler(
-      slots, new VariableNamer) {
+      slots, new VariableNamer, tokenContext) {
       override def compileExpression(expression: Expression, id: Id): Option[IntermediateExpression] = {
         try {
           super.compileExpression(expression, id)

@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.expressions.PropertyKeyName
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWithoutPropertyToken
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompilerTest.matchIR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
@@ -43,8 +44,9 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     val inputSlots = maybeInputSlots.getOrElse(slots)
     val readOnly = true
     val namer = new VariableNamer
+    val tokenContext = TokenContext.EMPTY
 
-    val expressionCompiler = new TestOperatorExpressionCompiler(slots, inputSlots, readOnly, namer)
+    val expressionCompiler = new TestOperatorExpressionCompiler(slots, inputSlots, readOnly, namer, tokenContext)
     expressionCompiler
   }
 
@@ -908,8 +910,8 @@ object OperatorExpressionCompilerTest {
   def matchBeginsWithIR(ir: IntermediateRepresentation): BeginsWithIrMatcher = BeginsWithIrMatcher(ir)
 }
 
-class TestOperatorExpressionCompiler(slots: SlotConfiguration, inputSlots: SlotConfiguration, readOnly: Boolean, namer: VariableNamer)
-  extends OperatorExpressionCompiler(slots, inputSlots, readOnly, namer) {
+class TestOperatorExpressionCompiler(slots: SlotConfiguration, inputSlots: SlotConfiguration, readOnly: Boolean, namer: VariableNamer, tokenContext: TokenContext)
+  extends OperatorExpressionCompiler(slots, inputSlots, readOnly, namer, tokenContext) {
 
   var initCachedPropertyFromStoreCount = 0
   var initCachedPropertyFromContextCount = 0

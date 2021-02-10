@@ -57,7 +57,7 @@ class CompiledExpressionConverter(log: Log,
 
     case e if sizeOf(e) > COMPILE_LIMIT => try {
       log.debug(s"Compiling expression: $expression")
-      StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext)
+      StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext, tokenContext)
         .compileExpression(e, id)
         .map(CompileWrappingExpression(_, inner.toCommandExpression(id, expression)))
     } catch {
@@ -85,7 +85,7 @@ class CompiledExpressionConverter(log: Log,
       val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
       if (totalSize > COMPILE_LIMIT) {
         log.debug(s" Compiling projection: $projections")
-        StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext)
+        StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext, tokenContext)
           .compileProjection(projections, id)
           .map(CompileWrappingProjection(_, projections.isEmpty))
       } else None
@@ -114,7 +114,7 @@ class CompiledExpressionConverter(log: Log,
         val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
         if (totalSize > COMPILE_LIMIT) {
           log.debug(s" Compiling grouping expression: $projections")
-          StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext)
+          StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext, tokenContext)
             .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage), id)
             .map(CompileWrappingDistinctGroupingExpression(_, projections.isEmpty))
         } else None

@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_NULLABLE
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_OFFSET_IS_FOR_LONG_SLOT
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.NODE_PROPERTY
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.RELATIONSHIP_PROPERTY
@@ -37,8 +38,9 @@ import org.neo4j.values.storable.Value
 
 class DefaultExpressionCompilerFront(slots: SlotConfiguration,
                                      readOnly: Boolean,
-                                     namer: VariableNamer
-                               ) extends AbstractExpressionCompilerFront(slots, readOnly, namer) {
+                                     namer: VariableNamer,
+                                     tokenContext: TokenContext
+                               ) extends AbstractExpressionCompilerFront(slots, readOnly, namer, tokenContext) {
 
   override protected def getLongAt(offset: Int): IntermediateRepresentation = getLongFromExecutionContext(offset)
 

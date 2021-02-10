@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.expressions.CaseExpression
 import org.neo4j.cypher.internal.expressions.DesugaredMapProjection
 import org.neo4j.cypher.internal.expressions.EntityType
 import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.GetDegree
 import org.neo4j.cypher.internal.expressions.LiteralEntry
 import org.neo4j.cypher.internal.expressions.MultiRelationshipPathStep
 import org.neo4j.cypher.internal.expressions.NODE_TYPE
@@ -24,6 +25,7 @@ import org.neo4j.cypher.internal.expressions.PathExpression
 import org.neo4j.cypher.internal.expressions.PathStep
 import org.neo4j.cypher.internal.expressions.PropertyKeyName
 import org.neo4j.cypher.internal.expressions.RELATIONSHIP_TYPE
+import org.neo4j.cypher.internal.expressions.RelTypeName
 import org.neo4j.cypher.internal.expressions.SemanticDirection.BOTH
 import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
 import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
@@ -4391,7 +4393,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(getR2, context) should equal(stringValue("hello from rel disk"))
   }
 
-  test("getDegree without type") {
+  test("getDegree primitive without type") {
     //given node with three outgoing and two incoming relationships
     val n = createNode("prop" -> "hello")
     relate(createNode(), n)
@@ -4412,7 +4414,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       equal(Values.longValue(5))
   }
 
-  test("getDegree with type") {
+  test("getDegree primitive with type") {
     //given node with three outgoing and two incoming relationships
     val n = createNode("prop" -> "hello")
     val relType = "R"
@@ -4430,6 +4432,57 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       evaluate(compile(GetDegreePrimitive(0, Some(typ), INCOMING), slots), context) should equal(Values.longValue(1))
       evaluate(compile(GetDegreePrimitive(0, Some(typ), BOTH), slots), context) should equal(Values.longValue(3))
     }
+  }
+
+  test("getDegree without type") {
+    //given node with three outgoing and two incoming relationships
+    val n = createNode("prop" -> "hello")
+    relate(createNode(), n)
+    relate(createNode(), n)
+    relate(n, createNode())
+    relate(n, createNode())
+    relate(n, createNode())
+
+    val slots = SlotConfiguration.empty.newReference("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setRefAt(0, ValueUtils.fromNodeEntity(n))
+    val nodeExpression = ReferenceFromSlot(0, "n")
+
+    evaluate(compile(GetDegree(nodeExpression, None, OUTGOING)(pos), slots), context) should
+      equal(Values.longValue(3))
+    evaluate(compile(GetDegree(nodeExpression, None, INCOMING)(pos), slots), context) should
+      equal(Values.longValue(2))
+    evaluate(compile(GetDegree(nodeExpression, None, BOTH)(pos), slots), context) should
+      equal(Values.longValue(5))
+  }
+
+  test("getDegree with type") {
+    //given node with three outgoing and two incoming relationships
+    val relType = "R"
+    val otherRelType = "OTHER"
+    val nonExistingRelType = "NOO"
+
+    val n = createNode("prop" -> "hello")
+    relate(createNode(), n, relType)
+    startNewTransaction() // Start a new transaction to exercise both code paths (pre-existing token vs. new token)
+    relate(createNode(), n, otherRelType)
+    relate(n, createNode(), relType)
+    relate(n, createNode(), relType)
+    relate(n, createNode(), otherRelType)
+
+    val slots = SlotConfiguration.empty.newReference("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setRefAt(0, ValueUtils.fromNodeEntity(n))
+    val nodeExpression = ReferenceFromSlot(0, "n")
+    val relTypeName = RelTypeName(relType)(pos)
+    val otherRelTypeName = RelTypeName(otherRelType)(pos)
+    val nonExistingRelTypeName = RelTypeName(nonExistingRelType)(pos)
+
+    evaluate(compile(GetDegree(nodeExpression, Some(relTypeName), OUTGOING)(pos), slots), context) should equal(Values.longValue(2))
+    evaluate(compile(GetDegree(nodeExpression, Some(relTypeName), INCOMING)(pos), slots), context) should equal(Values.longValue(1))
+    evaluate(compile(GetDegree(nodeExpression, Some(relTypeName), BOTH)(pos), slots), context) should equal(Values.longValue(3))
+    evaluate(compile(GetDegree(nodeExpression, Some(otherRelTypeName), BOTH)(pos), slots), context) should equal(Values.longValue(2))
+    evaluate(compile(GetDegree(nodeExpression, Some(nonExistingRelTypeName), BOTH)(pos), slots), context) should equal(Values.longValue(0))
   }
 
   test("check Degree without type") {
@@ -4973,15 +5026,15 @@ class CompiledExpressionsIT extends ExpressionsIT {
     CachingExpressionCompilerTracer.NONE)
 
   override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext)
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, query)
       .compileExpression(e, Id.INVALID_ID).getOrElse(fail(s"Failed to compile expression $e"))
 
   override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext)
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, query)
       .compileProjection(projections, Id.INVALID_ID).getOrElse(fail(s"Failed to compile projection $projections"))
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext)
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, query)
       .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty), Id.INVALID_ID)
       .getOrElse(fail(s"Failed to compile grouping $projections"))
 }
@@ -4993,18 +5046,18 @@ class CodeChainExpressionsIT extends ExpressionsIT {
     CachingExpressionCompilerTracer.NONE)
 
   private def fallback(slots: SlotConfiguration) =
-    new DefaultExpressionCompilerFront(slots, readOnly = false, new VariableNamer)
+    new DefaultExpressionCompilerFront(slots, readOnly = false, new VariableNamer, query)
 
   override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
-    StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, fallback(slots))
+    StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, query, fallback(slots))
       .compileExpression(e, Id.INVALID_ID).getOrElse(fail(s"Failed to compile expression $e"))
 
   override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
-    StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, fallback(slots))
+    StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, query, fallback(slots))
       .compileProjection(projections, Id.INVALID_ID).getOrElse(fail(s"Failed to compile projection $projections"))
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
-    StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, fallback(slots))
+    StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, query, fallback(slots))
       .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty), Id.INVALID_ID)
       .getOrElse(fail(s"Failed to compile grouping $projections"))
 }

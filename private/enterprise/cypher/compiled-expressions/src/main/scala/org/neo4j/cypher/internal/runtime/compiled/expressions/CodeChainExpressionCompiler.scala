@@ -76,6 +76,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
@@ -110,7 +111,8 @@ import org.neo4j.values.virtual.NodeValue
 import org.neo4j.values.virtual.VirtualValues
 
 class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
-                                  override val namer: VariableNamer) extends DefaultExpressionCompilerFront(slots, false, namer) {
+                                  override val namer: VariableNamer,
+                                  tokenContext: TokenContext) extends DefaultExpressionCompilerFront(slots, false, namer, tokenContext) {
 
   def exprToIntermediateRepresentation(expr: Expression): (IntermediateRepresentation, Set[Field], Set[LocalVariable]) = {
     val irInfo = exprToIRInner(expr).extract(namer)

@@ -59,9 +59,9 @@ class FusedPlansCompiler(readOnly: Boolean,
         case plan@(_: Union | _: ConditionalApply | _: AntiConditionalApply | _: SelectOrSemiApply | _: SelectOrAntiSemiApply) =>
           val leftSlots = physicalPlan.slotConfigurations(plan.lhs.get.id)
           val rightSlots = physicalPlan.slotConfigurations(plan.rhs.get.id)
-          new BinaryOperatorExpressionCompiler(slots, inputSlotConfiguration, leftSlots, rightSlots, readOnly, namer)
+          new BinaryOperatorExpressionCompiler(slots, inputSlotConfiguration, leftSlots, rightSlots, readOnly, namer, tokenContext)
         case _ =>
-          new OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, namer) // NOTE: We assume slots is the same within an entire pipeline
+          new OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, namer, tokenContext) // NOTE: We assume slots is the same within an entire pipeline
       }
 
     val innermost = new DelegateOperatorTaskTemplate()(expressionCompiler)

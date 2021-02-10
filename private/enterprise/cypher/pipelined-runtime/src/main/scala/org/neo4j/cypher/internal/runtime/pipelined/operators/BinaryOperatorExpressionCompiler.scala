@@ -17,6 +17,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
@@ -32,7 +33,8 @@ class BinaryOperatorExpressionCompiler(slots: SlotConfiguration,
                                        lhsSlotConfiguration: SlotConfiguration,
                                        rhsSlotConfiguration: SlotConfiguration,
                                        readOnly: Boolean,
-                                       namer: VariableNamer) extends OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, namer) {
+                                       namer: VariableNamer,
+                                       tokenContext: TokenContext) extends OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, namer, tokenContext) {
   val fromLHSName: String = namer.nextVariableName("fromLHS")
 
   /**

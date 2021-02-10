@@ -77,6 +77,7 @@ import org.neo4j.cypher.internal.expressions.Equals
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.False
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
+import org.neo4j.cypher.internal.expressions.GetDegree
 import org.neo4j.cypher.internal.expressions.GreaterThan
 import org.neo4j.cypher.internal.expressions.GreaterThanOrEqual
 import org.neo4j.cypher.internal.expressions.HasLabels
@@ -163,6 +164,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipTypeFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWithPropertyToken
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWithoutPropertyToken
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.CachedPropertiesRow
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
@@ -275,7 +277,8 @@ import scala.collection.mutable.ArrayBuffer
 
 abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                                                val readOnly: Boolean,
-                                               val namer: VariableNamer) extends ExpressionCompilerFront {
+                                               val namer: VariableNamer,
+                                               val tokenContext: TokenContext) extends ExpressionCompilerFront {
 
   override def compileGroupingKey(orderedGroupings: Seq[Expression], id: Id): Option[IntermediateExpression] = {
     val projections = orderedGroupings.flatMap(p => compileExpression(p, id))
@@ -1630,37 +1633,19 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                getLongAt(offset)), Seq.empty, Seq.empty, Set.empty))
 
     case GetDegreePrimitive(offset, typ, dir) =>
-      val methodName = dir match {
-        case SemanticDirection.OUTGOING => "nodeGetOutgoingDegree"
-        case SemanticDirection.INCOMING => "nodeGetIncomingDegree"
-        case SemanticDirection.BOTH => "nodeGetTotalDegree"
-      }
-      typ match {
-        case None =>
-          Some(
-            IntermediateExpression(
-              invokeStatic(method[Values, IntValue, Int]("intValue"),
-                invoke(DB_ACCESS, method[DbAccess, Int, Long, NodeCursor](methodName), getLongAt(offset), NODE_CURSOR)),
-              Seq.empty, Seq(vNODE_CURSOR), Set.empty))
-        case Some(Left(typeId)) =>
-          Some(
-            IntermediateExpression(
-              invokeStatic(method[Values, IntValue, Int]("intValue"),
-                invoke(DB_ACCESS, method[DbAccess, Int, Long, Int, NodeCursor](methodName), getLongAt(offset), constant(typeId), NODE_CURSOR)),
-              Seq.empty, Seq(vNODE_CURSOR), Set.empty))
+      getDegree(getLongAt(offset), typ, dir)
 
-        case Some(Right(typeName)) =>
-          val f = field[Int](namer.nextVariableName(), constant(-1))
-          Some(
-            IntermediateExpression(
-              block(
-                condition(equal(loadField(f), constant(-1)))(
-                  setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typeName)))),
-                invokeStatic(method[Values, IntValue, Int]("intValue"),
-                  invoke(DB_ACCESS, method[DbAccess, Int, Long, Int, NodeCursor](methodName),
-                    getLongAt(offset), loadField(f), NODE_CURSOR))
-              ), Seq(f), Seq(vNODE_CURSOR), Set.empty))
-      }
+    case GetDegree(nodeExpression, relType, dir) =>
+      val maybeToken: Option[Either[Int, String]] = relType.map(r => tokenContext.getOptRelTypeId(r.name).toLeft(r.name))
+      compileExpression(nodeExpression, id).map(node => {
+        val nodeId = invoke(cast[VirtualNodeValue](node.ir), method[VirtualNodeValue, Long]("id"))
+        val degree = getDegree(nodeId, maybeToken, dir).get
+        IntermediateExpression(degree.ir,
+                               degree.fields ++ node.fields,
+                               degree.variables ++ node.variables,
+                               degree.nullChecks ++ node.nullChecks,
+                               node.requireNullCheck)
+      })
 
     case HasDegreeGreaterThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
      checkDegree(offset, typ, dir, maxDegreeExpression, greaterThan, d => add(d, 1), id)
@@ -1818,6 +1803,40 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     IntermediateExpression(block(inits :+ predicate: _*),
       relationship.fields ++ tokenFields, relationship.variables :+ vRELATIONSHIP_CURSOR, relationship.nullChecks)
+  }
+
+  private def getDegree(nodeRep: IntermediateRepresentation, typ: Option[Either[Int, String]], dir: SemanticDirection) = {
+    val methodName = dir match {
+      case SemanticDirection.OUTGOING => "nodeGetOutgoingDegree"
+      case SemanticDirection.INCOMING => "nodeGetIncomingDegree"
+      case SemanticDirection.BOTH => "nodeGetTotalDegree"
+    }
+    typ match {
+      case None =>
+        Some(
+          IntermediateExpression(
+            invokeStatic(method[Values, IntValue, Int]("intValue"),
+                         invoke(DB_ACCESS, method[DbAccess, Int, Long, NodeCursor](methodName), nodeRep, NODE_CURSOR)),
+            Seq.empty, Seq(vNODE_CURSOR), Set.empty))
+      case Some(Left(typeId)) =>
+        Some(
+          IntermediateExpression(
+            invokeStatic(method[Values, IntValue, Int]("intValue"),
+                         invoke(DB_ACCESS, method[DbAccess, Int, Long, Int, NodeCursor](methodName), nodeRep, constant(typeId), NODE_CURSOR)),
+            Seq.empty, Seq(vNODE_CURSOR), Set.empty))
+
+      case Some(Right(typeName)) =>
+        val f = field[Int](namer.nextVariableName(), constant(-1))
+        Some(
+          IntermediateExpression(
+            block(
+              condition(equal(loadField(f), constant(-1)))(
+                setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typeName)))),
+              invokeStatic(method[Values, IntValue, Int]("intValue"),
+                           invoke(DB_ACCESS, method[DbAccess, Int, Long, Int, NodeCursor](methodName),
+                                  nodeRep, loadField(f), NODE_CURSOR))
+              ), Seq(f), Seq(vNODE_CURSOR), Set.empty))
+    }
   }
 
   private def tokenFieldsForLabels(labels: Seq[String]): (Seq[InstanceField], Seq[IntermediateRepresentation]) = {
