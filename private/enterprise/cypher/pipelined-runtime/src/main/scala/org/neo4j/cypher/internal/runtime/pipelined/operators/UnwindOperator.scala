@@ -133,7 +133,7 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
             invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"),
               nullCheckIfRequired(listExpression)),
             method[ListValue, java.util.Iterator[AnyValue]]("iterator")))),
-      setField(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id, doProfile)),
+      setField(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id, doProfile, codeGen.namer)),
       constant(true)
     )
   }
@@ -157,7 +157,7 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
           codeGen.setRefAt(offset,
             invoke(loadField(cursorField), method[IteratorCursor, AnyValue]("value"))),
           inner.genOperateWithExpressions,
-          doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id, doProfile))),
+          doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id, doProfile, codeGen.namer))),
           endInnerLoop
         )
       )

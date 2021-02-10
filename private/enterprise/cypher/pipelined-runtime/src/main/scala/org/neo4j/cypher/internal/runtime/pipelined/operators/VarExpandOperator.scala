@@ -366,7 +366,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, CursorPools]("enterWorkUnit"), CURSOR_POOL),
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, OperatorProfileEvent]("setTracer"), loadField(executionEventField)),
 
-          setField(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id, doProfile)),
+          setField(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id, doProfile, codeGen.namer)),
           assign(resultBoolean, constant(true)),
         )
       },
@@ -396,7 +396,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         else noop(),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id, doProfile))
+          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id, doProfile, codeGen.namer))
         ),
         endInnerLoop
       )

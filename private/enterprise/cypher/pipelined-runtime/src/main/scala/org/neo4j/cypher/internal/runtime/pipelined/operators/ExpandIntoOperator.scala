@@ -279,7 +279,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
         block(
           setUpCursors(fromNode, toNode),
           assign(resultBoolean, constant(true)),
-          setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id, doProfile)),
+          setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id, doProfile, codeGen.namer)),
         )
       },
       load[Boolean](resultBoolean)
@@ -306,7 +306,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
         writeRow(getRelationship),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id, doProfile))),
+          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id, doProfile, codeGen.namer))),
         endInnerLoop
       )
     )

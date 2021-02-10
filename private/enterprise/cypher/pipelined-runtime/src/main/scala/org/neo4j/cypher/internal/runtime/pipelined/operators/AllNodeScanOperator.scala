@@ -233,7 +233,7 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
     block(
       allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR, doProfile),
       allNodeScan(loadField(nodeCursorField)),
-      setField(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id, doProfile)),
+      setField(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id, doProfile, codeGen.namer)),
       constant(true)
     )
   }
@@ -257,7 +257,7 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id, doProfile))),
+        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id, doProfile, codeGen.namer))),
         endInnerLoop
       )
     )

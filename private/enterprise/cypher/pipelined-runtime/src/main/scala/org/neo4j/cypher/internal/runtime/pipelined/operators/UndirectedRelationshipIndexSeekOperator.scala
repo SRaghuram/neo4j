@@ -163,7 +163,7 @@ trait UndirectedSeek {
           block(
             singleRelationship(load[Long](localRelVar), loadField(relScanCursorField)),
             invokeStatic(method[Preconditions, Unit, Boolean, String]("checkState"),
-              profilingCursorNext[RelationshipScanCursor](loadField(relScanCursorField), id, doProfile), constant("Missing relationship")),
+              profilingCursorNext[RelationshipScanCursor](loadField(relScanCursorField), id, doProfile, codeGen.namer), constant("Missing relationship")),
             codeGen.setLongAt(startOffset, invoke(loadField(relScanCursorField), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
             codeGen.setLongAt(endOffset, invoke(loadField(relScanCursorField), method[RelationshipScanCursor, Long]("targetNodeReference")))
           )
@@ -178,7 +178,7 @@ trait UndirectedSeek {
         doIfInnerCantContinue(
           block(
             setField(forwardDirection, not(loadField(forwardDirection))),
-            innermost.setUnlessPastLimit(canContinue, or(not(loadField(forwardDirection)), profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile))),
+            innermost.setUnlessPastLimit(canContinue, or(not(loadField(forwardDirection)), profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile, codeGen.namer))),
           )
         ),
         endInnerLoop

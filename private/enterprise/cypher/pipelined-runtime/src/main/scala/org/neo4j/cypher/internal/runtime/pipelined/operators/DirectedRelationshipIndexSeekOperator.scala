@@ -317,12 +317,12 @@ abstract class BaseRelationshipIndexSeekTaskTemplate(inner: OperatorTaskTemplate
         codeGen.setLongAt(relOffset, load[Long](localRelVar)),
         singleRelationship(load[Long](localRelVar), loadField(relScanCursorField)),
         invokeStatic(method[Preconditions, Unit, Boolean, String]("checkState"),
-          profilingCursorNext[RelationshipScanCursor](loadField(relScanCursorField), id, doProfile), constant("Missing relationship")),
+          profilingCursorNext[RelationshipScanCursor](loadField(relScanCursorField), id, doProfile, codeGen.namer), constant("Missing relationship")),
         codeGen.setLongAt(startOffset, invoke(loadField(relScanCursorField), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
         codeGen.setLongAt(endOffset, invoke(loadField(relScanCursorField), method[RelationshipScanCursor, Long]("targetNodeReference"))),
         cacheProperties,
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile))),
+        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile, codeGen.namer))),
         endInnerLoop
       )
     )
@@ -414,7 +414,7 @@ abstract class SingleQueryRelationshipIndexSeekTaskTemplate(inner: OperatorTaskT
           allocateAndTraceCursor(relIndexCursorField, executionEventField, ALLOCATE_REL_INDEX_CURSOR, doProfile),
           allocateAndTraceCursor(relScanCursorField, executionEventField, ALLOCATE_REL_SCAN_CURSOR, doProfile),
           relationshipIndexSeek(indexReadSession(queryIndexId), loadField(relIndexCursorField), predicate, order, needsValues),
-          setField(canContinue, profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile))
+          setField(canContinue, profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile, codeGen.namer))
         )),
       load[Boolean](hasInnerLoopVar)
     )
@@ -585,7 +585,7 @@ abstract class BaseManyQueriesRelationshipIndexSeekTaskTemplate(override val inn
       setField(relCursorsToCloseField, createCursorArray),
       setField(relIndexCursorField, invokeStatic(getCursor, loadField(relCursorsToCloseField))),
       allocateAndTraceCursor(relScanCursorField, executionEventField, ALLOCATE_REL_SCAN_CURSOR, doProfile),
-      setField(canContinue, profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile)),
+      setField(canContinue, profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile, codeGen.namer)),
       constant(true))
   }
 

@@ -167,7 +167,7 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
         block(
           allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR, doProfile),
           nodeLabelScan(constant(labelId), loadField(nodeLabelCursorField), indexOrder),
-          setField(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, doProfile)),
+          setField(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, doProfile, codeGen.namer)),
           constant(true)
         )
 
@@ -199,7 +199,7 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
             block(
               allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR, doProfile),
               nodeLabelScan(loadField(labelField), loadField(nodeLabelCursorField), indexOrder),
-              setField(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, doProfile)),
+              setField(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, doProfile, codeGen.namer)),
             )
           },
           load[Boolean](hasInnerLoop)
@@ -226,7 +226,7 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(offset, invoke(loadField(nodeLabelCursorField), method[NodeLabelIndexCursor, Long]("nodeReference"))),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, doProfile))
+          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, doProfile, codeGen.namer))
         ),
         endInnerLoop
       )

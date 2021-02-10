@@ -58,6 +58,7 @@ import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -591,7 +592,7 @@ object OperatorCodeGenHelperTemplates {
   // Profiling
 
   private def event(id: Id) = loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x))
-  def profilingCursorNext[CURSOR](cursor: IntermediateRepresentation, id: Id, profile: Boolean)(implicit out: Manifest[CURSOR]): IntermediateRepresentation = {
+  def profilingCursorNext[CURSOR](cursor: IntermediateRepresentation, id: Id, profile: Boolean, namer: VariableNamer)(implicit out: Manifest[CURSOR]): IntermediateRepresentation = {
     /**
      * {{{
      *   val tmp = cursor.next()
@@ -600,7 +601,7 @@ object OperatorCodeGenHelperTemplates {
      * }}}
      */
       if (profile) {
-        val hasNext = "tmp_" + id.x
+        val hasNext = namer.nextVariableName("tmp")
         block(
           declareAndAssign(typeRefOf[Boolean], hasNext, invoke(cursor, method[CURSOR, Boolean]("next"))),
           condition(isNotNull(event(id))) {

@@ -97,7 +97,6 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyIndexQuery
 import org.neo4j.internal.kernel.api.PropertyIndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.Read
-import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.values.storable.FloatingPointValue
@@ -383,7 +382,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
       condition(load[Boolean](hasInnerLoopVar))(
         block(
           setUpCursor,
-          setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, doProfile))
+          setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, doProfile, codeGen.namer))
         )),
       load[Boolean](hasInnerLoopVar)
     )
@@ -425,7 +424,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getPropertyValue)).getOrElse(noop()),
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, doProfile))),
+        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, doProfile, codeGen.namer))),
         endInnerLoop
       )
     )
@@ -605,8 +604,8 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
     //Since CompositeValueIndexCursor we need to do some trickery so that we access the static method as
     //'CompositeValueIndexCursor.methodName` instead of `CompositeValueIndexCursor<Object>.methodName
     Method(nonGenericTypeRefOf[CompositeValueIndexCursor[_]],
-      typeRefOf[RelationshipValueIndexCursor], methodName,
-      typeRefOf[Array[RelationshipValueIndexCursor]])
+      typeRefOf[NodeValueIndexCursor], methodName,
+      typeRefOf[Array[NodeValueIndexCursor]])
   }
 
   private def setupCursors: IntermediateRepresentation = {
@@ -631,7 +630,7 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
      */
     block(
       setupCursors,
-      setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, doProfile)),
+      setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, doProfile, codeGen.namer)),
       constant(true))
   }
 
@@ -655,7 +654,7 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
           innermost.setUnlessPastLimit(canContinue,
-            profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, doProfile))
+            profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, doProfile, codeGen.namer))
         ),
         endInnerLoop
       )
