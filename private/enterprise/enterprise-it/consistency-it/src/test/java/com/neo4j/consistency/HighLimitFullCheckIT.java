@@ -29,4 +29,11 @@ public class HighLimitFullCheckIT extends FullCheckIntegrationTest
         settings.put( OnlineBackupSettings.online_backup_enabled, false );
         return settings;
     }
+
+    @Override
+    protected int expectedNumberOfErrorsForNegativeRelationshipPointerInconsistency()
+    {
+        // Because high-limit can actually store negative pointers this is somehow different between the formats
+        return 4;
+    }
 }
