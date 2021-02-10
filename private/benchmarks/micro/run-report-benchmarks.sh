@@ -103,5 +103,6 @@ ${jvm_path} -jar "${jar_path}" run-export  \
         --results-store-user "${results_store_user}" \
         --results-store-pass "${results_store_password}" \
         ${recordings_base_uri:+--recordings-base-uri $recordings_base_uri} \
+        ${recordings_base_uri:+--recordings-base-uri $recordings_base_uri} \
         --aws-region "eu-north-1" \
         ${aws_endpoint_url:+--aws-endpoint-url $aws_endpoint_url}
