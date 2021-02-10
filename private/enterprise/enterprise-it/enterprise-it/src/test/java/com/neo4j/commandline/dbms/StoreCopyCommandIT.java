@@ -1052,11 +1052,9 @@ class StoreCopyCommandIT extends AbstractCommandIT
 
         copyDatabase( "--from-database=" + databaseName,
                 "--to-database=" + copyName,
-                "--from-pagecache=6m",
-                "--to-pagecache=7m" );
+                "--from-pagecache=6m" );
 
         assertTrue( out.containsMessage( "(page cache 6m)" ) );
-        assertTrue( out.containsMessage( "(page cache 7m)" ) );
     }
 
     private void copyDatabase( String... args ) throws Exception

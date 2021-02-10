@@ -184,7 +184,7 @@ class RestartableImportIT
             Path databaseDirectory = Path.of( args[0] );
             RecordFormats format = RecordFormatSelector.selectForVersion( args[2] );
             BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
-            factory.instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(), null, PageCacheTracer.NULL, DEFAULT,
+            factory.instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(), PageCacheTracer.NULL, DEFAULT,
                     NullLogService.getInstance(), ExecutionMonitor.INVISIBLE, EMPTY, Config.defaults(), format,
                     NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
                     .doImport( input( Long.parseLong( args[1] ) ) );

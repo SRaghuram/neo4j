@@ -736,7 +736,6 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
         BatchImporter batchImporter = new ParallelBatchImporter(
                 Neo4jDb.layoutWithTxLogLocation( storeDir ),
                 new DefaultFileSystemAbstraction(),
-                null,
                 PageCacheTracer.NULL,
                 new LdbcImporterConfig(),
                 logService,

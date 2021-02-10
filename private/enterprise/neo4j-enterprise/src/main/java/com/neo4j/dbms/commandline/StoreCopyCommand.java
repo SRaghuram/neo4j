@@ -194,6 +194,7 @@ public class StoreCopyCommand extends AbstractCommand
     @Option( names = "--from-pagecache", paramLabel = "<size>", defaultValue = "8m", description = "The size of the page cache to use for reading." )
     private String fromPageCacheMemory;
 
+    @Deprecated
     @Option( names = "--to-pagecache", paramLabel = "<size>", description = "(Advanced) The size of the page cache to use for writing. " +
             "If not specified then an optimal size will be automatically selected" )
     private String toPageCacheMemory;
@@ -233,7 +234,7 @@ public class StoreCopyCommand extends AbstractCommand
                                                 skipRelationships, verbose, ctx.out(), pageCacheTracer, Clocks.nanoClock() );
                 try
                 {
-                    copy.copyTo( toDatabaseLayout, fromPageCacheMemory, toPageCacheMemory );
+                    copy.copyTo( toDatabaseLayout, fromPageCacheMemory );
                 }
                 catch ( Exception e )
                 {

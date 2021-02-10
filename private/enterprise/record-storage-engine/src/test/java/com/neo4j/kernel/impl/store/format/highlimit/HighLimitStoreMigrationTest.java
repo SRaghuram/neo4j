@@ -174,14 +174,14 @@ class HighLimitStoreMigrationTest
 
         @Override
         public BatchImporter instantiate(
-                DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
+                DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem,
                 PageCacheTracer pageCacheTracer, Configuration config, LogService logService, ExecutionMonitor executionMonitor,
                 AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, ImportLogic.Monitor monitor, JobScheduler jobScheduler,
                 Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker )
         {
             this.configuration = config;
             return delegate
-                    .instantiate( directoryStructure, fileSystem, externalPageCache, pageCacheTracer, config, logService, executionMonitor,
+                    .instantiate( directoryStructure, fileSystem, pageCacheTracer, config, logService, executionMonitor,
                             additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer, memoryTracker );
         }
 

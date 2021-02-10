@@ -272,7 +272,7 @@ class RestartableParallelBatchImporterIT
     {
         BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
         return factory.instantiate(
-                databaseLayout, fs, null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
+                databaseLayout, fs, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
                 Config.defaults( preallocate_logical_logs, false ), RecordFormatSelector.defaultFormat(), NO_MONITOR,
                 jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
     }

@@ -12,17 +12,16 @@ import org.neo4j.internal.batchimport.BatchImporter;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.batchimport.Configuration;
 import org.neo4j.internal.batchimport.ImportLogic;
-import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 
 @ServiceProvider
 public class RestartableBatchImporterFactory extends BatchImporterFactory
@@ -39,13 +38,13 @@ public class RestartableBatchImporterFactory extends BatchImporterFactory
     }
 
     @Override
-    public BatchImporter instantiate( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
+    public BatchImporter instantiate( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem,
             PageCacheTracer pageCacheTracer, Configuration config,
             LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats,
             ImportLogic.Monitor monitor, JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer,
             MemoryTracker memoryTracker )
     {
-        return new RestartableParallelBatchImporter( databaseLayout, fileSystem, externalPageCache, pageCacheTracer, config, logService, executionMonitor,
+        return new RestartableParallelBatchImporter( databaseLayout, fileSystem, pageCacheTracer, config, logService, executionMonitor,
                 additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer, memoryTracker );
     }
 }
