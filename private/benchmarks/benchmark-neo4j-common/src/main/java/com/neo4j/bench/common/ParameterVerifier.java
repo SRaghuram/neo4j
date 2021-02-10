@@ -10,9 +10,11 @@ import com.neo4j.bench.model.model.Repository;
 
 public class ParameterVerifier
 {
-    public static void performSanityChecks( String neo4jBranchOwner, String neo4jVersion, String neo4jBranch )
+    private static final String DEFAULT_TRIGGER = "neo4j";
+
+    public static void performSanityChecks( String neo4jBranchOwner, String neo4jVersion, String neo4jBranch, String triggeredBy )
     {
-        if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) )
+        if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) && triggeredBy.equals( DEFAULT_TRIGGER ) )
         {
             BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );
         }

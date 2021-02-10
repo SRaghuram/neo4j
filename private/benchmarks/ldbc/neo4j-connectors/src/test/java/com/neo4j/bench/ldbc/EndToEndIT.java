@@ -170,7 +170,7 @@ public class EndToEndIT extends BaseEndToEndIT
                        jvm.launchJava(),
                        // profilers
                        profilers.stream().map( ProfilerType::name ).collect( joining( "," ) ),
-                       "triggered_by",
+                       "neo4j",
                        // AWS endpoint URL
                        "--aws-endpoint-url",endpointUrl );
     }

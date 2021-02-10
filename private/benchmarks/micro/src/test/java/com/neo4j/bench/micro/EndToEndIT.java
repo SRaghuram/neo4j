@@ -99,7 +99,7 @@ class EndToEndIT extends BaseEndToEndIT
                        // profilers
                        ProfilerType.serializeProfilers( profilers ),
                        // triggered_by
-                       "triggered_by",
+                       "neo4j",
                        // work_dir
                        workDir.getAbsolutePath(),
                        "--aws-endpoint-url", endpointUrl );

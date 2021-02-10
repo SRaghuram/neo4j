@@ -455,7 +455,7 @@ public class RunReportCommand implements Runnable
             assertDisallowFormatMigration( neo4jConfig );
             assertStoreFormatIsSet( neo4jConfig );
             neo4jBranch = BranchAndVersion.teamcityBranchToRealBranch( neo4jBranch );
-            ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
+            ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch, triggeredBy);
             Files.createDirectories( resultsDir.toPath() );
 
             jvmArgs = buildJvmArgsString( jvmArgs, neo4jConfig );

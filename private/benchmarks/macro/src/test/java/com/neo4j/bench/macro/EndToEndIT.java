@@ -367,7 +367,7 @@ class EndToEndIT extends BaseEndToEndIT
                        Planner.DEFAULT.name(),
                        // runtime
                        Runtime.DEFAULT.name(),
-                       "triggered_by",
+                       "neo4j",
                        // error_policy
                        ErrorPolicy.FAIL.name(),
                        // embedded OR server:<path>

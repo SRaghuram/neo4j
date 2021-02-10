@@ -296,7 +296,8 @@ public class Main
     private void report( long start, long time, Neo4jConfig neo4jConfig, BenchmarkGroupBenchmarkMetrics metrics )
     {
         neo4jBranch = BranchAndVersion.teamcityBranchToRealBranch( neo4jBranch );
-        ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
+        String triggeredBy = "neo4j";
+        ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch, triggeredBy );
         BenchmarkTool tool = new BenchmarkTool( IMPORT_BENCH, neo4jCommit, IMPORT_OWNER, neo4jBranch );
         Java java = Java.current( Stream.of( jvmArgs ).collect( joining( " " ) ) );
 
@@ -306,7 +307,7 @@ public class Main
         {
             Neo4j neo4j = new Neo4j( neo4jCommit, neo4jVersion, neo4jEdition, neo4jBranch, neo4jBranchOwner );
             String id = UUID.randomUUID().toString();
-            TestRun testRun = new TestRun( id, time, start, build, parentBuild, "import-benchmark" );
+            TestRun testRun = new TestRun( id, time, start, build, parentBuild, triggeredBy );
 
             InstanceDiscovery instanceDiscovery = InstanceDiscovery.create();
             Instance instance = instanceDiscovery.currentInstance( System.getenv() );
