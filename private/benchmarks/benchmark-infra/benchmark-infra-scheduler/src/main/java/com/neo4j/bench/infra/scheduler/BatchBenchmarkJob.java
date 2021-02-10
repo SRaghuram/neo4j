@@ -101,17 +101,16 @@ class BatchBenchmarkJob
 
     BatchBenchmarkJob copyWith( JobStatus jobStatus, Clock clock )
     {
-
-        LOG.info( "updating batch job {} with status {}", this, jobStatus );
+        LOG.debug( "Updating batch job {} with status {}", this, jobStatus );
 
         ZonedDateTime runningTimestamp = runAt;
         ZonedDateTime doneTimestamp = doneAt;
 
-        if ( "RUNNING".equals( jobStatus.status() ) && runningTimestamp == null )
+        if ( jobStatus.isRunning() && runningTimestamp == null )
         {
             runningTimestamp = ZonedDateTime.now( clock );
         }
-        else if ( ("FAILED".equals( jobStatus.status() ) || "SUCCEEDED".equals( jobStatus.status() ))
+        else if ( (jobStatus.isFailed() || jobStatus.isSucceeded())
                   && doneTimestamp == null )
         {
             doneTimestamp = ZonedDateTime.now( clock );

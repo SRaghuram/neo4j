@@ -42,12 +42,22 @@ public class JobStatus
 
     public boolean isDone()
     {
-        return "SUCCEEDED".equals( status ) || "FAILED".equals( status );
+        return isSucceeded() || isFailed();
     }
 
     public boolean isWaiting()
     {
         return !isDone();
+    }
+
+    public boolean isRunning()
+    {
+        return "RUNNING".equals( status() );
+    }
+
+    public boolean isSucceeded()
+    {
+        return "SUCCEEDED".equals( status );
     }
 
     public boolean isFailed()
