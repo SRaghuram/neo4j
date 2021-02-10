@@ -7,6 +7,7 @@ package com.neo4j.metrics.diagnostics;
 
 import com.neo4j.configuration.MetricsSettings;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,6 +21,7 @@ import org.neo4j.kernel.diagnostics.DiagnosticsOfflineReportProvider;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSource;
 
 import static org.neo4j.kernel.diagnostics.DiagnosticsReportSources.newDiagnosticsFile;
+import static org.neo4j.kernel.diagnostics.DiagnosticsReportSources.newDiagnosticsString;
 
 @ServiceProvider
 public class MetricsDiagnosticsOfflineReportProvider extends DiagnosticsOfflineReportProvider
@@ -46,9 +48,16 @@ public class MetricsDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
         if ( fs.fileExists( metricsDirectory ) && fs.isDirectory( metricsDirectory ) )
         {
             List<DiagnosticsReportSource> files = new ArrayList<>();
-            for ( Path file : fs.listFiles( metricsDirectory ) )
+            try
             {
-                files.add( newDiagnosticsFile( "metrics/" + file.getFileName(), fs, file ) );
+                for ( Path file : fs.listFiles( metricsDirectory ) )
+                {
+                    files.add( newDiagnosticsFile( "metrics/" + file.getFileName(), fs, file ) );
+                }
+            }
+            catch ( IOException e )
+            {
+                files.add( newDiagnosticsString( "metrics", e::getMessage ) );
             }
             return files;
         }

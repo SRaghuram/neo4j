@@ -59,18 +59,21 @@ public class ClusterStateMigrator extends LifecycleAdapter
     {
         try
         {
-            // delete old cluster state files and directories except member ID
-            // member ID storage is created outside of the lifecycle and can't be deleted in a lifecycle method
-            // it is fine to keep member ID because it is a simple UUID and does not need to be migrated
-            var oldClusterStateFiles = fs.listFiles( clusterStateLayout.getClusterStateDirectory(),
-                    path -> isNotMemberIdStorage( path.getParent(), path.getFileName().toString() ) );
-            if ( isNotEmpty( oldClusterStateFiles ) )
+            if ( fs.fileExists( clusterStateLayout.getClusterStateDirectory() ) )
             {
-                for ( var oldClusterStateFile : oldClusterStateFiles )
+                // delete old cluster state files and directories except member ID
+                // member ID storage is created outside of the lifecycle and can't be deleted in a lifecycle method
+                // it is fine to keep member ID because it is a simple UUID and does not need to be migrated
+                var oldClusterStateFiles = fs.listFiles( clusterStateLayout.getClusterStateDirectory(),
+                        path -> isNotMemberIdStorage( path.getParent(), path.getFileName().toString() ) );
+                if ( isNotEmpty( oldClusterStateFiles ) )
                 {
-                    fs.deleteRecursively( oldClusterStateFile );
+                    for ( var oldClusterStateFile : oldClusterStateFiles )
+                    {
+                        fs.deleteRecursively( oldClusterStateFile );
+                    }
+                    log.info( "Deleted old cluster state entries %s", Arrays.toString( oldClusterStateFiles ) );
                 }
-                log.info( "Deleted old cluster state entries %s", Arrays.toString( oldClusterStateFiles ) );
             }
 
             clusterStateVersionStorage.writeState( CURRENT_VERSION );

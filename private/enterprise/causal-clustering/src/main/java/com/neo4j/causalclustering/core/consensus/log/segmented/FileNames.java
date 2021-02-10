@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -64,7 +65,7 @@ public class FileNames
      *
      * @return The sorted version to file map.
      */
-    public SortedMap<Long,Path> getAllFiles( FileSystemAbstraction fileSystem, Log log )
+    public SortedMap<Long,Path> getAllFiles( FileSystemAbstraction fileSystem, Log log ) throws IOException
     {
         SortedMap<Long,Path> versionFileMap = new TreeMap<>();
 

@@ -9,6 +9,7 @@ import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -44,7 +45,7 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     private Neo4jLayout neo4jLayout;
 
     @Test
-    void configuredDatabasesRootPath()
+    void configuredDatabasesRootPath() throws IOException
     {
         Path homeDir = testDirectory.homePath();
         Path databasesDir = testDirectory.directory( "my_databases" );
@@ -67,7 +68,7 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     }
 
     @Test
-    void notConfiguredDatabasesRootPath()
+    void notConfiguredDatabasesRootPath() throws IOException
     {
         Path homeDir = testDirectory.homePath();
         Path storeDir = neo4jLayout.databasesDirectory();

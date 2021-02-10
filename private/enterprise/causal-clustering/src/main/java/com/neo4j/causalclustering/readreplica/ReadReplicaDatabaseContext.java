@@ -87,7 +87,7 @@ public class ReadReplicaDatabaseContext
         return dependencies;
     }
 
-    public boolean isEmpty()
+    public boolean isEmpty() throws IOException
     {
         return storeFiles.isEmpty( kernelDatabase.getDatabaseLayout() );
     }

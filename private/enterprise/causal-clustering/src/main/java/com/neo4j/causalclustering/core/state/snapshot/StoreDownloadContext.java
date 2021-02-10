@@ -74,7 +74,7 @@ public class StoreDownloadContext
         }
     }
 
-    boolean hasStore()
+    boolean hasStore() throws IOException
     {
         return !storeFiles.isEmpty( databaseLayout() );
     }

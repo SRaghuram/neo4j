@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.stresstests;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
@@ -65,7 +66,7 @@ public class ConsistencyCheck extends Validation
         }
     }
 
-    private Set<String> getDatabaseNamesFromFileSystem( Neo4jLayout neo4jLayout )
+    private Set<String> getDatabaseNamesFromFileSystem( Neo4jLayout neo4jLayout ) throws IOException
     {
         return stream( fs.listFiles( neo4jLayout.databasesDirectory() ) ).filter( Files::isDirectory ).map( Path::getFileName ).map( Path::toString )
                                                                          .collect( toSet() );

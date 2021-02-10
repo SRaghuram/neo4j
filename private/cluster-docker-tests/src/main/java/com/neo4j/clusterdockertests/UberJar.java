@@ -7,9 +7,9 @@ package com.neo4j.clusterdockertests;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
@@ -34,7 +34,7 @@ final class UberJar implements AutoCloseable
     private final Map<String,Set<String>> serviceDeclarations = new HashMap<>();
     private final Path destination;
     private final boolean skipTestClasses;
-    private FileOutputStream out;
+    private OutputStream out;
     private JarOutputStream target;
 
     UberJar( Path destination )
@@ -53,7 +53,7 @@ final class UberJar implements AutoCloseable
         Manifest manifest = new Manifest();
         manifest.getMainAttributes().put( Attributes.Name.MANIFEST_VERSION, "1.0" );
 
-        this.out = new FileOutputStream( destination.toFile() );
+        this.out = Files.newOutputStream( destination );
         this.target = new JarOutputStream( out, manifest );
     }
 
@@ -83,7 +83,7 @@ final class UberJar implements AutoCloseable
                 }
             }
             String location = source.toString().split( "[/\\\\]target[/\\\\](test-)?classes[/\\\\]" )[1];
-            try ( FileInputStream inputStream = new FileInputStream( source.toFile() ) )
+            try ( InputStream inputStream = Files.newInputStream( source ) )
             {
                 writeJarEntry( Files.getLastModifiedTime( source ), target, location, inputStream );
             }

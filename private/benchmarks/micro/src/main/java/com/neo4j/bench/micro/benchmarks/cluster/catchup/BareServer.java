@@ -107,7 +107,7 @@ class BareServer implements CatchupServerHandler
         return new SimpleChannelInboundHandler<PrepareStoreCopyRequest>()
         {
             @Override
-            protected void channelRead0( ChannelHandlerContext ctx, PrepareStoreCopyRequest msg )
+            protected void channelRead0( ChannelHandlerContext ctx, PrepareStoreCopyRequest msg ) throws IOException
             {
                 fileHolder.sendFile( ctx, ATOMIC );
                 var nonAtomics =

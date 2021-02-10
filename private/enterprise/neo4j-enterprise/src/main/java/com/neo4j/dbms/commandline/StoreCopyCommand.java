@@ -270,7 +270,7 @@ public class StoreCopyCommand extends AbstractCommand
         }
     }
 
-    private DatabaseLayout getFromDatabaseLayout( Config config )
+    private DatabaseLayout getFromDatabaseLayout( Config config ) throws IOException
     {
         if ( source.path != null )
         {

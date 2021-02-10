@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
@@ -43,7 +44,7 @@ class FileNamesTest
     }
 
     @Test
-    void shouldWorkCorrectlyOnReasonableDirectoryContents()
+    void shouldWorkCorrectlyOnReasonableDirectoryContents() throws IOException
     {
         // Given
         // a raft log directory with just the expected files, without gaps
@@ -78,7 +79,7 @@ class FileNamesTest
     }
 
     @Test
-    void shouldIgnoreUnexpectedLogDirectoryContents()
+    void shouldIgnoreUnexpectedLogDirectoryContents() throws IOException
     {
         // Given
         // a raft log directory with just the expected files, without gaps

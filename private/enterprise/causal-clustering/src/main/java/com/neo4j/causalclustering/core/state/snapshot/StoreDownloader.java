@@ -77,7 +77,7 @@ public class StoreDownloader
      * @throws StoreIdDownloadFailedException if unable to download remote store id.
      */
     private StoreId validateStoreId( StoreDownloadContext context, RemoteStore remoteStore, SocketAddress address )
-            throws StoreIdDownloadFailedException, SnapshotFailedException
+            throws StoreIdDownloadFailedException, SnapshotFailedException, IOException
     {
         var remoteStoreId = remoteStore.getStoreId( address );
 

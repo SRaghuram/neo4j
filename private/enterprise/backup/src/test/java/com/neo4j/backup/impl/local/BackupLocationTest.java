@@ -11,10 +11,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.neo4j.function.ThrowingFunction;
+import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -84,7 +87,17 @@ class BackupLocationTest
     void emptyLocationForEmptyStoreBehavesCorrectly() throws IOException
     {
         assertThat( emptyBackupLocation )
-                .matches( l -> !l.hasExistingStore(), "should not have store" )
+                .matches( l ->
+                {
+                    try
+                    {
+                        return !l.hasExistingStore();
+                    }
+                    catch ( IOException e )
+                    {
+                        throw new UncheckedIOException( e );
+                    }
+                }, "should not have store" )
                 .matches( l -> l.databaseId().isEmpty(), "database id is empty" );
         assertThat( emptyBackupLocation.storeId() ).isEmpty();
 
@@ -99,7 +112,17 @@ class BackupLocationTest
         var expectedStoreId = storeFiles.readStoreId( databaseLayout, PageCursorTracer.NULL );
 
         assertThat( neo4jBackupLocation )
-                .matches( BackupLocation::hasExistingStore, "should have store" );
+                .matches( backupLocation ->
+                {
+                    try
+                    {
+                        return backupLocation.hasExistingStore();
+                    }
+                    catch ( IOException e )
+                    {
+                        throw new UncheckedIOException( e );
+                    }
+                }, "should have store" );
 
         assertThat( neo4jBackupLocation.databaseId() )
                 .isEmpty();

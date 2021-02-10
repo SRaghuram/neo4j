@@ -8,15 +8,18 @@ package com.neo4j.backup.impl.local;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.UUID;
-import java.util.function.Supplier;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
+import org.neo4j.function.ThrowingFunction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -29,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @TestDirectoryExtension
 class FileManagerTest
 {
-    public static final int MAX_ATTEMPTS = 10;
     @Inject
     FileSystemAbstraction fs;
     @Inject
@@ -40,27 +42,33 @@ class FileManagerTest
     @BeforeEach
     void setUp()
     {
-        fileManager = new FileManager( fs, MAX_ATTEMPTS );
+        fileManager = new FileManager( fs );
+    }
+
+    private static Stream<Arguments> patterns()
+    {
+        return Stream.of(
+                Arguments.of( (Function<FileManager,ThrowingFunction<Path,Path,IOException>>) f -> f::nextWorkingDir, FileManager.WORKING_DIR_PATTERN ),
+                Arguments.of( (Function<FileManager,ThrowingFunction<Path,Path,IOException>>) f -> f::nextErrorDir, FileManager.ERROR_DIR_PATTERN )
+        );
     }
 
     @ParameterizedTest
-    @ValueSource( strings = {FileManager.WORKING_DIR_PATTERN, FileManager.ERROR_DIR_PATTERN} )
-    void shouldCreateNewWorkingDirWhenPossible( String pattern ) throws IOException
+    @MethodSource( "patterns" )
+    void shouldCreateNewWorkingDir( Function<FileManager,ThrowingFunction<Path,Path,IOException>> nextDir, String pattern ) throws IOException
     {
-        var path = testDirectory.directory( "foo" );
+        ThrowingFunction<Path,Path,IOException> nextDirProvider = nextDir.apply( fileManager );
 
-        Supplier<Path> nexDirProvider =
-                () -> pattern.equals( FileManager.WORKING_DIR_PATTERN ) ? fileManager.nextWorkingDir( path ) : fileManager.nextErrorDir( path );
+        var path = testDirectory.directory( "foo" );
         for ( int i = 0; i < 10; i++ )
         {
-            var nexDir = nexDirProvider.get();
+            var nexDir = nextDirProvider.apply( path );
             fs.mkdir( nexDir );
             fs.write( nexDir.resolve( "file" ) ).write( ByteBuffer.wrap( "write".getBytes() ) );
             var expectedName = format( pattern, "foo", i );
             assertThat( nexDir ).exists()
                     .matches( p -> p.getFileName().toString().equals( expectedName ), "Expected file name to match " + expectedName );
         }
-        assertThrows( RuntimeException.class, nexDirProvider::get );
     }
 
     @Test
@@ -73,7 +81,7 @@ class FileManagerTest
     }
 
     @Test
-    void shouldDetermineIfDirectoryDoesNotExistOrIsEmpty()
+    void shouldDetermineIfDirectoryDoesNotExistOrIsEmpty() throws IOException
     {
         var emptyExistingDir = testDirectory.directory( "foo" );
         var nonEmptyDir = testDirectory.directory( "bar" );

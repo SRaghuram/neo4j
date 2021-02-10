@@ -7,6 +7,7 @@ package com.neo4j.commandline.admin.security;
 
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
+import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.cli.AbstractCommand;
@@ -41,7 +42,7 @@ public class SetOperatorPasswordCommand extends AbstractCommand
     }
 
     @Override
-    public void execute()
+    public void execute() throws IOException
     {
         Config config = loadNeo4jConfig();
         FileSystemAbstraction fileSystem = ctx.fs();

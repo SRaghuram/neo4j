@@ -230,7 +230,7 @@ class HighLimitStoreScanTest
 
         // when/then
         stopStore();
-        assertThat( directory.getFileSystem().deleteFile( databaseLayout.idNodeStore() ) ).isTrue();
+        directory.getFileSystem().deleteFile( databaseLayout.idNodeStore() );
         MutableBoolean checked = new MutableBoolean();
         IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( directory.getFileSystem(), immediate() )
         {

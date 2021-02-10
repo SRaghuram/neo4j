@@ -53,7 +53,7 @@ public interface ClusteredDatabaseContext extends DatabaseContext
     /**
      * @return Whether or not the store files for this database are empty/non-existent.
      */
-    boolean isEmpty();
+    boolean isEmpty() throws IOException;
 
     /**
      * @return A listing of all store files which comprise this database

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
@@ -93,7 +94,7 @@ class CorePruningIT
                 equalityCondition( expectedNumberOfLogFilesAfterPruning ), 5, TimeUnit.SECONDS );
     }
 
-    private int numberOfFiles( Path raftLogDir ) throws RuntimeException
+    private int numberOfFiles( Path raftLogDir ) throws IOException
     {
         return fs.listFiles( raftLogDir ).length;
     }

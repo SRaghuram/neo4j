@@ -8,6 +8,8 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
@@ -32,7 +34,14 @@ class EntryCursorTest
             new Segments( fsa, fileNames, readerPool, emptyList(), ignored -> mock( ChannelMarshal.class ), NullLogProvider.getInstance(), -1, INSTANCE );
 
     {
-        fsa.mkdir( bam );
+        try
+        {
+            fsa.mkdir( bam );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 
     @AfterEach

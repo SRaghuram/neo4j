@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -33,7 +32,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
@@ -56,12 +54,6 @@ class SegmentsTest
             contentMarshal, logProvider, header, INSTANCE ) );
 
     private final List<SegmentFile> segmentFiles = asList( fileA, fileB );
-
-    @BeforeEach
-    void before()
-    {
-        when( fsa.deleteFile( any( Path.class ) ) ).thenReturn( true );
-    }
 
     @Test
     void shouldCreateNext() throws Exception

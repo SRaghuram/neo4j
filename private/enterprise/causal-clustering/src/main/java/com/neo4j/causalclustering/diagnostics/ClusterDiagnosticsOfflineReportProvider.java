@@ -9,7 +9,8 @@ import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.configuration.CausalClusteringSettings;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +53,14 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
         List<DiagnosticsReportSource> sources = new ArrayList<>();
         if ( classifiers.contains( "raft" ) )
         {
-            getRaftLogs( sources );
+            try
+            {
+                getRaftLogs( sources );
+            }
+            catch ( IOException e )
+            {
+                sources.add( DiagnosticsReportSources.newDiagnosticsString( "raft", e::getMessage ) );
+            }
         }
         if ( classifiers.contains( "ccstate" ) )
         {
@@ -62,11 +70,10 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
         return sources;
     }
 
-    private void getRaftLogs( List<DiagnosticsReportSource> sources )
+    private void getRaftLogs( List<DiagnosticsReportSource> sources ) throws IOException
     {
         Path raftLogDir = clusterStateLayout.raftLogDirectory( defaultDatabaseName );
-        var raftLogDirFile = raftLogDir.toFile();
-        var hasRaftLogDir = raftLogDirFile.exists() && raftLogDirFile.isDirectory();
+        boolean hasRaftLogDir = Files.exists( raftLogDir ) && Files.isDirectory( raftLogDir );
         if ( hasRaftLogDir )
         {
             FileNames fileNames = new FileNames( raftLogDir );
@@ -74,7 +81,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
             for ( Path logFile : allFiles.values() )
             {
-                var destination = "raft" + File.pathSeparator + logFile.getFileName().toString();
+                var destination = "raft" + raftLogDir.getFileSystem().getSeparator() + logFile.getFileName().toString();
                 sources.add( DiagnosticsReportSources.newDiagnosticsFile( destination, fs, logFile ) );
             }
         }
@@ -83,9 +90,8 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     private void getClusterState( List<DiagnosticsReportSource> sources )
     {
         clusterStateLayout.listGlobalAndDatabaseDirectories( defaultDatabaseName, type -> type != RAFT_LOG ).stream()
-                   .filter( dir -> dir.toFile().exists() )
+                   .filter( Files::exists )
                    .forEach( dir -> addDirectory( "ccstate", dir, sources ));
-
     }
 
     /**
@@ -100,13 +106,17 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
         String currentLevel = path + dir.getFileSystem().getSeparator() + dir.getFileName();
         if ( fs.isDirectory( dir ) )
         {
-            Path[] files = fs.listFiles( dir );
-            if ( files != null )
+            try
             {
-                for ( Path file : files )
+                for ( Path file : fs.listFiles( dir ) )
                 {
                     addDirectory( currentLevel, file, sources );
                 }
+            }
+            catch ( IOException e )
+            {
+                sources.add( DiagnosticsReportSources
+                        .newDiagnosticsString( "ccstate" + dir.getFileSystem().getSeparator() + dir.getFileName().toString(), e::getMessage ) );
             }
         }
         else // File

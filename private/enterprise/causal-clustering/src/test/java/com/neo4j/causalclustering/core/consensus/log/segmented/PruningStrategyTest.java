@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import org.junit.jupiter.api.BeforeEach;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -24,7 +25,7 @@ abstract class PruningStrategyTest
 
     List<SegmentFile> files;
 
-    ArrayList<SegmentFile> createSegmentFiles( int size )
+    ArrayList<SegmentFile> createSegmentFiles( int size ) throws IOException
     {
         ArrayList<SegmentFile> list = new ArrayList<>( size );
         for ( int i = 0; i < size; i++ )

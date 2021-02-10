@@ -10,6 +10,7 @@ import com.neo4j.metrics.metric.MetricsRegister;
 import com.neo4j.metrics.source.MetricGroup;
 import com.neo4j.metrics.source.Metrics;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -120,16 +121,22 @@ public class StoreSizeMetrics extends Metrics
             return 0L; //dont visit files twice
         }
 
-        if ( Files.isDirectory( file ) )
+        try
         {
-            Path[] filesInDir = fileSystem.listFiles( file );
-            if ( filesInDir == null || filesInDir.length == 0 )
+            if ( Files.isDirectory( file ) )
             {
-                return 0L;
+                Path[] filesInDir = fileSystem.listFiles( file );
+                if ( filesInDir.length == 0 )
+                {
+                    return 0L;
+                }
+                return Arrays.stream( filesInDir ).mapToLong( fileInDir -> getSizeInternal( fileInDir, visitedFiles ) ).sum();
             }
-            return Arrays.stream( filesInDir ).mapToLong( fileInDir -> getSizeInternal( fileInDir, visitedFiles ) ).sum();
+            return fileSystem.getFileSize( file );
         }
-        return fileSystem.getFileSize( file );
+        catch ( IOException e )
+        {
+            return 0L;
+        }
     }
-
 }

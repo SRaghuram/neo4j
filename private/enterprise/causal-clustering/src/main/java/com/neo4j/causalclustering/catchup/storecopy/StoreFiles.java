@@ -48,20 +48,26 @@ public class StoreFiles
     public void delete( DatabaseLayout databaseLayout, LogFiles logFiles ) throws IOException
     {
         Path databaseDirectory = databaseLayout.databaseDirectory();
-        Path[] files = fs.listFiles( databaseDirectory, filenameFilter );
-        if ( files != null )
+        if ( fs.fileExists( databaseDirectory ) )
         {
-            for ( Path file : files )
+            for ( Path file : fs.listFiles( databaseDirectory, filenameFilter ) )
             {
                 fs.delete( file );
             }
         }
 
         delete( logFiles );
-        fs.deleteFile( databaseDirectory );
+        if ( fs.fileExists( databaseDirectory ) )
+        {
+            Path[] paths = fs.listFiles( databaseDirectory );
+            if ( paths.length == 0 )
+            {
+                fs.deleteFile( databaseDirectory );
+            }
+        }
     }
 
-    public void delete( LogFiles logFiles )
+    public void delete( LogFiles logFiles ) throws IOException
     {
         for ( Path txLog : logFiles.logFiles() )
         {
@@ -84,21 +90,22 @@ public class StoreFiles
         }
     }
 
-    public boolean isEmpty( DatabaseLayout databaseLayout )
+    public boolean isEmpty( DatabaseLayout databaseLayout ) throws IOException
     {
+        if ( !fs.fileExists( databaseLayout.databaseDirectory() ) )
+        {
+            return true;
+        }
         Set<Path> storeFiles = databaseLayout.storeFiles();
 
-        Path[] files = fs.listFiles( databaseLayout.databaseDirectory() );
-        if ( files != null )
+        for ( Path file : fs.listFiles( databaseLayout.databaseDirectory() ) )
         {
-            for ( Path file : files )
+            if ( storeFiles.contains( file ) )
             {
-                if ( storeFiles.contains( file ) )
-                {
-                    return false;
-                }
+                return false;
             }
         }
+
         return true;
     }
 

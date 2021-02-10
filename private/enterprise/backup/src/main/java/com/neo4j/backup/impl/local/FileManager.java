@@ -18,24 +18,16 @@ import static org.neo4j.io.fs.FileSystemUtils.isEmptyOrNonExistingDirectory;
 
 public class FileManager
 {
-    private static final int DEFAULT_MAX_TEST_DIRS = 1000;
     static final String WORKING_DIR_PATTERN = "%s.tmp.%d";
     static final String ERROR_DIR_PATTERN = "%s.err.%d";
     private final FileSystemAbstraction fs;
-    private final int maxDirAttempts;
 
-    public FileManager( FileSystemAbstraction fs, int maxDirAttempts )
+    public FileManager( FileSystemAbstraction fs )
     {
         this.fs = fs;
-        this.maxDirAttempts = maxDirAttempts;
     }
 
-    FileManager( FileSystemAbstraction fs )
-    {
-        this( fs, DEFAULT_MAX_TEST_DIRS );
-    }
-
-    boolean directoryDoesNotExistOrIsEmpty( Path directory )
+    boolean directoryDoesNotExistOrIsEmpty( Path directory ) throws IOException
     {
         return !fs.fileExists( directory ) || (fs.isDirectory( directory ) && fs.listFiles( directory ).length == 0);
     }
@@ -50,37 +42,27 @@ public class FileManager
         fs.deleteRecursively( directory );
     }
 
-    Path nextWorkingDir( Path dir )
+    Path nextWorkingDir( Path dir ) throws IOException
     {
         return createAnAvailableLocation( dir, WORKING_DIR_PATTERN );
     }
 
-    Path nextErrorDir( Path dir )
+    Path nextErrorDir( Path dir ) throws IOException
     {
         return createAnAvailableLocation( dir, ERROR_DIR_PATTERN );
     }
 
-    private Path createAnAvailableLocation( Path path, String pattern )
+    private Path createAnAvailableLocation( Path path, String pattern ) throws IOException
     {
-        var location = availableAlternativeNames( path, pattern, maxDirAttempts )
-                .filter( f -> isEmptyOrNonExistingDirectory( fs, f ) )
-                .findFirst()
-                .orElseThrow( noFreeBackupLocation( path, maxDirAttempts ) );
+        Path location;
+        int i = 0;
+        do
+        {
+            location = alteredBackupDirectoryName( pattern, path, i++ );
+        }
+        while ( !isEmptyOrNonExistingDirectory( fs, location ) );
         fs.mkdir( location );
         return location;
-    }
-
-    private static Supplier<RuntimeException> noFreeBackupLocation( Path file, int maxDirAttempts )
-    {
-        return () -> new RuntimeException( format(
-                "Unable to find a free backup location for the provided %s. %d possible locations were already taken.",
-                file, maxDirAttempts ) );
-    }
-
-    private static Stream<Path> availableAlternativeNames( Path originalBackupDirectory, String pattern, int maxDirAttempts )
-    {
-        return IntStream.range( 0, maxDirAttempts )
-                        .mapToObj( iteration -> alteredBackupDirectoryName( pattern, originalBackupDirectory, iteration ) );
     }
 
     private static Path alteredBackupDirectoryName( String pattern, Path directory, int iteration )

@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.Resource;
+import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileHandle;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -396,7 +397,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         // Delete previous profile files.
         filterRelevant( existingProfiles, file )
                 .filter( profile -> !refCounts.contains( profile ) )
-                .forEach( profile -> profile.delete( fs ) );
+                .forEach( IOUtils.uncheckedConsumer( ( Profile profile ) -> profile.delete( fs ) ) );
 
         return pagesInMemory;
     }

@@ -595,7 +595,6 @@ class BackupIT
         executeBackup( db );
 
         Path[] backupStoreFiles = fs.listFiles( backupDatabaseLayout.databaseDirectory() );
-        assertNotNull( backupStoreFiles );
         assertThat( backupStoreFiles ).hasSizeGreaterThan( 0 );
 
         for ( Path storeFile : backupDatabaseLayout.storeFiles() )
@@ -1113,7 +1112,7 @@ class BackupIT
 
         //then validate backup
         validateDatabaseRepresentation( stocksDB );
-        assertTrue( backupsDir.resolve( SYSTEM_DATABASE_NAME ).toFile().exists() ); // there is no way to create DbRepresentation from systemDB
+        assertTrue( fs.fileExists( backupsDir.resolve( SYSTEM_DATABASE_NAME ) ) ); // there is no way to create DbRepresentation from systemDB
 
         //then validate logs
         validateSuccessfulResult( userLogProvider, stocksDB );

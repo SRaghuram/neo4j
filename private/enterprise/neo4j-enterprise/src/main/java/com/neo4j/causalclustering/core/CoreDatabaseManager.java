@@ -146,10 +146,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
             {
                 fs.deleteRecursively( file );
             }
-            else if ( !fs.deleteFile( file ) )
-            {
-                throw new IOException( format( "Unable to delete file %s when dropping database %s", file.toAbsolutePath(), databaseName ) );
-            }
+            fs.deleteFile( file );
         }
 
         FileUtils.tryForceDirectory( raftGroupDir );
@@ -160,11 +157,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
                     "Cleanup has still been attempted.", databaseName ) );
         }
 
-        if ( !fs.deleteFile( raftGroupIdStateFile ) )
-        {
-            throw new IOException( format( "Unable to delete file %s when dropping database %s", raftGroupIdStateFile.toAbsolutePath(), databaseName ) );
-        }
-
+        fs.deleteFile( raftGroupIdStateFile );
         fs.deleteRecursively( raftGroupDir );
     }
 }

@@ -76,7 +76,7 @@ class BareFilesHolder
         storeFileStreamingProtocol.end( ctx, SUCCESS, lastTxId );
     }
 
-    Path[] getFiles()
+    Path[] getFiles() throws IOException
     {
         return fs.listFiles( Path.of( "." ) );
     }

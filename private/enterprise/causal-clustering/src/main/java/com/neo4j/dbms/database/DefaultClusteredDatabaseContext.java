@@ -162,7 +162,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
      * @return Whether or not the store files for this database are empty/non-existent.
      */
     @Override
-    public boolean isEmpty()
+    public boolean isEmpty() throws IOException
     {
         return storeFiles.isEmpty( databaseLayout );
     }

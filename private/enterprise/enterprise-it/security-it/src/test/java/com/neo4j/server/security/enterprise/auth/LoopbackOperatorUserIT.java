@@ -148,7 +148,7 @@ class LoopbackOperatorUserIT
     }
 
     @Test
-    void shouldNotAuthenticateOperatorOnNormalPort()
+    void shouldNotAuthenticateOperatorOnNormalPort() throws IOException
     {
         // GIVEN
         setupRestricted();
@@ -167,7 +167,7 @@ class LoopbackOperatorUserIT
     }
 
     @Test
-    void shouldNotConnectAsOperatorRestrictionDisabled()
+    void shouldNotConnectAsOperatorRestrictionDisabled() throws IOException
     {
         // GIVEN
         setupUnrestricted();
@@ -324,7 +324,7 @@ class LoopbackOperatorUserIT
     }
 
     @Test
-    void shouldNotListUpgradeUser()
+    void shouldNotListUpgradeUser() throws IOException
     {
         setInitialPassword();
         setupRestricted();
@@ -387,22 +387,22 @@ class LoopbackOperatorUserIT
                 .build();
     }
 
-    private void setupRestricted()
+    private void setupRestricted() throws IOException
     {
         setupOperatorUserAndSystemDatabase( true, true );
     }
 
-    private void setupRestricted( boolean blocked )
+    private void setupRestricted( boolean blocked ) throws IOException
     {
         setupOperatorUserAndSystemDatabase( true, blocked );
     }
 
-    private void setupUnrestricted()
+    private void setupUnrestricted() throws IOException
     {
         setupOperatorUserAndSystemDatabase( false, false );
     }
 
-    private void setupOperatorUserAndSystemDatabase( boolean restrictUpgrade, boolean blockDatabase )
+    private void setupOperatorUserAndSystemDatabase( boolean restrictUpgrade, boolean blockDatabase ) throws IOException
     {
         setOperatorPassword();
         final Map<Setting<?>,Object> config =
@@ -416,7 +416,7 @@ class LoopbackOperatorUserIT
         enterpriseDbms.database( SYSTEM_DATABASE_NAME );
     }
 
-    private void setInitialPassword()
+    private void setInitialPassword() throws IOException
     {
         final var ctx = new ExecutionContext( homeDir, confDir, out, err, fileSystem );
         final var command = new SetInitialPasswordCommand( ctx );
@@ -424,7 +424,7 @@ class LoopbackOperatorUserIT
         command.execute();
     }
 
-    private void setOperatorPassword()
+    private void setOperatorPassword() throws IOException
     {
         final var ctx = new ExecutionContext( homeDir, confDir, out, err, fileSystem );
         final var command = new SetOperatorPasswordCommand( ctx );

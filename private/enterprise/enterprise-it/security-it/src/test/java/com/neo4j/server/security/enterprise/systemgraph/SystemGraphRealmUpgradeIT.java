@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -164,7 +165,7 @@ class SystemGraphRealmUpgradeIT
     }
 
     @Test
-    void shouldChangeInitialPasswordAndSetAdmin() throws InvalidAuthTokenException
+    void shouldChangeInitialPasswordAndSetAdmin() throws InvalidAuthTokenException, IOException
     {
         setInitialPassword( "abc123" );
         createCommunityWithUsers( INITIAL_USER_NAME );
@@ -264,7 +265,7 @@ class SystemGraphRealmUpgradeIT
     }
 
     @Test
-    void shouldSetCustomAsAdminAndInitialPasswordForInitialUser() throws InvalidAuthTokenException
+    void shouldSetCustomAsAdminAndInitialPasswordForInitialUser() throws InvalidAuthTokenException, IOException
     {
         // GIVEN
         createCommunityWithUsers( INITIAL_USER_NAME, "Alice" );
@@ -395,7 +396,7 @@ class SystemGraphRealmUpgradeIT
         command.execute();
     }
 
-    private void setInitialPassword( String password )
+    private void setInitialPassword( String password ) throws IOException
     {
         final var ctx = new ExecutionContext( homeDir, confDir, out, err, fileSystem );
         final var command = new SetInitialPasswordCommand( ctx );

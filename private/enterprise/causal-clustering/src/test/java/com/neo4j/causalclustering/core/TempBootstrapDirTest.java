@@ -59,7 +59,7 @@ class TempBootstrapDirTest
         assertFalse( fileSystem.fileExists( tempBootstrapDir() ) );
     }
 
-    private void createTempBootstrapDir()
+    private void createTempBootstrapDir() throws IOException
     {
         fileSystem.mkdir( tempBootstrapDir() );
     }

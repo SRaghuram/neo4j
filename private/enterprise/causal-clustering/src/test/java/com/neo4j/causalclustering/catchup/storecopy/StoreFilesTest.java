@@ -70,12 +70,12 @@ class StoreFilesTest
     @Test
     void shouldDeleteFilesThatMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownFile" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "known-file" ) );
 
         List<Path> files = Arrays.asList(
-                createFile( databaseDir, "KnownFile1" ),
-                createFile( databaseDir, "KnownFile2" ),
-                createFile( databaseDir, "KnownFile3" ) );
+                createFile( databaseDir, "known-file1" ),
+                createFile( databaseDir, "known-file2" ),
+                createFile( databaseDir, "known-file3" ) );
 
         storeFiles.delete( databaseLayout, logFiles );
 
@@ -88,12 +88,12 @@ class StoreFilesTest
     @Test
     void shouldDeleteDirectoriesThatMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "knownDirectory" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "known-directory" ) );
 
         List<Path> directories = Arrays.asList(
-                createDirectory( databaseDir, "knownDirectory1" ),
-                createDirectory( databaseDir, "knownDirectory2" ),
-                createDirectory( databaseDir, "knownDirectory3" ) );
+                createDirectory( databaseDir, "known-directory1" ),
+                createDirectory( databaseDir, "known-directory2" ),
+                createDirectory( databaseDir, "known-directory3" ) );
 
         for ( Path directory : directories )
         {
@@ -130,11 +130,11 @@ class StoreFilesTest
     @Test
     void shouldNotDeleteFilesThatDoNotMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownFile" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "known-file" ) );
 
-        Path file1 = createFile( databaseDir, "UnknownFile1" );
-        Path file2 = createFile( databaseDir, "KnownFile2" );
-        Path file3 = createFile( databaseDir, "UnknownFile3" );
+        Path file1 = createFile( databaseDir, "unknown-file1" );
+        Path file2 = createFile( databaseDir, "known-file2" );
+        Path file3 = createFile( databaseDir, "unknown-file3" );
 
         storeFiles.delete( databaseLayout, logFiles );
 
@@ -146,11 +146,11 @@ class StoreFilesTest
     @Test
     void shouldNotDeleteDirectoriesThatDoNotMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownDirectory" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "known-directory" ) );
 
-        Path dir1 = createDirectory( databaseDir, "UnknownDirectory1" );
-        Path dir2 = createDirectory( databaseDir, "KnownDirectory2" );
-        Path dir3 = createDirectory( databaseDir, "UnknownDirectory3" );
+        Path dir1 = createDirectory( databaseDir, "unknown-directory1" );
+        Path dir2 = createDirectory( databaseDir, "known-directory2" );
+        Path dir3 = createDirectory( databaseDir, "unknown-directory3" );
 
         storeFiles.delete( databaseLayout, logFiles );
 
@@ -163,11 +163,11 @@ class StoreFilesTest
     @Test
     void shouldMoveFilesThatMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownFile" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "known-file" ) );
 
-        Path file1 = createFile( databaseDir, "KnownFile1" );
-        Path file2 = createFile( databaseDir, "KnownFile2" );
-        Path file3 = createFile( databaseDir, "KnownFile3" );
+        Path file1 = createFile( databaseDir, "known-file1" );
+        Path file2 = createFile( databaseDir, "known-file2" );
+        Path file3 = createFile( databaseDir, "known-file3" );
 
         storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
 
@@ -175,19 +175,19 @@ class StoreFilesTest
         assertFalse( fs.fileExists( file2 ) );
         assertFalse( fs.fileExists( file3 ) );
 
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile1" ) ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile2" ) ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile3" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "known-file1" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "known-file2" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "known-file3" ) ) );
     }
 
     @Test
     void shouldMoveDirectoriesThatMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownDirectory" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "known-directory" ) );
 
-        Path dir1 = createDirectory( databaseDir, "KnownDirectory1" );
-        Path dir2 = createDirectory( databaseDir, "KnownDirectory2" );
-        Path dir3 = createDirectory( databaseDir, "KnownDirectory3" );
+        Path dir1 = createDirectory( databaseDir, "known-directory1" );
+        Path dir2 = createDirectory( databaseDir, "known-directory2" );
+        Path dir3 = createDirectory( databaseDir, "known-directory3" );
 
         createFile( dir1, "dummy-file-1" );
         createFile( dir2, "dummy-file-2" );
@@ -199,14 +199,14 @@ class StoreFilesTest
         assertFalse( fs.fileExists( dir2 ) );
         assertFalse( fs.fileExists( dir3 ) );
 
-        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory1" ) ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory1" ).resolve( "dummy-file-1" ) ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "known-directory1" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "known-directory1" ).resolve( "dummy-file-1" ) ) );
 
-        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory2" ) ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory2" ).resolve( "dummy-file-2" ) ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "known-directory2" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "known-directory2" ).resolve( "dummy-file-2" ) ) );
 
-        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory3" ) ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory3" ).resolve( "dummy-file-3" ) ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "known-directory3" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "known-directory3" ).resolve( "dummy-file-3" ) ) );
     }
 
     @Test
@@ -233,11 +233,11 @@ class StoreFilesTest
     @Test
     void shouldNotMoveFilesThatDoNotMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownFile" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "known-file" ) );
 
-        Path file1 = createFile( databaseDir, "UnknownFile1" );
-        Path file2 = createFile( databaseDir, "KnownFile2" );
-        Path file3 = createFile( databaseDir, "UnknownFile3" );
+        Path file1 = createFile( databaseDir, "unknown-file1" );
+        Path file2 = createFile( databaseDir, "known-file2" );
+        Path file3 = createFile( databaseDir, "unknown-file3" );
 
         storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
 
@@ -245,19 +245,19 @@ class StoreFilesTest
         assertFalse( fs.fileExists( file2 ) );
         assertTrue( fs.fileExists( file3 ) );
 
-        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownFile1" ) ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile2" ) ) );
-        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownFile3" ) ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "unknown-file1" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "known-file2" ) ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "unknown-file3" ) ) );
     }
 
     @Test
     void shouldNotMoveDirectoriesThatDoNotMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownDirectory" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "known-directory" ) );
 
-        Path dir1 = createDirectory( databaseDir, "UnknownDirectory1" );
-        Path dir2 = createDirectory( databaseDir, "KnownDirectory2" );
-        Path dir3 = createDirectory( databaseDir, "UnknownDirectory3" );
+        Path dir1 = createDirectory( databaseDir, "unknown-directory1" );
+        Path dir2 = createDirectory( databaseDir, "known-directory2" );
+        Path dir3 = createDirectory( databaseDir, "unknown-directory3" );
 
         Path file1 = createFile( dir1, "dummy-file-1" );
         Path file2 = createFile( dir2, "dummy-file-2" );
@@ -272,31 +272,31 @@ class StoreFilesTest
         assertTrue( fs.isDirectory( dir3 ) );
         assertTrue( fs.fileExists( file3 ) );
 
-        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "UnknownDirectory1" ) ) );
-        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownDirectory1" ).resolve( "dummy-file-1" ) ) );
-        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory2" ) ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory2" ).resolve( "dummy-file-2" ) ) );
-        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "UnknownDirectory3" ) ) );
-        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownDirectory3" ).resolve( "dummy-file-3" ) ) );
+        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "unknown-directory1" ) ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "unknown-directory1" ).resolve( "dummy-file-1" ) ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "known-directory2" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "known-directory2" ).resolve( "dummy-file-2" ) ) );
+        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "unknown-directory3" ) ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "unknown-directory3" ).resolve( "dummy-file-3" ) ) );
     }
 
     @Test
-    void shouldCheckIfNonExistingDirectoryIsEmpty()
+    void shouldCheckIfNonExistingDirectoryIsEmpty() throws IOException
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        Path nonExistingDirectory = Path.of( "Non/ExistingDirectory" );
+        Path nonExistingDirectory = Path.of( "non/existing-directory" );
         DatabaseLayout layout = DatabaseLayout.ofFlat( nonExistingDirectory );
 
         assertTrue( storeFiles.isEmpty( layout ) );
     }
 
     @Test
-    void shouldCheckIfEmptyDirectoryIsEmpty()
+    void shouldCheckIfEmptyDirectoryIsEmpty() throws IOException
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        Path emptyDirectory = testDirectory.directory( "EmptyDirectory" );
+        Path emptyDirectory = testDirectory.directory( "empty-directory" );
         DatabaseLayout layout = DatabaseLayout.ofFlat( emptyDirectory );
 
         assertTrue( storeFiles.isEmpty( layout ) );

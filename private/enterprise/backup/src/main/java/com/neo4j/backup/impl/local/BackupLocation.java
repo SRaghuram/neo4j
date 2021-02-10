@@ -119,7 +119,7 @@ public class BackupLocation
         }
     }
 
-    public boolean hasExistingStore()
+    public boolean hasExistingStore() throws IOException
     {
         return !fileManager.directoryDoesNotExistOrIsEmpty( databaseLayout.databaseDirectory() );
     }

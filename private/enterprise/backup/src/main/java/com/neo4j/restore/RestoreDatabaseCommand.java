@@ -5,14 +5,14 @@
  */
 package com.neo4j.restore;
 
-import com.neo4j.backup.impl.local.DatabaseIdStore;
 import com.neo4j.backup.impl.MetadataStore;
+import com.neo4j.backup.impl.local.DatabaseIdStore;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
+import java.util.Collections;
 import java.util.Set;
 
 import org.neo4j.cli.CommandFailedException;
@@ -140,13 +140,12 @@ public class RestoreDatabaseCommand
 
     private void restoreDatabaseFiles() throws IOException
     {
-        var databaseStoreFiles = Optional.ofNullable( fs.listFiles( fromDatabasePath ) )
-                                         .map( Set::of )
-                                         .orElse( Set.of() );
-        var toolFiles = Optional.ofNullable( fs.listFiles( backupToolFolder,
-                                                           path -> !path.getFileName().toString().equals( DatabaseIdStore.FILE_NAME ) ) )
-                                .map( Set::of )
-                                .orElse( Set.of() );
+        var databaseStoreFiles = Set.of( fs.listFiles( fromDatabasePath ) );
+        Set<Path> toolFiles = Collections.emptySet();
+        if ( fs.fileExists( backupToolFolder ) )
+        {
+            toolFiles = Set.of( fs.listFiles( backupToolFolder, path -> !path.getFileName().toString().equals( DatabaseIdStore.FILE_NAME ) ) );
+        }
 
         var transactionLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath, fs ).build();
 

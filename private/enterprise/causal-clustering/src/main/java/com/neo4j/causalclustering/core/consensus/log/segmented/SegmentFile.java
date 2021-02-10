@@ -178,9 +178,9 @@ class SegmentFile implements AutoCloseable
         bufferedWriter.prepareForFlush().flush();
     }
 
-    public boolean delete()
+    public void delete() throws IOException
     {
-        return fileSystem.deleteFile( path );
+        fileSystem.deleteFile( path );
     }
 
     public SegmentHeader header()
@@ -188,7 +188,7 @@ class SegmentFile implements AutoCloseable
         return header;
     }
 
-    public long size()
+    public long size() throws IOException
     {
         return fileSystem.getFileSize( path );
     }

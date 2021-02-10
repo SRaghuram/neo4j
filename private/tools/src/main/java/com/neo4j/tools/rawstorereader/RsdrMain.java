@@ -157,7 +157,7 @@ public class RsdrMain
         return true;
     }
 
-    private static void listFiles( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout )
+    private static void listFiles( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout ) throws IOException
     {
         Path databaseDirectory = databaseLayout.databaseDirectory();
         Path[] listing = fileSystem.listFiles( databaseDirectory );

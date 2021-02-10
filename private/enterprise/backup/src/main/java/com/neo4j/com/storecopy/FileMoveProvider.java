@@ -5,6 +5,7 @@
  */
 package com.neo4j.com.storecopy;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
@@ -15,6 +16,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 
 import static com.neo4j.com.storecopy.FileMoveAction.moveViaFileSystem;
 import static java.util.stream.Collectors.toList;
+import static org.neo4j.io.IOUtils.uncheckedFunction;
 
 public class FileMoveProvider
 {
@@ -77,10 +79,10 @@ public class FileMoveProvider
     {
         // Note that flatMap is an *intermediate operation* and therefor always lazy.
         // It is very important that the stream we return only *lazily* calls out to expandTraverseFiles!
-        return Stream.of( dir ).flatMap( d -> expandTraverseFiles( d, basePath ) );
+        return Stream.of( dir ).flatMap( uncheckedFunction( d -> expandTraverseFiles( d, basePath ) ) );
     }
 
-    private Stream<FileMoveAction> expandTraverseFiles( Path dir, Path basePath )
+    private Stream<FileMoveAction> expandTraverseFiles( Path dir, Path basePath ) throws IOException
     {
         List<Path> listing = listFiles( dir );
         if ( listing == null )
@@ -111,15 +113,8 @@ public class FileMoveProvider
         return fs.isDirectory( file );
     }
 
-    private List<Path> listFiles( Path dir )
+    private List<Path> listFiles( Path dir ) throws IOException
     {
-        Path[] fsaFiles = fs.listFiles( dir );
-        if ( fsaFiles == null )
-        {
-            // This probably means 'dir' is actually a file, or it does not exist.
-            return null;
-        }
-
-        return Arrays.stream( fsaFiles ).distinct().collect( toList() );
+        return Arrays.stream( fs.listFiles( dir ) ).distinct().collect( toList() );
     }
 }

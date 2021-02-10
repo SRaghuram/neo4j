@@ -379,7 +379,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         SslResourceBuilder.caSignedKeyId( index ).trustSignedByCA().install( baseDir );
     }
 
-    private static void addUpgradeUser( Path homeDir )
+    private static void addUpgradeUser( Path homeDir ) throws IOException
     {
         final var ctx = new ExecutionContext( homeDir, homeDir.resolve( "conf" ), mock( PrintStream.class ), mock( PrintStream.class ), fs );
         final var command = new SetOperatorPasswordCommand( ctx );

@@ -8,10 +8,12 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+
 class SizeBasedLogPruningStrategyTest extends PruningStrategyTest
 {
     @Test
-    void indexToKeepTest()
+    void indexToKeepTest() throws IOException
     {
         // given
         int segmentFilesCount = 14;

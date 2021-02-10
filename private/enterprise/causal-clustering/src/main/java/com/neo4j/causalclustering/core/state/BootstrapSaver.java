@@ -86,17 +86,20 @@ public class BootstrapSaver
         assertExistsAndEmpty( directory );
     }
 
-    private boolean hasFiles( Path databaseDirectory )
+    private boolean hasFiles( Path databaseDirectory ) throws IOException
     {
+        if ( !fileSystem.fileExists( databaseDirectory ) )
+        {
+            return false;
+        }
         Path[] dbFsNodes = fileSystem.listFiles( databaseDirectory, EXCLUDE_TEMPORARY_DIRS );
-        return dbFsNodes != null && dbFsNodes.length > 0;
+        return dbFsNodes.length > 0;
     }
 
-    private void assertExistsAndEmpty( Path databaseDirectory )
+    private void assertExistsAndEmpty( Path databaseDirectory ) throws IOException
     {
-        Path[] dbFsNodes;
-        dbFsNodes = fileSystem.listFiles( databaseDirectory, EXCLUDE_TEMPORARY_DIRS );
-        if ( dbFsNodes == null || dbFsNodes.length != 0 )
+        Path[] dbFsNodes = fileSystem.listFiles( databaseDirectory, EXCLUDE_TEMPORARY_DIRS );
+        if ( dbFsNodes.length != 0 )
         {
             throw new IllegalStateException( "Expected empty directory: " + databaseDirectory );
         }
@@ -114,10 +117,7 @@ public class BootstrapSaver
         Path tempRenameDir = tempRenameDir( baseDir );
 
         fileSystem.renameFile( baseDir, tempRenameDir );
-        if ( !fileSystem.mkdir( baseDir ) )
-        {
-            throw new IllegalStateException( "Failed to create: " + baseDir );
-        }
+        fileSystem.mkdir( baseDir );
         fileSystem.renameFile( tempRenameDir, tempSavedDir );
     }
 
@@ -132,11 +132,7 @@ public class BootstrapSaver
 
         Path[] dbFsNodes = fileSystem.listFiles( directory, EXCLUDE_TEMPORARY_DIRS );
 
-        if ( dbFsNodes == null )
-        {
-            return;
-        }
-        else if ( dbFsNodes.length > 0 )
+        if ( dbFsNodes.length > 0 )
         {
             throw new IllegalStateException( "Unexpected files in directory: " + directory );
         }
@@ -152,7 +148,7 @@ public class BootstrapSaver
         fileSystem.renameFile( tempSavedDir, tempRenameDir );
 
         Path[] fsNodes = fileSystem.listFiles( directory, EXCLUDE_TEMPORARY_DIRS );
-        if ( fsNodes == null || fsNodes.length != 0 )
+        if ( fsNodes.length != 0 )
         {
             throw new IllegalStateException( "Unexpected state of directory: " + Arrays.toString( fsNodes ) );
         }

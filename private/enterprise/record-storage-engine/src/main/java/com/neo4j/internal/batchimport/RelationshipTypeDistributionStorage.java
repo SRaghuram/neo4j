@@ -68,7 +68,7 @@ class RelationshipTypeDistributionStorage
         }
     }
 
-    void remove()
+    void remove() throws IOException
     {
         fs.deleteFile( path );
     }

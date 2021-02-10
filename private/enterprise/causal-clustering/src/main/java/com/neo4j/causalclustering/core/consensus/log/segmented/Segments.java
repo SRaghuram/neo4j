@@ -167,9 +167,13 @@ class Segments implements AutoCloseable
             }
 
             log.info( "Pruning %s", notDisposed );
-            if ( !notDisposed.delete() )
+            try
             {
-                log.error( "Failed to delete %s", notDisposed );
+                notDisposed.delete();
+            }
+            catch ( IOException e )
+            {
+                log.error( format( "Failed to delete %s", notDisposed ), e );
                 break;
             }
 

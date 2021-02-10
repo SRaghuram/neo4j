@@ -5,6 +5,9 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 import org.neo4j.internal.helpers.collection.Visitor;
 
 class SizeBasedLogPruningStrategy implements CoreLogPruningStrategy, Visitor<SegmentFile,RuntimeException>
@@ -30,12 +33,19 @@ class SizeBasedLogPruningStrategy implements CoreLogPruningStrategy, Visitor<Seg
     }
 
     @Override
-    public boolean visit( SegmentFile segment ) throws RuntimeException
+    public boolean visit( SegmentFile segment )
     {
         if ( accumulatedSize < bytesToKeep )
         {
             file = segment;
-            accumulatedSize += file.size();
+            try
+            {
+                accumulatedSize += file.size();
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
             return false;
         }
 

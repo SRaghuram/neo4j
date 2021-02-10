@@ -44,7 +44,7 @@ public class LocationManager
         this.logProvider = logProvider;
         databaseIdStore = new DatabaseIdStore( fs );
         metadataStore = new MetadataStore( fs );
-        fileManager = new FileManager( fs, 10 );
+        fileManager = new FileManager( fs );
     }
 
     public BackupLocation createBackupLocation()
@@ -52,7 +52,7 @@ public class LocationManager
         return new BackupLocation( userBackupLocation, storeFiles, databaseIdStore, metadataStore, pageCacheTracer, fileManager, logProvider );
     }
 
-    public BackupLocation createTemporaryEmptyLocation()
+    public BackupLocation createTemporaryEmptyLocation() throws IOException
     {
         var tmpDir = fileManager.nextWorkingDir( userBackupLocation.databaseDirectory() );
         var tmpDatabaseLayout = DatabaseLayout.ofFlat( tmpDir );

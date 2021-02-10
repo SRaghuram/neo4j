@@ -28,8 +28,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 
-import static java.lang.String.format;
-
 public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
 {
     protected final ReadReplicaEditionModule edition;
@@ -86,10 +84,7 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
         var raftIdState = clusterStateLayout.raftGroupIdFile( databaseName );
         var raftIdStateDir = raftIdState.getParent();
 
-        if ( !fs.deleteFile( raftIdState ) )
-        {
-            throw new IOException( format( "Unable to delete file %s when dropping database %s", raftIdState.toAbsolutePath(), databaseName ) );
-        }
+        fs.deleteFile( raftIdState );
 
         FileUtils.tryForceDirectory( raftIdStateDir );
 

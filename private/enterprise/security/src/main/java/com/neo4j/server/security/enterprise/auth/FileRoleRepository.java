@@ -98,10 +98,7 @@ public class FileRoleRepository extends AbstractRoleRepository implements FileRe
         super.purge(); // Clears all cached data
 
         // Delete the file
-        if ( !fileSystem.deleteFile( roleFile ) )
-        {
-            throw new IOException( "Failed to delete file '" + roleFile.toAbsolutePath() + "'" );
-        }
+        fileSystem.deleteFile( roleFile );
     }
 
     @Override

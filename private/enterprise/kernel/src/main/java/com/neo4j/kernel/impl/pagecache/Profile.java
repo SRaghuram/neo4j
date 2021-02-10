@@ -74,7 +74,7 @@ final class Profile implements Comparable<Profile>
         return profileFile;
     }
 
-    void delete( FileSystemAbstraction fs )
+    void delete( FileSystemAbstraction fs ) throws IOException
     {
         fs.deleteFile( profileFile );
     }

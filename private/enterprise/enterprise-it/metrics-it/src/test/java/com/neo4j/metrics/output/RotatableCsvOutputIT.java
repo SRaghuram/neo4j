@@ -11,6 +11,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
@@ -33,9 +36,7 @@ import static com.neo4j.configuration.MetricsSettings.csv_rotation_threshold;
 import static com.neo4j.configuration.MetricsSettings.metrics_filter;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static java.time.Duration.ofMinutes;
-import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -111,7 +112,7 @@ class RotatableCsvOutputIT
         }
     }
 
-    private static Path metricsCsv( Path dbDir, String metric )
+    private static Path metricsCsv( Path dbDir, String metric ) throws IOException
     {
         while ( true )
         {
@@ -124,12 +125,14 @@ class RotatableCsvOutputIT
         }
     }
 
-    private static Optional<Path> findLatestMetricsFile( Path metricsPath, String metric )
+    private static Optional<Path> findLatestMetricsFile( Path metricsPath, String metric ) throws IOException
     {
-        String[] metricFiles = requireNonNull( metricsPath.toFile().list( ( dir, name ) -> name.equals( metric ) ) );
-        if ( isNotEmpty( metricFiles ) )
+        try ( DirectoryStream<Path> paths = Files.newDirectoryStream( metricsPath, p -> p.getFileName().toString().equals( metric ) ) )
         {
-            return Optional.of( metricsPath.resolve( metricFiles[0] ) );
+            for ( Path path : paths )
+            {
+                return Optional.of( path );
+            }
         }
         return Optional.empty();
     }

@@ -7,13 +7,15 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
 class EntryBasedLogPruningStrategyTest extends PruningStrategyTest
 {
     @Test
-    void indexToKeepTest()
+    void indexToKeepTest() throws IOException
     {
         // given
         files = createSegmentFiles( 10 );
@@ -27,7 +29,7 @@ class EntryBasedLogPruningStrategyTest extends PruningStrategyTest
     }
 
     @Test
-    void pruneStrategyExceedsNumberOfEntriesTest()
+    void pruneStrategyExceedsNumberOfEntriesTest() throws IOException
     {
         //given
         files = createSegmentFiles( 10 ).subList( 5, 10 );
@@ -41,7 +43,7 @@ class EntryBasedLogPruningStrategyTest extends PruningStrategyTest
     }
 
     @Test
-    void onlyFirstActiveLogFileTest()
+    void onlyFirstActiveLogFileTest() throws IOException
     {
         //given
         files = createSegmentFiles( 1 );
@@ -55,7 +57,7 @@ class EntryBasedLogPruningStrategyTest extends PruningStrategyTest
     }
 
     @Test
-    void onlyOneActiveLogFileTest()
+    void onlyOneActiveLogFileTest() throws IOException
     {
         //given
         files = createSegmentFiles( 6 ).subList( 4, 6 );

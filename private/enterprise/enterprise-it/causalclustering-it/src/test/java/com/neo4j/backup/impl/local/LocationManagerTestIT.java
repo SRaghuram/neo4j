@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.UUID;
 
 import org.neo4j.io.layout.Neo4jLayout;
@@ -68,7 +69,17 @@ class LocationManagerTestIT
     void shouldGiveAnEmptyLocationIfDestinationIsEmpty() throws IOException
     {
         var backupLocation = locationManager( "dontExist" ).createBackupLocation();
-        assertThat( backupLocation ).matches( bl -> !bl.hasExistingStore() );
+        assertThat( backupLocation ).matches( bl ->
+        {
+            try
+            {
+                return !bl.hasExistingStore();
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
+        } );
     }
 
     @Test
@@ -79,7 +90,17 @@ class LocationManagerTestIT
 
         var backupLocation = locationManager.createBackupLocation();
 
-        assertThat( backupLocation ).matches( BackupLocation::hasExistingStore, "Has an existing store" )
+        assertThat( backupLocation ).matches( backupLocation1 ->
+        {
+            try
+            {
+                return backupLocation1.hasExistingStore();
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
+        }, "Has an existing store" )
                                     .matches( bl -> bl.databaseId().isEmpty(), "Does not have a database id" );
 
         assertThat( backupLocation.storeId() ).contains( expectedStoreId );
@@ -107,7 +128,17 @@ class LocationManagerTestIT
         // old content is moved to error dir
         var errorDir = neo4jLayout.databasesDirectory().resolve( format( FileManager.ERROR_DIR_PATTERN, backupName, 0 ) );
         assertThat( errorDir ).doesNotExist();
-        assertThat( firstLocation ).matches( BackupLocation::hasExistingStore, "has existing store" );
+        assertThat( firstLocation ).matches( backupLocation ->
+        {
+            try
+            {
+                return backupLocation.hasExistingStore();
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
+        }, "has existing store" );
         assertThat( fallBackLocation.storeId() ).isEmpty();
 
         assertThat( fallBackLocation.databaseDirectory() ).doesNotExist();

@@ -242,7 +242,7 @@ class TransactionLogCatchUpWriterIT
         }
     }
 
-    private long getSizeOfDirectory( Path directory )
+    private long getSizeOfDirectory( Path directory ) throws IOException
     {
         long ret = 0;
         for ( Path path : fs.listFiles( directory ) )

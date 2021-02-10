@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -106,7 +107,7 @@ class SetOperatorPasswordCommandIT
         return homeDir.resolve( "data" ).resolve( "dbms" ).resolve( EnterpriseSecurityModule.OPERATOR_STORE_FILENAME );
     }
 
-    private void executeCommand( String... args )
+    private void executeCommand( String... args ) throws IOException
     {
         final var ctx = new ExecutionContext( homeDir, confDir, out, err, fileSystem );
         final var command = new SetOperatorPasswordCommand( ctx );

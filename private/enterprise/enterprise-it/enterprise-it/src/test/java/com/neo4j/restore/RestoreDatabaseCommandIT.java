@@ -401,9 +401,9 @@ class RestoreDatabaseCommandIT
 
         //then
         final var databaseStoreFileExistsInDatabaseDirectory = Arrays.stream( fileSystem.listFiles( toLayout.databaseDirectory() ) )
-                                                                     .anyMatch( path -> path.toFile().getName().equals( DatabaseIdStore.FILE_NAME ) );
+                                                                     .anyMatch( path -> path.getFileName().toString().equals( DatabaseIdStore.FILE_NAME ) );
         final var databaseStoreFileExistsInTxDirectory = Arrays.stream( fileSystem.listFiles( toLayout.getTransactionLogsDirectory() ) )
-                                                               .anyMatch( path -> path.toFile().getName().equals( DatabaseIdStore.FILE_NAME ) );
+                                                               .anyMatch( path -> path.getFileName().toString().equals( DatabaseIdStore.FILE_NAME ) );
         assertFalse( databaseStoreFileExistsInDatabaseDirectory );
         assertFalse( databaseStoreFileExistsInTxDirectory );
     }

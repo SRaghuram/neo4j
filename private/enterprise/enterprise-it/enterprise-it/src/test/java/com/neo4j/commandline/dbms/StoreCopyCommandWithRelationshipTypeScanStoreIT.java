@@ -9,6 +9,7 @@ import com.neo4j.dbms.commandline.StoreCopyCommand;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -114,7 +115,6 @@ public class StoreCopyCommandWithRelationshipTypeScanStoreIT extends AbstractCom
         // and
         managementService.createDatabase( copyName );
         GraphDatabaseService copyDb = managementService.database( copyName );
-        Map<Integer,List<Long>> contentOfRtss;
         try ( Transaction tx = copyDb.beginTx() )
         {
             CountsStore countsStore = ((GraphDatabaseAPI) copyDb).getDependencyResolver().resolveDependency( CountsStore.class );
@@ -179,7 +179,7 @@ public class StoreCopyCommandWithRelationshipTypeScanStoreIT extends AbstractCom
         return relationships;
     }
 
-    private void assertHasFile( FileSystemAbstraction fs, Path databaseDirectory, Path file )
+    private void assertHasFile( FileSystemAbstraction fs, Path databaseDirectory, Path file ) throws IOException
     {
         Path[] files = fs.listFiles( databaseDirectory );
         assertTrue( contains( files, file ) );
