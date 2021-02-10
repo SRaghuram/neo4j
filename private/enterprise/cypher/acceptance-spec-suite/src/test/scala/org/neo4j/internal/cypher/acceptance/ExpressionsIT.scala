@@ -5,13 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.lang.Math.PI
-import java.lang.Math.sin
-import java.time.Clock
-import java.time.Duration
-import java.util.UUID
-import java.util.concurrent.ThreadLocalRandom
-
 import org.neo4j.codegen.api.CodeGeneration.ByteCodeGeneration
 import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -180,6 +173,12 @@ import org.neo4j.values.virtual.VirtualValues.list
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
 
+import java.lang.Math.PI
+import java.lang.Math.sin
+import java.time.Clock
+import java.time.Duration
+import java.util.UUID
+import java.util.concurrent.ThreadLocalRandom
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -4700,6 +4699,33 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L3"), slots), context) should equal(Values.FALSE)
     evaluate(compile(hasLabels(NodeFromSlot(0, "n"), "L2", "L3"), slots), context) should equal(Values.FALSE)
     evaluate(compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L2", "L3"), slots), context) should equal(Values.FALSE)
+  }
+
+  test("HasLabelsOrTypes") {
+    val a = createLabeledNode("L1", "L2")
+    val b = createLabeledNode("L1")
+    val r = relate(a, b)
+    val slots = SlotConfiguration.empty
+      .newLong("a", nullable = true, symbols.CTNode)
+      .newLong("b", nullable = true, symbols.CTNode)
+      .newReference("r", nullable = false, symbols.CTRelationship)
+    val context = SlottedRow(slots)
+    context.setLongAt(0, a.getId)
+    context.setLongAt(1, -1)
+    context.setRefAt(0, VirtualValues.relationship(r.getId))
+
+    // node
+    evaluate(compile(hasLabelsOrTypes("a", "L1"), slots), context) should equal(Values.TRUE)
+    evaluate(compile(hasLabelsOrTypes("a", "L1", "L2"), slots), context) should equal(Values.TRUE)
+    evaluate(compile(hasLabelsOrTypes("a", "L1", "L3"), slots), context) should equal(Values.FALSE)
+
+    // relationship
+    evaluate(compile(hasLabelsOrTypes("r", REL.name()), slots), context) should equal(Values.TRUE)
+    evaluate(compile(hasLabelsOrTypes("r", REL.name(), "L2"), slots), context) should equal(Values.FALSE)
+    evaluate(compile(hasLabelsOrTypes("r", "L3"), slots), context) should equal(Values.FALSE)
+
+    // null
+    evaluate(compile(hasLabelsOrTypes("b", "L2"), slots), context) should equal(Values.NO_VALUE)
   }
 
   case class NodeAt(node: NodeValue, slot: Int)

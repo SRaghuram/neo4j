@@ -5,10 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
-import java.util
-import java.util.Optional
-import java.util.regex
-
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
@@ -271,6 +267,9 @@ import org.neo4j.values.virtual.VirtualNodeValue
 import org.neo4j.values.virtual.VirtualRelationshipValue
 import org.neo4j.values.virtual.VirtualValues
 
+import java.util
+import java.util.Optional
+import java.util.regex
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
@@ -1589,31 +1588,33 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case HasLabelsOrTypes(entityExpr: Expression, labelsOrTypes: Seq[LabelOrRelTypeName]) =>
       for (entity <- compileExpression(entityExpr, id)) yield {
         val entityName = namer.nextVariableName("entity")
-        val retVal = namer.nextVariableName("hasLabelsAndTypes")
+        val retVal = variable[AnyValue](namer.nextVariableName("hasLabelsAndTypes"), noValue)
         val hasLabelsExpression = hasLabels(labelsOrTypes.map(_.name), entity)
         val hasTypesExpression = hasTypes(labelsOrTypes.map(_.name), entity)
 
         val ir = block(
-          declareAndAssign(typeRefOf[AnyValue], entityName, entity.ir),
-          declare(typeRefOf[BooleanValue], retVal),
-          ifElse(IntermediateRepresentation.instanceOf[VirtualNodeValue](load[AnyValue](entityName)))(
-            assign(retVal, hasLabelsExpression.ir)
+          declareAndAssign(typeRefOf[AnyValue], entityName, nullCheckIfRequired(entity)),
+          ifElse(equal(entityName, noValue))(
+            assign(retVal, noValue)
           )(
-            ifElse(IntermediateRepresentation.instanceOf[VirtualRelationshipValue](load[AnyValue](entityName)))(
-              assign(retVal, hasTypesExpression.ir)
+            ifElse(IntermediateRepresentation.instanceOf[VirtualNodeValue](load[AnyValue](entityName)))(
+              assign(retVal, hasLabelsExpression.ir)
             )(
-              fail(newInstance(constructor[ParameterWrongTypeException, String], constant("Expected a node or relationship when checking types or labels.")))
-            )
+              ifElse(IntermediateRepresentation.instanceOf[VirtualRelationshipValue](load[AnyValue](entityName)))(
+                assign(retVal, hasTypesExpression.ir)
+              )(
+                fail(newInstance(constructor[ParameterWrongTypeException, String], constant("Expected a node or relationship when checking types or labels.")))
+              )
+            ),
           ),
-          load[BooleanValue](retVal)
+          load(retVal)
         )
 
         IntermediateExpression(
           ir,
           hasLabelsExpression.fields ++ hasTypesExpression.fields,
-          hasLabelsExpression.variables ++ hasTypesExpression.variables,
-          hasLabelsExpression.nullChecks ++ hasTypesExpression.nullChecks,
-          hasLabelsExpression.requireNullCheck || hasTypesExpression.requireNullCheck
+          hasLabelsExpression.variables ++ hasTypesExpression.variables :+ retVal,
+          Set(equal(load(retVal), noValue))
         )
       }
 
