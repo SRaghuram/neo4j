@@ -67,6 +67,6 @@ public class ClusteredDbmsReconcilerIT
         // then
         assertEventually( "Reconciler should eventually stop",
                 () -> databaseStateService.stateOfDatabase( fooDb.databaseId() ).operatorState(), equalityCondition( STOPPED ), 1, MINUTES );
-        assertEquals( err, databaseStateService.causeOfFailure( fooDb.databaseId() ).orElse( null ) );
+        assertEquals( err, databaseStateService.causeOfFailure( fooDb.databaseId() ).map( Throwable::getCause ).orElse( null ) );
     }
 }
