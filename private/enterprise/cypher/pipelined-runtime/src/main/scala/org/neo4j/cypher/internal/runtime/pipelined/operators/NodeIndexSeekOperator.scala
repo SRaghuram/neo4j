@@ -31,6 +31,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
+import org.neo4j.codegen.api.IntermediateRepresentation.nonGenericTypeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
@@ -96,6 +97,7 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyIndexQuery
 import org.neo4j.internal.kernel.api.PropertyIndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.values.storable.FloatingPointValue
@@ -599,7 +601,12 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
         case IndexOrder.ASCENDING => "ascending"
         case IndexOrder.DESCENDING => "descending"
       }
-    method[CompositeValueIndexCursor[_], NodeValueIndexCursor, Array[NodeValueIndexCursor]](methodName)
+
+    //Since CompositeValueIndexCursor we need to do some trickery so that we access the static method as
+    //'CompositeValueIndexCursor.methodName` instead of `CompositeValueIndexCursor<Object>.methodName
+    Method(nonGenericTypeRefOf[CompositeValueIndexCursor[_]],
+      typeRefOf[RelationshipValueIndexCursor], methodName,
+      typeRefOf[Array[RelationshipValueIndexCursor]])
   }
 
   private def setupCursors: IntermediateRepresentation = {

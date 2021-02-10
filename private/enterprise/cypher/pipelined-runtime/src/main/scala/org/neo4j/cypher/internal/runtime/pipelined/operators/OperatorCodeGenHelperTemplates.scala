@@ -98,6 +98,7 @@ import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.PropertyIndexQuery
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
+import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor
 import org.neo4j.internal.kernel.api.Token
 import org.neo4j.internal.kernel.api.TokenWrite
 import org.neo4j.internal.kernel.api.Write
@@ -129,6 +130,9 @@ object OperatorCodeGenHelperTemplates {
   }
   case object NodeValueIndexCursorPool extends CursorPoolsType {
     override def name: String = "nodeValueIndexCursorPool"
+  }
+  case object RelValueIndexCursorPool extends CursorPoolsType {
+    override def name: String = "relationshipValueIndexCursorPool"
   }
   case object GroupCursorPool extends CursorPoolsType {
     override def name: String = "relationshipGroupCursorPool"
@@ -249,6 +253,7 @@ object OperatorCodeGenHelperTemplates {
   val ALLOCATE_NODE_CURSOR: IntermediateRepresentation = allocateCursor(NodeCursorPool)
   val ALLOCATE_NODE_LABEL_CURSOR: IntermediateRepresentation = allocateCursor(NodeLabelIndexCursorPool)
   val ALLOCATE_NODE_INDEX_CURSOR: IntermediateRepresentation = allocateCursor(NodeValueIndexCursorPool)
+  val ALLOCATE_REL_INDEX_CURSOR: IntermediateRepresentation = allocateCursor(RelValueIndexCursorPool)
   val ALLOCATE_GROUP_CURSOR: IntermediateRepresentation = allocateCursor(GroupCursorPool)
   val ALLOCATE_TRAVERSAL_CURSOR: IntermediateRepresentation = allocateCursor(TraversalCursorPool)
   val ALLOCATE_REL_SCAN_CURSOR: IntermediateRepresentation = allocateCursor(RelScanCursorPool)
@@ -446,6 +451,21 @@ object OperatorCodeGenHelperTemplates {
         indexOrder(order),
         constant(needsValues)),
       arrayOf[PropertyIndexQuery](query))
+
+  def relationshipIndexSeek(indexReadSession: IntermediateRepresentation,
+                            cursor: IntermediateRepresentation,
+                            query: IntermediateRepresentation,
+                            order: IndexOrder,
+                            needsValues: Boolean): IntermediateRepresentation =
+    invokeSideEffect(loadField(DATA_READ),
+      method[Read, Unit, IndexReadSession, RelationshipValueIndexCursor, IndexQueryConstraints, Array[IndexQuery]]("relationshipIndexSeek"),
+      indexReadSession,
+      cursor,
+      invokeStatic(
+        method[IndexQueryConstraints, IndexQueryConstraints, IndexOrder, Boolean]("constrained"),
+        indexOrder(order),
+        constant(needsValues)),
+      arrayOf[IndexQuery](query))
 
   def indexOrder(indexOrder: IndexOrder): IntermediateRepresentation = indexOrder match {
     case IndexOrder.ASCENDING => getStatic[IndexOrder, IndexOrder]("ASCENDING")

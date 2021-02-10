@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.LabelToken
 import org.neo4j.cypher.internal.expressions.ListLiteral
+import org.neo4j.cypher.internal.expressions.RelationshipTypeToken
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.CompositeQueryExpression
 import org.neo4j.cypher.internal.logical.plans.Distinct
@@ -60,7 +61,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.BinaryOperatorExpre
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ByNameLookup
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ByTokenLookup
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CompositeDirectedRelationshipIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompositeNodeIndexSeekTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CompositeUndirectedRelationshipIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateNodeFusedCommand
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperatorTemplate
@@ -80,7 +83,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperatorTempla
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputSingleAccumulatorFromMorselArgumentStateBufferOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.LockNodesOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyNodeByIdsSeekTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesDirectedRelationshipIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesUndirectedRelationshipIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeCountFromCountStoreOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexStringSearchScanTaskTemplate
@@ -127,11 +132,15 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SetNodePropertyOper
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertiesFromMapOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertyOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetRelationshipPropertyOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleDirectedRangeSeekQueryRelationshipIndexSeekTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleExactDirectedSeekQueryRelationshipIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleExactSeekQueryNodeIndexSeekTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleExactUndirectedSeekQueryRelationshipIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleNodeByIdSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleRangeSeekQueryNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedAllNodeScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedLabelScanTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleUndirectedRangeSeekQueryRelationshipIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedProjectEndpointsTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperatorTaskTemplate
@@ -290,10 +299,16 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
         case plan@plans.NodeUniqueIndexSeek(node, label, properties, valueExpr, _, order)  =>
-            indexSeek(node, label, properties, valueExpr, asKernelIndexOrder(order), unique = true, plan)
+          nodeIndexSeek(node, label, properties, valueExpr, asKernelIndexOrder(order), unique = true, plan)
 
         case plan@plans.NodeIndexSeek(node, label, properties, valueExpr, _, order) =>
-            indexSeek(node, label, properties, valueExpr, asKernelIndexOrder(order), unique = false, plan)
+            nodeIndexSeek(node, label, properties, valueExpr, asKernelIndexOrder(order), unique = false, plan)
+
+        case plan@plans.DirectedRelationshipIndexSeek(rel, start, end, typeToken, properties, valueExpr, _, order) =>
+          relationshipIndexSeek(rel, start, end, typeToken, properties, valueExpr, asKernelIndexOrder(order), plan, directed = true)
+
+        case plan@plans.UndirectedRelationshipIndexSeek(rel, start, end, typeToken, properties, valueExpr, _, order) =>
+          relationshipIndexSeek(rel, start, end, typeToken, properties, valueExpr, asKernelIndexOrder(order), plan, directed = false)
 
         case plan@plans.NodeByIdSeek(node, nodeIds, _) =>
           ctx: TemplateContext =>
@@ -1059,7 +1074,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
       case _ => None
     }
 
-  private def indexSeek(node: String,
+  private def nodeIndexSeek(node: String,
                         label: LabelToken,
                         properties: Seq[IndexedProperty],
                         valueExpr: QueryExpression[Expression],
@@ -1157,6 +1172,187 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               order,
               ctx.argumentSizes(plan.id),
               needsLockingUnique && composite.exactOnly)(ctx.expressionCompiler)
+        }
+
+      case ExistenceQueryExpression() =>
+        throw new InternalException("An ExistenceQueryExpression shouldn't be found outside of a CompositeQueryExpression")
+
+      case _ => None
+
+    }
+  }
+
+  private def relationshipIndexSeek(relationship: String,
+                                    startNode: String,
+                                    endNode: String,
+                                    typeToken: RelationshipTypeToken,
+                                    properties: Seq[IndexedProperty],
+                                    valueExpr: QueryExpression[Expression],
+                                    order: IndexOrder,
+                                    plan: LogicalPlan,
+                                    directed: Boolean): Option[NewTemplate] = {
+    valueExpr match {
+      case SingleQueryExpression(expr) =>
+        require(properties.length == 1)
+        ctx: TemplateContext =>
+          val slottedIndexedProperties = properties.map(SlottedIndexedProperty(relationship, _, ctx.slots))
+          val property = slottedIndexedProperties.head
+          if (directed) {
+            new SingleExactDirectedSeekQueryRelationshipIndexSeekTaskTemplate(ctx.inner,
+              plan.id,
+              ctx.innermost,
+              ctx.slots.getLongOffsetFor(relationship),
+              ctx.slots.getLongOffsetFor(startNode),
+              ctx.slots.getLongOffsetFor(endNode),
+              property,
+              ctx.compileExpression(expr, plan.id),
+              ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+              ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+          } else {
+            new SingleExactUndirectedSeekQueryRelationshipIndexSeekTaskTemplate(ctx.inner,
+              plan.id,
+              ctx.innermost,
+              ctx.slots.getLongOffsetFor(relationship),
+              ctx.slots.getLongOffsetFor(startNode),
+              ctx.slots.getLongOffsetFor(endNode),
+              property,
+              ctx.compileExpression(expr, plan.id),
+              ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+              ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+          }
+
+      case ManyQueryExpression(expr) =>
+        require(properties.length == 1)
+        ctx: TemplateContext =>
+          val slottedIndexedProperties = properties.map(SlottedIndexedProperty(relationship, _, ctx.slots))
+          val property = slottedIndexedProperties.head
+          if (directed) {
+            new ManyQueriesDirectedRelationshipIndexSeekTaskTemplate(ctx.inner,
+              plan.id,
+              ctx.innermost,
+              ctx.slots.getLongOffsetFor(relationship),
+              ctx.slots.getLongOffsetFor(startNode),
+              ctx.slots.getLongOffsetFor(endNode),
+              property,
+              SeekExpression(Seq(ctx.compileExpression(expr, plan.id)), in => manyExactSeek(property.propertyKeyId, in.head)),
+              ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+              order,
+              ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+          } else {
+            new ManyQueriesUndirectedRelationshipIndexSeekTaskTemplate(ctx.inner,
+              plan.id,
+              ctx.innermost,
+              ctx.slots.getLongOffsetFor(relationship),
+              ctx.slots.getLongOffsetFor(startNode),
+              ctx.slots.getLongOffsetFor(endNode),
+              property,
+              SeekExpression(Seq(ctx.compileExpression(expr, plan.id)), in => manyExactSeek(property.propertyKeyId, in.head)),
+              ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+              order,
+              ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+          }
+
+      case RangeQueryExpression(rangeWrapper) =>
+        require(properties.length == 1)
+        computeRangeExpression(rangeWrapper, properties.head, plan.id).map(
+          seek => {
+            ctx: TemplateContext => {
+              val slottedIndexedProperties = properties.map(SlottedIndexedProperty(relationship, _, ctx.slots))
+              val property = slottedIndexedProperties.head
+              seek(ctx) match {
+                case seek if seek.single =>
+                  if (directed) {
+                    new SingleDirectedRangeSeekQueryRelationshipIndexSeekTaskTemplate(ctx.inner,
+                      plan.id,
+                      ctx.innermost,
+                      ctx.slots.getLongOffsetFor(relationship),
+                      ctx.slots.getLongOffsetFor(startNode),
+                      ctx.slots.getLongOffsetFor(endNode),
+                      property,
+                      seek,
+                      ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+                      order,
+                      ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+                  } else {
+                    new SingleUndirectedRangeSeekQueryRelationshipIndexSeekTaskTemplate(ctx.inner,
+                      plan.id,
+                      ctx.innermost,
+                      ctx.slots.getLongOffsetFor(relationship),
+                      ctx.slots.getLongOffsetFor(startNode),
+                      ctx.slots.getLongOffsetFor(endNode),
+                      property,
+                      seek,
+                      ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+                      order,
+                      ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+                  }
+
+                case seek =>
+                  if (directed) {
+                    new ManyQueriesDirectedRelationshipIndexSeekTaskTemplate(ctx.inner,
+                      plan.id,
+                      ctx.innermost,
+                      ctx.slots.getLongOffsetFor(relationship),
+                      ctx.slots.getLongOffsetFor(startNode),
+                      ctx.slots.getLongOffsetFor(endNode),
+                      property,
+                      seek,
+                      ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+                      order,
+                      ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+                  } else {
+                    new ManyQueriesUndirectedRelationshipIndexSeekTaskTemplate(ctx.inner,
+                      plan.id,
+                      ctx.innermost,
+                      ctx.slots.getLongOffsetFor(relationship),
+                      ctx.slots.getLongOffsetFor(startNode),
+                      ctx.slots.getLongOffsetFor(endNode),
+                      property,
+                      seek,
+                      ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+                      order,
+                      ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+                  }
+              }
+            }
+          }
+        )
+
+      case CompositeQueryExpression(parts) =>
+        require(parts.lengthCompare(properties.length) == 0)
+        val predicates = parts.zip(properties).flatMap {
+          case (e, p) => computeCompositeQueries(e, p, plan.id)
+        }
+
+        if (predicates.size != properties.length) None
+        else {
+          ctx: TemplateContext =>
+            val slottedIndexedProperties = properties.map(SlottedIndexedProperty(relationship, _, ctx.slots))
+            if (directed) {
+              new CompositeDirectedRelationshipIndexSeekTaskTemplate(ctx.inner,
+                plan.id,
+                ctx.innermost,
+                ctx.slots.getLongOffsetFor(relationship),
+                ctx.slots.getLongOffsetFor(startNode),
+                ctx.slots.getLongOffsetFor(endNode),
+                slottedIndexedProperties,
+                predicates.map(predicate => predicate(ctx)),
+                ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+                order,
+                ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+            } else {
+              new CompositeUndirectedRelationshipIndexSeekTaskTemplate(ctx.inner,
+                plan.id,
+                ctx.innermost,
+                ctx.slots.getLongOffsetFor(relationship),
+                ctx.slots.getLongOffsetFor(startNode),
+                ctx.slots.getLongOffsetFor(endNode),
+                slottedIndexedProperties,
+                predicates.map(predicate => predicate(ctx)),
+                ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+                order,
+                ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+            }
         }
 
       case ExistenceQueryExpression() =>
