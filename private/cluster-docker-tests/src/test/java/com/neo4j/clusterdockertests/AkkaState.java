@@ -7,7 +7,9 @@ package com.neo4j.clusterdockertests;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neo4j.test.driver.ClusterChecker;
+import com.neo4j.test.driver.DriverFactory;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
@@ -19,15 +21,18 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.neo4j.driver.Driver;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.Value;
+import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer;
 
+import static com.neo4j.clusterdockertests.MetricsReader.isEqualTo;
+import static com.neo4j.clusterdockertests.MetricsReader.replicatedDataMetric;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Akka state is a json string returned from a cypher query.
- * This class extracts the main information that we are interested in
+ * Akka state is a json string returned from a cypher query. This class extracts the main information that we are interested in
  */
 final class AkkaState
 {
@@ -61,6 +66,31 @@ final class AkkaState
         this.unreachable = unreachable;
         this.up = up;
         this.notUp = notUp;
+    }
+
+    public static void checkMetrics( Set<Neo4jServer> servers, DriverFactory driverFactory, int databaseCount ) throws IOException
+    {
+        var metricsReader = new MetricsReader();
+        var expectedMetrics = new MetricsReader.MetricExpectations();
+        var aliveMembers = (int) servers.stream().filter( Neo4jServer::isContainerRunning ).count();
+
+        expectedMetrics.add( replicatedDataMetric( "raft_id_published_by_member.visible" ), isEqualTo( databaseCount ) )
+                       .add( replicatedDataMetric( "per_db_leader_name.visible" ),          isEqualTo( databaseCount ) )
+                       .add( replicatedDataMetric( "member_data.visible" ),                 isEqualTo( aliveMembers ) )
+                       .add( replicatedDataMetric( "member_db_state.visible" ),             isEqualTo( aliveMembers * databaseCount ) )
+                       .add( replicatedDataMetric( "raft_member_mapping.visible" ),         isEqualTo( aliveMembers * databaseCount ) );
+
+        // TODO: make concurrent using async
+        for ( var server : servers )
+        {
+            if ( server.isContainerRunning() )
+            {
+                try ( Driver driver = driverFactory.graphDatabaseDriver( server.getDirectBoltUri() ) )
+                {
+                    metricsReader.checkExpectations( driver, expectedMetrics );
+                }
+            }
+        }
     }
 
     public Set<String> getMembers()
@@ -186,5 +216,4 @@ final class AkkaState
 
         return AkkaState.FromQueryResult( records );
     };
-
 }

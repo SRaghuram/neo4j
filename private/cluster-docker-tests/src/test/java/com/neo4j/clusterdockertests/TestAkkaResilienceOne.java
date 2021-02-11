@@ -42,6 +42,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Record;
@@ -53,6 +54,7 @@ import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer;
 import org.neo4j.logging.Level;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.configuration.MetricsSettings.metrics_filter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow;
@@ -91,7 +93,12 @@ public class TestAkkaResilienceOne
     {
         // The settings here make the akka failure detector behave more like a fixed timeout failure detector.
         // A large heartbeat pause makes the test take longer to run but prevents flakiness because of contention or GC or VM pauses when running in TC
+        List<GlobbingPattern> metricsFilter = metrics_filter.defaultValue();
+        metricsFilter.add( new GlobbingPattern( "neo4j.causal_clustering.*" ) );
+        String metricsFilterString = metricsFilter.stream().map( GlobbingPattern::toString ).collect( Collectors.joining( "," ) );
+
         return DeveloperWorkflow.configureNeo4jContainerIfNecessary( input )
+                                .withNeo4jConfig( metrics_filter.name(), metricsFilterString )
                                 .withNeo4jConfig( CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString() )
                                 .withNeo4jConfig( CausalClusteringInternalSettings.akka_failure_detector_acceptable_heartbeat_pause.name(),
                                                   acceptableHeartbeatPause.toSeconds() + "s" )
@@ -135,7 +142,7 @@ public class TestAkkaResilienceOne
     }
 
     @AfterEach
-    void after() throws Neo4jCluster.Neo4jTimeoutException, TimeoutException
+    void after() throws Neo4jCluster.Neo4jTimeoutException, TimeoutException, IOException
     {
         // make sure that nothing is broken before the cluster is handed over to the next test
         try
@@ -409,6 +416,10 @@ public class TestAkkaResilienceOne
                 },
                 6, TimeUnit.MINUTES
         );
+        assertEventuallyDoesNotThrow( "metrics should look ok", () -> {
+            AkkaState.checkMetrics( cluster.getAllServersOfType( Neo4jServer.Type.CORE_SERVER ), driverFactory, 2 );
+        }, 2, TimeUnit.MINUTES, 15, TimeUnit.SECONDS );
+
     }
 
     private static URI getFirstAkkaSeed( ClusterChecker checker ) throws ExecutionException, InterruptedException, TimeoutException

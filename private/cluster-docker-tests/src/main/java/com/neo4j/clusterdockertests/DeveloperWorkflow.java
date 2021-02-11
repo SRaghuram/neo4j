@@ -99,6 +99,9 @@ public final class DeveloperWorkflow
             // delete all the jars that came with the docker image (if there are still any present)
             "( ! compgen -G '/var/lib/neo4j/lib/*' >/dev/null ) || rm /var/lib/neo4j/lib/*\n" +
 
+            // move the mounted jars to the place that the neo4j startup script expects them to be
+            "mv /var/lib/neo4j/lib /var/lib/neo4j/oldlib && mv /var/lib/neo4j/devlib /var/lib/neo4j/lib\n" +
+
             // print something to stdout - we use this check the logs to be sure that the dev workflow was run.
             "echo 'dev extension script completed.'\n";
 

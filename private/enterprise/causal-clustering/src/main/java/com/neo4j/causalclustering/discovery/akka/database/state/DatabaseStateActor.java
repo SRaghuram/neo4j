@@ -73,6 +73,7 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseS
         var localStatesMap = serverSnapshot.databaseStates().entrySet().stream()
                                            .reduce( LWWMap.create(), this::addState, LWWMap::merge );
 
+        log().debug( "add initial states {}", localStatesMap );
         if ( !localStatesMap.isEmpty() )
         {
             modifyReplicatedData( key, map -> map.merge( localStatesMap ) );
@@ -99,10 +100,12 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseS
     {
         if ( update.operatorState() == DROPPED )
         {
+            log().debug( "remove state {}", update );
             modifyReplicatedData( key, map -> map.remove( cluster, new DatabaseServer( update.databaseId(), myself ) ) );
         }
         else
         {
+            log().debug( "add state {}", update );
             modifyReplicatedData( key, map -> map.put( cluster, new DatabaseServer( update.databaseId(), myself ), update ) );
         }
     }
@@ -111,13 +114,14 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseS
     {
         data.getEntries().keySet().stream()
                 .filter( ds -> ds.serverId().equals( message.serverId ) )
-                .peek( ds -> log().info( "remove state {}", ds ) )
+                .peek( ds -> log().debug( "remove state {}", ds ) )
                 .forEach( ds -> modifyReplicatedData( key, map -> map.remove( cluster, ds ) ));
     }
 
     @Override
     protected void handleIncomingData( LWWMap<DatabaseServer,DiscoveryDatabaseState> newData )
     {
+        log().debug( "incoming states {}", newData );
         data = newData;
         var statesGroupedByDatabase = data.getEntries().entrySet().stream()
                 .map( e -> Map.entry( e.getKey().serverId(), e.getValue() ) )

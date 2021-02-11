@@ -11,20 +11,25 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.platform.commons.logging.Logger;
 import org.junit.platform.commons.logging.LoggerFactory;
 import org.testcontainers.containers.Neo4jContainer;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.util.Set;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.junit.jupiter.causal_cluster.CausalCluster;
 import org.neo4j.junit.jupiter.causal_cluster.CoreModifier;
 import org.neo4j.junit.jupiter.causal_cluster.NeedsCausalCluster;
@@ -32,16 +37,14 @@ import org.neo4j.junit.jupiter.causal_cluster.Neo4jCluster;
 import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.clusterdockertests.MetricsReader.isEqualTo;
-import static com.neo4j.clusterdockertests.MetricsReader.replicatedDataMetric;
-import static com.neo4j.configuration.MetricsSettings.metrics_filter;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
-@NeedsCausalCluster
+@NeedsCausalCluster( numberOfCoreServers = 5 )
 @DriverExtension
 @ExtendWith( DumpDockerLogs.class )
-public class ExampleTest
+@TestMethodOrder( MethodOrderer.OrderAnnotation.class )
+public class BigClusterAkkaTest
 {
     private static final AuthToken authToken = AuthTokens.basic( "neo4j", "password" );
 
@@ -55,12 +58,15 @@ public class ExampleTest
 
     private Driver driver;
     private final MetricsReader metricsReader = new MetricsReader();
+    private int databaseCount = 2;
 
     @CoreModifier
     private static Neo4jContainer<?> configure( Neo4jContainer<?> input ) throws IOException
     {
         return DeveloperWorkflow.configureNeo4jContainerIfNecessary( input )
-                                .withNeo4jConfig( metrics_filter.name(), "*" );
+                .withNeo4jConfig( "metrics.filter", "*" )
+                .withNeo4jConfig( "causal_clustering.minimum_core_cluster_size_at_formation", "5" )
+                .withNeo4jConfig( "causal_clustering.minimum_core_cluster_size_at_runtime", "5" );
     }
 
     @BeforeAll
@@ -81,6 +87,8 @@ public class ExampleTest
         driver = driverFactory.graphDatabaseDriver( cluster.getURIs() );
         // make sure that cluster is ready to go before we start
         driver.verifyConnectivity();
+        // let's try to add a few extra databases
+        databaseCount = ensureDatabaseCount( 5, driver );
     }
 
     @AfterEach
@@ -88,59 +96,57 @@ public class ExampleTest
     {
         // make sure that nothing is broken before the cluster is handed over to the next test
         driver.verifyConnectivity();
+
+        // make sure every container is running
+        cluster.startServers( cluster.getAllServers().stream().filter( server -> !server.isContainerRunning() ).collect( Collectors.toSet() ) );
+        checkMetrics();
     }
 
     @Test
-    void stopStartOneServerTest() throws Exception
+    @Order( 1 )
+    void stopOneServerTest() throws Exception
     {
         // when
-        Set<Neo4jServer> stopped = cluster.stopRandomServers( 1 );
-
+        cluster.stopRandomServers( 2 );
         Thread.sleep( 100 );
 
-        // when
-        Set<Neo4jServer> started = cluster.startServers( stopped );
-        cluster.waitForBoltOnAll( started, Duration.ofMinutes( 1 ) );
-
         // then
-        assertThat( started ).containsExactlyInAnyOrderElementsOf( stopped );
         driver.verifyConnectivity();
         checkMetrics();
     }
 
     @Test
-    void killStartOneServerTest() throws Neo4jCluster.Neo4jTimeoutException, InterruptedException
+    @Order( 2 )
+    void killOneServerTest() throws Exception
     {
         // when
-        Set<Neo4jServer> stopped = cluster.killRandomServers( 1 );
-
+        cluster.killRandomServers( 2 );
         Thread.sleep( 100 );
 
-        // when
-        Set<Neo4jServer> started = cluster.startServers( stopped );
-        cluster.waitForBoltOnAll( started, Duration.ofMinutes( 1 ) );
-
         // then
-        assertThat( started ).containsExactlyInAnyOrderElementsOf( stopped );
         driver.verifyConnectivity();
         checkMetrics();
+    }
+
+    private int ensureDatabaseCount( int expectedCount, Driver driver )
+    {
+        try ( var session = driver.session( SessionConfig.forDatabase( "system" ) ) )
+        {
+            var actualCount = (int) session.run( "SHOW DATABASES YIELD name" ).stream().map( r -> r.get( "name" ) ).distinct().count();
+            while ( actualCount < expectedCount )
+            {
+                session.run( "CREATE DATABASE $newDb WAIT", Map.of( "newDb", "testDB" + actualCount ) ).consume();
+                actualCount++;
+            }
+            return actualCount;
+        }
     }
 
     private void checkMetrics()
     {
-        var expectations = new MetricsReader.MetricExpectations()
-                .add( replicatedDataMetric( "per_db_leader_name.visible" ), isEqualTo( 2 ) );
-
-        for ( var server : cluster.getAllServers() )
+        assertEventuallyDoesNotThrow( "metrics should look ok", () ->
         {
-            try ( var driver = driverFactory.graphDatabaseDriver( server.getDirectBoltUri() ) )
-            {
-                metricsReader.checkExpectations( driver, expectations );
-            }
-            catch ( IOException e )
-            {
-                e.printStackTrace();
-            }
-        }
+            AkkaState.checkMetrics( cluster.getAllServersOfType( Neo4jServer.Type.CORE_SERVER ), driverFactory, databaseCount );
+        }, 2, TimeUnit.MINUTES, 15, TimeUnit.SECONDS );
     }
 }
