@@ -87,6 +87,11 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         startInitialDatabases();
     }
 
+    public void registerDatabaseStateChangedListener( DatabaseStateChangedListener databaseStateChangedListener )
+    {
+        reconciler.registerDatabaseStateChangedListener( databaseStateChangedListener );
+    }
+
     /**
      * Blocking call. Just syntactic sugar around a {@link StartupOperator}. Used to transition default databases to
      * desired initial states at DatabaseManager startup

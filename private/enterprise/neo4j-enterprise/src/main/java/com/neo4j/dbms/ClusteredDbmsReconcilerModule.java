@@ -42,11 +42,6 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
         this.operatorEventListener = new SystemOperatingDatabaseEventListener( systemOperator );
     }
 
-    public void registerDatabaseStateChangedListener( DatabaseStateChangedListener databaseStateChangedListener )
-    {
-        reconciler.registerDatabaseStateChangedListener( databaseStateChangedListener );
-    }
-
     @Override
     protected Stream<DbmsOperator> operators()
     {

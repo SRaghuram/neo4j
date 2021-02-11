@@ -108,8 +108,10 @@ public class BatchingTxApplier
     private void commit( TransactionChain transactionChain ) throws TransactionFailureException
     {
         commitProcess.commit( transactionChain.first, NULL, EXTERNAL );
-        long lastAppliedRaftLogIndex =
-                LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader( transactionChain.last.transactionRepresentation().additionalHeader() );
+        var additionalHeader = transactionChain.last.transactionRepresentation().additionalHeader();
+        var lastAppliedRaftLogIndex = ( additionalHeader.length == 0 ) ?
+                transactionChain.last.transactionId() :
+                LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader( additionalHeader );
         commandIndexTracker.setAppliedCommandIndex( lastAppliedRaftLogIndex );
     }
 
