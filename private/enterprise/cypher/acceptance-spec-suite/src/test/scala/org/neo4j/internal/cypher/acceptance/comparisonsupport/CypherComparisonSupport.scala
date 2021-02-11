@@ -254,6 +254,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
    * @param query the query
    * @param expectedDifferentResults Scenarios which are expected to work, but return different results. This is often the case for bugfixes that have not been
    *                                 backported to older versions.
+   * @param assertEqualResult If `false`, then it is only asserted that scenarios in `expectDifferentResults` are different from base scenario.
    * @param planComparisonStrategy a strategy how to compare the execution plans. Disabled by default.
    * @param resultAssertionInTx if `Some(...)` this will execute the given assertions inside of the transaction. That can be helpful is the assertions rely on
    *                            being executed in the same transaction as the query.
@@ -264,6 +265,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   protected def executeWith(expectSucceed: TestConfiguration,
                             query: String,
                             expectedDifferentResults: TestConfiguration = Configs.Empty,
+                            assertEqualResult: Boolean = true,
                             planComparisonStrategy: PlanComparisonStrategy = DoNotComparePlans,
                             resultAssertionInTx: Option[RewindableExecutionResult => Unit] = None,
                             executeBefore: InternalTransaction => Unit = _ => {},
@@ -315,10 +317,10 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
         case (scenario, result) =>
           planComparisonStrategy.compare(expectSucceed, scenario, result)
 
-          if (compareResults.containsScenario(scenario)) {
-            assertResultsSame(result, baseResult, query, s"${scenario.name} returned different results than ${baseScenario.name}")
-          } else {
+          if (!compareResults.containsScenario(scenario)) {
             assertResultsNotSame(result, baseResult, query, s"Unexpectedly (but correctly!)\n${scenario.name} returned same results as ${baseScenario.name}")
+          } else if (assertEqualResult) {
+            assertResultsSame(result, baseResult, query, s"${scenario.name} returned different results than ${baseScenario.name}")
           }
       }
       baseResult

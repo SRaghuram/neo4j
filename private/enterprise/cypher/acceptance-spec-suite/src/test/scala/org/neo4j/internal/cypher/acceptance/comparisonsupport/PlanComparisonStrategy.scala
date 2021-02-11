@@ -40,14 +40,22 @@ case class ComparePlansWithPredicate(predicate: InternalPlanDescription => Boole
 
 case class ComparePlansWithAssertion(assertion: InternalPlanDescription => Unit,
                                      expectPlansToFail: TestConfiguration = TestConfiguration.empty) extends PlanComparisonStrategy {
+  val strategy = ComparePlansWithRuntimeDependantAssertion((ipd, _) => assertion(ipd), expectPlansToFail)
+  override def compare(expectSucceed: TestConfiguration, scenario: TestScenario, result: RewindableExecutionResult): Unit = {
+    strategy.compare(expectSucceed, scenario, result)
+  }
+}
+
+case class ComparePlansWithRuntimeDependantAssertion(assertion: (InternalPlanDescription, TestScenario) => Unit,
+                                                     expectPlansToFail: TestConfiguration = TestConfiguration.empty) extends PlanComparisonStrategy {
   override def compare(expectSucceed: TestConfiguration, scenario: TestScenario, result: RewindableExecutionResult): Unit = {
     val comparePlans = expectSucceed - expectPlansToFail
     if (comparePlans.containsScenario(scenario)) {
       withClue(s"plan for ${scenario.name}\n") {
-        assertion(result.executionPlanDescription())
+        assertion(result.executionPlanDescription(), scenario)
       }
     } else if (!Configs.Experimental.containsScenario(scenario)) {
-      val tryResult = Try(assertion(result.executionPlanDescription()))
+      val tryResult = Try(assertion(result.executionPlanDescription(), scenario))
       tryResult match {
         case Success(_) =>
           fail(s"plan for ${scenario.name} did unexpectedly succeed \n${result.executionPlanString()}")

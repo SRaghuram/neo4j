@@ -20,23 +20,25 @@ object Runtimes {
     if (runtimes.nonEmpty) Runtimes(runtimes: _*) else all
   }
 
-  object SlottedWithInterpretedExpressions extends Runtime(Set("SLOTTED", "SCHEMA"), "runtime=slotted expressionEngine=interpreted")
+  object SlottedWithInterpretedExpressions extends Runtime("SLOTTED", true, "runtime=slotted expressionEngine=interpreted")
 
-  object SlottedWithCompiledExpressions extends Runtime(Set("SLOTTED", "SCHEMA"), "runtime=slotted expressionEngine=compiled")
+  object SlottedWithCompiledExpressions extends Runtime("SLOTTED", true, "runtime=slotted expressionEngine=compiled")
 
-  object Interpreted extends Runtime(Set("INTERPRETED", "SCHEMA"), "runtime=interpreted")
+  object Interpreted extends Runtime("INTERPRETED", true, "runtime=interpreted")
 
-  object Parallel extends Runtime(Set("PARALLEL"), "runtime=parallel")
+  object Parallel extends Runtime("PARALLEL", false, "runtime=parallel")
 
-  object PipelinedFused extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=pipelined operatorEngine=compiled" +
+  object PipelinedFused extends Runtime("PIPELINED", true, "runtime=pipelined operatorEngine=compiled" +
     (if (DebugSupport.DEBUG_GENERATED_SOURCE_CODE) s" debug=$GENERATE_JAVA_SOURCE_DEBUG_OPTION" else ""))
 
-  object PipelinedNonFused extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=pipelined operatorEngine=interpreted")
+  object PipelinedNonFused extends Runtime("PIPELINED", true, "runtime=pipelined operatorEngine=interpreted")
 
-  object PipelinedFull extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=pipelined interpretedPipesFallback=all")
+  object PipelinedFull extends Runtime("PIPELINED", true, "runtime=pipelined interpretedPipesFallback=all")
 }
 
-case class Runtime(acceptedRuntimeNames: Set[String], preparserOption: String) {
+case class Runtime(name: String, schema: Boolean, preparserOption: String) {
+  val acceptedRuntimeNames: Set[String] = if (schema) Set(name, "SCHEMA") else Set(name)
+
   def isDefinedBy(preParserArgs: Array[String]): Boolean =
     preparserOption.split(" ").forall(preParserArgs.contains(_))
 }

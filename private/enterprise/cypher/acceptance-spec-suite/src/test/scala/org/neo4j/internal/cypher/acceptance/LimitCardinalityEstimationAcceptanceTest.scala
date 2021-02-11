@@ -10,6 +10,8 @@ import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.compiler.planner.logical.PlannerDefaults
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithRuntimeDependantAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature.VOID
@@ -160,17 +162,27 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 10
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"CYPHER MATCH (n), (m) RETURN n, m LIMIT $limit")
+    val query = s"CYPHER MATCH (n), (m) RETURN n, m LIMIT $limit"
 
-    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
-      .withLHS(aPlan("Limit").withEstimatedRows(limit)
-        .withLHS(aPlan("CartesianProduct").withEstimatedRows(limit)
-          .withChildren(
-            aPlan("AllNodesScan").withEstimatedRows(batchSize),
-            aPlan("AllNodesScan").withEstimatedRows(batchSize)
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithRuntimeDependantAssertion(
+      (plan, scenario) => {
+        val (lhsCard, rhsCard) = scenario.runtime.name match {
+          case "PIPELINED" => (batchSize, batchSize * Math.ceil(limit / (batchSize * batchSize).toDouble).toLong)
+          case _ => (1L, limit.toLong)
+        }
+        plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+          .withLHS(aPlan("Limit").withEstimatedRows(limit)
+            .withLHS(aPlan("CartesianProduct").withEstimatedRows(limit)
+              .withLHS(aPlan("AllNodesScan").withEstimatedRows(lhsCard))
+              .withRHS(aPlan("AllNodesScan").withEstimatedRows(rhsCard))
+            )
           )
-        )
-      )
+      }
+    ))
   }
 
   test("should estimate rows with selectivity through NodeHashJoin") {
@@ -213,18 +225,29 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 49
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n), (m) WITH n, m ORDER BY m RETURN n, m LIMIT $limit")
+    val query = s"profile MATCH (n), (m) WITH n, m RETURN n, m ORDER BY m LIMIT $limit"
 
-    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
-      .withLHS(aPlan("Limit").withEstimatedRows(limit)
-        .withLHS(aPlan("CartesianProduct").withEstimatedRows(limit)
-          .withChildren(
-            aPlan("Sort").withEstimatedRows(batchSize)
-              .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount)),
-            aPlan("AllNodesScan").withEstimatedRows(batchSize * batchSize)
-          )
-        )
-      )
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithRuntimeDependantAssertion(
+        (plan, scenario) => {
+          val (lhsCard, rhsCard, binaryPlan) = scenario.runtime.name match {
+            case "PIPELINED" => (1L, limit.toLong, "Apply")
+            case _ => (1L, limit.toLong, "CartesianProduct")
+          }
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+            .withLHS(aPlan("Limit").withEstimatedRows(limit)
+              .withLHS(aPlan(binaryPlan).withEstimatedRows(limit)
+                .withRHS(aPlan("AllNodesScan").withEstimatedRows(rhsCard))
+                .withLHS(aPlan("Sort").withEstimatedRows(lhsCard)
+                  .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount))
+                )
+              )
+            )
+        }
+      ))
   }
 
   test("should estimate rows with reset selectivity through top") {
@@ -233,17 +256,27 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val limit = 50
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n), (m) RETURN n, m ORDER BY n, m LIMIT $limit")
+    val query = s"MATCH (n), (m) RETURN n, m ORDER BY n, m LIMIT $limit"
 
-    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
-      .withLHS(aPlan("Top").withEstimatedRows(limit)
-        .withLHS(aPlan("CartesianProduct").withEstimatedRows(nodeCount * nodeCount)
-          .withChildren(
-            aPlan("AllNodesScan").withEstimatedRows(nodeCount),
-            aPlan("AllNodesScan").withEstimatedRows(nodeCount * nodeCount / batchSize)
-          )
-        )
-      )
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithRuntimeDependantAssertion(
+        (plan, scenario) => {
+          val (lhsCard, rhsCard) = scenario.runtime.name match {
+            case "PIPELINED" => (nodeCount.toLong, nodeCount * nodeCount / batchSize)
+            case _ => (nodeCount.toLong, nodeCount.toLong * nodeCount.toLong)
+          }
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+            .withLHS(aPlan("Top").withEstimatedRows(limit)
+              .withLHS(aPlan("CartesianProduct").withEstimatedRows(nodeCount * nodeCount)
+                .withLHS(aPlan("AllNodesScan").withEstimatedRows(lhsCard))
+                .withRHS(aPlan("AllNodesScan").withEstimatedRows(rhsCard))
+              )
+            )
+        }
+      ))
   }
 
   test("should estimate rows with limit selectivity through partial top") {
@@ -284,71 +317,101 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   test("should estimate rows with lowest limit selectivity when lowest limit is earliest") {
     val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
-    val lowLimit = 9
+    val lowLimit = 18
     val highLimit = 20
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $lowLimit RETURN n, m LIMIT $highLimit")
+    val query = s"MATCH (n), (m) WITH n, m LIMIT $lowLimit RETURN n, m LIMIT $highLimit"
 
-    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
-      .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
-        .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
-          .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
-              .withChildren(
-                aPlan("AllNodesScan").withEstimatedRows(batchSize),
-                aPlan("AllNodesScan").withEstimatedRows(batchSize)
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithRuntimeDependantAssertion(
+        (plan, scenario) => {
+          val (lhsCard, rhsCard) = scenario.runtime.name match {
+            case "PIPELINED" => (batchSize, batchSize * Math.ceil(lowLimit / (batchSize * batchSize).toDouble).toLong)
+            case _ => (1L, lowLimit.toLong)
+          }
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
+            .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+              .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+                .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
+                  .withLHS(aPlan("AllNodesScan").withEstimatedRows(lhsCard))
+                  .withRHS(aPlan("AllNodesScan").withEstimatedRows(rhsCard))
+                )
               )
-          )
-        )
-      )
+            )
+        }
+      ))
   }
 
   test("should estimate rows with lowest limit selectivity when lowest limit is latest") {
     val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
-    val lowLimit = 5
+    val lowLimit = 20
     val highLimit = 200000
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $highLimit RETURN n, m LIMIT $lowLimit")
+    val query = s"MATCH (n), (m) WITH n, m LIMIT $highLimit RETURN n, m LIMIT $lowLimit"
 
-    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
-      .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
-        .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
-          .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
-              .withChildren(
-                aPlan("AllNodesScan").withEstimatedRows(batchSize),
-                aPlan("AllNodesScan").withEstimatedRows(batchSize)
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithRuntimeDependantAssertion(
+        (plan, scenario) => {
+          val (lhsCard, rhsCard) = scenario.runtime.name match {
+            case "PIPELINED" => (batchSize, batchSize * Math.ceil(lowLimit / (batchSize * batchSize).toDouble).toLong)
+            case _ => (1L, lowLimit.toLong)
+          }
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
+            .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+              .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+                .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
+                  .withLHS(aPlan("AllNodesScan").withEstimatedRows(lhsCard))
+                  .withRHS(aPlan("AllNodesScan").withEstimatedRows(rhsCard))
+                )
               )
-          )
-        )
-      )
+            )
+        }
+      ))
   }
 
   test("should estimate rows with lowest limit selectivity when lowest limit is latest and cardinality is increased between limits") {
     val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
-    val lowLimit = 500
+    val lowLimit = 3500
     val highLimit = 200000
     val unwindFactor = 100
     (0 until nodeCount).foreach(_ => createNode())
 
-    // Param so that unwind does not get auto-parameterized.
-    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $highLimit UNWIND range(1, $unwindFactor) AS i RETURN n, m, $$x LIMIT $lowLimit", Map("x" -> 10))
+    val query = s"PROFILE MATCH (n), (m) WITH n, m LIMIT $highLimit UNWIND range(1, $unwindFactor) AS i RETURN n, m, $$x LIMIT $lowLimit"
 
-    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
-      .withLHS(includeSomewhere.aPlan("Limit").withEstimatedRows(lowLimit)
-        .withLHS(aPlan("Unwind").withEstimatedRows(lowLimit)
-          .withLHS(aPlan("Limit").withEstimatedRows(round(lowLimit / unwindFactor.toDouble))
-            .withLHS(aPlan("CartesianProduct").withEstimatedRows(round(lowLimit / unwindFactor.toDouble))
-              .withChildren(
-                aPlan("AllNodesScan").withEstimatedRows(batchSize),
-                aPlan("AllNodesScan").withEstimatedRows(batchSize)
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      params = Map("x" -> 10), // Param so that unwind does not get auto-parameterized.
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithRuntimeDependantAssertion(
+        (plan, scenario) => {
+          val (lhsCard, rhsCard) = scenario.runtime.name match {
+            case "PIPELINED" => (batchSize, batchSize * Math.ceil(lowLimit / unwindFactor.toDouble / (batchSize * batchSize)).toLong)
+            case _ => (1L, Math.ceil(lowLimit / unwindFactor.toDouble).toLong)
+          }
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
+            .withLHS(includeSomewhere.aPlan("Limit").withEstimatedRows(lowLimit)
+              .withLHS(aPlan("Unwind").withEstimatedRows(lowLimit)
+                .withLHS(aPlan("Limit").withEstimatedRows(round(lowLimit / unwindFactor.toDouble))
+                  .withLHS(aPlan("CartesianProduct").withEstimatedRows(round(lowLimit / unwindFactor.toDouble))
+                    .withLHS(aPlan("AllNodesScan").withEstimatedRows(lhsCard))
+                    .withRHS(aPlan("AllNodesScan").withEstimatedRows(rhsCard))
+                  )
+                )
               )
             )
-          )
-        )
-      )
+        }
+      ))
   }
 
   test("should estimate rows with lowest limit selectivity when lowest limit is latest and cardinality is decreased between limits") {
@@ -358,47 +421,67 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val highLimit = 200000
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $highLimit WHERE n.prop > 5 RETURN n, m LIMIT $lowLimit")
+    val query = s"MATCH (n), (m) WITH n, m LIMIT $highLimit WHERE n.prop > 5 RETURN n, m LIMIT $lowLimit"
 
-    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
-      .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
-        .withLHS(aPlan("Filter").withEstimatedRows(lowLimit)
-          .withLHS(aPlan("Limit").withEstimatedRows(round((lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor)))
-            .withLHS(aPlan("CartesianProduct").withEstimatedRows(round((lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor)))
-              .withChildren(
-                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(batchSize),
-                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(batchSize * 6)
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithRuntimeDependantAssertion(
+        (plan, scenario) => {
+          val (lhsCard, rhsCard) = scenario.runtime.name match {
+            case "PIPELINED" => (batchSize, batchSize * Math.ceil(lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor / (batchSize * batchSize) ).toLong)
+            case _ => (1L, Math.ceil(lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor).toLong)
+          }
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
+            .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+              .withLHS(aPlan("Filter").withEstimatedRows(lowLimit)
+                .withLHS(aPlan("Limit").withEstimatedRows(round(lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))
+                  .withLHS(aPlan("CartesianProduct").withEstimatedRows(round(lowLimit / PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))
+                    .withLHS(includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(lhsCard))
+                    .withRHS(includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(rhsCard))
+                  )
+                )
               )
             )
-          )
-        )
-      )
+        }
+      ))
   }
 
   test("should estimate rows with lowest limit selectivity when lowest limit is earliest and cardinality is increased between limits") {
     val batchSize = databaseConfig()(GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small).asInstanceOf[Integer].toLong
     val nodeCount = 100
-    val lowLimit = 5
+    val lowLimit = 25
     val highLimit = 200000
     val unwindFactor = 100
     (0 until nodeCount).foreach(_ => createNode())
 
-    // Param so that unwind does not get auto-parameterized.
-    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $lowLimit UNWIND range(1, $unwindFactor) AS i RETURN n, m, $$x LIMIT $highLimit", Map("x" -> 10))
+    val query = s"MATCH (n), (m) WITH n, m LIMIT $lowLimit UNWIND range(1, $unwindFactor) AS i RETURN n, m, $$x LIMIT $highLimit"
 
-    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit * unwindFactor)
-      .withLHS(includeSomewhere.aPlan("Limit").withEstimatedRows(lowLimit * unwindFactor)
-        .withLHS(aPlan("Unwind").withEstimatedRows(lowLimit * unwindFactor)
-          .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
-            .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
-              .withChildren(
-                aPlan("AllNodesScan").withEstimatedRows(batchSize),
-                aPlan("AllNodesScan").withEstimatedRows(batchSize)
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      params = Map("x" -> 10), // Param so that unwind does not get auto-parameterized.
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithRuntimeDependantAssertion(
+        (plan, scenario) => {
+          val (lhsCard, rhsCard) = scenario.runtime.name match {
+            case "PIPELINED" => (batchSize, batchSize * Math.ceil(lowLimit / (batchSize * batchSize).toDouble).toLong)
+            case _ => (1L, lowLimit.toLong)
+          }
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit * unwindFactor)
+            .withLHS(includeSomewhere.aPlan("Limit").withEstimatedRows(lowLimit * unwindFactor)
+              .withLHS(aPlan("Unwind").withEstimatedRows(lowLimit * unwindFactor)
+                .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+                  .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
+                    .withLHS(aPlan("AllNodesScan").withEstimatedRows(lhsCard))
+                    .withRHS(aPlan("AllNodesScan").withEstimatedRows(rhsCard))
+                  )
+                )
               )
             )
-          )
-        )
-      )
+        }
+      ))
   }
 
   test("should estimate rows with lowest limit selectivity when lowest limit is earliest and cardinality is decreased between limits") {
@@ -408,21 +491,31 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val highLimit = 200000
     (0 until nodeCount).foreach(_ => createNode())
 
-    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $lowLimit WHERE n.prop > 5 RETURN n, m LIMIT $highLimit")
+    val query = s"MATCH (n), (m) WITH n, m LIMIT $lowLimit WHERE n.prop > 5 RETURN n, m LIMIT $highLimit"
 
-    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(round(lowLimit * PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))
-      .withLHS(aPlan("Limit").withEstimatedRows(round(lowLimit * PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))
-        .withLHS(aPlan("Filter").withEstimatedRows(round(lowLimit * PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))
-          .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
-            .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
-              .withChildren(
-                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(batchSize),
-                includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(batchSize * 2)
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithRuntimeDependantAssertion(
+        (plan, scenario) => {
+          val (lhsCard, rhsCard) = scenario.runtime.name match {
+            case "PIPELINED" => (batchSize, batchSize * Math.ceil(lowLimit / (batchSize * batchSize).toDouble).toLong)
+            case _ => (1L, lowLimit.toLong)
+          }
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(round(lowLimit * PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))
+            .withLHS(aPlan("Limit").withEstimatedRows(round(lowLimit * PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))
+              .withLHS(aPlan("Filter").withEstimatedRows(round(lowLimit * PlannerDefaults.DEFAULT_RANGE_SELECTIVITY.factor))
+                .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+                  .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
+                    .withLHS(includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(lhsCard))
+                    .withRHS(includeSomewhere.aPlan("AllNodesScan").withEstimatedRows(rhsCard))
+                  )
+                )
               )
             )
-          )
-        )
-      )
+        }
+      ))
   }
 
   test("should estimate rows with limit selectivity through Distinct") {
@@ -652,6 +745,34 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
           .withLHS(aPlan("NodeByLabelScan").withEstimatedRows(8))))
       // original: 10, fraction: 5/7.5
       .withLHS(aPlan("NodeByLabelScan").withEstimatedRows(7))
+  }
+
+  test("should estimate cartesian product effective cardinality as Volcano if it provides order") {
+    val nodes = 100
+    for(i <- 0 until 100 / 2) {
+      val a = createLabeledNode(Map("name" -> s"$i"), "Person")
+      val b = createLabeledNode(Map("name" -> s"$i"), "Person")
+      for (_ <- 0 until 8) {
+        relate(a, b)
+      }
+    }
+
+    graph.createIndex("Person", "name")
+
+    val query =
+      """CYPHER runtime=pipelined profile MATCH (p0:Person),
+        |      (p1:Person)
+        |OPTIONAL MATCH (p0)-->(p0_1)-->(p0_2)
+        |RETURN * ORDER BY p1.name
+        |""".stripMargin
+
+    val result = execute(query)
+
+    // this apply is initially a cartesian product, but eventually rewritten into an apply
+    result.executionPlanDescription() should includeSomewhere
+    .aPlan("Apply").withEstimatedRows(nodes * nodes)
+      .withRHS(aPlan("NodeByLabelScan").withEstimatedRows(nodes * nodes))
+      .withLHS(aPlan().withEstimatedRows(nodes))
   }
 
   private def createNodesAndRels(nodeCount: Int, relCount: Int) = {
