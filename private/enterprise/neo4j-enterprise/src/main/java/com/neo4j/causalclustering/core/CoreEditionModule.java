@@ -21,7 +21,7 @@ import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInst
 import com.neo4j.causalclustering.core.replication.ReplicationBenchmarkProcedure;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
-import com.neo4j.causalclustering.core.state.CoreDiscoveryModule;
+import com.neo4j.causalclustering.core.state.DiscoveryModule;
 import com.neo4j.causalclustering.diagnostics.GlobalTopologyStateDiagnosticProvider;
 import com.neo4j.causalclustering.diagnostics.RaftMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -531,9 +531,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     private CoreTopologyService createTopologyService( DatabaseStateService databaseStateService )
     {
         var firstStartupDetector = new DefaultDiscoveryFirstStartupDetector( clusterStateLayout );
-        var discoveryModule = new CoreDiscoveryModule( identityModule, discoveryServiceFactory, globalModule, sslPolicyLoader,
-                                                       firstStartupDetector, databaseStateService, panicService.panicker() );
-        return discoveryModule.topologyService();
+        var discoveryModule = new DiscoveryModule( discoveryServiceFactory, globalModule, sslPolicyLoader, databaseStateService, panicService.panicker() );
+        return discoveryModule.coreTopologyService( identityModule, firstStartupDetector);
     }
 
     @Override

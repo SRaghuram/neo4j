@@ -9,62 +9,50 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.client.ClusterClientReceptionist;
-import akka.pattern.AskTimeoutException;
-import akka.pattern.Patterns;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyListenerService;
-import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
-import com.neo4j.causalclustering.discovery.akka.common.RaftMemberKnownMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyMessage;
-import com.neo4j.causalclustering.discovery.akka.coretopology.RaftIdSetRequest;
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseStateActor;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
-import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
 import com.neo4j.causalclustering.error_handling.DbmsPanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.identity.CoreServerIdentity;
-import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
-import com.neo4j.configuration.CausalClusteringInternalSettings;
 
 import java.time.Clock;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.dbms.identity.ServerIdentity;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
@@ -78,40 +66,38 @@ import org.neo4j.util.VisibleForTesting;
 
 import static akka.actor.ActorRef.noSender;
 import static com.neo4j.causalclustering.error_handling.DbmsPanicReason.IrrecoverableDiscoveryFailure;
-import static java.lang.String.format;
 
-public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopologyService, Restartable
+public abstract class AkkaMemberTopologyService extends SafeLifecycle implements TopologyService, Restartable
 {
-    private final ActorSystemLifecycle actorSystemLifecycle;
+    protected final ActorSystemLifecycle actorSystemLifecycle;
     private final LogProvider logProvider;
-    private final RetryStrategy catchupAddressRetryStrategy;
-    private final ActorSystemRestarter actorSystemRestarter;
-    private final ServerSnapshotFactory serverSnapshotFactory;
-    private final JobScheduler jobScheduler;
-    private final CallableExecutor executor;
+    protected final RetryStrategy catchupAddressRetryStrategy;
+    protected final ActorSystemRestarter actorSystemRestarter;
+    protected final ServerSnapshotFactory serverSnapshotFactory;
+    protected final JobScheduler jobScheduler;
+    protected final CallableExecutor executor;
     private final Clock clock;
     private final ReplicatedDataMonitor replicatedDataMonitor;
     private final ClusterSizeMonitor clusterSizeMonitor;
-    private final DatabaseStateService databaseStateService;
-    private final Config config;
-    private final CoreServerIdentity myIdentity;
-    private final Log log;
-    private final Log userLog;
+    protected final DatabaseStateService databaseStateService;
+    protected final Config config;
+    protected final ServerIdentity myIdentity;
+    protected final Log log;
+    protected final Log userLog;
 
-    private final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
-    private final Map<NamedDatabaseId,LeaderInfo> localLeadersByDatabaseId = new ConcurrentHashMap<>();
-    private final Panicker panicker;
+    protected final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
+    protected final Panicker panicker;
 
-    private volatile boolean isRestarting;
-    private volatile ActorRef coreTopologyActorRef;
-    private volatile ActorRef directoryActorRef;
-    private volatile ActorRef databaseStateActorRef;
-    private volatile GlobalTopologyState globalTopologyState;
+    protected volatile boolean isRestarting;
+    protected volatile ActorRef coreTopologyActorRef;
+    protected volatile ActorRef directoryActorRef;
+    protected volatile ActorRef databaseStateActorRef;
+    protected volatile GlobalTopologyState globalTopologyState;
 
-    public AkkaCoreTopologyService( Config config, CoreServerIdentity myIdentity, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
-                                    LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, ActorSystemRestarter actorSystemRestarter,
-                                    ServerSnapshotFactory serverSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
-                                    DatabaseStateService databaseStateService, Panicker panicker )
+    public AkkaMemberTopologyService( Config config, ServerIdentity myIdentity, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
+                                      LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, ActorSystemRestarter actorSystemRestarter,
+                                      ServerSnapshotFactory serverSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
+                                      DatabaseStateService databaseStateService, Panicker panicker )
     {
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
@@ -181,12 +167,6 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         return actorSystemLifecycle.applicationActorOf( directoryProps, DirectoryActor.NAME );
     }
 
-    private Map<DatabaseId,LeaderInfo> localLeadershipsSnapshot()
-    {
-        return localLeadersByDatabaseId.entrySet().stream()
-                                       .collect( Collectors.toUnmodifiableMap( entry -> entry.getKey().databaseId(), Map.Entry::getValue ) );
-    }
-
     private ActorRef databaseStateActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> stateSink,
             ActorRef rrTopologyActor )
     {
@@ -204,12 +184,16 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
     private void publishInitialData( ActorRef... actorRefs )
     {
-        var serverSnapshot = serverSnapshotFactory.createSnapshot( databaseStateService, localLeadershipsSnapshot() );
+        var serverSnapshot = createServerSnapshot();
         for ( ActorRef actorRef : actorRefs )
         {
             actorRef.tell( new PublishInitialData( serverSnapshot ), noSender() );
         }
     }
+
+    protected abstract ServerSnapshot createServerSnapshot();
+
+    protected abstract void removeLeaderInfo( NamedDatabaseId namedDatabaseId );
 
     private void onCoreTopologyMessage( CoreTopologyMessage coreTopologyMessage )
     {
@@ -239,55 +223,6 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public SocketAddress lookupRaftAddress( RaftMemberId target )
-    {
-        return globalTopologyState.getCoreServerInfo( target ).map( CoreServerInfo::getRaftServer ).orElse( null );
-    }
-
-    @Override
-    public void addLocalCoreTopologyListener( Listener listener )
-    {
-        listenerService.addCoreTopologyListener( listener );
-        listener.onCoreTopologyChange( coreTopologyForDatabase( listener.namedDatabaseId() ).resolve( globalTopologyState::resolveRaftMemberForServer ) );
-    }
-
-    @Override
-    public void removeLocalCoreTopologyListener( Listener listener )
-    {
-        listenerService.removeCoreTopologyListener( listener );
-    }
-
-    @Override
-    public PublishRaftIdOutcome publishRaftId( RaftGroupId raftGroupId, RaftMemberId memberId ) throws TimeoutException
-    {
-        var coreTopologyActor = coreTopologyActorRef;
-        if ( coreTopologyActor != null )
-        {
-            var timeout = config.get( CausalClusteringInternalSettings.raft_id_publish_timeout );
-            var request = new RaftIdSetRequest( raftGroupId, memberId, timeout );
-            var idSetJob = Patterns.ask( coreTopologyActor, request, timeout )
-                                   .thenApplyAsync( this::checkOutcome, executor )
-                                   .toCompletableFuture();
-            try
-            {
-                // Although the idSetJob has a timeout it needs the actor system to enforce it.
-                // We have observed that the Akka system can hang and then the timeout never throws.
-                // So we timeout fetching this future because enforcing this timeout doesn't depend on Akka.
-                return idSetJob.get( timeout.toNanos(), TimeUnit.NANOSECONDS );
-            }
-            catch ( CompletionException | InterruptedException | ExecutionException e )
-            {
-                if ( e.getCause() instanceof AskTimeoutException )
-                {
-                    throw new TimeoutException( "Could not publish raft id within " + timeout.toSeconds() + " seconds" );
-                }
-                throw new RuntimeException( e.getCause() );
-            }
-        }
-        return PublishRaftIdOutcome.MAYBE_PUBLISHED;
-    }
-
-    @Override
     public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
         return globalTopologyState.resolveRaftMemberForServer( namedDatabaseId.databaseId(), serverId );
@@ -299,22 +234,6 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         return globalTopologyState.resolveServerForRaftMember( raftMemberId );
     }
 
-    private PublishRaftIdOutcome checkOutcome( Object response )
-    {
-        if ( !(response instanceof PublishRaftIdOutcome) )
-        {
-            throw new IllegalArgumentException( format( "Unexpected response when attempting to publish raftId. Expected %s, received %s",
-                                                        PublishRaftIdOutcome.class.getSimpleName(), response.getClass().getCanonicalName() ) );
-        }
-        return (PublishRaftIdOutcome) response;
-    }
-
-    @Override
-    public boolean canBootstrapDatabase( NamedDatabaseId namedDatabaseId )
-    {
-        return globalTopologyState.bootstrapState().canBootstrapRaft( namedDatabaseId );
-    }
-
     @Override
     public Future<?> scheduleRestart()
     {
@@ -323,13 +242,6 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
             log.warn( "Core topology service restart requested when restart already in progress." );
         }
         return executor.submit( this::restartSameThread );
-    }
-
-    @Override
-    public boolean didBootstrapDatabase( NamedDatabaseId namedDatabaseId )
-    {
-        var thisRaftMember = resolveRaftMemberForServer( namedDatabaseId, myIdentity.serverId() );
-        return globalTopologyState.bootstrapState().memberBootstrappedRaft( namedDatabaseId, thisRaftMember );
     }
 
     @VisibleForTesting
@@ -388,24 +300,9 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public void onRaftMemberKnown( NamedDatabaseId namedDatabaseId, RaftMemberId raftMemberId )
-    {
-        var coreTopologyActor = coreTopologyActorRef;
-        if ( coreTopologyActor != null )
-        {
-            coreTopologyActor.tell( new RaftMemberKnownMessage( namedDatabaseId, raftMemberId ), noSender() );
-        }
-    }
-
-    @Override
     public void onDatabaseStop( NamedDatabaseId namedDatabaseId )
     {
-        var removedInfo = localLeadersByDatabaseId.remove( namedDatabaseId );
-        if ( removedInfo != null )
-        {
-            log.info( "I am server %s. Removed leader info of member %s %s and term %s", serverId(), removedInfo.memberId(), namedDatabaseId,
-                      removedInfo.term() );
-        }
+        removeLeaderInfo( namedDatabaseId );
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
         {
@@ -424,55 +321,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public void setLeader( LeaderInfo newLeaderInfo, NamedDatabaseId namedDatabaseId )
-    {
-        localLeadersByDatabaseId.compute( namedDatabaseId, ( databaseId, leaderInfo ) ->
-        {
-            var currentLeaderInfo = leaderInfo != null ?  leaderInfo : LeaderInfo.INITIAL;
-            if ( currentLeaderInfo.term() < newLeaderInfo.term() )
-            {
-                log.info( "I am server %s. Updating leader info to member %s %s and term %s", serverId(), newLeaderInfo.memberId(), namedDatabaseId,
-                          newLeaderInfo.term() );
-                sendLeaderInfo( newLeaderInfo, namedDatabaseId );
-                return newLeaderInfo;
-            }
-            return currentLeaderInfo;
-        } );
-    }
-
-    @Override
-    public void handleStepDown( long term, NamedDatabaseId namedDatabaseId )
-    {
-        localLeadersByDatabaseId.computeIfPresent( namedDatabaseId, ( databaseId, currentLeaderInfo ) ->
-        {
-            var wasLeaderForTerm =
-                    Objects.equals( myIdentity.raftMemberId( namedDatabaseId ), currentLeaderInfo.memberId() ) &&
-                    term == currentLeaderInfo.term();
-
-            if ( wasLeaderForTerm )
-            {
-                log.info( "Step down event detected. This topology member, with MemberId %s, was leader for %s in term %s, now moving " +
-                          "to follower.", serverId(), namedDatabaseId, currentLeaderInfo.term() );
-
-                var newLeaderInfo = currentLeaderInfo.stepDown();
-                sendLeaderInfo( newLeaderInfo, namedDatabaseId );
-                return newLeaderInfo;
-            }
-            return currentLeaderInfo;
-        } );
-    }
-
-    @Override
-    public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, ServerId serverId )
-    {
-        var leaderInfo = localLeadersByDatabaseId.get( namedDatabaseId );
-        var raftMemberId = globalTopologyState.resolveRaftMemberForServer( namedDatabaseId.databaseId(), serverId );
-        if ( leaderInfo != null && Objects.equals( raftMemberId, leaderInfo.memberId() ) )
-        {
-            return RoleInfo.LEADER;
-        }
-        return globalTopologyState.role( namedDatabaseId, serverId );
-    }
+    public abstract RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, ServerId serverId );
 
     @Override
     public LeaderInfo getLeader( NamedDatabaseId namedDatabaseId )
@@ -545,15 +394,6 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     GlobalTopologyState topologyState()
     {
         return globalTopologyState;
-    }
-
-    private void sendLeaderInfo( LeaderInfo leaderInfo, NamedDatabaseId namedDatabaseId )
-    {
-        var directoryActor = directoryActorRef;
-        if ( directoryActor != null )
-        {
-            directoryActor.tell( new LeaderInfoSettingMessage( leaderInfo, namedDatabaseId ), noSender() );
-        }
     }
 
     private GlobalTopologyState newGlobalTopologyState( LogProvider logProvider, CoreTopologyListenerService listenerService )

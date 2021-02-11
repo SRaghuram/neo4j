@@ -49,7 +49,7 @@ class CoreTopologyChangeListenerTest
 
     private final ActorSystemLifecycle actorSystemLifecycle = Mockito.mock( ActorSystemLifecycle.class );
 
-    private final AkkaCoreTopologyService service = new AkkaCoreTopologyService(
+    private final AkkaMemberCoreTopologyService service = new AkkaMemberCoreTopologyService(
             Config.defaults(),
             myIdentity,
             actorSystemLifecycle,

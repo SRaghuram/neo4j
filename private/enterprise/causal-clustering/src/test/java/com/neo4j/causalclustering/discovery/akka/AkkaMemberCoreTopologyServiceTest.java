@@ -69,7 +69,7 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
-class AkkaCoreTopologyServiceTest
+class AkkaMemberCoreTopologyServiceTest
 {
     private Config config = Config.defaults();
     private CoreServerIdentity myIdentity = new InMemoryCoreServerIdentity();
@@ -85,7 +85,7 @@ class AkkaCoreTopologyServiceTest
     private ActorSystem system;
     private ActorSystemLifecycle systemLifecycle;
     private TestKit testKit;
-    private AkkaCoreTopologyService service;
+    private AkkaMemberCoreTopologyService service;
 
     @BeforeEach
     void setup()
@@ -108,7 +108,7 @@ class AkkaCoreTopologyServiceTest
                     return testKit.getRef();
                 } );
 
-        service = new AkkaCoreTopologyService(
+        service = new AkkaMemberCoreTopologyService(
                 config,
                 myIdentity,
                 systemLifecycle,
@@ -361,7 +361,7 @@ class AkkaCoreTopologyServiceTest
     @Test
     void shouldReportEmptyTopologiesAfterRestart() throws Exception
     {
-        testEmptyTopologiesAreReportedAfter( AkkaCoreTopologyService::restartSameThread );
+        testEmptyTopologiesAreReportedAfter( AkkaMemberTopologyService::restartSameThread );
     }
 
     @Test
@@ -434,7 +434,7 @@ class AkkaCoreTopologyServiceTest
         inOrder.verify( systemLifecycle, times( maxAkkaSystemRestartAttempts ) ).createClusterActorSystem( any() );
     }
 
-    private void testEmptyTopologiesAreReportedAfter( ThrowingConsumer<AkkaCoreTopologyService,Exception> testAction ) throws Exception
+    private void testEmptyTopologiesAreReportedAfter( ThrowingConsumer<AkkaMemberTopologyService,Exception> testAction ) throws Exception
     {
         var databaseId = randomNamedDatabaseId();
         var memberId1 = IdFactory.randomServerId();

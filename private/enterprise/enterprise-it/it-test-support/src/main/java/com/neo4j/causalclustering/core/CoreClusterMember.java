@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
+import com.neo4j.causalclustering.discovery.akka.AkkaMemberTopologyService;
 import com.neo4j.causalclustering.identity.CoreIdentityModule;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
@@ -391,7 +391,7 @@ public class CoreClusterMember implements ClusterMember
         try
         {
             var coreTopologyService = globalModule.getGlobalDependencies().resolveDependency( CoreTopologyService.class );
-            Cluster akkaCluster = ((AkkaCoreTopologyService) coreTopologyService).getAkkaCluster();
+            Cluster akkaCluster = ((AkkaMemberTopologyService) coreTopologyService).getAkkaCluster();
             return Optional.ofNullable( akkaCluster );
         }
         catch ( UnsatisfiedDependencyException | NullPointerException ignored )

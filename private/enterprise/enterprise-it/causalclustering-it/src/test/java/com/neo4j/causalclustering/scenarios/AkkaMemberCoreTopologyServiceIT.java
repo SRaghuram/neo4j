@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
-import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
+import com.neo4j.causalclustering.discovery.akka.AkkaMemberTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
 import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot;
@@ -39,9 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.test.ports.PortAuthority.allocatePort;
 
-class AkkaCoreTopologyServiceIT
+class AkkaMemberCoreTopologyServiceIT
 {
-    private AkkaCoreTopologyService service;
+    private AkkaMemberTopologyService service;
     private JobScheduler jobScheduler;
 
     @BeforeEach

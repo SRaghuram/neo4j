@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
+import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
@@ -36,17 +37,18 @@ import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
     @Override
-    public final AkkaCoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler,
-                                                              LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
-                                                              RetryStrategy catchupAddressRetryStrategy,
-                                                              SslPolicyLoader sslPolicyLoader, ServerSnapshotFactory serverSnapshotFactory,
-                                                              DiscoveryFirstStartupDetector firstStartupDetector,
-                                                              Monitors monitors, Clock clock, DatabaseStateService databaseStateService,
-                                                              Panicker panicker )
+    public final AkkaMemberCoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler,
+                                                                    LogProvider logProvider, LogProvider userLogProvider,
+                                                                    RemoteMembersResolver remoteMembersResolver,
+                                                                    RetryStrategy catchupAddressRetryStrategy,
+                                                                    SslPolicyLoader sslPolicyLoader, ServerSnapshotFactory serverSnapshotFactory,
+                                                                    DiscoveryFirstStartupDetector firstStartupDetector,
+                                                                    Monitors monitors, Clock clock, DatabaseStateService databaseStateService,
+                                                                    Panicker panicker )
     {
         ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forConfig( config );
 
-        return new AkkaCoreTopologyService(
+        return new AkkaMemberCoreTopologyService(
                 config,
                 myIdentity,
                 actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, firstStartupDetector ),
@@ -97,5 +99,30 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
         SslPolicy sslPolicy = sslPolicyLoader.hasPolicyForSource( CLUSTER ) ? sslPolicyLoader.getPolicy( CLUSTER ) : null;
         Optional<SSLEngineProvider> sslEngineProvider = Optional.ofNullable( sslPolicy ).map( AkkaDiscoverySSLEngineProvider::new );
         return new ActorSystemFactory( sslEngineProvider, firstStartupDetector, config, logProvider );
+    }
+
+    @Override
+    public TopologyService standaloneTopologyService( Config config, ServerIdentity myIdentity, JobScheduler jobScheduler, LogProvider logProvider,
+                                                      LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
+                                                      RetryStrategy topologyServiceRetryStrategy, SslPolicyLoader sslPolicyLoader,
+                                                      ServerSnapshotFactory serverSnapshotFactory, Monitors monitors, Clock clock,
+                                                      DatabaseStateService databaseStateService, Panicker panicker )
+    {
+        ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forConfig( config );
+        return new AkkaMemberStandaloneTopologyService(
+                config,
+                myIdentity,
+                actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, () -> true ),
+                logProvider,
+                userLogProvider,
+                topologyServiceRetryStrategy,
+                actorSystemRestarter,
+                serverSnapshotFactory,
+                jobScheduler,
+                clock,
+                monitors,
+                databaseStateService,
+                panicker
+        );
     }
 }

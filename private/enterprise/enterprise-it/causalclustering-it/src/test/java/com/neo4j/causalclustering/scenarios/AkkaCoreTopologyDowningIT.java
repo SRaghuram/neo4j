@@ -12,7 +12,8 @@ import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.ActorSystemRestarter;
-import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
+import com.neo4j.causalclustering.discovery.akka.AkkaMemberCoreTopologyService;
+import com.neo4j.causalclustering.discovery.akka.AkkaMemberTopologyService;
 import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
@@ -273,7 +274,7 @@ class AkkaCoreTopologyDowningIT
         DatabaseStateService databaseStateService = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
 
         var myIdentity = new InMemoryCoreServerIdentity();
-        AkkaCoreTopologyService service = new AkkaCoreTopologyService(
+        AkkaMemberTopologyService service = new AkkaMemberCoreTopologyService(
                 config,
                 myIdentity,
                 actorSystemLifecycle,
@@ -368,16 +369,16 @@ class AkkaCoreTopologyDowningIT
 
     private static class TopologyServiceComponents
     {
-        private final AkkaCoreTopologyService topologyService;
+        private final AkkaMemberTopologyService topologyService;
         private final TestActorSystemLifecycle actorSystemLifecycle;
 
-        private TopologyServiceComponents( AkkaCoreTopologyService topologyService, TestActorSystemLifecycle actorSystemLifecycle )
+        private TopologyServiceComponents( AkkaMemberTopologyService topologyService, TestActorSystemLifecycle actorSystemLifecycle )
         {
             this.topologyService = topologyService;
             this.actorSystemLifecycle = actorSystemLifecycle;
         }
 
-        AkkaCoreTopologyService topologyService()
+        AkkaMemberTopologyService topologyService()
         {
             return topologyService;
         }

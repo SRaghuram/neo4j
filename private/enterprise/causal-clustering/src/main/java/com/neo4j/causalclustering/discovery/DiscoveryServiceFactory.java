@@ -29,6 +29,14 @@ public interface DiscoveryServiceFactory
                                              Clock clock, DatabaseStateService databaseStateService, Panicker panicker );
 
     TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, ServerIdentity myIdentity,
-            RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader, ServerSnapshotFactory serverSnapshotFactory, Clock clock,
-            DatabaseStateService databaseStateService );
+                                                RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader,
+                                                ServerSnapshotFactory serverSnapshotFactory, Clock clock,
+                                                DatabaseStateService databaseStateService );
+
+    TopologyService standaloneTopologyService( Config config, ServerIdentity myIdentity, JobScheduler jobScheduler, LogProvider logProvider,
+                                               LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
+                                               RetryStrategy topologyServiceRetryStrategy,
+                                               SslPolicyLoader sslPolicyLoader, ServerSnapshotFactory serverSnapshotFactory,
+                                               Monitors monitors,
+                                               Clock clock, DatabaseStateService databaseStateService, Panicker panicker );
 }
