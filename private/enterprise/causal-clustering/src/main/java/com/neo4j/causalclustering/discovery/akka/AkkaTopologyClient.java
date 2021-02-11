@@ -131,16 +131,6 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public void onRaftMemberKnown( NamedDatabaseId namedDatabaseId )
-    {
-        var clientTopologyActor = clientTopologyActorRef;
-        if ( clientTopologyActor != null )
-        {
-            clientTopologyActor.tell( new RaftMemberKnownMessage( namedDatabaseId ), noSender() );
-        }
-    }
-
-    @Override
     public void onDatabaseStop( NamedDatabaseId namedDatabaseId )
     {
         var clientTopologyActor = clientTopologyActorRef;

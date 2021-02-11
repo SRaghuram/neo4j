@@ -53,11 +53,6 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public void onRaftMemberKnown( NamedDatabaseId namedDatabaseId )
-    {
-    }
-
-    @Override
     public void onDatabaseStop( NamedDatabaseId namedDatabaseId )
     {
     }

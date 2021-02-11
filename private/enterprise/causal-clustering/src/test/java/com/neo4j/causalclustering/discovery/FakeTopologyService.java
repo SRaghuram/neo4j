@@ -166,11 +166,6 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public void onRaftMemberKnown( NamedDatabaseId namedDatabaseId )
-    {
-    }
-
-    @Override
     public void onDatabaseStop( NamedDatabaseId namedDatabaseId )
     {
     }

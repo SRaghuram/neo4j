@@ -22,6 +22,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
  */
 public interface CoreTopologyService extends TopologyService
 {
+    void onRaftMemberKnown( NamedDatabaseId namedDatabaseId );
 
     SocketAddress lookupRaftAddress( RaftMemberId target );
 

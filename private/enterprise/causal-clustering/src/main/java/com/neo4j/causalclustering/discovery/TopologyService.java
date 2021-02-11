@@ -25,8 +25,6 @@ public interface TopologyService extends Lifecycle, DatabaseStateChangedListener
 {
     void onDatabaseStart( NamedDatabaseId namedDatabaseId );
 
-    void onRaftMemberKnown( NamedDatabaseId namedDatabaseId );
-
     void onDatabaseStop( NamedDatabaseId namedDatabaseId );
 
     ServerId serverId();
