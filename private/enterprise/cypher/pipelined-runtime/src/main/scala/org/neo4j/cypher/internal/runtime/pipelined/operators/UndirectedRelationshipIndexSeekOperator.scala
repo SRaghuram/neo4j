@@ -9,6 +9,7 @@ import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.field
@@ -20,7 +21,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.not
-import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
@@ -35,6 +35,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.singleRelationship
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -163,7 +165,7 @@ trait UndirectedSeek {
           block(
             singleRelationship(load[Long](localRelVar), loadField(relScanCursorField)),
             invokeStatic(method[Preconditions, Unit, Boolean, String]("checkState"),
-              profilingCursorNext[RelationshipScanCursor](loadField(relScanCursorField), id, doProfile, codeGen.namer), constant("Missing relationship")),
+              cursorNext[RelationshipScanCursor](loadField(relScanCursorField)), constant("Missing relationship")),
             codeGen.setLongAt(startOffset, invoke(loadField(relScanCursorField), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
             codeGen.setLongAt(endOffset, invoke(loadField(relScanCursorField), method[RelationshipScanCursor, Long]("targetNodeReference")))
           )
@@ -178,7 +180,10 @@ trait UndirectedSeek {
         doIfInnerCantContinue(
           block(
             setField(forwardDirection, not(loadField(forwardDirection))),
-            innermost.setUnlessPastLimit(canContinue, or(not(loadField(forwardDirection)), profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile, codeGen.namer))),
+            condition(loadField(forwardDirection)) {
+              innermost.setUnlessPastLimit(canContinue, profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile, codeGen.namer))
+            },
+            conditionallyProfileRow(not(loadField(forwardDirection)), id, doProfile)
           )
         ),
         endInnerLoop

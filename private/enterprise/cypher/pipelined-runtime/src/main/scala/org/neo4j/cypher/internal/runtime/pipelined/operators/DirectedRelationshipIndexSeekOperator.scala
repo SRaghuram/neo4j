@@ -70,6 +70,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.RelValueIndexCursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.asStorableValue
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexOrder
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexReadSession
@@ -186,6 +187,9 @@ class DirectedRelationshipIndexSeekTask(inputMorsel: Morsel,
   override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
     if (relCursor != null) {
       relCursor.setTracer(event)
+    }
+    if (scanCursor != null) {
+      scanCursor.setTracer(event)
     }
   }
 
@@ -317,7 +321,7 @@ abstract class BaseRelationshipIndexSeekTaskTemplate(inner: OperatorTaskTemplate
         codeGen.setLongAt(relOffset, load[Long](localRelVar)),
         singleRelationship(load[Long](localRelVar), loadField(relScanCursorField)),
         invokeStatic(method[Preconditions, Unit, Boolean, String]("checkState"),
-          profilingCursorNext[RelationshipScanCursor](loadField(relScanCursorField), id, doProfile, codeGen.namer), constant("Missing relationship")),
+          cursorNext[RelationshipScanCursor](loadField(relScanCursorField)), constant("Missing relationship")),
         codeGen.setLongAt(startOffset, invoke(loadField(relScanCursorField), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
         codeGen.setLongAt(endOffset, invoke(loadField(relScanCursorField), method[RelationshipScanCursor, Long]("targetNodeReference"))),
         cacheProperties,
@@ -653,12 +657,14 @@ object BaseManyQueriesRelationshipIndexSeekTaskTemplate {
                     order: IndexOrder,
                     needsValues: Boolean,
                     read: Read,
-                    cursorPools: CursorPools): Array[RelationshipValueIndexCursor] = {
+                    cursorPools: CursorPools,
+                    tracer: KernelReadTracer): Array[RelationshipValueIndexCursor] = {
     val cursors = new Array[RelationshipValueIndexCursor](predicates.length)
     val pool = cursorPools.relationshipValueIndexCursorPool
     var i = 0
     while (i < cursors.length) {
       val cursor = pool.allocate()
+      cursor.setTracer(tracer)
       read.relationshipIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, needsValues || order != IndexOrder.NONE), predicates(i))
       cursors(i) = cursor
       i += 1
@@ -678,13 +684,15 @@ object BaseManyQueriesRelationshipIndexSeekTaskTemplate {
                              order: IndexOrder,
                              needsValues: Boolean,
                              read: Read,
-                             cursorPools: CursorPools): Array[RelationshipValueIndexCursor] = {
+                             cursorPools: CursorPools,
+                             tracer: KernelReadTracer): Array[RelationshipValueIndexCursor] = {
     val combinedPredicates = combine(predicates)
     val cursors = new Array[RelationshipValueIndexCursor](combinedPredicates.length)
     val pool = cursorPools.relationshipValueIndexCursorPool
     var i = 0
     while (i < cursors.length) {
       val cursor = pool.allocate()
+      cursor.setTracer(tracer)
       val queries = combinedPredicates(i)
       val reallyNeedsValues = needsValues || order != IndexOrder.NONE
       val actualValues =
@@ -735,13 +743,14 @@ class ManyQueriesDirectedRelationshipIndexSeekTaskTemplate(inner: OperatorTaskTe
       seekValues = seekExpression.generateSeekValues.map(_ ()).map(v => v.copy(ir = nullCheckIfRequired(v)))
     }
     invokeStatic(
-      method[BaseManyQueriesRelationshipIndexSeekTaskTemplate, Array[RelationshipValueIndexCursor], Array[IndexQuery], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("createCursors"),
+      method[BaseManyQueriesRelationshipIndexSeekTaskTemplate, Array[RelationshipValueIndexCursor], Array[IndexQuery], IndexReadSession, IndexOrder, Boolean, Read, CursorPools, KernelReadTracer]("createCursors"),
       seekExpression.generatePredicate(seekValues.map(_.ir)),
       indexReadSession(queryIndexId),
       indexOrder(order),
       constant(needsValues),
       loadField(DATA_READ),
-      CURSOR_POOL)
+      CURSOR_POOL,
+      loadField(executionEventField))
   }
   override def genExpressions: Seq[IntermediateExpression] = seekValues
 }
@@ -774,13 +783,14 @@ class CompositeDirectedRelationshipIndexSeekTaskTemplate(inner: OperatorTaskTemp
       case (vs, p) => p(vs.map(_.ir))
     }
     invokeStatic(
-      method[BaseManyQueriesRelationshipIndexSeekTaskTemplate, Array[RelationshipValueIndexCursor], Array[Array[IndexQuery]], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("compositeCreateCursors"),
+      method[BaseManyQueriesRelationshipIndexSeekTaskTemplate, Array[RelationshipValueIndexCursor], Array[Array[IndexQuery]], IndexReadSession, IndexOrder, Boolean, Read, CursorPools, KernelReadTracer]("compositeCreateCursors"),
       arrayOf[Array[IndexQuery]](predicates:_*),
       indexReadSession(queryIndexId),
       indexOrder(order),
       constant(needsValues),
       loadField(DATA_READ),
-      CURSOR_POOL)
+      CURSOR_POOL,
+      loadField(executionEventField))
   }
   override def genExpressions: Seq[IntermediateExpression] = seekValues.flatten
   private def compile(generators: Seq[() => IntermediateExpression]): Seq[IntermediateExpression] = generators.map(_())
