@@ -39,6 +39,7 @@ import org.neo4j.internal.id.FreeIds;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.internal.id.IdValidator;
 import org.neo4j.internal.id.indexed.IndexedIdGenerator;
 import org.neo4j.internal.recordstorage.RecordNodeCursor;
 import org.neo4j.internal.recordstorage.RecordRelationshipScanCursor;
@@ -360,8 +361,8 @@ class HighLimitStoreScanTest
         {
             boolean shouldRequireSecondaryUnit = random.nextInt( 4 ) == 0;
             long max = shouldRequireSecondaryUnit ? 1L << 50 : 1L << 32;
-            record.initialize( true, random.nextLong( max ), random.nextLong( max ), random.nextLong( max ), random.nextInt( 1 << 16 ), random.nextLong( max ),
-                    random.nextLong( max ), random.nextLong( max ), random.nextLong( max ), false, false );
+            record.initialize( true, randomId( max ), randomId( max ), randomId( max ), random.nextInt( 1 << 16 ), randomId( max ),
+                    randomId( max ), randomId( max ), randomId( max ), false, false );
             record.setCreated();
         }
         return record;
@@ -375,11 +376,21 @@ class HighLimitStoreScanTest
         {
             boolean shouldRequireSecondaryUnit = random.nextInt( 4 ) == 0;
             long max = shouldRequireSecondaryUnit ? 1L << 50 : 1L << 32;
-            record.initialize( true, random.nextLong( max ), random.nextBoolean(), random.nextLong( max ),
-                    DynamicNodeLabels.dynamicPointer( random.nextLong( max ) ) );
+            record.initialize( true, randomId( max ), random.nextBoolean(), randomId( max ), DynamicNodeLabels.dynamicPointer( randomId( max ) ) );
             record.setCreated();
         }
         return record;
+    }
+
+    private long randomId( long max )
+    {
+        long id;
+        do
+        {
+            id = random.nextLong( max );
+        }
+        while ( IdValidator.isReservedId( id ) );
+        return id;
     }
 
     private NodeRecord copyToRecord( NodeRecord cursor )
