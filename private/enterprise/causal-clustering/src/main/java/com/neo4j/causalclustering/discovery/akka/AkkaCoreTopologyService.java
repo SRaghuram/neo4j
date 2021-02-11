@@ -388,12 +388,12 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public void onRaftMemberKnown( NamedDatabaseId namedDatabaseId )
+    public void onRaftMemberKnown( NamedDatabaseId namedDatabaseId, RaftMemberId raftMemberId )
     {
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
         {
-            coreTopologyActor.tell( new RaftMemberKnownMessage( namedDatabaseId ), noSender() );
+            coreTopologyActor.tell( new RaftMemberKnownMessage( namedDatabaseId, raftMemberId ), noSender() );
         }
     }
 

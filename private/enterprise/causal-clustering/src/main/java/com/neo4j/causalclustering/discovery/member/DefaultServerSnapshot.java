@@ -32,8 +32,9 @@ public final class DefaultServerSnapshot implements ServerSnapshot
     private final Map<DatabaseId,RaftMemberId> databaseMemberships;
     private final Map<DatabaseId,LeaderInfo> databaseLeaderships;
 
-    private DefaultServerSnapshot( Map<DatabaseId,RaftMemberId> databaseMemberships, Map<DatabaseId,DatabaseState> databaseStates,
-            Map<DatabaseId,LeaderInfo> databaseLeaderships )
+    public DefaultServerSnapshot( Map<DatabaseId,RaftMemberId> databaseMemberships,
+                                   Map<DatabaseId,DatabaseState> databaseStates,
+                                   Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
         this.databaseStates = databaseStates;
         this.databaseMemberships = databaseMemberships;

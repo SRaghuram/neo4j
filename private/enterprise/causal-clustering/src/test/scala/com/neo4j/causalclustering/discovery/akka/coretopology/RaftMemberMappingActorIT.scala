@@ -16,10 +16,12 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.common.RaftMemberKnownMessage
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseServer
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
+import com.neo4j.causalclustering.discovery.member.DefaultServerSnapshot
 import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
 import com.neo4j.causalclustering.identity.RaftMemberId
+import org.neo4j.dbms.identity.ServerId
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository
@@ -38,6 +40,18 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
 
       Then("the initial mappings should be published")
       expectUpdateWithDatabase(data, namedDatabaseIds, raftMemberIds, 1)
+    }
+
+    "send initial data for non cores (databases with memberships)" in new Fixture {
+      // Standalone will also start the RaftMemberMappingActor through the Core Topology Actor
+      When("PublishInitialData request received for databases without raft memberships")
+      val snapDbsWithoutMemberships =
+        new DefaultServerSnapshot(Map.empty[DatabaseId, RaftMemberId].asJava, databaseMemberships.asJava, Map.empty[DatabaseId, LeaderInfo].asJava)
+
+      replicatedDataActorRef ! new PublishInitialData(snapDbsWithoutMemberships)
+
+      Then("publish an empty initial mappings")
+      expectUpdateWithDatabase(LWWMap.empty[DatabaseServer, RaftMemberId], Set.empty[NamedDatabaseId], Set.empty[RaftMemberId], Set.empty[ServerId], 1)
     }
 
     "send metadata to core topology actor on update" in new Fixture {
@@ -88,8 +102,8 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
       collectReplicatorUpdates(data, 1)
 
       When("receive both start messages")
-      replicatedDataActorRef ! new RaftMemberKnownMessage(namedDatabaseId1)
-      replicatedDataActorRef ! new RaftMemberKnownMessage(namedDatabaseId2)
+      replicatedDataActorRef ! new RaftMemberKnownMessage(namedDatabaseId1, raftMemberId1)
+      replicatedDataActorRef ! new RaftMemberKnownMessage(namedDatabaseId2, raftMemberId2)
 
       Then("update replicator")
       expectUpdateWithDatabase(namedDatabaseId1, raftMemberId1)
@@ -105,8 +119,8 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
       And("initial update")
       replicatedDataActorRef ! new PublishInitialData(snapshot)
       And("both databases started")
-      replicatedDataActorRef ! new RaftMemberKnownMessage(namedDatabaseId1)
-      replicatedDataActorRef ! new RaftMemberKnownMessage(namedDatabaseId2)
+      replicatedDataActorRef ! new RaftMemberKnownMessage(namedDatabaseId1, raftMemberId1)
+      replicatedDataActorRef ! new RaftMemberKnownMessage(namedDatabaseId2, raftMemberId2)
 
       val replicatedData = expectUpdateWithDatabase(data,
         namedDatabaseIds + namedDatabaseId1 + namedDatabaseId2, raftMemberIds + raftMemberId1 + raftMemberId2, 3)
@@ -131,10 +145,11 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
     val namedDatabaseIds = Set("system", "not_system").map(databaseIdRepository.getRaw)
     val raftMemberIds = namedDatabaseIds.map(identityModule.raftMemberId)
     val stateService = databaseStateService(namedDatabaseIds)
+    val databaseMemberships = namedDatabaseIds.map(namedDatabaseId => (namedDatabaseId.databaseId(), stateService.stateOfDatabase(namedDatabaseId))).toMap
     val snapshot = new TestCoreServerSnapshot(identityModule, stateService, Map.empty[DatabaseId, LeaderInfo].asJava)
 
     val replicatedDataActorRef = system.actorOf(RaftMemberMappingActor.props(
-      cluster, replicator.ref, coreTopologyProbe.ref, identityModule, monitor))
+      cluster, replicator.ref, coreTopologyProbe.ref, identityModule.serverId(), monitor))
 
     def collectReplicatorUpdates(original: LWWMap[DatabaseServer, RaftMemberId], count: Int): LWWMap[DatabaseServer, RaftMemberId] = {
       val update = expectReplicatorUpdates(replicator, dataKey)
@@ -147,18 +162,26 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
     }
 
     def expectUpdateWithDatabase(namedDatabaseId: NamedDatabaseId, raftMemberId: RaftMemberId): LWWMap[DatabaseServer, RaftMemberId] = {
-      expectUpdateWithDatabase(LWWMap.create[DatabaseServer, RaftMemberId], Set(namedDatabaseId), Set(raftMemberId), 1)
+      expectUpdateWithDatabase(LWWMap.create[DatabaseServer, RaftMemberId], Set(namedDatabaseId), Set(raftMemberId), Set(myself), 1)
     }
 
     def expectUpdateWithDatabase(initial: LWWMap[DatabaseServer, RaftMemberId],
                                  namedDatabaseIds: Set[NamedDatabaseId],
                                  raftMemberIds: Set[RaftMemberId],
                                  messageCount: Int): LWWMap[DatabaseServer, RaftMemberId] = {
+      expectUpdateWithDatabase(initial, namedDatabaseIds, raftMemberIds, Set(myself), messageCount)
+    }
+
+    def expectUpdateWithDatabase(initial: LWWMap[DatabaseServer, RaftMemberId],
+                                 namedDatabaseIds: Set[NamedDatabaseId],
+                                 raftMemberIds: Set[RaftMemberId],
+                                 serverIds : Set[ServerId],
+                                 messageCount: Int): LWWMap[DatabaseServer, RaftMemberId] = {
       namedDatabaseIds.size should equal(raftMemberIds.size)
       val state = collectReplicatorUpdates(initial, messageCount)
       val data = state.entries
       data.keySet.map(_.databaseId) should contain theSameElementsAs namedDatabaseIds.map(_.databaseId)
-      data.keySet.map(_.serverId) should contain only myself
+      data.keySet.map(_.serverId) should contain theSameElementsAs  serverIds
       data.values should contain theSameElementsAs raftMemberIds
       state
     }

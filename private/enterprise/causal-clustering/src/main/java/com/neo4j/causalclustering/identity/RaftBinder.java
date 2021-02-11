@@ -143,7 +143,7 @@ public class RaftBinder implements Supplier<Optional<RaftGroupId>>
         /* The binding protocol towards other servers has to be re-written if we are to support random RaftMemberIDs. */
         var raftMemberId = new RaftMemberId( myIdentity.serverId().uuid() );
         myIdentity.createMemberId( namedDatabaseId, raftMemberId );
-        topologyService.onRaftMemberKnown( namedDatabaseId );
+        topologyService.onRaftMemberKnown( namedDatabaseId, raftMemberId );
 
         if ( isInitialDatabase() )
         {
@@ -163,7 +163,7 @@ public class RaftBinder implements Supplier<Optional<RaftGroupId>>
         validateRaftId( raftGroupId, namedDatabaseId );
 
         var memberId = myIdentity.loadMemberId( namedDatabaseId );
-        topologyService.onRaftMemberKnown( namedDatabaseId );
+        topologyService.onRaftMemberKnown( namedDatabaseId, memberId );
         awaitPublishRaftId( bindingConditions, raftGroupId, memberId );
 
         monitor.boundToRaftFromDisk( namedDatabaseId, myIdentity.raftMemberId( namedDatabaseId ) );

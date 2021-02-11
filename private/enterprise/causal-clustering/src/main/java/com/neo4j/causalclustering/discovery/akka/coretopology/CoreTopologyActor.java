@@ -21,7 +21,6 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.RaftMemberKnownMessage;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
-import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -33,6 +32,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.dbms.identity.ServerIdentity;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.util.VisibleForTesting;
 
@@ -51,7 +51,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
             Cluster cluster,
             TopologyBuilder topologyBuilder,
             Config config,
-            CoreServerIdentity myIdentity,
+            ServerIdentity myIdentity,
             ReplicatedDataMonitor replicatedDataMonitor,
             ClusterSizeMonitor clusterSizeMonitor )
     {
@@ -94,7 +94,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
             Cluster cluster,
             TopologyBuilder topologyBuilder,
             Config config,
-            CoreServerIdentity myIdentity,
+            ServerIdentity myIdentity,
             ReplicatedDataMonitor replicatedDataMonitor,
             ClusterSizeMonitor clusterSizeMonitor )
     {
@@ -111,7 +111,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         this.config = config;
 
         // Children, who will be sending messages to us
-        mappingActor = getContext().actorOf( RaftMemberMappingActor.props( cluster, replicator, getSelf(), myIdentity, replicatedDataMonitor ) );
+        mappingActor = getContext().actorOf( RaftMemberMappingActor.props( cluster, replicator, getSelf(), myIdentity.serverId(), replicatedDataMonitor ) );
         metadataActor = getContext().actorOf(
                 MetadataActor.props( cluster, replicator, getSelf(), databaseStateActor, mappingActor, config, replicatedDataMonitor, myIdentity.serverId() ) );
         ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, config ) );

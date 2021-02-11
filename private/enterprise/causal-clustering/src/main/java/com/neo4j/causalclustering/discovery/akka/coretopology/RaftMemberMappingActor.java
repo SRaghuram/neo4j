@@ -17,12 +17,13 @@ import com.neo4j.causalclustering.discovery.akka.common.RaftMemberKnownMessage;
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseServer;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
-import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
+import java.util.Map;
 import java.util.Objects;
 
 import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.RAFT_MEMBER_MAPPING;
 
@@ -31,7 +32,7 @@ import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDat
  */
 public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<DatabaseServer,RaftMemberId>>
 {
-    static Props props( Cluster cluster, ActorRef replicator, ActorRef topologyActor, CoreServerIdentity myIdentity,
+    static Props props( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ServerId myIdentity,
             ReplicatedDataMonitor monitor )
     {
         return Props.create(
@@ -39,9 +40,9 @@ public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<Datab
     }
 
     private final ActorRef topologyActor;
-    private final CoreServerIdentity myIdentity;
+    private final ServerId myIdentity;
 
-    private RaftMemberMappingActor( Cluster cluster, ActorRef replicator, ActorRef topologyActor, CoreServerIdentity myIdentity,
+    private RaftMemberMappingActor( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ServerId myIdentity,
             ReplicatedDataMonitor monitor )
     {
         super( cluster, replicator, LWWMapKey::create, LWWMap::empty, RAFT_MEMBER_MAPPING, monitor );
@@ -59,15 +60,15 @@ public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<Datab
 
     private void handleRaftMemberKnownMessage( RaftMemberKnownMessage message )
     {
-        var raftMemberId = myIdentity.raftMemberId( message.namedDatabaseId() );
-        var mapping = new DatabaseServer( message.namedDatabaseId().databaseId(), myIdentity.serverId() );
+        var raftMemberId = message.raftMemberId();
+        var mapping = new DatabaseServer( message.namedDatabaseId().databaseId(), myIdentity );
         log().debug( "add mapping {}", mapping );
         modifyReplicatedData( key, map -> map.put( cluster, mapping, raftMemberId ) );
     }
 
     private void handleDatabaseStoppedMessage( DatabaseStoppedMessage message )
     {
-        var mapping = new DatabaseServer( message.namedDatabaseId().databaseId(), myIdentity.serverId() );
+        var mapping = new DatabaseServer( message.namedDatabaseId().databaseId(), myIdentity );
         log().debug( "remove mapping {}", mapping );
         modifyReplicatedData( key, map -> map.remove( cluster, mapping ) );
     }
@@ -75,19 +76,21 @@ public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<Datab
     @Override
     public void sendInitialDataToReplicator( ServerSnapshot serverSnapshot )
     {
-        var serverId = myIdentity.serverId();
-        var localMappings = serverSnapshot.discoverableDatabases().stream()
-                                          .map( databaseId -> new DatabaseServer( databaseId, serverId ) )
-                                          .reduce( LWWMap.create(), this::addMapping, LWWMap::merge );
+        var localDiscoverableDbs = serverSnapshot.discoverableDatabases();
+        var raftMemberPerLocalDatabase = serverSnapshot.databaseMemberships().entrySet().stream()
+                                                       .filter( en -> localDiscoverableDbs.contains( en.getKey() ) )
+                                                       .reduce( LWWMap.<DatabaseServer,RaftMemberId>create(), this::addRaftMember, LWWMap::merge );
 
-        log().debug( "add initial mappings {}", localMappings );
-        modifyReplicatedData( key, map -> map.merge( localMappings ) );
+        log().debug( "add initial mappings {}", raftMemberPerLocalDatabase );
+        modifyReplicatedData( key, map -> map.merge( raftMemberPerLocalDatabase ) );
     }
 
-    private LWWMap<DatabaseServer,RaftMemberId> addMapping( LWWMap<DatabaseServer,RaftMemberId> acc,
-            DatabaseServer key )
+    private LWWMap<DatabaseServer,RaftMemberId> addRaftMember( LWWMap<DatabaseServer,RaftMemberId> acc, Map.Entry<DatabaseId,RaftMemberId> dbMembership )
     {
-        return acc.put( cluster, key, myIdentity.raftMemberId( key.databaseId() ) );
+        var dbId = dbMembership.getKey();
+        var dbServer = new DatabaseServer( dbId, myIdentity );
+        var raftMemberId = dbMembership.getValue();
+        return acc.put( cluster, dbServer, raftMemberId );
     }
 
     private void removeDataFromReplicator( CleanupMessage message )
