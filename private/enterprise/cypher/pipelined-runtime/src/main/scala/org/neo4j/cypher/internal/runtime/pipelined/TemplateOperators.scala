@@ -1132,7 +1132,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
           }
         )
 
-      case CompositeQueryExpression(parts) =>
+      case composite@CompositeQueryExpression(parts) =>
         require(parts.lengthCompare(properties.length) == 0)
         val predicates = parts.zip(properties).flatMap {
           case (e, p) => computeCompositeQueries(e, p, plan.id)
@@ -1151,7 +1151,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.indexRegistrator.registerQueryIndex(label, properties),
               order,
               ctx.argumentSizes(plan.id),
-              needsLockingUnique)(ctx.expressionCompiler)
+              needsLockingUnique && composite.exactOnly)(ctx.expressionCompiler)
         }
 
       case ExistenceQueryExpression() =>
