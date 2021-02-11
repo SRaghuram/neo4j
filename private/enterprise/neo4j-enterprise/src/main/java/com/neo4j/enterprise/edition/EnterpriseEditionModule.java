@@ -5,14 +5,23 @@
  */
 package com.neo4j.enterprise.edition;
 
+import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
+import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
+import com.neo4j.causalclustering.core.state.DiscoveryModule;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
+import com.neo4j.causalclustering.error_handling.DbmsPanicker;
+import com.neo4j.causalclustering.error_handling.DefaultPanicService;
+import com.neo4j.causalclustering.error_handling.PanicService;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.EnterpriseEditionSettings;
 import com.neo4j.configuration.FabricEnterpriseConfig;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphDbmsModel;
@@ -57,6 +66,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.dbms.identity.StandaloneIdentityModule;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -96,6 +106,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
     private final Dependencies dependencies;
+    private final PanicService panicService;
+    private final StandaloneIdentityModule identityModule;
     private final SecurityLog securityLog;
     private DatabaseStartAborter databaseStartAborter;
 
@@ -115,6 +127,10 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.Single( globalModule.getGlobalLife(), dependencies, globalModule.getLogService() );
         SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalModule.getGlobalConfig() );
         dependencies.satisfyDependency( settingsWhiteList );
+        panicService = new DefaultPanicService( globalModule.getJobScheduler(), globalModule.getLogService(),
+                DbmsPanicker.buildFor( globalModule.getGlobalConfig(), globalModule.getLogService() ) );
+        identityModule = StandaloneIdentityModule.fromGlobalModule( globalModule );
+        dependencies.satisfyDependency( identityModule );
         securityLog = new SecurityLog( globalModule.getGlobalConfig(), globalModule.getFileSystem() );
         globalModule.getGlobalLife().add( securityLog );
     }
@@ -175,8 +191,6 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     {
         var databaseManager = new EnterpriseMultiDatabaseManager( globalModule, this );
 
-        createDatabaseManagerDependentModules( databaseManager );
-
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
@@ -191,11 +205,15 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         globalModule.getGlobalLife().add( reconcilerModule );
         globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
 
+        createDatabaseManagerDependentModules( databaseManager, reconcilerModule );
+
         return databaseManager;
     }
 
-    private void createDatabaseManagerDependentModules( MultiDatabaseManager<StandaloneDatabaseContext> databaseManager )
+    private void createDatabaseManagerDependentModules( MultiDatabaseManager<StandaloneDatabaseContext> databaseManager,
+            StandaloneDbmsReconcilerModule reconcilerModule )
     {
+        initDiscoveryAndCatchupIfNeeded( databaseManager, reconcilerModule );
         initBackupIfNeeded( globalModule, globalModule.getGlobalConfig(), databaseManager );
     }
 
@@ -296,7 +314,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
                 supportedProtocolCreator.createSupportedModifierProtocols(),
                 pipelineBuilders.backupServer(),
-                backupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, internalLogProvider, globalModule.getGlobalDependencies(),
+                backupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, internalLogProvider,
+                        globalModule.getGlobalDependencies(),
                         backupStrategyProvider ),
                 new InstalledProtocolHandler(),
                 jobScheduler, portRegister );
@@ -304,5 +323,56 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
 
         backupServer.ifPresent( globalModule.getGlobalLife()::add );
+    }
+
+    private void initDiscoveryAndCatchupIfNeeded( MultiDatabaseManager<StandaloneDatabaseContext> databaseManager,
+            StandaloneDbmsReconcilerModule reconcilerModule )
+    {
+        if ( globalModule.getGlobalConfig().get( EnterpriseEditionSettings.enable_clustering_in_standalone ) )
+        {
+            createTopologyService( reconcilerModule );
+            createCatchupService( databaseManager );
+        }
+    }
+
+    private void createTopologyService( StandaloneDbmsReconcilerModule reconcilerModule )
+    {
+        var discoveryModule =
+                new DiscoveryModule( new AkkaDiscoveryServiceFactory(), globalModule, sslPolicyLoader, databaseStateService, panicService.panicker() );
+        var topologyService = discoveryModule.standaloneTopologyService( identityModule );
+
+        reconcilerModule.registerDatabaseStateChangedListener( topologyService );
+    }
+
+    private void createCatchupService( MultiDatabaseManager<StandaloneDatabaseContext> databaseManager )
+    {
+        var config = globalModule.getGlobalConfig();
+        var logProvider = globalModule.getLogService().getInternalLogProvider();
+        var supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
+
+        int maxChunkSize = config.get( CausalClusteringSettings.store_copy_chunk_size );
+        var catchupServerHandler = MultiDatabaseCatchupServerHandler.catchupServerHandler( databaseManager, databaseStateService, globalModule.getFileSystem(),
+                maxChunkSize, logProvider, globalModule.getGlobalDependencies() );
+
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( sslPolicyLoader );
+
+        var catchupServer = CatchupServerBuilder.builder()
+                .catchupServerHandler( catchupServerHandler )
+                .catchupProtocols( supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration() )
+                .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
+                .pipelineBuilder( pipelineBuilders.server() )
+                .installedProtocolsHandler( new InstalledProtocolHandler() )
+                .listenAddress( config.get( CausalClusteringSettings.transaction_listen_address ) )
+                .scheduler( globalModule.getJobScheduler() )
+                .config( config )
+                .bootstrapConfig( BootstrapConfiguration.serverConfig( config ) )
+                .portRegister( globalModule.getConnectorPortRegister() )
+                .userLogProvider( globalModule.getLogService().getUserLogProvider() )
+                .debugLogProvider( logProvider )
+                .serverName( "catchup-server" )
+                .handshakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
+                .build();
+
+        globalModule.getGlobalLife().add( catchupServer );
     }
 }

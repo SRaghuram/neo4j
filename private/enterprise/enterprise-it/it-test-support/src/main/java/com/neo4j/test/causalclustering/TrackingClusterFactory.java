@@ -92,4 +92,13 @@ public class TrackingClusterFactory implements ClusterFactory
             initialFailure = name;
         }
     }
+
+    @Override
+    public Cluster createStandaloneCluster( ClusterConfig clusterConfig )
+    {
+        Path directory = testDirectory.directory( generateId() );
+        Cluster cluster = ClusterConfig.createStandaloneCluster( directory, clusterConfig );
+        clusters.add( cluster );
+        return cluster;
+    }
 }

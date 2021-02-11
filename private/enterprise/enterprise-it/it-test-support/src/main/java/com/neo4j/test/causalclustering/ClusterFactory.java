@@ -10,4 +10,6 @@ import com.neo4j.causalclustering.common.Cluster;
 public interface ClusterFactory
 {
     Cluster createCluster( ClusterConfig clusterConfig );
+
+    Cluster createStandaloneCluster( ClusterConfig clusterConfig );
 }

@@ -5,17 +5,14 @@
  */
 package com.neo4j.causalclustering.common;
 
-import akka.cluster.Cluster;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
-import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
-import com.neo4j.causalclustering.identity.CoreIdentityModule;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.EnterpriseEditionSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
 
@@ -24,7 +21,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.SortedMap;
 
 import org.neo4j.configuration.Config;
@@ -37,7 +33,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.identity.ServerId;
-import org.neo4j.exceptions.UnsatisfiedDependencyException;
+import org.neo4j.dbms.identity.ServerIdentity;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
@@ -111,6 +107,7 @@ public class StandaloneMember implements ClusterMember
         intraClusterBoltSocketAddress = format( advertisedHost, intraClusterBoltPort );
 
         config.set( default_database, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        config.set( EnterpriseEditionSettings.enable_clustering_in_standalone, true );
         config.set( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.SINGLE );
         config.set( GraphDatabaseSettings.default_advertised_address, new SocketAddress( advertisedHost ) );
         config.set( CausalClusteringSettings.initial_discovery_members, discoveryAddresses );
@@ -185,7 +182,7 @@ public class StandaloneMember implements ClusterMember
     @Override
     public ServerId serverId()
     {
-        return systemDatabase.getDependencyResolver().resolveDependency( CoreIdentityModule.class ).serverId();
+        return systemDatabase.getDependencyResolver().resolveDependency( ServerIdentity.class ).serverId();
     }
 
     @Override
@@ -337,23 +334,5 @@ public class StandaloneMember implements ClusterMember
     {
         fs.deleteRecursively( clusterStateLayout.getClusterStateDirectory() );
         fs.deleteFile( neo4jLayout.serverIdFile() );
-    }
-
-    public Optional<Cluster> getAkkaCluster()
-    {
-        if ( globalModule == null )
-        {
-            return Optional.empty();
-        }
-        try
-        {
-            var coreTopologyService = globalModule.getGlobalDependencies().resolveDependency( CoreTopologyService.class );
-            Cluster akkaCluster = ((AkkaCoreTopologyService) coreTopologyService).getAkkaCluster();
-            return Optional.ofNullable( akkaCluster );
-        }
-        catch ( UnsatisfiedDependencyException | NullPointerException ignored )
-        {
-            return Optional.empty();
-        }
     }
 }

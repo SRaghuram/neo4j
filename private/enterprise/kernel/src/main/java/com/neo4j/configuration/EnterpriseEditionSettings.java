@@ -46,8 +46,13 @@ public class EnterpriseEditionSettings implements SettingsDeclaration
 
     @Description( "If there is a Database Management System Panic (an irrecoverable error) should the neo4j process shut down or continue running. " +
                   "Following a DbMS panic it is likely that a significant amount of functionality will be lost. " +
-                  "Recovering full functionality will require a Neo4j restart"
-    )
+                  "Recovering full functionality will require a Neo4j restart" )
     public static final Setting<Boolean> shutdown_on_dbms_panic =
             newBuilder( "dbms.panic.shutdown_on_panic", BOOL, false ).build();
+
+    @Description( "Enable discovery service and a catchup server to be started on an Enterprise Standalone Instance 'dbms.mode=SINGLE', " +
+                  "and with that allow for Read Replicas to connect and pull transaction from it. " +
+                  "In clustered 'dbms.mode'-s (CORE, READ_REPLICA) this setting is not recognized." )
+    public static final Setting<Boolean> enable_clustering_in_standalone =
+            newBuilder( "dbms.clustering.enable", BOOL, false ).build();
 }
