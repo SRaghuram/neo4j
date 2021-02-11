@@ -317,7 +317,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
                                                     needsValues: Boolean,
                                                     queryIndexId: Int,
                                                     argumentSize: SlotConfiguration.Size,
-                                                    uniqueSeek: Boolean,
+                                                    needsLockingUnique: Boolean,
                                                     codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
@@ -388,7 +388,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
   }
 
   private def setUpCursor: IntermediateRepresentation = {
-    if (uniqueSeek) {
+    if (needsLockingUnique) {
       val localCursor = codeGen.namer.nextVariableName("cursor")
       block(
         declareAndAssign(typeRefOf[NodeValueIndexCursor], localCursor, ALLOCATE_NODE_INDEX_CURSOR),
@@ -437,7 +437,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
      * }}}
      */
     block(
-      if (!uniqueSeek) freeCursor[NodeValueIndexCursor](loadField(nodeIndexCursorField), NodeValueIndexCursorPool) else noop(),
+      if (!needsLockingUnique) freeCursor[NodeValueIndexCursor](loadField(nodeIndexCursorField), NodeValueIndexCursorPool) else noop(),
       setField(nodeIndexCursorField, constant(null))
     )
   }
@@ -486,7 +486,7 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                     generateSeekValue: () => IntermediateExpression,
                                                     queryIndexId: Int,
                                                     argumentSize: SlotConfiguration.Size,
-                                                    unique: Boolean)
+                                                    needsLockingUnique: Boolean)
                                                    (codeGen: OperatorExpressionCompiler)
   extends SingleQueryNodeIndexSeekTaskTemplate(inner,
                                                id,
@@ -498,7 +498,7 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                false,
                                                queryIndexId,
                                                argumentSize,
-                                               unique,
+                                               needsLockingUnique,
                                                codeGen) {
 
   private var seekValue: IntermediateExpression = _
@@ -549,8 +549,8 @@ class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                property.getValueFromIndex,
                                                queryIndexId,
                                                argumentSize,
-                                               false,
-                                               codeGen) {
+                                               needsLockingUnique = false,
+                                               codeGen = codeGen) {
 
   private var seekValues: Seq[IntermediateExpression] = _
   private val predicateVar = variable[PropertyIndexQuery](codeGen.namer.nextVariableName(), constant(null))
@@ -837,7 +837,11 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
         val exactPredicate = predicates(i).asInstanceOf[ExactPredicate]
         val resultNodeId = read.lockingNodeUniqueIndexSeek(index.reference(), cursor, exactPredicate)
         if (StatementConstants.NO_SUCH_NODE == resultNodeId) {
-          cursors(i) = NodeValueHit.EMPTY
+          while (i < cursors.length) {
+            cursors(i) = NodeValueHit.EMPTY
+            i+=1
+          }
+          return cursors
         } else {
           cursors(i) = new NodeValueHit(resultNodeId, Array(exactPredicate.value()), read)
         }
