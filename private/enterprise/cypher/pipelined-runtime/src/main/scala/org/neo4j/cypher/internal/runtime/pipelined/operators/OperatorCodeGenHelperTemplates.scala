@@ -84,9 +84,6 @@ import org.neo4j.cypher.operations.CypherCoercions
 import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.Direction
-import org.neo4j.internal.kernel.api.PropertyIndexQuery.ExistsPredicate
-import org.neo4j.internal.kernel.api.PropertyIndexQuery.StringContainsPredicate
-import org.neo4j.internal.kernel.api.PropertyIndexQuery.StringSuffixPredicate
 import org.neo4j.internal.kernel.api.Cursor
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -97,6 +94,9 @@ import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.PropertyIndexQuery
+import org.neo4j.internal.kernel.api.PropertyIndexQuery.ExistsPredicate
+import org.neo4j.internal.kernel.api.PropertyIndexQuery.StringContainsPredicate
+import org.neo4j.internal.kernel.api.PropertyIndexQuery.StringSuffixPredicate
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor
@@ -459,14 +459,14 @@ object OperatorCodeGenHelperTemplates {
                             order: IndexOrder,
                             needsValues: Boolean): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ),
-      method[Read, Unit, IndexReadSession, RelationshipValueIndexCursor, IndexQueryConstraints, Array[IndexQuery]]("relationshipIndexSeek"),
+      method[Read, Unit, IndexReadSession, RelationshipValueIndexCursor, IndexQueryConstraints, Array[PropertyIndexQuery]]("relationshipIndexSeek"),
       indexReadSession,
       cursor,
       invokeStatic(
         method[IndexQueryConstraints, IndexQueryConstraints, IndexOrder, Boolean]("constrained"),
         indexOrder(order),
         constant(needsValues)),
-      arrayOf[IndexQuery](query))
+      arrayOf[PropertyIndexQuery](query))
 
   def indexOrder(indexOrder: IndexOrder): IntermediateRepresentation = indexOrder match {
     case IndexOrder.ASCENDING => getStatic[IndexOrder, IndexOrder]("ASCENDING")
