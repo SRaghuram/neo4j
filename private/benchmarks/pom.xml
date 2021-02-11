@@ -99,6 +99,20 @@
         </dependencies>
     </dependencyManagement>
 
+    <dependencies>
+        <!--
+            For some reason Maven picks up wrong JUnit dependency for multi-project builds and can report a successful run even if it didn't start any tests.
+            If you think you've got a better idea than this workaround, make sure that this command actually run all tests:
+                mvn -P CI verify -pl :benchmark-infra-scheduler,:benchmark-common
+         -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
     <modules>
         <module>benchmark-common</module>
         <module>benchmark-results-client</module>
