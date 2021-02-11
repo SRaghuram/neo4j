@@ -442,7 +442,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should (
-          includeSomewhere.aPlan("AntiConditionalApply")
+          includeSomewhere.aPlan("Either")
             .withRHS(
               aPlan("MergeCreateRelationship")
                 .withRows(1)
