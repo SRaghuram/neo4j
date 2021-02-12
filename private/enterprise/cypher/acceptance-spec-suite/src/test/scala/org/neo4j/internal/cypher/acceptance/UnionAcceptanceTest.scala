@@ -169,4 +169,24 @@ class UnionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonS
 
     result.toList should equal(expected)
   }
+
+  test("Should use ordered union to solve label disjunction") {
+    for(i <- 0 until 300) {
+      val labels = Seq(
+        Option("A").filter(_ => i < 100),
+        Option("B").filter(_ => i % 10 == 0),
+        Option("C").filter(_ => i % 8 == 0),
+      ).flatten
+      createLabeledNode(labels: _*)
+    }
+
+    val result = executeSingle("MATCH (n) WHERE n:A or n:B RETURN labels(n) AS l")
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("OrderedDistinct").withEstimatedRows(120)
+      .onTopOf(aPlan("OrderedUnion").withEstimatedRows(130))
+    result.columnAs[Seq[String]]("l").foreach { labels =>
+      labels should (contain("A") or contain("B"))
+    }
+    result.size should be(120)
+  }
 }
