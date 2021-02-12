@@ -157,7 +157,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             name = {CMD_RECORDINGS_BASE_URI},
             description = "S3 bucket recordings and profiles were uploaded to",
             title = "Recordings and profiles S3 URI" )
-    private URI recordingsBaseUri = URI.create( "benchmarking.neo4j.com/recordings/" );
+    private URI recordingsBaseUri = URI.create( "s3://benchmarking.neo4j.com/recordings/" );
 
     private static String getJobName( String tool, String benchmark, String version, String triggered )
     {

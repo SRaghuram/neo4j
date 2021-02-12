@@ -28,7 +28,6 @@ import com.neo4j.bench.model.profiling.RecordingType;
 import org.junit.jupiter.api.Test;
 
 import java.io.UncheckedIOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -58,6 +57,7 @@ public class ResultsCopyTest
     private static final Metrics METRICS = new Metrics( Metrics.MetricsUnit.latency( SECONDS ), 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
     private static final ParameterizedProfiler PROFILER_JFR = ParameterizedProfiler.defaultProfiler( ProfilerType.JFR );
     private static final ParameterizedProfiler PROFILER_ASYNC = ParameterizedProfiler.defaultProfiler( ProfilerType.ASYNC );
+    private static final String S3_FOLDER = "/";
 
     @Inject
     private TestDirectory temporaryFolder;
@@ -104,16 +104,17 @@ public class ResultsCopyTest
 
         if ( recordingDescriptor.isDuplicatesAllowed() )
         {
-            ResultsCopy.extractProfilerRecordings( metrics, targetDir, new URI( "/" ), parentDir );
+            ResultsCopy.extractProfilerRecordings( metrics, targetDir, S3_FOLDER, parentDir );
 
-            Map<String,String> expectedRecordings = ImmutableMap.of( recordingDescriptor.recordingType().propertyKey(), "/" + recordingDescriptor.filename() );
+            Map<String,String> expectedRecordings = ImmutableMap.of( recordingDescriptor.recordingType().propertyKey(),
+                                                                     S3_FOLDER + recordingDescriptor.filename() );
             assertThat( metrics.getMetricsFor( new BenchmarkGroupBenchmark( GROUP, BENCH ) ).profilerRecordings().toMap(), equalTo( expectedRecordings ) );
             assertTrue( Files.exists( targetDir.resolve( recordingDescriptor.filename() ) ), "File was not copied" );
         }
         else
         {
             BenchmarkUtil.assertException( UncheckedIOException.class,
-                                           () -> ResultsCopy.extractProfilerRecordings( metrics, targetDir, new URI( "/" ), parentDir ) );
+                                           () -> ResultsCopy.extractProfilerRecordings( metrics, targetDir, S3_FOLDER, parentDir ) );
         }
     }
 
@@ -127,9 +128,9 @@ public class ResultsCopyTest
         metrics.add( GROUP, BENCH, METRICS, null, new Neo4jConfig() );
         Path targetDir = temporaryFolder.directory( "target" );
 
-        ResultsCopy.extractProfilerRecordings( metrics, targetDir, new URI( "/" ), parentDir );
+        ResultsCopy.extractProfilerRecordings( metrics, targetDir, S3_FOLDER, parentDir );
 
-        Map<String,String> expectedRecordings = ImmutableMap.of( RecordingType.JFR.propertyKey(), "/" + recordingDescriptor.filename() );
+        Map<String,String> expectedRecordings = ImmutableMap.of( RecordingType.JFR.propertyKey(), S3_FOLDER + recordingDescriptor.filename() );
         assertThat( metrics.getMetricsFor( new BenchmarkGroupBenchmark( GROUP, BENCH ) ).profilerRecordings().toMap(), equalTo( expectedRecordings ) );
         assertTrue( Files.exists( targetDir.resolve( recordingDescriptor.filename() ) ), "File was not copied" );
     }
@@ -147,11 +148,11 @@ public class ResultsCopyTest
         metrics.add( GROUP, CHILD_2, METRICS, null, new Neo4jConfig() );
         Path targetDir = temporaryFolder.directory( "target" );
 
-        ResultsCopy.extractProfilerRecordings( metrics, targetDir, new URI( "/" ), parentDir );
+        ResultsCopy.extractProfilerRecordings( metrics, targetDir, S3_FOLDER, parentDir );
 
         Map<String,String> expectedRecordings = ImmutableMap.of(
-                RecordingType.JFR.propertyKey(), "/" + recordingDescriptor1.filename(),
-                RecordingType.ASYNC.propertyKey(), "/" + recordingDescriptor2.filename()
+                RecordingType.JFR.propertyKey(), S3_FOLDER + recordingDescriptor1.filename(),
+                RecordingType.ASYNC.propertyKey(), S3_FOLDER + recordingDescriptor2.filename()
         );
         assertThat( metrics.getMetricsFor( new BenchmarkGroupBenchmark( GROUP, CHILD_1 ) ).profilerRecordings().toMap(), equalTo( expectedRecordings ) );
         assertThat( metrics.getMetricsFor( new BenchmarkGroupBenchmark( GROUP, CHILD_2 ) ).profilerRecordings().toMap(), equalTo( expectedRecordings ) );
@@ -167,7 +168,7 @@ public class ResultsCopyTest
         BenchmarkGroupBenchmarkMetrics metrics = new BenchmarkGroupBenchmarkMetrics();
         Path targetDir = temporaryFolder.directory( "target" );
 
-        ResultsCopy.extractProfilerRecordings( metrics, targetDir, new URI( "/" ), parentDir );
+        ResultsCopy.extractProfilerRecordings( metrics, targetDir, S3_FOLDER, parentDir );
 
         assertFalse( Files.exists( targetDir.resolve( recordingDescriptor.filename() ) ), "File was copied" );
     }

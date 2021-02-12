@@ -106,13 +106,15 @@ public class AmazonS3Upload implements AutoCloseable
         amazonS3.putObject( putObjectRequest.withMetadata( objectMetadata ) );
     }
 
-    public URI constructS3Uri( String bucketName, String keyPrefix, Path source )
+    static URI constructS3Uri( URI baseUri, Path source )
     {
+        String bucketName = baseUri.getAuthority();
+        String keyPrefix = removeEnd( removeStart( baseUri.getPath(), "/" ), "/" );
         try
         {
             return new URI( format( "s3://%s/%s/%s",
                                     bucketName,
-                                    removeEnd( removeStart( keyPrefix, "/" ), "/" ),
+                                    keyPrefix,
                                     source.getFileName() ) );
         }
         catch ( URISyntaxException e )

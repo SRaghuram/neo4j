@@ -18,10 +18,10 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 
 import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.appendIfMissing;
-import static org.apache.commons.lang3.StringUtils.removeStart;
 
 public class ResultsReporter
 {
@@ -45,6 +45,8 @@ public class ResultsReporter
                                  String awsEndpointURL,
                                  ErrorReportingPolicy errorReportingPolicy )
     {
+        Objects.requireNonNull(recordingsBaseUri.getScheme(), "Recordings URI must contain scheme");
+
         try
         {
             Path testRunReportFile = workDir.toPath().resolve( "test-result.json" );
@@ -55,15 +57,15 @@ public class ResultsReporter
             System.out.printf( "Reporting test run with id %s%n", testRunId );
 
             Path tempRecordingsDir = Files.createTempDirectory( workDir.toPath(), null );
-            URI s3ProfilerRecordingsFolderUri = constructS3Uri( awsEndpointURL, recordingsBaseUri, tempRecordingsDir );
+            URI s3ProfilerRecordingsFolderUri = AmazonS3Upload.constructS3Uri( recordingsBaseUri, tempRecordingsDir );
 
+            String s3Folder = appendIfMissing( dropScheme( s3ProfilerRecordingsFolderUri ), "/" );
             ResultsCopy.extractProfilerRecordings( testRunReport.benchmarkGroupBenchmarkMetrics(),
                                                    tempRecordingsDir,
-                                                   s3ProfilerRecordingsFolderUri,
+                                                   s3Folder,
                                                    workDir.toPath() );
 
             String archiveName = tempRecordingsDir.getFileName() + ".tar.gz";
-            String s3ArchivePath = appendIfMissing( removeStart( recordingsBaseUri.toString(), "s3://" ), "/" ) + archiveName;
             Path testRunArchive = workDir.toPath().resolve( archiveName );
             System.out.printf( "creating .tar.gz archive '%s' of profiles directory '%s'%n", testRunArchive, tempRecordingsDir );
             TarGzArchive.compress( testRunArchive, tempRecordingsDir );
@@ -73,9 +75,10 @@ public class ResultsReporter
                 System.out.printf( "uploading profiler recording directory '%s' to '%s'%n", tempRecordingsDir, s3ProfilerRecordingsFolderUri );
                 amazonS3Upload.uploadFolder( tempRecordingsDir, s3ProfilerRecordingsFolderUri );
 
-                URI testRunArchiveS3Uri = constructS3Uri( awsEndpointURL, recordingsBaseUri, testRunArchive );
+                URI testRunArchiveS3Uri = AmazonS3Upload.constructS3Uri( recordingsBaseUri, testRunArchive );
                 System.out.printf( "uploading profiler recordings archive '%s' to '%s'%n", testRunArchive, testRunArchiveS3Uri );
                 amazonS3Upload.uploadFile( testRunArchive, testRunArchiveS3Uri );
+                String s3ArchivePath = dropScheme( testRunArchiveS3Uri );
                 testRunReport.testRun().setArchive( s3ArchivePath );
             }
 
@@ -87,18 +90,9 @@ public class ResultsReporter
         }
     }
 
-    private URI constructS3Uri( String awsEndpointURL, URI recordingsBaseUri, Path tempRecordingsDir )
+    private String dropScheme( URI s3Uri )
     {
-        try ( AmazonS3Upload amazonS3Upload = AmazonS3Upload.create( awsRegion, awsEndpointURL ) )
-        {
-            String bucketName = recordingsBaseUri.getAuthority();
-            String recordingsKeyPrefix = recordingsBaseUri.getPath();
-            return amazonS3Upload.constructS3Uri( bucketName, recordingsKeyPrefix, tempRecordingsDir );
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( "Failed to construct S3 Folder URI", e );
-        }
+        return s3Uri.getAuthority() + s3Uri.getPath();
     }
 
     public void report( TestRunReport testRunReport, ErrorReportingPolicy errorReportingPolicy )

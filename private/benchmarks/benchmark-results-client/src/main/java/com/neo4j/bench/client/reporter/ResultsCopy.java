@@ -16,7 +16,6 @@ import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.profiling.ProfilerRecordings;
 import com.neo4j.bench.model.profiling.RecordingType;
 
-import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,8 +25,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.appendIfMissing;
-import static org.apache.commons.lang3.StringUtils.removeStart;
 
 public class ResultsCopy
 {
@@ -48,10 +45,9 @@ public class ResultsCopy
      */
     static void extractProfilerRecordings( BenchmarkGroupBenchmarkMetrics metrics,
                                            Path tempProfilerRecordingsDir,
-                                           URI s3FolderUri,
+                                           String s3Folder,
                                            Path workDir )
     {
-        String s3Folder = appendIfMissing( removeStart( s3FolderUri.toString(), "s3://" ), "/" );
         Set<FullBenchmarkName> successfulBenchmarks = extractSuccessfulBenchmarks( metrics );
 
         for ( BenchmarkGroupDirectory benchmarkGroupDirectory : BenchmarkGroupDirectory.searchAllIn( workDir ) )
