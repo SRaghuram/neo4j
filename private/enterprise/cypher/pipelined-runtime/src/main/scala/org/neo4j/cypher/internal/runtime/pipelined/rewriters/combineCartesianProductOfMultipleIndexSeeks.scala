@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
-import org.neo4j.cypher.internal.logical.plans.IndexSeekLeafPlan
 import org.neo4j.cypher.internal.logical.plans.MultiNodeIndexSeek
+import org.neo4j.cypher.internal.logical.plans.NodeIndexSeekLeafPlan
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.EffectiveCardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.runtime.pipelined.rewriters.combineCartesianProductOfMultipleIndexSeeks.CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD
@@ -33,13 +33,13 @@ case class combineCartesianProductOfMultipleIndexSeeks(effectiveCardinalities: E
                                                        threshold: EffectiveCardinality = CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD,
                                                        stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
-    case o @ CartesianProduct(lhs: IndexSeekLeafPlan, rhs: IndexSeekLeafPlan) if leveragedOrders.get(o.id) || effectiveCardinalities.get(lhs.id) < threshold =>
+    case o @ CartesianProduct(lhs: NodeIndexSeekLeafPlan, rhs: NodeIndexSeekLeafPlan) if leveragedOrders.get(o.id) || effectiveCardinalities.get(lhs.id) < threshold =>
       MultiNodeIndexSeek(Array(lhs, rhs))(SameId(o.id))
 
-    case o @ CartesianProduct(lhs: MultiNodeIndexSeek, rhs: IndexSeekLeafPlan) if leveragedOrders.get(o.id) || effectiveCardinalities.get(lhs.id) < threshold =>
+    case o @ CartesianProduct(lhs: MultiNodeIndexSeek, rhs: NodeIndexSeekLeafPlan) if leveragedOrders.get(o.id) || effectiveCardinalities.get(lhs.id) < threshold =>
       MultiNodeIndexSeek(lhs.nodeIndexSeeks :+ rhs)(SameId(o.id))
 
-    case o @ CartesianProduct(lhs: IndexSeekLeafPlan, rhs: MultiNodeIndexSeek) if leveragedOrders.get(o.id) || effectiveCardinalities.get(lhs.id) < threshold =>
+    case o @ CartesianProduct(lhs: NodeIndexSeekLeafPlan, rhs: MultiNodeIndexSeek) if leveragedOrders.get(o.id) || effectiveCardinalities.get(lhs.id) < threshold =>
       MultiNodeIndexSeek(lhs +: rhs.nodeIndexSeeks)(SameId(o.id))
 
   }, stopper)

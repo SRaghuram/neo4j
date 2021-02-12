@@ -10,8 +10,8 @@ import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
-import org.neo4j.cypher.internal.logical.plans.IndexSeekLeafPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NodeIndexSeekLeafPlan
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
 import org.neo4j.cypher.internal.logical.plans.ProcedureSignature
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
@@ -840,7 +840,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
   private def computeMultiNodeIndexSeekParamaters(id: Id,
                                                  slots: SlotConfiguration,
-                                                 nodeIndexSeeks: Seq[IndexSeekLeafPlan]) = {
+                                                 nodeIndexSeeks: Seq[NodeIndexSeekLeafPlan]) = {
     nodeIndexSeeks.map { p =>
       val columnOffset = slots.getLongOffsetFor(p.idName)
       val slottedIndexProperties = p.properties.map(SlottedIndexedProperty(p.idName, _, slots)).toArray

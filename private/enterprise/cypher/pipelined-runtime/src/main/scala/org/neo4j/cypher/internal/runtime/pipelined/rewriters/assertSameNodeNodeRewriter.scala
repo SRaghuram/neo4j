@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
 import org.neo4j.cypher.internal.logical.plans.AssertSameNode
 import org.neo4j.cypher.internal.logical.plans.AssertingMultiNodeIndexSeek
-import org.neo4j.cypher.internal.logical.plans.IndexSeekLeafPlan
+import org.neo4j.cypher.internal.logical.plans.NodeIndexSeekLeafPlan
 import org.neo4j.cypher.internal.util.Rewriter
 import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.bottomUp
@@ -17,13 +17,13 @@ import org.neo4j.cypher.internal.util.bottomUp
   */
 case class assertSameNodeNodeRewriter(stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
-    case o @ AssertSameNode(node, lhs: IndexSeekLeafPlan, rhs: IndexSeekLeafPlan) =>
+    case o @ AssertSameNode(node, lhs: NodeIndexSeekLeafPlan, rhs: NodeIndexSeekLeafPlan) =>
       AssertingMultiNodeIndexSeek(node, Array(lhs, rhs))(SameId(o.id))
 
-    case o @ AssertSameNode(node, lhs: AssertingMultiNodeIndexSeek, rhs: IndexSeekLeafPlan) if node == lhs.node && node == rhs.idName =>
+    case o @ AssertSameNode(node, lhs: AssertingMultiNodeIndexSeek, rhs: NodeIndexSeekLeafPlan) if node == lhs.node && node == rhs.idName =>
       AssertingMultiNodeIndexSeek(node, lhs.nodeIndexSeeks :+ rhs)(SameId(o.id))
 
-    case o @ AssertSameNode(node, lhs: IndexSeekLeafPlan, rhs: AssertingMultiNodeIndexSeek) if node == rhs.node && node == lhs.idName =>
+    case o @ AssertSameNode(node, lhs: NodeIndexSeekLeafPlan, rhs: AssertingMultiNodeIndexSeek) if node == rhs.node && node == lhs.idName =>
       AssertingMultiNodeIndexSeek(node, lhs +: rhs.nodeIndexSeeks)(SameId(o.id))
 
   }, stopper)
