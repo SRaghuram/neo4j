@@ -5,8 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.time.LocalDate
-
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.exceptions.HintException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
@@ -14,6 +12,8 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.values.storable.CoordinateReferenceSystem
 import org.neo4j.values.storable.Values
+
+import java.time.LocalDate
 
 class HintAcceptanceTest
   extends ExecutionEngineFunSuite with CypherComparisonSupport {
@@ -153,6 +153,24 @@ class HintAcceptanceTest
       """MATCH(p:Person)
         |USING INDEX p:Person(job)
         |WHERE p.name IN ["Bob"] OR p.job IN ["janitor"]
+        |RETURN p.name, p.job""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+    result.toSet shouldBe Set(Map("p.name"->"foo", "p.job"->"janitor"))
+
+  }
+
+  test("Index hints solved on LHS of OR should not be lost when forming UNION") {
+
+    createLabeledNode(Map("name"->"foo", "job"->"janitor"), "Person")
+    graph.createIndex("Person", "name")
+    graph.createIndex("Person", "job")
+
+    val query =
+      """MATCH(p:Person)
+        |USING INDEX p:Person(job)
+        |WHERE p.job IN ["janitor"] OR p.name IN ["Bob"]
         |RETURN p.name, p.job""".stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
