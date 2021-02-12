@@ -39,7 +39,7 @@ case class TestScenario(planner: Planner, runtime: Runtime) extends Assertions {
       if (!planner.acceptedPlannerNames.contains(reportedPlanner)) {
         fail(s"did not use ${planner.acceptedPlannerNames} planner - instead $reportedPlanner was used. Scenario $name")
       }
-      runtime.checkNotificationsForWarnings(internalExecutionResult.internalNotifications) match {
+      runtime.checkNotificationsForWarnings(internalExecutionResult.notifications.toSeq) match {
         case Some(error) => fail(s"Scenario $name succeeded but got unexpected notification: $error. ")
         case _ =>
       }
@@ -67,7 +67,7 @@ case class TestScenario(planner: Planner, runtime: Runtime) extends Assertions {
           && planner.acceptedPlannerNames.contains(reportedPlannerName)) {
 
           if (!silentUnexpectedSuccess) {
-            runtime.checkNotificationsForWarnings(result.internalNotifications) match {
+            runtime.checkNotificationsForWarnings(result.notifications.toSeq) match {
               case None => fail(s"""Unexpectedly succeeded using $name for query:
                                 |
                                 |$query
