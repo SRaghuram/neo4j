@@ -27,8 +27,8 @@ public enum EnterpriseOperatorState implements OperatorState
     STOPPED( "offline", 100 ),
     STORE_COPYING( "store copying", 200 ),
     STARTED( "online", 300 ),
-    DROPPED( "dropped", 50 ),
-    DROPPED_DUMPED( "dropped", 25 ),
+    DROPPED( "dropped", 50, true ),
+    DROPPED_DUMPED( "dropped", 25, true ),
     QUARANTINED( "quarantined", 0 ),
 
     // States which should never be desired by an operator
@@ -38,11 +38,18 @@ public enum EnterpriseOperatorState implements OperatorState
 
     private final String description;
     private final int precedence;
+    private final boolean terminal;
 
     EnterpriseOperatorState( String description, int precedence )
     {
+        this( description, precedence, false );
+    }
+
+    EnterpriseOperatorState( String description, int precedence, boolean terminal )
+    {
         this.description = description;
         this.precedence = precedence;
+        this.terminal = terminal;
     }
 
     /**
@@ -62,6 +69,11 @@ public enum EnterpriseOperatorState implements OperatorState
        return precedence;
     }
 
+    @Override
+    public boolean terminal()
+    {
+        return terminal;
+    }
     /**
      * Returns whichever of the left or right OperatorStates should take precedence over the other.
      *

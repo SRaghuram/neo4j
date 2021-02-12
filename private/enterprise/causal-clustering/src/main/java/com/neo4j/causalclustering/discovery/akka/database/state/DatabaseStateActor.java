@@ -14,7 +14,6 @@ import akka.japi.pf.ReceiveBuilder;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
-import com.neo4j.causalclustering.discovery.akka.coretopology.RaftMemberMappingActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 
@@ -28,7 +27,6 @@ import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.DATABASE_STATE;
-import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 
 public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseServer,DiscoveryDatabaseState>>
 {
@@ -98,7 +96,7 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseS
 
     private void handleDatabaseState( DiscoveryDatabaseState update )
     {
-        if ( update.operatorState() == DROPPED )
+        if ( update.operatorState().terminal() )
         {
             log().debug( "remove state {}", update );
             modifyReplicatedData( key, map -> map.remove( cluster, new DatabaseServer( update.databaseId(), myself ) ) );
