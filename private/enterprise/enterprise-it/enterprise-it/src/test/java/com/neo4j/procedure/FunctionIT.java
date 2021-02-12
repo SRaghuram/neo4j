@@ -161,6 +161,25 @@ class FunctionIT
 
     @ParameterizedTest
     @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
+    void shouldHandleExistsOnNullableNodeProperty( String runtime )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            // Given
+            tx.createNode().setProperty( "prop", 42 );
+
+            // When
+            Result res = tx.execute(
+                    format( "CYPHER runtime=%s MATCH (n) WITH com.neo4j.procedure.nodeWithDescription(n) AS node WHERE exists(node.prop) RETURN node.prop",
+                            runtime ) );
+
+            // Then
+            assertThat( res.next().get( "node.prop" ) ).isEqualTo( 42 );
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )
     void shouldCallDelegatingFunction( String runtime )
     {
         // Given
