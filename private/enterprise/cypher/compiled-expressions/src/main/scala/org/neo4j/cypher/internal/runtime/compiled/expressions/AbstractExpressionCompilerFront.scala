@@ -170,6 +170,7 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
+import org.neo4j.cypher.internal.runtime.ast.DefaultValueLiteral
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.ASSERT_PREDICATE
@@ -196,12 +197,6 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilat
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vRELATIONSHIP_CURSOR
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeCollectExpression
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.runtime.CachedPropertiesRow
-import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.WritableRow
-import org.neo4j.cypher.internal.runtime.ast.DefaultValueLiteral
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTBoolean
 import org.neo4j.cypher.internal.util.symbols.CTDate
@@ -2955,7 +2950,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         // ListValue list = [evaluate collection expression];
         // ArrayList<AnyValue> extracted = new ArrayList<>();
         declare[ListValue](listVar),
-        declareAndAssign(returnVar, nullCheckIfRequired(collection)),
+        declareAndAssign(typeRefOf[AnyValue], returnVar, nullCheckIfRequired(collection)),
         assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), load[AnyValue](returnVar))),
         condition(notEqual(returnVar, noValue)) {
           block(

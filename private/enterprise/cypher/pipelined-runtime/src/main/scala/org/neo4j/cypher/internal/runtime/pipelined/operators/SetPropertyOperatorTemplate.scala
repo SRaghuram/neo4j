@@ -25,6 +25,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -120,7 +121,7 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
     val nodeProp = nullCheckIfRequired(nodeProperty)
 
     block(
-      declareAndAssign(entityValueVar, nullCheckIfRequired(entityValue)),
+      declareAndAssign(typeRefOf[AnyValue], entityValueVar, nullCheckIfRequired(entityValue)),
       ifElse(instanceOf[VirtualNodeValue](load[Long](entityValueVar)))(
         SetPropertyOperatorTemplate.setProperty(
           isNode = true,
