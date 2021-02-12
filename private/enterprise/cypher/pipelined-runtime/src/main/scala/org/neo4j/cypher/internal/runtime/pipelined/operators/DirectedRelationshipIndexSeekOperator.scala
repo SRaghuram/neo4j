@@ -228,8 +228,12 @@ class DirectedRelationshipIndexSeekTask(inputMorsel: Morsel,
                               kernelIndexOrder: IndexOrder,
                               needsValues: Boolean): (RelationshipValueIndexCursor, Array[RelationshipValueIndexCursor]) = {
     if (indexQueries.size == 1) {
-      val cursor = nonCompositeSeek(state.queryIndexes(queryIndex), resources, read, indexQueries.head)
-      (cursor, Array(cursor))
+      if (isImpossible(indexQueries.head)) {
+        (RelationshipValueIndexCursor.EMPTY, Array.empty)// leave cursor un-initialized/empty
+      } else {
+        val cursor = nonCompositeSeek(state.queryIndexes(queryIndex), resources, read, indexQueries.head)
+        (cursor, Array(cursor))
+      }
     } else {
       val cursors = ArrayBuffer.empty[RelationshipValueIndexCursor]
       indexQueries.filterNot(isImpossible).foreach(query => {
@@ -255,10 +259,6 @@ class DirectedRelationshipIndexSeekTask(inputMorsel: Morsel,
                                resources: QueryResources,
                                read: Read,
                                predicates: Seq[PropertyIndexQuery]): RelationshipValueIndexCursor = {
-
-    if (isImpossible(predicates)) {
-      return RelationshipValueIndexCursor.EMPTY// leave cursor un-initialized/empty
-    }
 
     // We don't need property values from the index for an exact seek
     exactSeekValues =
