@@ -1589,8 +1589,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       for (entity <- compileExpression(entityExpr, id)) yield {
         val entityName = namer.nextVariableName("entity")
         val retVal = variable[AnyValue](namer.nextVariableName("hasLabelsAndTypes"), noValue)
-        val hasLabelsExpression = hasLabels(labelsOrTypes.map(_.name), entity)
-        val hasTypesExpression = hasTypes(labelsOrTypes.map(_.name), entity)
+        val entityExpression = IntermediateExpression(load[AnyValue](entityName), Seq.empty, Seq.empty, Set.empty)
+        val hasLabelsExpression = hasLabels(labelsOrTypes.map(_.name), entityExpression)
+        val hasTypesExpression = hasTypes(labelsOrTypes.map(_.name), entityExpression)
 
         val ir = block(
           declareAndAssign(typeRefOf[AnyValue], entityName, nullCheckIfRequired(entity)),
@@ -1598,10 +1599,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             assign(retVal, noValue)
           )(
             ifElse(IntermediateRepresentation.instanceOf[VirtualNodeValue](load[AnyValue](entityName)))(
-              assign(retVal, hasLabelsExpression.ir)
+              assign(retVal, nullCheckIfRequired(hasLabelsExpression))
             )(
               ifElse(IntermediateRepresentation.instanceOf[VirtualRelationshipValue](load[AnyValue](entityName)))(
-                assign(retVal, hasTypesExpression.ir)
+                assign(retVal, nullCheckIfRequired(hasTypesExpression))
               )(
                 fail(newInstance(constructor[ParameterWrongTypeException, String], constant("Expected a node or relationship when checking types or labels.")))
               )
@@ -1612,8 +1613,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
         IntermediateExpression(
           ir,
-          hasLabelsExpression.fields ++ hasTypesExpression.fields,
-          hasLabelsExpression.variables ++ hasTypesExpression.variables :+ retVal,
+          hasLabelsExpression.fields ++ hasTypesExpression.fields ++ entity.fields,
+          hasLabelsExpression.variables ++ hasTypesExpression.variables ++ entity.variables :+ retVal,
           Set(equal(load(retVal), noValue))
         )
       }
@@ -1789,7 +1790,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
   }
 
   private def hasLabels(labelNames: Seq[String],
-                        node: IntermediateExpression) = {
+                        node: IntermediateExpression): IntermediateExpression = {
     val (tokenFields, inits) = tokenFieldsForLabels(labelNames)
 
     val predicate: IntermediateRepresentation = ternary(and(tokenFields.map { token =>
@@ -1802,7 +1803,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
   }
 
   private def hasTypes(types: Seq[String],
-                       relationship: IntermediateExpression) = {
+                       relationship: IntermediateExpression): IntermediateExpression = {
     val (tokenFields, inits) = tokenFieldsForTypes(types)
 
     val predicate: IntermediateRepresentation = ternary(
