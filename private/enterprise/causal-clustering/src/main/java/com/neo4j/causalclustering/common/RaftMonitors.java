@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.common;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 
 /**
@@ -20,7 +21,7 @@ public class RaftMonitors extends Monitors
 {
     private RaftMonitors( Monitors parent )
     {
-        super( parent );
+        super( parent, NullLogProvider.getInstance() );
     }
 
     public static RaftMonitors create( Monitors globalMonitors, Dependencies clusterDependencies )

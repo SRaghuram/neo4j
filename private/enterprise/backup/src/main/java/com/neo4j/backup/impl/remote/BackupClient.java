@@ -69,7 +69,7 @@ public class BackupClient
                                            TimeUnit.MILLISECONDS );
         this.remoteStoreFactory = ( storeCopyClientMonitor, namedDatabaseId ) ->
         {
-            var childMonitor = new Monitors( monitors );
+            var childMonitor = new Monitors( monitors, logProvider );
             childMonitor.addMonitorListener( storeCopyClientMonitor );
             var txPullClient = new TxPullClient( catchupClientFactory, namedDatabaseId, () -> childMonitor, logProvider );
             final var storeCopyExecutor = jobScheduler.executor( Group.STORE_COPY_CLIENT );
