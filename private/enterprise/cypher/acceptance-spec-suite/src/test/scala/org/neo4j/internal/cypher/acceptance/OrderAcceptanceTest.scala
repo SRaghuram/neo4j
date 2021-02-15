@@ -5,6 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
@@ -967,5 +968,60 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       relate(joe, friends(i), "FRIEND")
       relate(joseph, friends(i+2), "FRIEND")
     }
+  }
+
+  test("Option debug=disallowSplittingTop should force Top in plan") {
+
+    // :B x 10
+    // :A x 100
+    // :A-->:B x 1000
+    for (i <- 0 until 10) {
+      val b = createLabeledNode(Map("i" -> i), "B")
+      for (_ <- 0 until 10) {
+        val a = createLabeledNode("A")
+        for (_ <- 0 until 10) {
+          relate(a, b)
+        }
+      }
+    }
+    val query =
+      """CYPHER debug=disallowSplittingTop
+        |MATCH (a:A)-[r1]->(b:B)
+        |RETURN b.i AS i ORDER BY b.i LIMIT 5
+        |""".stripMargin
+
+    val result = executeSingle(query)
+    result.executionPlanDescription().should(includeSomewhere.aPlan("Top"))
+    result.toList.shouldEqual(Seq.fill(5)(0).map(i => Map("i" -> i)))
+  }
+
+  test("Setting unsupported.cypher.splitting_top_behavior=DISALLOW should force Top in plan") {
+
+    restartWithConfig(
+      databaseConfig() ++ Map(
+        GraphDatabaseInternalSettings.cypher_splitting_top_behavior -> GraphDatabaseInternalSettings.SplittingTopBehavior.DISALLOW
+      )
+    )
+
+    // :B x 10
+    // :A x 100
+    // :A-->:B x 1000
+    for (i <- 0 until 10) {
+      val b = createLabeledNode(Map("i" -> i), "B")
+      for (_ <- 0 until 10) {
+        val a = createLabeledNode("A")
+        for (_ <- 0 until 10) {
+          relate(a, b)
+        }
+      }
+    }
+    val query =
+      """MATCH (a:A)-[r1]->(b:B)
+        |RETURN b.i AS i ORDER BY b.i LIMIT 5
+        |""".stripMargin
+
+    val result = executeSingle(query)
+    result.executionPlanDescription().should(includeSomewhere.aPlan("Top"))
+    result.toList.shouldEqual(Seq.fill(5)(0).map(i => Map("i" -> i)))
   }
 }
