@@ -23,18 +23,16 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
+import com.neo4j.bench.macro.execution.process.InternalProfilerAssist;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
-import com.neo4j.bench.model.model.Parameters;
 
 import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Command( name = "run-single-server", description = "runs one query in a new process for a single workload" )
 public class RunSingleServerCommand implements Runnable
@@ -157,17 +155,6 @@ public class RunSingleServerCommand implements Runnable
     @Override
     public void run()
     {
-        Pid clientPid = HasPid.getPid();
-        Pid serverPid = new Pid( neo4jPid );
-
-        Map<Pid,Parameters> pidParameters = new HashMap<>();
-        pidParameters.put( clientPid, Parameters.CLIENT );
-        pidParameters.put( serverPid, Parameters.SERVER );
-
-        Map<Pid,List<ProfilerType>> pidProfilers = new HashMap<>();
-        pidProfilers.put( clientPid, ProfilerType.deserializeProfilers( clientProfilerNames ) );
-        pidProfilers.put( serverPid, ProfilerType.deserializeProfilers( serverProfilerNames ) );
-
         try ( Resources resources = new Resources( workDir.toPath() ) )
         {
             DeploymentMode deploymentMode = Deployment.server();
@@ -186,8 +173,9 @@ public class RunSingleServerCommand implements Runnable
                                           planner,
                                           runtime,
                                           executionMode,
-                                          pidParameters,
-                                          pidProfilers,
+                                          InternalProfilerAssist.forLocalServer( neo4jPid,
+                                                  ProfilerType.deserializeProfilers( clientProfilerNames ),
+                                                  ProfilerType.deserializeProfilers( serverProfilerNames ) ),
                                           warmupCount,
                                           minMeasurementSeconds,
                                           maxMeasurementSeconds,

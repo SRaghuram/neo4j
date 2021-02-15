@@ -5,17 +5,13 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.common.process.Pid;
-import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
+import com.neo4j.bench.macro.execution.process.InternalProfilerAssist;
 import com.neo4j.bench.macro.workload.Query;
-import com.neo4j.bench.model.model.Parameters;
 
-import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.EXECUTE;
@@ -32,8 +28,7 @@ public class CypherExecutingRunner extends QueryRunner
 
     @Override
     protected void run( Jvm jvm,
-                        Map<Pid,Parameters> pidParameters,
-                        Map<Pid,List<InternalProfiler>> pidProfilers,
+                        InternalProfilerAssist profilerAssist,
                         Query query,
                         ForkDirectory forkDirectory,
                         MeasurementControl warmupControl,
@@ -46,8 +41,7 @@ public class CypherExecutingRunner extends QueryRunner
             {
                 new Runner().run( jvm,
                                   database,
-                                  pidParameters,
-                                  pidProfilers,
+                                  profilerAssist,
                                   warmupStrategy.warmupQuery(),
                                   query.copyWith( EXECUTE ).queryString(),
                                   query.benchmarkGroup(),

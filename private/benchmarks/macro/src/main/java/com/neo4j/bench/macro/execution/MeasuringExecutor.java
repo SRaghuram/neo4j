@@ -5,8 +5,6 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.common.process.HasPid;
-import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.common.profiling.RecordingDescriptor;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -42,10 +40,9 @@ public abstract class MeasuringExecutor
     }
 
     public static MeasuringExecutor toMeasureCardinalityAccuracy( CardinalityMeasurement cardinalityMeasurement,
-                                                                  Map<Pid,Parameters> pidParameters,
+                                                                  Parameters additionalParameters,
                                                                   Query query )
     {
-        Parameters additionalParameters = pidParameters.get( HasPid.getPid() );
         return new MeasuringExecutor.QErrorRunner( cardinalityMeasurement,
                                                    additionalParameters,
                                                    FullBenchmarkName.from( query.benchmarkGroup(), query.benchmark() ) );

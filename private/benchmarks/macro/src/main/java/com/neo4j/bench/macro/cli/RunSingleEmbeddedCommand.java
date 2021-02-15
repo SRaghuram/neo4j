@@ -15,8 +15,6 @@ import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
-import com.neo4j.bench.common.process.HasPid;
-import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
@@ -26,10 +24,10 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
+import com.neo4j.bench.macro.execution.process.InternalProfilerAssist;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.Neo4jConfig;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.options.Edition;
 
 import java.io.File;
@@ -40,7 +38,6 @@ import java.util.List;
 
 import org.neo4j.configuration.connectors.BoltConnector;
 
-import static java.util.Collections.singletonMap;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @Command( name = "run-single-embedded", description = "runs one query in a new process for a single workload" )
@@ -177,7 +174,7 @@ public class RunSingleEmbeddedCommand implements Runnable
                 Neo4jConfig neo4jConfig = getNeo4jConfig();
                 QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
                                                                       forkDirectory -> createDatabase( store, edition, neo4jConfig, forkDirectory ) );
-                Pid clientPid = HasPid.getPid();
+
                 QueryRunner.runSingleCommand( queryRunner,
                                               Jvm.bestEffortOrFail( jvmFile ),
                                               forkDir,
@@ -186,8 +183,7 @@ public class RunSingleEmbeddedCommand implements Runnable
                                               planner,
                                               runtime,
                                               executionMode,
-                                              singletonMap( clientPid, Parameters.NONE ),
-                                              singletonMap( clientPid, ProfilerType.deserializeProfilers( profilerNames ) ),
+                                              InternalProfilerAssist.forEmbedded( ProfilerType.deserializeProfilers( profilerNames ) ),
                                               warmupCount,
                                               minMeasurementSeconds,
                                               maxMeasurementSeconds,
