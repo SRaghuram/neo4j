@@ -4705,10 +4705,14 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val a = createLabeledNode("L1", "L2")
     val b = createLabeledNode("L1")
     val r = relate(a, b)
+
     val slots = SlotConfiguration.empty
       .newLong("a", nullable = true, symbols.CTNode)
       .newLong("b", nullable = true, symbols.CTNode)
       .newReference("r", nullable = false, symbols.CTRelationship)
+    // needed for interpreted
+    SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
+
     val context = SlottedRow(slots)
     context.setLongAt(0, a.getId)
     context.setLongAt(1, -1)
