@@ -421,7 +421,8 @@ public class StoreCopy
             // Load index providers
             Dependencies deps = new Dependencies();
             Monitors monitors = new Monitors();
-            deps.satisfyDependencies( fs, config, fromPageCache, NullLogService.getInstance(), monitors, RecoveryCleanupWorkCollector.immediate() );
+            deps.satisfyDependencies( fs, config, fromPageCache, NullLogService.getInstance(), monitors, RecoveryCleanupWorkCollector.immediate(),
+                                      pageCacheTracer );
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( from, DbmsInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
             DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );

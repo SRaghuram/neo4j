@@ -113,7 +113,7 @@ public final class StoreMigration
             Dependencies deps = new Dependencies();
             Monitors monitors = new Monitors();
             deps.satisfyDependencies( fs, config, pageCache, logService, monitors,
-                    RecoveryCleanupWorkCollector.immediate() );
+                    RecoveryCleanupWorkCollector.immediate(), pageCacheTracer );
 
             DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( storeDirectory );
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DbmsInfo.UNKNOWN, deps );
