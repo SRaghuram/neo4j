@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.plandescription.Arguments.Details
 import org.neo4j.cypher.internal.plandescription.Arguments.EstimatedRows
 import org.neo4j.cypher.internal.runtime.PathImpl
 import org.neo4j.graphdb.Node
@@ -332,17 +331,10 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val endNode = createNode()
     relate(node, endNode, "HAS")
 
-    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:A) RETURN (n)-[:HAS]->() as p",
-      planComparisonStrategy = ComparePlansWithAssertion( planDescription => {
-        planDescription.find("Argument") shouldNot be(empty)
-        planDescription.cd("Argument").arguments should contain(EstimatedRows(1, Some(1)))
-        planDescription.find("Expand(All)") shouldNot be(empty)
-        val expandArgs = planDescription.cd("Expand(All)").arguments.toSet
-        expandArgs should contain(EstimatedRows(0.05, Some(0.05)))
-        expandArgs collect {
-          case Details(List(details)) if details.prettifiedString.matches("""\(n\)\-\[anon_[0-9]*\:HAS]\-\>\(anon_[0-9]*\)""") => true
-        } should not be empty
-      }))
+    val r = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:A) RETURN (n)-[:HAS]->() as p")
+    r.executionPlanDescription() should includeSomewhere
+      .aPlan("Expand(All)").withEstimatedRows(1).containingArgumentRegex("""\(n\)\-\[anon_[0-9]*\:HAS]\-\>\(anon_[0-9]*\)""".r)
+      .onTopOf(aPlan("Argument").withEstimatedRows(19))
   }
 
   test("should be able to execute aggregating-functions on pattern expressions") {
