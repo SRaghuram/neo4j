@@ -915,10 +915,10 @@ class EffectiveCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSui
     result.executionPlanDescription() should includeSomewhere.
       aPlan("Apply").withEstimatedRows(count)
       .withRHS(
-        aPlan("AntiConditionalApply").withEstimatedRows(count)
-          .withRHS(aPlan("MergeCreateNode").withEstimatedRows(count * count))
+        aPlan("Either").withEstimatedRows(count)
+          .withRHS(aPlan("MergeCreateNode").withEstimatedRows(count))
           .withLHS(
-            aPlan("ConditionalApply").withEstimatedRows(count * count)
+            aPlan("OnMatchApply").withEstimatedRows(count * count)
               .withRHS(aPlan("SetProperty").withEstimatedRows(count * count))
           )
       )
