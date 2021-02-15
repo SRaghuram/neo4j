@@ -20,7 +20,6 @@ import org.neo4j.ssl.SslPolicy;
 
 public class DiscoverySSLContextFactory
 {
-    public static final String PROTOCOL = "TLS";
     private final SslPolicy sslPolicy;
 
     public DiscoverySSLContextFactory( SslPolicy sslPolicy )
@@ -37,7 +36,7 @@ public class DiscoverySSLContextFactory
             KeyStore keyStore = sslPolicy.getKeyStore( password, password );
             keyManagerFactory.init( keyStore, password );
 
-            SSLContext sslContext = SSLContext.getInstance( PROTOCOL );
+            SSLContext sslContext = SSLContext.getInstance( "TLS" );
             KeyManager[] keyManagers = keyManagerFactory.getKeyManagers();
             TrustManager[] trustManagers = sslPolicy.getTrustManagerFactory().getTrustManagers();
             sslContext.init( keyManagers, trustManagers, null );
