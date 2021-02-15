@@ -13,6 +13,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
@@ -21,6 +22,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.NewInstance
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands
@@ -59,6 +61,7 @@ class DeleteOperator(
   deleteExpression: commands.expressions.Expression,
   deleteType: DeleteType
 ) extends StatelessOperator {
+  private[this] var profileEvent: OperatorProfileEvent = _
 
   override def operate(
     output: Morsel,
@@ -67,7 +70,7 @@ class DeleteOperator(
   ): Unit = {
     val queryState = state.queryStateForExpressionEvaluation(resources)
     val cursor: MorselFullCursor = output.fullCursor()
-    val deleter = Deleter(deleteType, queryState, resources.queryStatisticsTracker)
+    val deleter = Deleter(deleteType, queryState, resources.queryStatisticsTracker, profileEvent)
 
     while (cursor.next()) {
       val deleteMe = deleteExpression(cursor, queryState)
@@ -75,6 +78,10 @@ class DeleteOperator(
         deleter.delete(deleteMe)
       }
     }
+  }
+
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
+    this.profileEvent = event
   }
 }
 
@@ -136,9 +143,10 @@ class DeleteOperatorTemplate(
     }
 
     newInstance(
-      Constructor(deleterType, Seq(typeRefOf[QueryState], typeRefOf[MutableQueryStatistics])),
+      Constructor(deleterType, Seq(typeRefOf[QueryState], typeRefOf[MutableQueryStatistics], typeRefOf[OperatorProfileEvent])),
       QUERY_STATE,
-      QUERY_STATS_TRACKER
+      QUERY_STATS_TRACKER,
+      loadField(executionEventField)
     )
   }
 }
@@ -159,21 +167,21 @@ object Deleter {
   /**
    * Factory method to create a [[Deleter]] based on the specified delete type.
    */
-  def apply(deleteType: DeleteType, state: QueryState, stats: MutableQueryStatistics): Deleter = {
+  def apply(deleteType: DeleteType, state: QueryState, stats: MutableQueryStatistics, profileEvent: OperatorProfileEvent): Deleter = {
     deleteType match {
-      case Node => new NodeDeleter(state, stats)
-      case DetachNode => new DetachNodeDeleter(state, stats)
-      case Relationship => new RelationshipDeleter(state, stats)
-      case Path => new PathDeleter(state, stats)
-      case DetachPath => new DetachPathDeleter(state, stats)
-      case Expression => new AnyDeleter(state, stats)
-      case DetachExpression => new DetachAnyDeleter(state, stats)
+      case Node => new NodeDeleter(state, stats, profileEvent)
+      case DetachNode => new DetachNodeDeleter(state, stats, profileEvent)
+      case Relationship => new RelationshipDeleter(state, stats, profileEvent)
+      case Path => new PathDeleter(state, stats, profileEvent)
+      case DetachPath => new DetachPathDeleter(state, stats, profileEvent)
+      case Expression => new AnyDeleter(state, stats, profileEvent)
+      case DetachExpression => new DetachAnyDeleter(state, stats, profileEvent)
       case unknown => throw new InternalException(s"Unrecognized delete type $unknown")
     }
   }
 }
 
-class NodeDeleter(state: QueryState, stats: MutableQueryStatistics) extends BaseDeleter(state, stats) {
+class NodeDeleter(state: QueryState, stats: MutableQueryStatistics, profileEvent: OperatorProfileEvent) extends BaseDeleter(state, stats, profileEvent) {
   override def delete(deleteMe: AnyValue): Unit = {
     deleteMe match {
       case node: NodeValue => deleteNode(node)
@@ -182,7 +190,7 @@ class NodeDeleter(state: QueryState, stats: MutableQueryStatistics) extends Base
   }
 }
 
-class DetachNodeDeleter(state: QueryState, stats: MutableQueryStatistics) extends BaseDeleter(state, stats) {
+class DetachNodeDeleter(state: QueryState, stats: MutableQueryStatistics, profileEvent: OperatorProfileEvent) extends BaseDeleter(state, stats, profileEvent) {
   override def delete(deleteMe: AnyValue): Unit = {
     deleteMe match {
       case node: NodeValue => detachDeleteNode(node)
@@ -191,7 +199,7 @@ class DetachNodeDeleter(state: QueryState, stats: MutableQueryStatistics) extend
   }
 }
 
-class RelationshipDeleter(state: QueryState, stats: MutableQueryStatistics) extends BaseDeleter(state, stats) {
+class RelationshipDeleter(state: QueryState, stats: MutableQueryStatistics, profileEvent: OperatorProfileEvent) extends BaseDeleter(state, stats, profileEvent) {
   override def delete(deleteMe: AnyValue): Unit = {
     deleteMe match {
       case relationship: RelationshipValue => deleteRelationship(relationship)
@@ -200,7 +208,7 @@ class RelationshipDeleter(state: QueryState, stats: MutableQueryStatistics) exte
   }
 }
 
-class PathDeleter(state: QueryState, stats: MutableQueryStatistics) extends BaseDeleter(state, stats) {
+class PathDeleter(state: QueryState, stats: MutableQueryStatistics, profileEvent: OperatorProfileEvent) extends BaseDeleter(state, stats, profileEvent) {
   override def delete(deleteMe: AnyValue): Unit = {
     deleteMe match {
       case path: PathValue => deletePath(path)
@@ -209,7 +217,7 @@ class PathDeleter(state: QueryState, stats: MutableQueryStatistics) extends Base
   }
 }
 
-class DetachPathDeleter(state: QueryState, stats: MutableQueryStatistics) extends BaseDeleter(state, stats) {
+class DetachPathDeleter(state: QueryState, stats: MutableQueryStatistics, profileEvent: OperatorProfileEvent) extends BaseDeleter(state, stats, profileEvent) {
   override def delete(deleteMe: AnyValue): Unit = {
     deleteMe match {
       case path: PathValue => detachDeletePath(path)
@@ -218,13 +226,13 @@ class DetachPathDeleter(state: QueryState, stats: MutableQueryStatistics) extend
   }
 }
 
-class AnyDeleter(state: QueryState, stats: MutableQueryStatistics) extends BaseDeleter(state, stats) {
+class AnyDeleter(state: QueryState, stats: MutableQueryStatistics, profileEvent: OperatorProfileEvent) extends BaseDeleter(state, stats, profileEvent) {
   override def delete(deleteMe: AnyValue): Unit = {
     deleteAny(deleteMe)
   }
 }
 
-class DetachAnyDeleter(state: QueryState, stats: MutableQueryStatistics) extends BaseDeleter(state, stats) {
+class DetachAnyDeleter(state: QueryState, stats: MutableQueryStatistics, profileEvent: OperatorProfileEvent) extends BaseDeleter(state, stats, profileEvent) {
   override def delete(deleteMe: AnyValue): Unit = {
     detachDeleteAny(deleteMe)
   }
@@ -232,14 +240,17 @@ class DetachAnyDeleter(state: QueryState, stats: MutableQueryStatistics) extends
 
 abstract class BaseDeleter(
   private[this] val state: QueryState,
-  private[this] val stats: MutableQueryStatistics
+  private[this] val stats: MutableQueryStatistics,
+  private[this] val profileEvent: OperatorProfileEvent
 ) extends Deleter {
 
   def deleteNode(deleteMe: NodeValue): Unit = {
-    val id = deleteMe.id()
-    if (!state.query.nodeOps.isDeletedInThisTx(id)) {
-      state.query.nodeOps.delete(id)
+    // Note, delete operation checks if node is deleted in transaction further down
+    if (state.query.nodeOps.delete(deleteMe.id())) {
       stats.deleteNode()
+      if (profileEvent != null) {
+        profileEvent.dbHit()
+      }
     }
   }
 
@@ -249,14 +260,19 @@ abstract class BaseDeleter(
       val deletedRelationships = state.query.detachDeleteNode(id)
       stats.deleteRelationships(deletedRelationships)
       stats.deleteNode()
+      if (profileEvent != null) {
+        profileEvent.dbHits(1 + deletedRelationships)
+      }
     }
   }
 
   def deleteRelationship(relationship: RelationshipValue): Unit = {
     val id = relationship.id()
-    if (!state.query.relationshipOps.isDeletedInThisTx(id)) {
-      state.query.relationshipOps.delete(id)
+    if (state.query.relationshipOps.delete(id)) {
       stats.deleteRelationship()
+      if (profileEvent != null) {
+        profileEvent.dbHit()
+      }
     }
   }
 
