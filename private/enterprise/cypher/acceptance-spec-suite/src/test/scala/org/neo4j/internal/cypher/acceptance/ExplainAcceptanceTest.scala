@@ -69,7 +69,7 @@ class ExplainAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
                   |MATCH (start:Start)
                   |RETURN head([path IN (start)-[:NEXT*]->(:End) | last(nodes(path))]) AS result""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val result = executeWith(Configs.NestedPlan, query)
     val plan = result.executionPlanDescription().toString
 
     plan should include("(start)-[`anon_49`:NEXT*]->(`anon_60`:End)")

@@ -1190,7 +1190,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     //when
     val q = "MATCH (n)-[r]-(m) WITH [n,r,m] AS xs UNWIND xs AS x WITH x WHERE x:Foo RETURN x"
-    val result = executeWith(Configs.All - Configs.PipelinedFused, q)
+    val result = executeWith(Configs.All, q)
 
     //then
     result.toList should contain theSameElementsAs List(Map("x" -> n), Map("x" -> r), Map("x" -> m), Map("x" -> n), Map("x" -> r), Map("x" -> m))
