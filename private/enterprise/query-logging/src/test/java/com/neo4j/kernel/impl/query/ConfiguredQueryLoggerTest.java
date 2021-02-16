@@ -354,7 +354,7 @@ class ConfiguredQueryLoggerTest
     void shouldNotLogPassword( FormattedLogFormat logFormat )
     {
         String inputQuery = "CALL dbms.security.changePassword('abc123')";
-        String outputQuery = "CALL dbms.security.changePassword('******')";
+        String outputQuery = "CALL dbms.security.changePassword(******)";
 
         runAndCheck( logFormat, inputQuery, outputQuery, emptyMap(), "{}" );
     }
@@ -364,7 +364,7 @@ class ConfiguredQueryLoggerTest
     void shouldNotLogChangeUserPassword( FormattedLogFormat logFormat )
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('user', 'abc123')";
-        String outputQuery = "CALL dbms.security.changeUserPassword('user', '******')";
+        String outputQuery = "CALL dbms.security.changeUserPassword('user', ******)";
 
         runAndCheck( logFormat, inputQuery, outputQuery, emptyMap(), "{}" );
     }
@@ -374,7 +374,7 @@ class ConfiguredQueryLoggerTest
     void shouldNotLogChangeUserPasswordWithChangeRequired( FormattedLogFormat logFormat )
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('user', 'abc123', true)";
-        String outputQuery = "CALL dbms.security.changeUserPassword('user', '******', true)";
+        String outputQuery = "CALL dbms.security.changeUserPassword('user', ******, true)";
 
         runAndCheck( logFormat, inputQuery, outputQuery, emptyMap(), "{}" );
     }
@@ -384,7 +384,7 @@ class ConfiguredQueryLoggerTest
     void shouldNotLogPasswordNull( FormattedLogFormat logFormat )
     {
         String inputQuery = "CALL dbms.security.changeUserPassword(null, 'password')";
-        String outputQuery = "CALL dbms.security.changeUserPassword(null, '******')";
+        String outputQuery = "CALL dbms.security.changeUserPassword(null, ******)";
 
         runAndCheck( logFormat, inputQuery, outputQuery, emptyMap(), "{}" );
     }
@@ -394,7 +394,7 @@ class ConfiguredQueryLoggerTest
     void shouldNotLogPasswordExplain( FormattedLogFormat logFormat )
     {
         String inputQuery = "EXPLAIN CALL dbms.security.changePassword('abc123')";
-        String outputQuery = "EXPLAIN CALL dbms.security.changePassword('******')";
+        String outputQuery = "EXPLAIN CALL dbms.security.changePassword(******)";
 
         runAndCheck( logFormat, inputQuery, outputQuery, emptyMap(), "{}" );
     }
@@ -404,7 +404,7 @@ class ConfiguredQueryLoggerTest
     void shouldNotLogPasswordEvenIfPasswordIsSilly( FormattedLogFormat logFormat )
     {
         String inputQuery = "CALL dbms.security.changePassword('.changePassword(\\'si\"lly\\')')";
-        String outputQuery = "CALL dbms.security.changePassword('******')";
+        String outputQuery = "CALL dbms.security.changePassword(******)";
 
         runAndCheck( logFormat, inputQuery, outputQuery, emptyMap(), "{}" );
     }
@@ -415,8 +415,8 @@ class ConfiguredQueryLoggerTest
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('neo4j','.changePassword(silly)') " +
                             "CALL dbms.security.changeUserPassword('smith','other$silly') RETURN 1";
-        String outputQuery = "CALL dbms.security.changeUserPassword('neo4j','******') " +
-                             "CALL dbms.security.changeUserPassword('smith','******') RETURN 1";
+        String outputQuery = "CALL dbms.security.changeUserPassword('neo4j',******) " +
+                             "CALL dbms.security.changeUserPassword('smith',******) RETURN 1";
 
         runAndCheck( logFormat, inputQuery, outputQuery, emptyMap(), "{}" );
     }
@@ -426,7 +426,7 @@ class ConfiguredQueryLoggerTest
     void shouldNotLogCreateUserPassword( FormattedLogFormat logFormat )
     {
         String inputQuery = "CALL dbms.security.createUser('user', 'abc123')";
-        String outputQuery = "CALL dbms.security.createUser('user', '******')";
+        String outputQuery = "CALL dbms.security.createUser('user', ******)";
 
         runAndCheck( logFormat, inputQuery, outputQuery, emptyMap(), "{}" );
     }
@@ -436,7 +436,7 @@ class ConfiguredQueryLoggerTest
     void shouldNotLogCreateUserPasswordWithRequiredChange( FormattedLogFormat logFormat )
     {
         String inputQuery = "CALL dbms.security.createUser('user', 'abc123', true)";
-        String outputQuery = "CALL dbms.security.createUser('user', '******', true)";
+        String outputQuery = "CALL dbms.security.createUser('user', ******, true)";
 
         runAndCheck( logFormat, inputQuery, outputQuery, emptyMap(), "{}" );
     }
@@ -483,7 +483,7 @@ class ConfiguredQueryLoggerTest
     void shouldNotLogPasswordDifferentWhitespace( FormattedLogFormat logFormat )
     {
         String inputQuery = "CALL dbms.security.changeUserPassword(%s'abc123'%s)";
-        String outputQuery = "CALL dbms.security.changeUserPassword(%s'******'%s)";
+        String outputQuery = "CALL dbms.security.changeUserPassword(%s******%s)";
 
         runAndCheck(
                 logFormat, format( inputQuery, "'user',", "" ),

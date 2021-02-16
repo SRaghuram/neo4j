@@ -19,6 +19,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,6 +27,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TimeZone;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -37,6 +39,7 @@ import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.UncloseableDelegatingFileSystemAbstraction;
@@ -139,11 +142,11 @@ class QueryLoggerIT
         String connectionDetails = connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME );
         assertThat( logLines, contains(
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails,
-                        "CREATE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
+                        "CREATE USER foo SET PASSWORD ****** CHANGE NOT REQUIRED" ) ),
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails,
-                        "CREATE OR REPLACE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
+                        "CREATE OR REPLACE USER foo SET PASSWORD ****** CHANGE NOT REQUIRED" ) ),
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails,
-                        "CREATE USER foo IF NOT EXISTS SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
+                        "CREATE USER foo IF NOT EXISTS SET PASSWORD ****** CHANGE NOT REQUIRED" ) ),
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "CREATE ROLE role IF NOT EXISTS" ) ),
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "GRANT ROLE role TO foo" ) ),
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "GRANT ACCESS ON DATABASE * TO role" ) ),
@@ -387,7 +390,7 @@ class QueryLoggerIT
         databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines.get( 0 ), containsString( "CREATE USER testUser SET PASSWORD '******'" ) );
+        assertThat( logLines.get( 0 ), containsString( "CREATE USER testUser SET PASSWORD ******" ) );
     }
 
     @Test
@@ -600,7 +603,7 @@ class QueryLoggerIT
 
         List<String> logLines = readAllLines( logFilename );
         var lastEntry = logLines.size() - 1;
-        var obfuscatedQuery = "ALTER CURRENT USER SET PASSWORD FROM '******' TO '******'";
+        var obfuscatedQuery = "ALTER CURRENT USER SET PASSWORD FROM ****** TO ******";
         assertThat( logLines.get( lastEntry ),
                 endsWith( String.format( "%s%s - %s - {} - runtime=system - {}",
                         connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
@@ -623,7 +626,7 @@ class QueryLoggerIT
 
         List<String> logLines = readAllLines( logFilename );
         var lastEntry = logLines.size() - 1;
-        var obfuscatedQuery = "ALTER USER foo SET PASSWORD '******'";
+        var obfuscatedQuery = "ALTER USER foo SET PASSWORD ******";
         assertThat( logLines.get( lastEntry ),
                 endsWith( String.format( "%s%s - %s - {} - runtime=system - {}",
                         connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
@@ -646,7 +649,7 @@ class QueryLoggerIT
 
         List<String> logLines = readAllLines( logFilename );
         var lastEntry = logLines.size() - 1;
-        var obfuscatedQuery = "CALL dbms.security.changeUserPassword('foo', '******')";
+        var obfuscatedQuery = "CALL dbms.security.changeUserPassword('foo', ******)";
         assertThat( logLines.get( lastEntry ),
                 endsWith( String.format( "%s%s - %s - {} - runtime=system - {}",
                         connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
@@ -668,7 +671,7 @@ class QueryLoggerIT
 
         List<String> logLines = readAllLines( logFilename );
         var lastEntry = logLines.size() - 1;
-        var obfuscatedQuery = "CREATE USER foo SET PASSWORD '******'";
+        var obfuscatedQuery = "CREATE USER foo SET PASSWORD ******";
         assertThat( logLines.get( lastEntry ),
                 endsWith( String.format( "%s%s - %s - {} - runtime=system - {}",
                         connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
@@ -691,7 +694,7 @@ class QueryLoggerIT
 
         List<String> logLines = readAllLines( logFilename );
         var lastEntry = logLines.size() - 1;
-        var obfuscatedQuery = "CALL dbms.security.createUser('foo', '******')";
+        var obfuscatedQuery = "CALL dbms.security.createUser('foo', ******)";
         assertThat( logLines.get( lastEntry ),
                 endsWith( String.format( "%s%s - %s - {} - runtime=system - {}",
                         connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
@@ -763,6 +766,52 @@ class QueryLoggerIT
         finally
         {
             TimeZone.setDefault( defaultTimeZone );
+        }
+    }
+
+    @Test
+    void shouldIfConfiguredObfuscateAllLiterals() throws Exception
+    {
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_obfuscate_literals, true )
+                       .setConfig( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true );
+
+        buildDatabase();
+
+        Map<String,String> toTest = MapUtil.stringMap(
+                "MATCH (n) WHERE n.salary = 10000000.76 RETURN n", "MATCH (n) WHERE n.salary = ****** RETURN n",
+                "MATCH (n) WHERE n.salary = 10000000.76 RETURN $p", "MATCH (n) WHERE n.salary = ****** RETURN $p",
+                "MATCH (n) WHERE n.isEvil = true RETURN n", "MATCH (n) WHERE n.isEvil = ****** RETURN n",
+                "MATCH (n) WHERE n.creditCard = 123123 RETURN n", "MATCH (n) WHERE n.creditCard = ****** RETURN n",
+                "MATCH (n) WHERE n.secret = 'There \\\'is\\\' \\\"no\\\" god!' RETURN n", "MATCH (n) WHERE n.secret = ****** RETURN n",
+                 "MATCH (n) WHERE n.secret = \"There \\\"is\\\" 'no' god!\" RETURN n", "MATCH (n) WHERE n.secret = ****** RETURN n",
+                "RETURN ['the', 'answer', 'is',  42]", "RETURN [******, ******, ******,  ******]",
+                "RETURN ['there', 'is', ' no', 'god', $p, '!']", "[******, ******, ******, ******, $p, ******]",
+                "RETURN {answer: 42}", "RETURN {answer: ******}",
+                "RETURN {     answer: 42 \t }", "{     answer: ****** \t }",
+                "RETURN {     answers: [ 42,       {key: false } ], accurate: false }",
+                "RETURN {     answers: [ ******,       {key: ****** } ], accurate: ****** }",
+                "MATCH (n) WHERE n.secret = NULL RETURN n", "MATCH (n) WHERE n.secret = ****** RETURN n"
+        );
+
+        ArrayList<String> expected = new ArrayList<>( toTest.size() );
+        for ( Entry<String,String> entry : toTest.entrySet() )
+        {
+            String query = entry.getKey();
+            executeQuery( query, Map.of( "p", 42 ) );
+            expected.add( entry.getValue() );
+        }
+
+        databaseManagementService.shutdown();
+
+        List<String> logLines = readAllLines( logFilename );
+
+        assertEquals( logLines.size(), expected.size() );
+        for ( int i = 0; i < logLines.size(); i++ )
+        {
+            assertThat( logLines.get( i ),
+                        endsWith( String.format( "%s - {p: 42} - runtime=pipelined - {}", expected.get( i ) ) ) );
         }
     }
 
