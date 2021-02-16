@@ -9,16 +9,12 @@ import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
+import com.neo4j.bench.micro.benchmarks.cypher.plan.builder.BenchmarkSetupPlanBuilder
 import com.neo4j.bench.micro.data.Augmenterizer
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.micro.data.ManagedStore
-import com.neo4j.bench.micro.data.Plans.IdGen
-import com.neo4j.bench.micro.data.Plans.astLabelName
-import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.Stores
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.logical.plans.IndexOrderAscending
 import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
@@ -39,7 +35,7 @@ import org.openjdk.jmh.infra.Blackhole
 class OrLabelScan extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME),
-    base = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME))
+    base = Array(Slotted.NAME))
   @Param(Array[String]())
   var runtime: String = _
 
@@ -81,10 +77,10 @@ class OrLabelScan extends AbstractCypherBenchmark {
         val allNodes = tx.getAllNodes
         allNodes.iterator().forEachRemaining {
           node =>
-            if (aCount > singleCount) {
+            if (aCount < singleCount) {
               node.addLabel(LABEL_A)
               aCount += 1
-            } else if (bCount > singleCount) {
+            } else if (bCount < singleCount) {
               node.addLabel(LABEL_B)
               bCount += 1
             } else {
@@ -107,23 +103,24 @@ class OrLabelScan extends AbstractCypherBenchmark {
   override def setup(planContext: PlanContext): TestSetup = {
     val colName = "n"
 
-    val distinct = if (ordered) {
-      val lhs = plans.NodeByLabelScan(colName, astLabelName(LABEL_A), Set.empty, IndexOrderAscending)(IdGen)
-      val rhs = plans.NodeByLabelScan(colName, astLabelName(LABEL_B), Set.empty, IndexOrderAscending)(IdGen)
-      val union = plans.OrderedUnion(lhs, rhs, List(Ascending(colName)))(IdGen)
-      plans.OrderedDistinct(union, Map(colName -> astVariable(colName)), Seq(astVariable(colName)))(IdGen)
+    var builder = new BenchmarkSetupPlanBuilder()
+      .produceResults(colName)
+
+    builder = if (ordered) {
+      builder
+        .orderedDistinct(Seq(colName), s"$colName AS $colName")
+        .orderedUnion(Seq(Ascending(colName)))
+        .|.nodeByLabelScan(colName, LABEL_B.name(), IndexOrderAscending)
+        .nodeByLabelScan(colName, LABEL_A.name(), IndexOrderAscending)
     } else {
-      val lhs = plans.NodeByLabelScan(colName, astLabelName(LABEL_A), Set.empty, IndexOrderNone)(IdGen)
-      val rhs = plans.NodeByLabelScan(colName, astLabelName(LABEL_B), Set.empty, IndexOrderNone)(IdGen)
-      val union = plans.Union(lhs, rhs)(IdGen)
-      plans.Distinct(union, Map(colName -> astVariable(colName)))(IdGen)
+      builder
+        .distinct(s"$colName AS $colName")
+        .union()
+        .|.nodeByLabelScan(colName, LABEL_B.name(), IndexOrderNone)
+        .nodeByLabelScan(colName, LABEL_A.name(), IndexOrderNone)
     }
 
-    val resultColumns = List(colName)
-    val produceResults = plans.ProduceResult(distinct, resultColumns)(IdGen)
-    val table = SemanticTable().addNode(astVariable(colName))
-
-    TestSetup(produceResults, table, resultColumns)
+    builder.build()
   }
 
   @Benchmark
