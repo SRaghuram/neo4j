@@ -57,7 +57,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     }
   }
 
-  test("Optional Match with OR and preceding match should not loose variables from first match") {
+  test("Optional Match with OR and preceding match should not lose variables from first match") {
     val uuid = "6799d30c-f5c9-4a3a-9557-6883d11d5ef8"
     val geonameid = 290557
     val query =
@@ -76,8 +76,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       Seq("Person", "Company", "Product").foreach(l => createLabeledNode(Map("uuid" -> s"xxx$i"), l))
       Seq("City", "AdministrativeLocation1", "AdministrativeLocation2", "Country", "Region").foreach(l => createLabeledNode(Map("geonameId" -> i), l, "Location"))
     }
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Optional").onTopOf(aPlan("Filter").onTopOf(aPlan("Distinct").onTopOf(aPlan("Union"))))
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Optional").onTopOf(aPlan("Filter").onTopOf(aPlan("OrderedDistinct").onTopOf(aPlan("OrderedUnion"))))
     val results: Seq[Map[String, AnyRef]] = result.toList
     results.size should be(1)
     results.head("p") should be(p)
@@ -970,7 +970,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createLabeledNode("B")
     createLabeledNode("C")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a) WHERE (a:A AND a:B) OR (a:A AND a:C) RETURN a")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (a) WHERE (a:A AND a:B) OR (a:A AND a:C) RETURN a")
 
     // Then
     result.toList should equal(List(Map("a" -> n1), Map("a" -> n2), Map("a" -> n3)))
