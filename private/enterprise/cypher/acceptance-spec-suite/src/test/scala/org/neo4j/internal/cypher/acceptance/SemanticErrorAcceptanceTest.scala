@@ -5,8 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.util
-
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.InterpretedRuntimeName
 import org.neo4j.cypher.internal.PipelinedRuntimeName
@@ -14,6 +12,7 @@ import org.neo4j.cypher.internal.SlottedRuntimeName
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
 
+import java.util
 import scala.collection.JavaConverters.asScalaIteratorConverter
 
 class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
@@ -522,6 +521,36 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
       "WITH 1 AS n CALL { WITH n RETURN n+1 AS x UNION WITH n AS m RETURN m-1 AS x } RETURN x",
       s"$msg (line 1, column 49 (offset: 48))"
     )
+    executeAndEnsureError(
+      "WITH 1 AS n CALL { WITH *, 1 AS x RETURN x } RETURN x",
+      s"$msg (line 1, column 20 (offset: 19))"
+    )
+  }
+
+  test("should give an error message about bad importing WITH") {
+
+    val badImportingWithClauses = Seq(
+      "WITH n ORDER BY n.prop" -> "ORDER BY",
+      "WITH n WHERE n.prop > 123" -> "WHERE",
+      "WITH n LIMIT 10" -> "LIMIT",
+      "WITH n SKIP 10" -> "SKIP",
+      "WITH DISTINCT n" -> "DISTINCT"
+    )
+
+    for {
+      (withClause, errorMsg) <- badImportingWithClauses
+      query <- Seq(
+        s"WITH 1 AS n CALL { $withClause RETURN x } RETURN x",
+        s"WITH 1 AS n CALL { FROM g $withClause RETURN x } RETURN x",
+        s"WITH 1 AS n CALL { USE g $withClause RETURN x } RETURN x",
+        s"WITH 1 AS n CALL { WITH n RETURN n+1 AS x UNION $withClause RETURN n-1 AS x } RETURN x",
+        s"WITH 1 AS n CALL { WITH n CALL { $withClause RETURN n+1 AS x } RETURN x } RETURN x",
+      )
+    } {
+      executeAndEnsureError(
+        query,
+        s"Importing WITH should consist only of simple references to outside variables. $errorMsg is not allowed.")
+   }
   }
 
   test("should give a custom error message when returning already declared variable from uncorrelated subquery") {
