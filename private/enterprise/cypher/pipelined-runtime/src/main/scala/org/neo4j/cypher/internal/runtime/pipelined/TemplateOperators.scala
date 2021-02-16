@@ -502,7 +502,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               nodePredicate,
               relationshipPredicate)(ctx.expressionCompiler)
 
-        case plan@plans.ProcedureCall(_, call@ResolvedCall(signature, callArguments, _, _, _)) if !parallelExecution =>
+        case plan@plans.ProcedureCall(_, call@ResolvedCall(signature, callArguments, _, _, _, _)) if !parallelExecution =>
           ctx: TemplateContext => {
             if (call.signature.isVoid) {
               new VoidProcedureOperatorTemplate(

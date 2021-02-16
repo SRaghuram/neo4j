@@ -422,4 +422,18 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     // THEN
     graph.getMaybeRelationshipConstraint("Label", "prop").isEmpty should be(true)
   }
+
+  test("Procedure call with YIELD * should not work with CYPHER 3.5 and 4.2") {
+    Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+      withClue(version) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"$version CALL db.labels() YIELD *")
+        }
+
+        // THEN
+        exception.getMessage should include("Procedure call using `YIELD *` is not supported in this Cypher version.")
+      }
+    })
+  }
 }

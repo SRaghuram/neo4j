@@ -43,6 +43,13 @@ public class ProxyFunctions
         return Stream.of( new Result( "write" ) );
     }
 
+    @Procedure
+    @Description( "deprecated return column procedure" )
+    public Stream<MultiResult> procWithDepr()
+    {
+        return Stream.of( new MultiResult( "foo", "bar" ) );
+    }
+
     public static class Result
     {
         public final String foo;
@@ -50,6 +57,19 @@ public class ProxyFunctions
         public Result( String foo )
         {
             this.foo = foo;
+        }
+    }
+
+    public static class MultiResult
+    {
+        public final String foo;
+        @Deprecated( since = "For testing deprecated return column for procedures" )
+        public final String bar;
+
+        public MultiResult( String foo, String bar )
+        {
+            this.foo = foo;
+            this.bar = bar;
         }
     }
 }

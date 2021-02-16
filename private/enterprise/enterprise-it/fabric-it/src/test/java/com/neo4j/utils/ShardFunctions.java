@@ -28,6 +28,13 @@ public class ShardFunctions
     }
 
     @Procedure
+    @Description( "deprecated return column procedure" )
+    public Stream<ProxyFunctions.MultiResult> procWithDepr()
+    {
+        return Stream.of( new ProxyFunctions.MultiResult( "foo", "bar" ) );
+    }
+
+    @Procedure
     @Description( "read procedure on shards only" )
     public Stream<Result> readerOnShard()
     {
@@ -39,6 +46,13 @@ public class ShardFunctions
     public Stream<Result> writerOnShard()
     {
         return Stream.of( new Result( "write" ) );
+    }
+
+    @Procedure
+    @Description( "void procedure" )
+    public void voidProc()
+    {
+        int answer = 40 + 2;
     }
 
     public static class Result

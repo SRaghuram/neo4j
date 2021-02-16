@@ -748,7 +748,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           SlottedPipeMapper.computeUnionRowMapping(rhsSlots, slots)
         )
 
-      case plans.ProcedureCall(_, call@ResolvedCall(signature, callArguments, _, _, _)) =>
+      case plans.ProcedureCall(_, call@ResolvedCall(signature, callArguments, _, _, _, _)) =>
         new ProcedureCallOperator(
           WorkIdentity.fromPlan(plan),
           signature,
@@ -942,7 +942,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case _: plans.Argument => None
 
-      case plans.ProcedureCall(_, call@ResolvedCall(signature, callArguments, _, _, _)) =>
+      case plans.ProcedureCall(_, call@ResolvedCall(signature, callArguments, _, _, _, _)) =>
         val callMode = ProcedureCallMode.fromAccessMode(signature.accessMode)
         Some(new ProcedureCallMiddleOperator(
           WorkIdentity.fromPlan(plan),

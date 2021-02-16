@@ -64,6 +64,13 @@ public class TestProcedure
     @Context
     public DependencyResolver dependencyResolver;
 
+    @Procedure( "org.neo4j.voidProc" )
+    @Description( "org.neo4j.voidProc" )
+    public void voidProc()
+    {
+        int answer = 40 + 2;
+    }
+
     @Procedure( "org.neo4j.time" )
     @Description( "org.neo4j.time" )
     public void time( @Name( value = "time" ) LocalTime statementTime )
@@ -85,6 +92,21 @@ public class TestProcedure
     public Stream<CountResult> stream123()
     {
         return IntStream.of( 1, 2, 3 ).mapToObj( i -> new CountResult( i, "count" + i ) );
+    }
+
+    @Deprecated( since = "For testing deprecated procedures" )
+    @Procedure( "org.neo4j.stream123Depr" )
+    @Description( "org.neo4j.stream123Depr" )
+    public Stream<CountResult> stream123Depr()
+    {
+        return IntStream.of( 1, 2, 3 ).mapToObj( i -> new CountResult( i, "count" + i ) );
+    }
+
+    @Procedure( "org.neo4j.procWithDepr" )
+    @Description( "org.neo4j.procWithDepr" )
+    public Stream<DeprecatedResult> procWithDepr()
+    {
+        return IntStream.of( 1, 2, 3 ).mapToObj( i -> new DeprecatedResult( i, "count" + i ) );
     }
 
     @Procedure( "org.neo4j.recurseN" )
@@ -421,6 +443,19 @@ public class TestProcedure
         {
             resultCount++;
             return INCLUDE_AND_CONTINUE;
+        }
+    }
+
+    public static class DeprecatedResult
+    {
+        public long count;
+        @Deprecated( since = "For testing deprecated return column for procedures" )
+        public String name;
+
+        DeprecatedResult( long count, String name )
+        {
+            this.count = count;
+            this.name = name;
         }
     }
 }

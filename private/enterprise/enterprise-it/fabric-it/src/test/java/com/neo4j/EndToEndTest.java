@@ -937,6 +937,70 @@ class EndToEndTest
     }
 
     @Test
+    void testCallWithoutYieldProcedure()
+    {
+        List<String> result = inMegaTx( AccessMode.READ, tx ->
+        {
+            var query = joinAsLines(
+                    "USE mega.graph(0)",
+                    "CALL com.neo4j.utils.reader()"
+            );
+            return tx.run( query ).stream().map( r -> r.get( "foo" ).asString() ).collect( Collectors.toList() );
+        } );
+
+        assertThat( result.size() ).isEqualTo( 1 );
+        assertThat( result ).contains( "read" );
+    }
+
+    @Test
+    void testCallYieldStarProcedure()
+    {
+        List<String> result = inMegaTx( AccessMode.READ, tx ->
+        {
+            var query = joinAsLines(
+                    "USE mega.graph(0)",
+                    "CALL com.neo4j.utils.reader() YIELD *"
+            );
+            return tx.run( query ).stream().map( r -> r.get( "foo" ).asString() ).collect( Collectors.toList() );
+        } );
+
+        assertThat( result.size() ).isEqualTo( 1 );
+        assertThat( result ).contains( "read" );
+    }
+
+    @Test
+    void testCallYieldStarProcedureShouldReturnDeprecatedResultColumns()
+    {
+        List<String> result = inMegaTx( AccessMode.READ, tx ->
+        {
+            var query = joinAsLines(
+                    "USE mega.graph(0)",
+                    "CALL com.neo4j.utils.procWithDepr() YIELD *"
+            );
+            // only needs to check the returned columns
+            return tx.run( query ).stream().collect( Collectors.toList() ).get( 0 ).keys();
+        } );
+
+        assertThat( result.size() ).isEqualTo( 2 );
+        assertThat( result ).contains( "foo", "bar" );
+    }
+
+    @Test
+    void testCallYieldStarForVoidProcedure()
+    {
+        ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( AccessMode.READ, tx ->
+        {
+            var query = joinAsLines(
+                    "USE mega.graph(0)",
+                    "CALL com.neo4j.utils.voidProc() YIELD *"
+            );
+            tx.run( query ).consume();
+        } ) );
+
+        assertThat( ex.getMessage() ).contains( "Cannot yield value from void procedure." );
+    }
+
+    @Test
     void testRollbackOnStatementFailure()
     {
         // this is intentionally not using the driver, because the driver closes transactions on any failure

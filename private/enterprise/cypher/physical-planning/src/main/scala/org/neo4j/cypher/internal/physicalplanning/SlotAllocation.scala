@@ -688,7 +688,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case LoadCSV(_, _, variableName, HasHeaders, _, _, _) =>
         slots.newReference(variableName, nullable, CTMap)
 
-      case ProcedureCall(_, ResolvedCall(_, _, callResults, _, _)) =>
+      case ProcedureCall(_, ResolvedCall(_, _, callResults, _, _, _)) =>
         callResults.foreach {
           case ProcedureResultItem(_, variable) =>
             slots.newReference(variable.name, true, CTAny)

@@ -79,7 +79,7 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
       ))})
   }
 
-  test("should not yield deprecated fields") {
+  test("should yield deprecated fields") {
     // given
     registerProcedure("something.with.deprecated.output") { builder =>
       builder.out(util.Arrays.asList(
@@ -97,7 +97,7 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     // then
     graph.withTx( tx => {
       tx.execute("CALL something.with.deprecated.output()").stream().toArray.toList should equal(List(
-        map("one", "alpha", "newTwo", "beta")
+        map("one", "alpha", "oldTwo", "junk", "newTwo", "beta")
       ))})
   }
 

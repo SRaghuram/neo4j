@@ -5,8 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.util
-
 import org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.QueryExecutionException
@@ -19,6 +17,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 
+import java.util
 import scala.collection.JavaConverters.asScalaIteratorConverter
 
 class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
@@ -44,6 +43,87 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
       Map("count" -> 1, "name" -> "count1" ),
       Map("count" -> 2, "name" -> "count2" ),
       Map("count" -> 3, "name" -> "count3" )
+    ))
+  }
+
+  test("should support YIELD * in stand-alone call") {
+    registerTestProcedures()
+
+    val result = executeWith(Configs.ProcedureCallRead, "CALL org.neo4j.stream123() YIELD *")
+
+    result.toSet should equal(Set(
+      Map("count" -> 1, "name" -> "count1"),
+      Map("count" -> 2, "name" -> "count2"),
+      Map("count" -> 3, "name" -> "count3")
+    ))
+  }
+
+  test("should support YIELD * in stand-alone call with implicit arguments") {
+    registerTestProcedures()
+
+    val result = executeWith(Configs.ProcedureCallRead, "CALL org.neo4j.stream123 YIELD *")
+
+    result.toSet should equal(Set(
+      Map("count" -> 1, "name" -> "count1"),
+      Map("count" -> 2, "name" -> "count2"),
+      Map("count" -> 3, "name" -> "count3")
+    ))
+  }
+
+  test("should not support YIELD * in in-query call") {
+    registerTestProcedures()
+
+    failWithError(Configs.ProcedureCallRead, "CALL org.neo4j.stream123() YIELD * RETURN *", "Cannot use `YIELD *` outside standalone call")
+    failWithError(Configs.ProcedureCallRead, "CREATE () WITH 1 AS ignore CALL org.neo4j.stream123() YIELD * RETURN *", "Cannot use `YIELD *` outside standalone call")
+    failWithError(Configs.ProcedureCallRead, "CALL org.neo4j.stream123() YIELD count CALL org.neo4j.stream123() YIELD *", "Cannot use `YIELD *` outside standalone call")
+  }
+
+  test("should not support YIELD * with VOID procedure") {
+    registerTestProcedures()
+
+    failWithError(Configs.ProcedureCallRead, "CALL org.neo4j.voidProc() YIELD *", "Cannot yield value from void procedure.")
+  }
+
+  test("YIELD * should not filter out deprecated columns") {
+    registerTestProcedures()
+
+    withClue("Call with YIELD *: ") {
+      val resultYieldStar = executeWith(Configs.ProcedureCallRead, "CALL org.neo4j.procWithDepr() YIELD *")
+      resultYieldStar.toSet should equal(Set(
+        Map("count" -> 1, "name" -> "count1"),
+        Map("count" -> 2, "name" -> "count2"),
+        Map("count" -> 3, "name" -> "count3")
+      ))
+    }
+
+    withClue("Call with YIELD deprecatedColumn: ") {
+      val resultYieldDepr = executeWith(Configs.ProcedureCallRead, "CALL org.neo4j.procWithDepr() YIELD name")
+      resultYieldDepr.toSet should equal(Set(
+        Map("name" -> "count1"),
+        Map("name" -> "count2"),
+        Map("name" -> "count3")
+      ))
+    }
+
+    withClue("Call without YIELD: ") {
+      val result = executeWith(Configs.ProcedureCallRead, "CALL org.neo4j.procWithDepr()")
+      result.toSet should equal(Set(
+        Map("count" -> 1, "name" -> "count1"),
+        Map("count" -> 2, "name" -> "count2"),
+        Map("count" -> 3, "name" -> "count3")
+      ))
+    }
+  }
+
+  test("should support YIELD * on deprecated procedure") {
+    registerTestProcedures()
+
+    val result = executeWith(Configs.ProcedureCallRead, "CALL org.neo4j.stream123Depr() YIELD *")
+
+    result.toSet should equal(Set(
+      Map("count" -> 1, "name" -> "count1"),
+      Map("count" -> 2, "name" -> "count2"),
+      Map("count" -> 3, "name" -> "count3")
     ))
   }
 
