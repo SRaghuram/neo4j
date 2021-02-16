@@ -39,15 +39,22 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.KernelVersion;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
+import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
+import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
+import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
+import org.neo4j.kernel.impl.transaction.log.ReaderLogVersionBridge;
+import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.files.LogFile;
+import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.Race;
 import org.neo4j.test.extension.Inject;
@@ -67,6 +74,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.dbms.database.ComponentVersion.DBMS_RUNTIME_COMPONENT;
 import static org.neo4j.dbms.database.SystemGraphComponent.VERSION_LABEL;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.test.Race.throwing;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
@@ -81,6 +89,9 @@ class TransactionLogUpgradeIT
 
     @Inject
     private ClusterFactory clusterFactory;
+
+    @Inject
+    private FileSystemAbstraction fs;
 
     private Cluster cluster;
     private GraphDatabaseService systemDb;
@@ -227,8 +238,8 @@ class TransactionLogUpgradeIT
         //Then
         assertRuntimeVersion( DbmsRuntimeVersion.LATEST_DBMS_RUNTIME_COMPONENT_VERSION );
         assertKernelVersion( KernelVersion.LATEST );
-        assertUpgradeTransactionInOrder( KernelVersion.V4_2, KernelVersion.LATEST, startTransaction );
         assertDegrees( nodeId );
+        assertUpgradeTransactionInOrder( KernelVersion.V4_2, KernelVersion.LATEST, startTransaction );
     }
 
     private void assertDegrees( long nodeId )
@@ -315,18 +326,28 @@ class TransactionLogUpgradeIT
 
     private void assertUpgradeTransactionInOrder( KernelVersion from, KernelVersion to, long fromTxId ) throws Exception
     {
+        stopDatabase( DEFAULT_DATABASE_NAME, cluster );
+        assertDatabaseEventuallyStopped( DEFAULT_DATABASE_NAME, cluster );
+
         for ( ClusterMember member : cluster.allMembers() )
         {
-            LogicalTransactionStore lts = member.resolveDependency( DEFAULT_DATABASE_NAME, LogicalTransactionStore.class );
             ArrayList<KernelVersion> transactionVersions = new ArrayList<>();
             ArrayList<CommittedTransactionRepresentation> transactions = new ArrayList<>();
-            try ( TransactionCursor transactionCursor = lts.getTransactions( fromTxId + 1 ) )
+
+            LogFile logFile = LogFilesBuilder.logFilesBasedOnlyBuilder( member.databaseLayout().getTransactionLogsDirectory(), fs ).build().getLogFile();
+            try ( PhysicalLogVersionedStoreChannel reader = logFile.openForVersion( 0 );
+                    ReadAheadLogChannel readAheadLogChannel = new ReadAheadLogChannel( reader, new ReaderLogVersionBridge( logFile ), INSTANCE );
+                    PhysicalTransactionCursor cursor = new PhysicalTransactionCursor( readAheadLogChannel,
+                        new VersionAwareLogEntryReader( StorageEngineFactory.selectStorageEngine().commandReaderFactory() ) ) )
             {
-                while ( transactionCursor.next() )
+                while ( cursor.next() )
                 {
-                    CommittedTransactionRepresentation representation = transactionCursor.get();
-                    transactions.add( representation );
-                    transactionVersions.add( representation.getStartEntry().getVersion() );
+                    CommittedTransactionRepresentation representation = cursor.get();
+                    if ( representation.getCommitEntry().getTxId() > fromTxId )
+                    {
+                        transactions.add( representation );
+                        transactionVersions.add( representation.getStartEntry().getVersion() );
+                    }
                 }
             }
             assertThat( transactionVersions ).hasSizeGreaterThanOrEqualTo( 2 ); //at least upgrade transaction and the triggering transaction
