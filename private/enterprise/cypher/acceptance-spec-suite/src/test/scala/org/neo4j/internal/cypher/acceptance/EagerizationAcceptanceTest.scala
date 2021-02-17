@@ -1377,6 +1377,51 @@ class EagerizationAcceptanceTest
     assertStats(result, relationshipsCreated = 1)
   }
 
+  test("should need eagerness for optional match set label") {
+    createLabeledNode("Foo")
+    createLabeledNode("Foo")
+    createLabeledNode("Bar")
+
+    val query =
+      """MATCH (a:Foo)
+        |OPTIONAL MATCH (b:Bar)
+        |MATCH (c)
+        |SET c:Bar
+        |RETURN b""".stripMargin
+    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    result.size shouldEqual 6
+  }
+
+  test("should need eagerness for optional match remove label") {
+    createLabeledNode("Foo")
+    createLabeledNode("Foo")
+    createLabeledNode("Bar")
+    createLabeledNode("Bar")
+
+    val query =
+      """
+        |MATCH (a:Foo)
+        |OPTIONAL MATCH (b:Bar)
+        |REMOVE b:Bar
+        |RETURN b""".stripMargin
+    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    result.size shouldEqual 4
+  }
+
+  test("should need eagerness for optional match create node") {
+    createLabeledNode("Foo")
+    createLabeledNode("Foo")
+    createLabeledNode("Bar")
+
+    val query =
+      """MATCH (a:Foo)
+        |OPTIONAL MATCH (b:Bar)
+        |CREATE (c:Bar)
+        |RETURN b""".stripMargin
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    result.size shouldEqual 2
+  }
+
   // TESTS FOR MATCH AND MERGE
 
   test("on match set label on unstable iterator should be eager") {
@@ -2355,16 +2400,19 @@ class EagerizationAcceptanceTest
     result.columnAs[Long]("count(*)").next shouldBe 4
   }
 
-  test("remove same label without anything else reading it should not be eager") {
-    createLabeledNode("A")
-    createLabeledNode("B")
-    createLabeledNode("C")
+  test("remove same label without anything else reading it should be eager") {
+    for(_ <- 0 until 2) {
+      createLabeledNode("A")
+      createLabeledNode("B")
+      createLabeledNode("C")
+    }
+
     val query = "MATCH  (m1:A), (m2:B), (n:C) REMOVE n:C RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
-    result.columnAs[Long]("count(*)").next shouldBe 1
-    assertStats(result, labelsRemoved = 1)
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    result.columnAs[Long]("count(*)").next shouldBe 8
+    assertStats(result, labelsRemoved = 2)
   }
 
   test("matching label on right-hand side and removing same label should be eager and get the count right") {
