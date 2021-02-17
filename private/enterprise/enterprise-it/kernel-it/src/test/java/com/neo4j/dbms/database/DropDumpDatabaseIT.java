@@ -17,16 +17,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.LoadCommand;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.archive.Loader;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.test.extension.DbmsController;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -37,6 +41,7 @@ import static org.neo4j.configuration.GraphDatabaseInternalSettings.databases_ro
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.database_dumps_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @EnterpriseDbmsExtension
 @ExtendWith( SuppressOutputExtension.class )
@@ -45,6 +50,8 @@ public class DropDumpDatabaseIT
 {
     @Inject
     DatabaseManagementService managementService;
+    @Inject
+    DbmsController dbmsController;
     @Inject
     Neo4jLayout neo4jLayout;
     @Inject
@@ -85,6 +92,39 @@ public class DropDumpDatabaseIT
 
         // then
         assertThat( nodeExistsWithLabel( fooDb, testLabel ) ).isTrue();
+    }
+
+    @Test
+    void dropDumpDatabaseRestartDbms()
+    {
+        // given
+        var dbName = "foo";
+        managementService.createDatabase( dbName );
+        var fooDb = managementService.database( dbName );
+        var testLabel = Label.label( "test" );
+        writeNode( fooDb, testLabel );
+        var systemDb = managementService.database( SYSTEM_DATABASE_NAME );
+
+        // when
+        dropDump( systemDb, fooDb.databaseName() );
+
+        // then
+        assertEventually( "foo should not exist", () -> dbExists( systemDb, dbName ), exists -> !exists, 10, TimeUnit.SECONDS );
+
+        // when/then
+        dbmsController.restartDbms(); //should not throw
+    }
+
+    boolean dbExists( GraphDatabaseService systemDb, String dbName )
+    {
+        var hasRow = new AtomicBoolean( false );
+        try ( var tx = systemDb.beginTx();
+              var result = tx.execute( "SHOW DATABASE `" + dbName + "`" ) )
+        {
+            hasRow.set( result.hasNext() );
+            tx.commit();
+        }
+        return hasRow.get();
     }
 
     void dropDump( GraphDatabaseService systemDb, String dbName )
