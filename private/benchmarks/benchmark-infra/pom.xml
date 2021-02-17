@@ -22,7 +22,6 @@
 		<module>benchmark-infra-common</module>
 		<module>benchmark-infra-scheduler</module>
 		<module>benchmark-infra-worker</module>
-		<module>benchmark-infra-deployment</module>
 	</modules>
 
 	<dependencyManagement>
