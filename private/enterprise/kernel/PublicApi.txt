@@ -56,7 +56,7 @@ com.neo4j.configuration.OnlineBackupSettings::incremental_backup_strategy org.ne
 com.neo4j.configuration.OnlineBackupSettings::online_backup_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 com.neo4j.configuration.OnlineBackupSettings::online_backup_listen_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
 com.neo4j.configuration.TransactionStreamingStrategy public final enum extends java.lang.Enum<com.neo4j.configuration.TransactionStreamingStrategy>
-com.neo4j.configuration.TransactionStreamingStrategy::StartTime com.neo4j.configuration.TransactionStreamingStrategy public static final
-com.neo4j.configuration.TransactionStreamingStrategy::Unbounded com.neo4j.configuration.TransactionStreamingStrategy public static final
+com.neo4j.configuration.TransactionStreamingStrategy::START_TIME com.neo4j.configuration.TransactionStreamingStrategy public static final
+com.neo4j.configuration.TransactionStreamingStrategy::UNBOUNDED com.neo4j.configuration.TransactionStreamingStrategy public static final
 com.neo4j.configuration.TransactionStreamingStrategy::valueOf(java.lang.String) com.neo4j.configuration.TransactionStreamingStrategy public static
 com.neo4j.configuration.TransactionStreamingStrategy::values() com.neo4j.configuration.TransactionStreamingStrategy[] public static
