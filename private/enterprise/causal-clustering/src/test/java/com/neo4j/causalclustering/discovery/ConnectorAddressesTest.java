@@ -11,6 +11,11 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 
 import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.bolt;
@@ -19,6 +24,9 @@ import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.htt
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.mock;
 
 class ConnectorAddressesTest
 {
@@ -113,5 +121,25 @@ class ConnectorAddressesTest
 
         // then
         assertEquals( expectedString, connectorAddressesString );
+    }
+
+    @Test
+    void shouldNotReturnIntraClusterBoltAddressForReadReplicaWhenBuiltFromConfig()
+    {
+        // given
+        Config config = mock( Config.class );
+        given( config.get( BoltConnector.advertised_address ) ).willReturn( new SocketAddress( "stub" ) );
+        given( config.get( GraphDatabaseSettings.mode ) ).willReturn( GraphDatabaseSettings.Mode.READ_REPLICA );
+        given( config.get( GraphDatabaseSettings.routing_advertised_address ) ).willReturn( new SocketAddress( "stub" ) );
+        given( config.get( GraphDatabaseSettings.routing_enabled ) ).willReturn( true );
+        given( config.get( HttpConnector.enabled ) ).willReturn( false );
+        given( config.get( HttpsConnector.enabled ) ).willReturn( false );
+        ConnectorAddresses connectorAddresses = ConnectorAddresses.fromConfig( config );
+
+        // when
+        Optional<SocketAddress> addrOpt = connectorAddresses.intraClusterBoltAddress();
+
+        // then
+        assertTrue( addrOpt.isEmpty() );
     }
 }

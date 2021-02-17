@@ -95,8 +95,9 @@ public class ConnectorAddresses
         ConnectorUri httpsAddress = null;
 
         clientBoltAddress = new ConnectorUri( bolt, config.get( BoltConnector.advertised_address ) );
+        var isNotReadReplica = config.get( GraphDatabaseSettings.mode ) != GraphDatabaseSettings.Mode.READ_REPLICA;
 
-        if ( config.get( GraphDatabaseSettings.routing_enabled ) )
+        if ( config.get( GraphDatabaseSettings.routing_enabled ) && isNotReadReplica )
         {
             intraClusterBoltAddress = new ConnectorUri( bolt, config.get( GraphDatabaseSettings.routing_advertised_address ) );
         }

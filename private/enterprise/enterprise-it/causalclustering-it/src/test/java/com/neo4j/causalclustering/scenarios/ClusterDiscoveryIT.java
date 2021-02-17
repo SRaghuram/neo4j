@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -25,6 +26,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -64,7 +66,11 @@ class ClusterDiscoveryIT
         var cluster = startCluster( ReadsOnFollowers.DENY, ServerSideRouting.ENABLED );
 
         var expected = cluster.allMembers().stream()
-                              .map( ClusterMember::intraClusterBoltAdvertisedAddress )
+                              .map( ClusterMember::clientConnectorAddresses )
+                              .map( ConnectorAddresses::intraClusterBoltAddress )
+                              .filter( Optional::isPresent )
+                              .map( Optional::get )
+                              .map( SocketAddress::toString )
                               .collect( Collectors.toSet() );
 
         var topologyService = cluster.awaitLeader().resolveDependency( SYSTEM_DATABASE_NAME, TopologyService.class );
