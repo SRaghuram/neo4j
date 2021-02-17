@@ -390,11 +390,11 @@ public class SyntheticStoreGenerator
                             {
                                 generationResult.incAuxiliaryMetrics();
                             }
+                            plans.add( new BenchmarkPlan( benchmarkGroup,
+                                                          benchmark,
+                                                          SubmitTestRunsAndPlansIT.plan( "a" ) ) );
+                            generationResult.incPlan();
                         }
-                        plans.add( new BenchmarkPlan( benchmarkGroup,
-                                                      benchmark,
-                                                      SubmitTestRunsAndPlansIT.plan( "a" ) ) );
-                        generationResult.incPlan();
                     }
 
                     calendar.add( Calendar.MINUTE, minutesBetweenRuns );

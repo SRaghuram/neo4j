@@ -34,7 +34,6 @@ public class TestRunErrorTest
                 "benchmarkGroupName", "group",
                 "benchmarkProperties", ImmutableMap.<String,Object>builder()
                         .put( "mode", "LATENCY" )
-                        .put( "cypher_query", "Q1" )
                         .put( "name", "simpleName_(param1,value1)_(mode,LATENCY)" )
                         .put( "simple_name", "simpleName" )
                         .put( "description", "description" )
