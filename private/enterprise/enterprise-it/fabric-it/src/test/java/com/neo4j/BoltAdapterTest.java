@@ -6,6 +6,7 @@
 package com.neo4j;
 
 import com.neo4j.utils.DriverUtils;
+import com.neo4j.utils.ReactorDebugging;
 import com.neo4j.utils.TestFabric;
 import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -20,6 +21,7 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
@@ -35,6 +37,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.exceptions.DatabaseException;
+import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
 import org.neo4j.fabric.bolt.FabricBookmark;
@@ -113,7 +116,9 @@ class BoltAdapterTest
     @BeforeEach
     void setUp()
     {
-        reset( fabricExecutor, transactionManager, fabricTransaction );
+        reset( fabricExecutor, transactionManager, fabricTransaction, statementResult );
+
+        publisher.reset();
 
         when( statementResult.columns() ).thenReturn( Flux.just( "c1", "c2" ) );
         when( statementResult.records() ).thenReturn( Flux.from( publisher ) );
@@ -283,7 +288,7 @@ class BoltAdapterTest
             latch.countDown();
         } );
 
-        assertTrue( publisher.latch.await( 10, TimeUnit.SECONDS ) );
+        assertTrue( publisher.subscriptionHappened.await( 10, TimeUnit.SECONDS ) );
         publisher.publishRecord( record( "v1", "v2" ) );
         publisher.publishRecord( record( "v3", "v4" ) );
         publisher.error( new IllegalStateException( "Something went wrong" ) );
@@ -314,7 +319,7 @@ class BoltAdapterTest
             latch.countDown();
         } );
 
-        assertTrue( publisher.latch.await( 10, TimeUnit.SECONDS ) );
+        assertTrue( publisher.subscriptionHappened.await( 10, TimeUnit.SECONDS ) );
         publisher.publishRecord( record( "v1", "v2" ) );
         publisher.publishRecord( record( "v3", "v4" ) );
         publisher.error( new IllegalStateException( "Something went wrong" ) );
@@ -331,13 +336,15 @@ class BoltAdapterTest
     {
         mockConfig();
 
-        var latch = new CountDownLatch( 1 );
-        List<org.neo4j.driver.Record> records = new ArrayList<>();
-        var session = driver.rxSession( SessionConfig.forDatabase( "mega" ) );
+
+        RxSession session = null;
         try
         {
             var tx = Mono.from( session.beginTransaction() ).block();
             var result = tx.run( "Some Cypher query" );
+            List<org.neo4j.driver.Record> records = new ArrayList<>();
+
+            var onCompleteCalled = new CountDownLatch( 1 );
             Flux.from( result.records() )
                 .subscribe( new Subscriber<>()
                 {
@@ -362,12 +369,12 @@ class BoltAdapterTest
                     @Override
                     public void onComplete()
                     {
-                        latch.countDown();
+                        onCompleteCalled.countDown();
                     }
                 } );
 
             publishDefaultResult();
-            assertTrue( latch.await( 10, TimeUnit.SECONDS ) );
+            assertTrue( onCompleteCalled.await( 10, TimeUnit.SECONDS ) );
             verifyDefaultResult( records );
         }
         finally
@@ -421,7 +428,7 @@ class BoltAdapterTest
 
     private void publishDefaultResult() throws InterruptedException
     {
-        assertTrue( publisher.latch.await( 10, TimeUnit.SECONDS ) );
+        assertTrue( publisher.subscriptionHappened.await( 10, TimeUnit.SECONDS ) );
         publisher.publishRecord( record( "v1", "v2" ) );
         publisher.publishRecord( record( "v3", "v4" ) );
         publisher.complete();
@@ -447,14 +454,14 @@ class BoltAdapterTest
     private static class ResultPublisher implements Publisher<Record>
     {
 
-        private final CountDownLatch latch = new CountDownLatch( 1 );
+        private CountDownLatch subscriptionHappened;
         private Subscriber<? super Record> subscriber;
 
         @Override
         public void subscribe( Subscriber<? super Record> subscriber )
         {
             this.subscriber = subscriber;
-            latch.countDown();
+            subscriptionHappened.countDown();
             subscriber.onSubscribe( new Subscription()
             {
                 @Override
@@ -484,6 +491,12 @@ class BoltAdapterTest
         void error( Exception e )
         {
             subscriber.onError( e );
+        }
+
+        void reset()
+        {
+            subscriptionHappened = new CountDownLatch( 1 );
+            subscriber = null;
         }
     }
 
