@@ -200,9 +200,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
         },
         inner.genOperateWithExpressions,
         // Else if no inner operator can proceed we move to the next input row
-        doIfInnerCantContinue(
-          innermost.setUnlessPastLimit(canContinue,
-            block(profileRow(id, profile), invoke(INPUT_CURSOR, NEXT)))),
+        doIfInnerCantContinue(setField(canContinue, block(profileRow(id, profile), invoke(INPUT_CURSOR, NEXT)))),
         innermost.resetCachedPropertyVariables
       )
     }

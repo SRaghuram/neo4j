@@ -314,6 +314,18 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     result.toSet shouldBe expectedResult
   }
 
+  test("should handle union in nested subquery with limit ") {
+    val nodes = for (_ <- 0 until 3) yield createNode()
+
+    val query = s"""MATCH (x) CALL {
+                   |    WITH x CALL {
+                   |        RETURN 0 AS y UNION RETURN 0 AS y
+                   |    } WITH y LIMIT 1 RETURN y
+                   |} RETURN id(x), y""".stripMargin
+    val r = executeWith(Configs.All, query)
+    r.toList shouldBe(nodes.map(n => Map("id(x)" -> n.getId, "y" -> 0)))
+  }
+
   test("should handle aggregation in reduce") {
     val query =
       """
