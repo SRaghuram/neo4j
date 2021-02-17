@@ -4485,6 +4485,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(GetDegree(nodeExpression, Some(nonExistingRelTypeName), BOTH)(pos), slots), context) should equal(Values.longValue(0))
   }
 
+  test("getDegree with null reference") {
+    val slots = SlotConfiguration.empty.newReference("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setRefAt(0, Values.NO_VALUE)
+
+    val nodeExpression = ReferenceFromSlot(0, "n")
+
+    evaluate(compile(GetDegree(nodeExpression, None, OUTGOING)(pos), slots), context) should equal(Values.NO_VALUE)
+  }
+
   test("check Degree without type") {
     //given node with three outgoing and two incoming relationships
     val n = createNode("prop" -> "hello")

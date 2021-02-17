@@ -1644,7 +1644,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                                degree.fields ++ node.fields,
                                degree.variables ++ node.variables,
                                degree.nullChecks ++ node.nullChecks,
-                               node.requireNullCheck)
+                               requireNullCheck = true)
       })
 
     case HasDegreeGreaterThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
