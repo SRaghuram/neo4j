@@ -272,7 +272,7 @@ class PipelinedArgumentNoFusingTest extends ArgumentTestBase(NO_FUSING, PIPELINE
 class PipelinedExpandAllTest extends ExpandAllTestBase(FUSING, PIPELINED, SIZE_HINT)
                              with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                              with PipelinedSpecSuite
-class PipelinedExpandAllTestNoFusing extends ExpandAllTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedExpandAllNoFusingTest extends ExpandAllTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
                                      with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                                      with PipelinedSpecSuite
 
@@ -280,17 +280,17 @@ class PipelinedExpandAllTestNoFusing extends ExpandAllTestBase(NO_FUSING, PIPELI
 class PipelinedExpandIntoTest extends ExpandIntoTestBase(FUSING, PIPELINED, SIZE_HINT)
                               with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                               with PipelinedSpecSuite
-class PipelinedExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedExpandIntoNoFusingTest extends ExpandIntoTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
                                       with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                                       with PipelinedSpecSuite
 
 // OPTIONAL EXPAND ALL
 class PipelinedOptionalExpandAllTest extends OptionalExpandAllTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-class PipelinedOptionalExpandAllTestNoFusing extends OptionalExpandAllTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedOptionalExpandAllNoFusingTest extends OptionalExpandAllTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // OPTIONAL EXPAND INTO
 class PipelinedOptionalExpandIntoTest extends OptionalExpandIntoTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-class PipelinedOptionalExpandIntoTestNoFusing extends OptionalExpandIntoTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedOptionalExpandIntoNoFusingTest extends OptionalExpandIntoTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // VAR EXPAND
 class PipelinedVarLengthExpandTest extends VarLengthExpandTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
@@ -302,7 +302,7 @@ class PipelinedPruningNoFusingVarLengthExpandTest extends PruningVarLengthExpand
 
 // PROJECT ENDPOINTS
 class PipelinedProjectEndpointsTest extends ProjectEndpointsTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-class PipelinedProjectEndpointsTestNoFusing extends ProjectEndpointsTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedProjectEndpointsNoFusingTest extends ProjectEndpointsTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // PROJECTION
 class PipelinedProjectionTest extends ProjectionTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

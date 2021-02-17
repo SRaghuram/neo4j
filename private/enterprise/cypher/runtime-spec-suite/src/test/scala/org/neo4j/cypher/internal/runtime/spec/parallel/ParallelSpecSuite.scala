@@ -129,7 +129,7 @@ trait ParallelRuntimeSpecSuite extends TimeLimitedCypherTest with AssertFusingSu
 
 // INPUT
 class ParallelRuntimeInputTest extends ParallelInputTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite
-class ParallelRuntimeInputTestNoFusing extends ParallelInputTestBase(NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite
+class ParallelRuntimeInputNoFusingTest extends ParallelInputTestBase(NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 
 // ALL NODE SCAN
 class ParallelRuntimeAllNodeScanTest extends AllNodeScanTestBase(FUSING, PARALLEL, SIZE_HINT)
@@ -215,7 +215,7 @@ class ParallelRuntimeApplyNoFusingStressTest extends ApplyStressTestBase(NO_FUSI
 // EXPAND ALL
 class ParallelRuntimeExpandAllTest extends ExpandAllTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
                                    with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
-class ParallelRuntimeExpandAllTestNoFusing extends ExpandAllTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeExpandAllNoFusingTest extends ExpandAllTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
                                            with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class ParallelRuntimeExpandAllStressTest extends ExpandAllStressTestBase(FUSING, PARALLEL) with TimeLimitedCypherTest
 class ParallelRuntimeExpandAllNoFusingStressTest extends ExpandAllStressTestBase(NO_FUSING, PARALLEL) with TimeLimitedCypherTest
@@ -223,7 +223,7 @@ class ParallelRuntimeExpandAllNoFusingStressTest extends ExpandAllStressTestBase
 // EXPAND INTO
 class ParallelRuntimeExpandIntoTest extends ExpandIntoTestBase(FUSING, PARALLEL, SIZE_HINT)
                                     with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext] with ParallelRuntimeSpecSuite
-class ParallelRuntimeExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeExpandIntoNoFusingTest extends ExpandIntoTestBase(NO_FUSING, PARALLEL, SIZE_HINT)
                                             with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext] with ParallelRuntimeSpecSuite
 
 // OPTIONAL EXPAND ALL
@@ -263,11 +263,11 @@ class ParallelRuntimeOptionalExpandAllTest extends OptionalExpandAllTestBase(FUS
   }
 
 }
-class ParallelRuntimeOptionalExpandAllTestNoFusing extends OptionalExpandAllTestBase(NO_FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite
+class ParallelRuntimeOptionalExpandAllNoFusingTest extends OptionalExpandAllTestBase(NO_FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite
 
 // OPTIONAL EXPAND INTO
 class ParallelRuntimeOptionalExpandIntoTest extends OptionalExpandIntoTestBase(FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite
-class ParallelRuntimeOptionalExpandIntoTestNoFusing extends OptionalExpandIntoTestBase(NO_FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite
+class ParallelRuntimeOptionalExpandIntoNoFusingTest extends OptionalExpandIntoTestBase(NO_FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite
 
 // VAR EXPAND
 class ParallelRuntimeVarLengthExpandTest extends VarLengthExpandTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
