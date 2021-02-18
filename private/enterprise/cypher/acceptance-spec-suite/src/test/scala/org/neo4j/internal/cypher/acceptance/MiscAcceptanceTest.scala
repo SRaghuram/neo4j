@@ -249,7 +249,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   test("should get degree of node from a parameter") {
     val node = createLabeledNode("Item")
     relate(createNode(), node, "CONTAINS")
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused, "UNWIND $param as p MATCH (p:Item) RETURN size((p)<-[:CONTAINS]-()) as total", params = Map("param" -> List(node)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "UNWIND $param as p MATCH (p:Item) RETURN size((p)<-[:CONTAINS]-()) as total", params = Map("param" -> List(node)))
     result.toList should equal(List(Map("total" -> 1)))
   }
 
