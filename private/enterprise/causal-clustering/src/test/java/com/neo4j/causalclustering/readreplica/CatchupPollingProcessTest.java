@@ -44,7 +44,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.CallingThreadExecutor;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
-import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.CatchupFailed;
+import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.CATCHUP_FAILED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -202,7 +202,7 @@ class CatchupPollingProcessTest
         txPuller.start();
         txPuller.tick().get();
 
-        verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, CatchupFailed, any() ) );
+        verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, CATCHUP_FAILED, any() ) );
     }
 
     @Test

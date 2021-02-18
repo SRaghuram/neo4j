@@ -62,7 +62,7 @@ public class ClusteredDbmsReconcilerIT
         var err = new Exception( "Panic cause" );
 
         // when
-        fooPanicker.panic( DatabasePanicReason.Test, err );
+        fooPanicker.panic( DatabasePanicReason.TEST, err );
 
         // then
         assertEventually( "Reconciler should eventually stop",

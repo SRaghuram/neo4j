@@ -7,6 +7,8 @@ package com.neo4j.causalclustering.error_handling;
 
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
+import org.neo4j.internal.helpers.Exceptions;
+
 public class StopDatabaseHandler implements DatabasePanicEventHandler
 {
     private final ClusterInternalDbmsOperator internalOperator;
@@ -20,6 +22,13 @@ public class StopDatabaseHandler implements DatabasePanicEventHandler
     public void onPanic( DatabasePanicEvent panic )
     {
         internalOperator.stopOnPanic( panic.databaseId(),
-                                      new IllegalStateException( panic.reason.getDescription() + ": " + panic.getCause().getMessage(), panic.getCause() ) );
+                                      new IllegalStateException( getPanicMessage( panic ), panic.getCause() ) );
+    }
+
+    String getPanicMessage( DatabasePanicEvent panic )
+    {
+        return Exceptions.findCauseOrSuppressed( panic.cause, throwable -> throwable != null && throwable.getMessage() != null )
+                         .map( throwable -> panic.reason.getDescription() + ": " + throwable.getMessage() )
+                         .orElse( panic.reason.getDescription() );
     }
 }

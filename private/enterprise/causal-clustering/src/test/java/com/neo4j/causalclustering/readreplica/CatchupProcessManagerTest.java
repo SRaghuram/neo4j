@@ -131,7 +131,7 @@ class CatchupProcessManagerTest
         CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
         CatchupProcessManager catchupProcessManager = createProcessManager( catchupProcess );
 
-        catchupProcessManager.panicDatabase( DatabasePanicReason.Test, new RuntimeException( "Don't panic Mr. Mainwaring!" ) );
+        catchupProcessManager.panicDatabase( DatabasePanicReason.TEST, new RuntimeException( "Don't panic Mr. Mainwaring!" ) );
 
         Timer timer = spy( single( timerService.getTimers( TX_PULLER_TIMER ) ) );
 

@@ -102,7 +102,7 @@ public class PanicEventHandlersTest
     {
         String errorMessage = this.getClass().getCanonicalName();
         RuntimeException exception = new RuntimeException( errorMessage );
-        panicService.panickerFor( databaseId ).panic( DatabasePanicReason.Test, exception );
+        panicService.panickerFor( databaseId ).panic( DatabasePanicReason.TEST, exception );
         scheduler.runJob();
         assertThat( databasePanics.get( databaseId ) ).containsExactly( exception );
         return exception;

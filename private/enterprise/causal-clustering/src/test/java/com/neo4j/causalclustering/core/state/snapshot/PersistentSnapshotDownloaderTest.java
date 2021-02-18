@@ -32,7 +32,7 @@ import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.DOWNLOAD_SNAPSHOT;
 import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.SHUTDOWN;
-import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.SnapshotFailed;
+import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.SNAPSHOT_FAILED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -279,7 +279,7 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, SnapshotFailed, runtimeException ) );
+        verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, SNAPSHOT_FAILED, runtimeException ) );
     }
 
     @Test
@@ -295,7 +295,7 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, SnapshotFailed, snapshotFailedException ) );
+        verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, SNAPSHOT_FAILED, snapshotFailedException ) );
     }
 
     @Test

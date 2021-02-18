@@ -18,7 +18,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
-import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.SnapshotFailed;
+import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.SNAPSHOT_FAILED;
 
 class PersistentSnapshotDownloader implements Runnable
 {
@@ -122,7 +122,7 @@ class PersistentSnapshotDownloader implements Runnable
             if ( e.status() == SnapshotFailedException.Status.UNRECOVERABLE )
             {
                 log.error( "Unrecoverable error when downloading core snapshot and store.", e );
-                panicker.panic( new DatabasePanicEvent( context.databaseId(), SnapshotFailed, e ) );
+                panicker.panic( new DatabasePanicEvent( context.databaseId(), SNAPSHOT_FAILED, e ) );
             }
             else
             {
@@ -132,7 +132,7 @@ class PersistentSnapshotDownloader implements Runnable
         catch ( Throwable e )
         {
             log.error( "Unrecoverable error when downloading core snapshot and store.", e );
-            panicker.panic( new DatabasePanicEvent( context.databaseId(), SnapshotFailed, e ) );
+            panicker.panic( new DatabasePanicEvent( context.databaseId(), SNAPSHOT_FAILED, e ) );
         }
         finally
         {

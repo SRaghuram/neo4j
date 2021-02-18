@@ -152,7 +152,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         }
         catch ( Throwable e )
         {
-            panicker.panic( DatabasePanicReason.CommandApplicationFailed, e );
+            panicker.panic( DatabasePanicReason.COMMAND_APPLICATION_FAILED, e );
             log.error( "Failed to apply", e );
         }
     }

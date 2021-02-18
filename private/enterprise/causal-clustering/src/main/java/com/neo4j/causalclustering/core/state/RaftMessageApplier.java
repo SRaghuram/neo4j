@@ -73,7 +73,7 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
         catch ( Throwable e )
         {
             log.error( "Error handling message", e );
-            panicker.panic( DatabasePanicReason.RaftMessageApplierFailed, e );
+            panicker.panic( DatabasePanicReason.RAFT_MESSAGE_APPLIER_FAILED, e );
             stopped = true;
         }
     }

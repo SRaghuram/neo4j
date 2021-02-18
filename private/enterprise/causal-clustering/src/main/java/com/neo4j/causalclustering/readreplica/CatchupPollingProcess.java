@@ -35,7 +35,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.util.VisibleForTesting;
 
-import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.CatchupFailed;
+import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.CATCHUP_FAILED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.CANCELLED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.PANIC;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
@@ -164,7 +164,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         upToDateFuture.completeExceptionally( e );
         state = PANIC;
-        panicker.panic( new DatabasePanicEvent( databaseContext.databaseId(), CatchupFailed, e ) );
+        panicker.panic( new DatabasePanicEvent( databaseContext.databaseId(), CATCHUP_FAILED, e ) );
     }
 
     private void pullTransactions()

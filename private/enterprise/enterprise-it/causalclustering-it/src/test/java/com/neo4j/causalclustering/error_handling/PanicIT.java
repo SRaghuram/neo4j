@@ -97,7 +97,7 @@ class PanicIT
             var panicService = context.panicService();
 
             // when
-            panicService.panickerFor( context.defaultDbId() ).panic( DatabasePanicReason.Test, new Exception() );
+            panicService.panickerFor( context.defaultDbId() ).panic( DatabasePanicReason.TEST, new Exception() );
 
             // then
             // default db shutdown because of the panic
@@ -114,7 +114,7 @@ class PanicIT
             var defaultDb = member.defaultDatabase();
             var panicService = defaultDb.getDependencyResolver().resolveDependency( PanicService.class );
             var databasePanicker = panicService.panickerFor( defaultDb.databaseId() );
-            databasePanicker.panic( DatabasePanicReason.Test, new Exception() );
+            databasePanicker.panic( DatabasePanicReason.TEST, new Exception() );
         }
     }
 

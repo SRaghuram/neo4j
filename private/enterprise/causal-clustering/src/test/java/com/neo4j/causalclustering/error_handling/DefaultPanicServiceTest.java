@@ -55,9 +55,9 @@ class DefaultPanicServiceTest
 
         var panicker1 = panicService.panickerFor( namedDatabaseId1 );
 
-        panicker1.panic( DatabasePanicReason.Test, new Exception() );
-        panicker1.panic( DatabasePanicReason.Test, new IOException() );
-        panicker1.panic( DatabasePanicReason.Test, new RuntimeException() );
+        panicker1.panic( DatabasePanicReason.TEST, new Exception() );
+        panicker1.panic( DatabasePanicReason.TEST, new IOException() );
+        panicker1.panic( DatabasePanicReason.TEST, new RuntimeException() );
 
         assertFalse( lockedEventHandler1.isComplete );
 
@@ -74,7 +74,7 @@ class DefaultPanicServiceTest
         var error = new Exception();
         var panicker = panicService.panickerFor( namedDatabaseId2 );
 
-        panicker.panic( DatabasePanicReason.Test, error );
+        panicker.panic( DatabasePanicReason.TEST, error );
 
         runBackgroundTasks();
         assertThat( assertableLogProvider )
@@ -100,7 +100,7 @@ class DefaultPanicServiceTest
         panicService.addDatabasePanicEventHandlers( namedDatabaseId1, handlers );
 
         var panicker = panicService.panickerFor( namedDatabaseId1 );
-        panicker.panic( DatabasePanicReason.Test, new Exception() );
+        panicker.panic( DatabasePanicReason.TEST, new Exception() );
 
         runBackgroundTasks();
         assertThat( numberOfInvokedHandlers.get() ).isEqualTo( handlers.size() );
@@ -118,7 +118,7 @@ class DefaultPanicServiceTest
         panicService.addDatabasePanicEventHandlers( namedDatabaseId2, handlers );
 
         var panicker = panicService.panickerFor( namedDatabaseId2 );
-        panicker.panic( DatabasePanicReason.Test, new Exception() );
+        panicker.panic( DatabasePanicReason.TEST, new Exception() );
 
         runBackgroundTasks();
 

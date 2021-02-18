@@ -14,12 +14,12 @@ package com.neo4j.causalclustering.error_handling;
  */
 public enum DatabasePanicReason implements Panicker.Reason
 {
-    Test( "DatabasePanic just for testing" ),
-    UnknownReason( "See exception message for details" ),
-    CatchupFailed( "Catchup failed" ),
-    SnapshotFailed( "Snapshot failed" ),
-    CommandApplicationFailed( "Command application failed" ),
-    RaftMessageApplierFailed( "RaftMessage applier failed" );
+    TEST( "DatabasePanic just for testing" ),
+    UNKNOWN_REASON( "See exception message for details" ),
+    CATCHUP_FAILED( "Catchup failed" ),
+    SNAPSHOT_FAILED( "Snapshot failed" ),
+    COMMAND_APPLICATION_FAILED( "Command application failed" ),
+    RAFT_MESSAGE_APPLIER_FAILED( "RaftMessage applier failed" );
 
     private final String description;
 
