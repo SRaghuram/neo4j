@@ -12,11 +12,18 @@ import com.neo4j.causalclustering.discovery.TestFirstStartupDetector
 import com.neo4j.causalclustering.discovery.akka.NeoSuite
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import com.neo4j.configuration.CausalClusteringSettings
+import org.junit.runner.RunWith
 import org.neo4j.configuration.Config
 import org.neo4j.logging.AssertableLogProvider
 import org.neo4j.logging.Level
 import org.neo4j.logging.LogAssertions.assertThat
+import org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow
+import org.scalatest.junit.JUnitRunner
 
+import scala.concurrent.duration.MILLISECONDS
+import scala.concurrent.duration.SECONDS
+
+@RunWith(classOf[JUnitRunner])
 class LoggingActorIT extends NeoSuite {
 
   "LoggingActor receiving logging messages" when {
@@ -38,7 +45,6 @@ class LoggingActorIT extends NeoSuite {
       "pass info and warning messages on to Neo logProvider" in new Fixture(Level.INFO) {
 
         withLogging {
-          println( Thread.currentThread().getName )
           assertThat(logProvider).doesNotContainMessage("debug test")
           assertThat(logProvider).containsMessages("info test", "warning test")
         }
@@ -59,20 +65,26 @@ class LoggingActorIT extends NeoSuite {
   abstract class Fixture(logLevel: Level) {
 
     val config = Config.defaults(CausalClusteringSettings.middleware_logging_level, logLevel)
-
     val testSystem = ActorSystem("testSystem", new TypesafeConfigService(ArteryTransport.TCP, new TestFirstStartupDetector(true), config).generate())
     val loggingContext = "LoggingActorIT"
     val logProvider = new AssertableLogProvider(true)
     LoggingFilter.enable(logProvider)
     LoggingActor.enable(testSystem, logProvider)
-    val logger = Logging(testSystem, loggingContext)
+    val logger = Logging(testSystem, this.getClass)
 
-    def withLogging( assertions: => Unit ): Unit = {
+    def withLogging(assertions: => Unit): Unit = {
+
       logger.debug("debug test")
       logger.info("info test")
       logger.warning("warning test")
 
-      assertions
+      assertEventuallyDoesNotThrow(
+        "Assertions should succeed",
+        () => assertions,
+        2L, SECONDS,
+        5, MILLISECONDS
+      )
+
       cleanUp()
     }
 
