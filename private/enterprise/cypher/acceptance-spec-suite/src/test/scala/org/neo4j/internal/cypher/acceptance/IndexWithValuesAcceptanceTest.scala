@@ -670,6 +670,20 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       List(Map("n.prop1" -> 41), Map("n.prop1" -> 41), Map("n.prop1" -> 40), Map("n.prop1" -> 40)))
   }
 
+  test("should handle multiple index seek when there are changes in the transaction state") {
+    //given
+    graph.createIndex("NODE", "id")
+
+    //when
+    val result = executeWith(Configs.All, "MATCH (n:NODE) WHERE n.id = '1' OR n.id = '2' RETURN n.id",
+      executeBefore = _.execute("CREATE (:NODE {id:'1'}), (:NODE {id:'2', relationProp:2})"),
+    )
+
+    //then
+    assertIndexSeek(result)
+    result.toList should equal(List(Map("n.id" -> "1"), Map("n.id" -> "2")))
+  }
+
   private def assertIndexSeek(result: RewindableExecutionResult): Unit = {
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexSeek")
