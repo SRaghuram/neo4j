@@ -9,6 +9,7 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.batch.AWSBatch;
 import com.amazonaws.services.batch.AWSBatchClientBuilder;
+import com.amazonaws.services.batch.model.AWSBatchException;
 import com.amazonaws.services.batch.model.ComputeEnvironmentDetail;
 import com.amazonaws.services.batch.model.ComputeEnvironmentOrder;
 import com.amazonaws.services.batch.model.DescribeComputeEnvironmentsRequest;
@@ -28,6 +29,7 @@ import com.amazonaws.services.ec2.model.DescribeInstanceTypesRequest;
 import com.amazonaws.services.ec2.model.InstanceTypeInfo;
 import com.neo4j.bench.infra.AWSCredentials;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -170,14 +172,59 @@ public class InfrastructureResources
 
     private InfrastructureResource getJobDefinitionResource( StackResource stackResource )
     {
-        DescribeJobDefinitionsResult describeJobDefinitionsResult =
-                awsBatch.describeJobDefinitions( new DescribeJobDefinitionsRequest().withJobDefinitions( stackResource.getPhysicalResourceId() ) );
+        DescribeJobDefinitionsResult describeJobDefinitionsResult = null;
+
+        int retries = 0;
+        boolean retry = false;
+        int maxRetries = 10;
+
+        do
+        {
+            long waitTime = getWaitTimeExp( retries );
+            try
+            {
+                // Wait for the result.
+                Thread.sleep( waitTime );
+
+                describeJobDefinitionsResult =
+                        awsBatch.describeJobDefinitions( new DescribeJobDefinitionsRequest().withJobDefinitions( stackResource.getPhysicalResourceId() ) );
+            }
+            catch ( AWSBatchException e )
+            {
+                if ( e.getErrorCode().equals( "429" ) )
+                {
+                    retry = true;
+                }
+                else
+                {
+                    throw e;
+                }
+            }
+            catch ( InterruptedException e )
+            {
+                throw new RuntimeException( e );
+            }
+        }
+        while ( retry && (retries++ < maxRetries) );
+
         return describeJobDefinitionsResult.getJobDefinitions()
                                            .stream()
                                            .findFirst()
                                            .map( InfrastructureResources::toJobDefinitionResource )
                                            .orElseThrow( () -> new RuntimeException(
                                                    format( "%s job definition not found", stackResource.getPhysicalResourceId() ) ) );
+    }
+
+    public static long getWaitTimeExp( int retryCount )
+    {
+        if ( 0 == retryCount )
+        {
+            return 0;
+        }
+
+        long waitTime = ((long) Math.pow( 2, retryCount ) * 100L);
+
+        return waitTime;
     }
 
     private static JobDefinitionResource toJobDefinitionResource( JobDefinition jobDefinition )
