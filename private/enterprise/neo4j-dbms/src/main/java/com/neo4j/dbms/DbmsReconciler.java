@@ -302,12 +302,20 @@ public class DbmsReconciler
         log.info( "Database '%s' is requested to transition %s", databaseName, EnterpriseDatabaseState.logFromTo( currentState, desiredState ) );
 
         var backoff = strategy.newTimeout();
-        var steps = getLifecycleTransitionSteps( currentState, desiredState );
         var executor = executors.executor( request, desiredState.databaseId() );
 
-        var namedDatabaseId = desiredState.databaseId();
-        return CompletableFuture.supplyAsync( () -> doTransitions( initialResult.state(), steps, desiredState ), executor )
-                .thenCompose( result -> handleResult( namedDatabaseId, desiredState, result, executor, backoff, 0 ) );
+        try
+        {
+            var steps = getLifecycleTransitionSteps( currentState, desiredState );
+            var namedDatabaseId = desiredState.databaseId();
+            return CompletableFuture.supplyAsync( () -> doTransitions( initialResult.state(), steps, desiredState ), executor )
+                                    .thenCompose( result -> handleResult( namedDatabaseId, desiredState, result, executor, backoff, 0 ) );
+        }
+        catch ( Exception e )
+        {
+            return CompletableFuture.completedFuture( initialResult.withError( DatabaseManagementException.wrap( e ) ) );
+        }
+
     }
 
     private static ReconcilerStepResult doTransitions( EnterpriseDatabaseState currentState,
@@ -395,11 +403,17 @@ public class DbmsReconciler
         var attempt = retries + 1;
         log.warn( "Retrying reconciliation of %s to state '%s'. This is attempt %d.", namedDatabaseId,
                 desiredState.operatorState().description(), attempt );
-
-        var remainingSteps = getLifecycleTransitionSteps( result.state(), desiredState );
-        return CompletableFuture.supplyAsync( () -> doTransitions( result.state(), remainingSteps, desiredState ),
-                delayedExecutor( backoff.getAndIncrement(), TimeUnit.MILLISECONDS, executor ) )
-                .thenCompose( retryResult -> handleResult( namedDatabaseId, desiredState, retryResult, executor, backoff, attempt ) );
+        try
+        {
+            var remainingSteps = getLifecycleTransitionSteps( result.state(), desiredState );
+            return CompletableFuture.supplyAsync( () -> doTransitions( result.state(), remainingSteps, desiredState ),
+                                                  delayedExecutor( backoff.getAndIncrement(), TimeUnit.MILLISECONDS, executor ) )
+                                    .thenCompose( retryResult -> handleResult( namedDatabaseId, desiredState, retryResult, executor, backoff, attempt ) );
+        }
+        catch ( Exception e )
+        {
+            return CompletableFuture.completedFuture( result.withError( e ) );
+        }
     }
 
     private void postReconcile( String databaseName, ReconcilerRequest request, ReconcilerStepResult result, Throwable throwable )

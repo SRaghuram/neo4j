@@ -30,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.test.conditions.Conditions.FALSE;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @EnterpriseDbmsExtension
