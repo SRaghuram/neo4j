@@ -334,11 +334,16 @@ class BoltAdapterTest
     @Test
     void testCompletionWhenLastRecordRead() throws InterruptedException
     {
+        String interceptorName = "testCompletionWhenLastRecordRead";
+
         mockConfig();
 
         RxSession session = null;
         try
         {
+            Hooks.onEachOperator( interceptorName, ReactorDebugging::toStringInterceptor );
+            session = driver.rxSession( SessionConfig.forDatabase( "mega" ) );
+
             var tx = Mono.from( session.beginTransaction() ).block();
             var result = tx.run( "Some Cypher query" );
             List<org.neo4j.driver.Record> records = new ArrayList<>();
@@ -378,6 +383,7 @@ class BoltAdapterTest
         }
         finally
         {
+            Hooks.resetOnEachOperator( interceptorName );
             Mono.from( session.close() ).block();
         }
     }
