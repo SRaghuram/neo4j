@@ -32,7 +32,7 @@ import static org.neo4j.test.conditions.Conditions.FALSE;
 import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @ClusterExtension
-class CausalClusterRestEndpointsOnlyLeaderLeftT
+class CausalClusterRestEndpointsOnlyLeaderLeftIT
 {
     @Inject
     private ClusterFactory clusterFactory;

@@ -33,7 +33,7 @@ import org.neo4j.test.extension.Inject;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Buffers.Extension
-class CoreReplicatedContentMarshallingTestV2
+class CoreReplicatedContentMarshallingV2Test
 {
     @Inject
     private Buffers buffers;
