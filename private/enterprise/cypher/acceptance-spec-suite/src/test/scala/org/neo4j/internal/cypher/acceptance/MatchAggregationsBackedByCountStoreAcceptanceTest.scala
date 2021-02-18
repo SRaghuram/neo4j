@@ -617,6 +617,24 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     compareCount(query, 108, executeBefore = executeBefore)
   }
 
+  test("should not plan relationship count store lookup when start node has multiple labels") {
+    executeSingle {
+      """CREATE (:Me)
+        |CREATE (t:Topic)
+        |WITH t
+        |UNWIND range(1, 10) AS i
+        |CREATE (:User {id: i})-[:FOLLOWS]->(t)""".stripMargin
+    }
+
+    for (countType <- Seq("count(*)", "count(r)")) {
+      val query = s"MATCH (me:User:Me)-[r:FOLLOWS]->(t) RETURN $countType AS c"
+
+      val res = executeWith(Configs.All, query)
+      res.executionPlanDescription() shouldNot includeSomewhere.aPlan("RelationshipCountFromCountStore")
+      res.toList shouldBe List(Map("c" -> 0))
+    }
+  }
+
   private def setupModel(tx: InternalTransaction,
                          label1: String = "User",
                          label2: String = "User",
