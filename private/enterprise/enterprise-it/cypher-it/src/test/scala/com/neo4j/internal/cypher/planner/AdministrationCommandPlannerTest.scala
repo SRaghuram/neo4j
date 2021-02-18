@@ -45,6 +45,7 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
     "DROP USER foo IF EXISTS",
     "ALTER USER foo SET PLAINTEXT PASSWORD 'password' SET STATUS suspended",
     "ALTER USER foo SET ENCRYPTED PASSWORD 'password'",
+    "ALTER USER foo IF EXISTS SET PASSWORD CHANGE NOT REQUIRED",
     "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'secret'",
 
     // Role commands

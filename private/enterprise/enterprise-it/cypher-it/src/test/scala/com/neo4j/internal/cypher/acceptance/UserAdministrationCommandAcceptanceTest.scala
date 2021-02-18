@@ -49,6 +49,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       "CREATE OR REPLACE USER Bar SET PASSWORD 'neo'" -> 2,
       "CREATE OR REPLACE USER Bao SET PASSWORD 'neo'" -> 1,
       "ALTER USER Bar SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" -> 1,
+      "ALTER USER Baz IF EXISTS SET PASSWORD CHANGE NOT REQUIRED" -> 1,
       "DROP USER Bar" -> 1,
       "DROP USER Baz IF EXISTS" -> 1
     ))
@@ -1344,6 +1345,34 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
+  }
+
+  test("should alter existing user using if exists") {
+    // GIVEN
+    prepareUser("foo", "bar")
+
+    // WHEN
+    execute("ALTER USER foo IF EXISTS SET PASSWORD 'baz'")
+
+    // THEN
+    testUserLogin("foo", "baz", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+  }
+
+  test("should do nothing when altering non-existing user using if exists") {
+    // WHEN
+    execute("ALTER USER foo IF EXISTS SET STATUS SUSPENDED")
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(defaultUser))
+  }
+
+  test("should do nothing when altering an invalid (non-existing) user using if exists") {
+    // WHEN
+    execute("ALTER USER `:foo` IF EXISTS SET PASSWORD CHANGE REQUIRED")
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(defaultUser))
   }
 
   test("should fail when altering a non-existing user: string password") {

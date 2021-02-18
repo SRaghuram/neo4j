@@ -436,4 +436,18 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
       }
     })
   }
+
+  test("IF EXISTS for ALTER USER should not work with CYPHER 3.5 and 4.2") {
+    Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+      withClue(version) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"$version ALTER USER foo IF EXISTS SET STATUS ACTIVE")
+        }
+
+        // THEN
+        exception.getMessage should include("Updating a user with `IF EXISTS` is not supported in this Cypher version.")
+      }
+    })
+  }
 }
