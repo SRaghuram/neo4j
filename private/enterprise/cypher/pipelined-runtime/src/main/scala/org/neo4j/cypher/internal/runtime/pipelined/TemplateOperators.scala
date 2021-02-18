@@ -107,6 +107,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperatorTemp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectionTypes
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.RemoveLabelsTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SeekExpression
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialDistinctOnRhsOfApplyOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate
@@ -942,6 +943,10 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
         case plan@plans.Prober(_, probe: Prober.Probe) =>
           ctx: TemplateContext =>
             new ProberOperatorTemplate(ctx.inner, plan.id, probe)(ctx.expressionCompiler)
+
+        case plan@plans.RemoveLabels(_, idName, labelNames) =>
+          ctx: TemplateContext =>
+            new RemoveLabelsTemplate(ctx.inner, plan.id, ctx.slots(idName), labelNames.map(_.name))(ctx.expressionCompiler)
 
         case _ =>
           None

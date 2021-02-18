@@ -61,6 +61,11 @@ public class MutableQueryStatistics implements QueryStatistics
         removedLabels++;
     }
 
+    public void removeLabels( int count )
+    {
+        removedLabels += count;
+    }
+
     @Override
     public int getNodesCreated()
     {

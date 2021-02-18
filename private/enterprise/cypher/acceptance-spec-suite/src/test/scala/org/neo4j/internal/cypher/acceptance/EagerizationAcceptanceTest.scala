@@ -2319,7 +2319,7 @@ class EagerizationAcceptanceTest
     createLabeledNode(Map("prop" -> 5), "Node", "Lol")
     val query = "MATCH (n:Node) REMOVE n:Lol"
 
-    assertStats(executeWith(Configs.InterpretedAndSlotted, query,
+    assertStats(executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0)), labelsRemoved = 1)
   }
 
@@ -2327,7 +2327,7 @@ class EagerizationAcceptanceTest
     createLabeledNode(Map("prop" -> 5), "Node")
     val query = "MATCH (n:Node) REMOVE n:Node"
 
-    assertStats(executeWith(Configs.InterpretedAndSlotted, query,
+    assertStats(executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0)), labelsRemoved = 1)
   }
 
@@ -2336,7 +2336,7 @@ class EagerizationAcceptanceTest
     createNode()
     val query = "MATCH (m:Lol), (n) WHERE m.plannerSugar = 2 REMOVE n:Lol RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     assertStats(result, labelsRemoved = 1)
@@ -2348,7 +2348,7 @@ class EagerizationAcceptanceTest
     createLabeledNode("Lol")
     val query = "MATCH (m:Lol), (n:Lol) REMOVE m:Lol RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     assertStats(result, labelsRemoved = 2)
@@ -2361,7 +2361,7 @@ class EagerizationAcceptanceTest
     createLabeledNode("C")
     val query = "MATCH  (m1:A), (m2:B), (n:C) REMOVE n:C RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
     result.columnAs[Long]("count(*)").next shouldBe 1
     assertStats(result, labelsRemoved = 1)
@@ -2373,7 +2373,7 @@ class EagerizationAcceptanceTest
     createNode()
     val query = "MATCH (m1:Two), (m2:Two), (n) REMOVE n:Two RETURN count(*) AS c"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     assertStats(result, labelsRemoved = 2)
     result.toList should equal(List(Map("c" -> 12)))
@@ -2385,7 +2385,7 @@ class EagerizationAcceptanceTest
     createLabeledNode("B")
     val query = "MATCH (n), (m1:A), (m2:A) REMOVE n:B RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
     result.columnAs[Long]("count(*)").next shouldBe 12
     assertStats(result, labelsRemoved = 3)
@@ -2396,7 +2396,7 @@ class EagerizationAcceptanceTest
     createLabeledNode("Foo")
     val query = "MATCH (n) CREATE (m) WITH * MATCH (o:Foo) REMOVE n:Foo RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Long]("count(*)").next shouldBe 4
     assertStats(result, labelsRemoved = 2, nodesCreated = 2)
@@ -2407,7 +2407,7 @@ class EagerizationAcceptanceTest
     createLabeledNode("Foo")
     val query = "MATCH (n) CREATE (m:Foo) WITH * MATCH (o:Foo) REMOVE n:Foo RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(2))
     result.columnAs[Long]("count(*)").next shouldBe 8
     assertStats(result, labelsAdded = 2, labelsRemoved = 2, nodesCreated = 2)
@@ -2420,7 +2420,7 @@ class EagerizationAcceptanceTest
     createLabeledNode("Bar")
     val query = "MATCH (n) CREATE (m) WITH * MATCH (o:Bar) REMOVE n:Foo RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
     result.columnAs[Long]("count(*)").next shouldBe 8
     assertStats(result, labelsRemoved = 2, nodesCreated = 4)
@@ -2432,7 +2432,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (n:Foo)--(m) REMOVE m:Foo RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
     result.columnAs[Long]("count(*)").next shouldBe 4
     assertStats(result, labelsRemoved = 4)
@@ -2845,7 +2845,7 @@ class EagerizationAcceptanceTest
         |RETURN labels
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.toList should equal(List(Map("labels" -> List("Foo")), Map("labels" -> List("Foo"))))
     assertStats(result, labelsRemoved = 2)
@@ -2899,7 +2899,7 @@ class EagerizationAcceptanceTest
         |RETURN labels(n), labels(m)
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query = query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query = query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.toList should equal(List(Map("labels(n)" -> List(), "labels(m)" -> List()),
       Map("labels(n)" -> List(), "labels(m)" -> List())))

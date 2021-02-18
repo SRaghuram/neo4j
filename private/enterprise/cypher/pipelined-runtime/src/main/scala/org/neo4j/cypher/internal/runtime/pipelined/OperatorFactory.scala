@@ -132,6 +132,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsHea
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsMiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.RemoveLabelsOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SkipOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
@@ -1036,6 +1037,13 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case plans.DetachDeleteExpression(_, expression) if !parallelExecution =>
         Some(new DeleteOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, expression), DeleteType.DetachExpression))
+
+      case plans.RemoveLabels(_, idName, labelNames) if !parallelExecution =>
+        Some(new RemoveLabelsOperator(
+          WorkIdentity.fromPlan(plan),
+          idName,
+          labelNames.map(_.name).toArray
+        ))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)

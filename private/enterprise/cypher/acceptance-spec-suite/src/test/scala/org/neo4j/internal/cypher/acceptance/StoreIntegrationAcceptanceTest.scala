@@ -17,7 +17,7 @@ class StoreIntegrationAcceptanceTest extends ExecutionEngineFunSuite with QueryS
   test("should not create labels id when trying to delete non-existing labels") {
     createNode()
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) REMOVE n:BAR RETURN id(n) AS id")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) REMOVE n:BAR RETURN id(n) AS id")
 
     assertStats(result, labelsRemoved = 0)
     result.toList should equal(List(Map("id" -> 0)))

@@ -105,6 +105,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipTypeScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RemoveLabelsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrAntiSemiApplyTestBase
@@ -263,3 +264,4 @@ class SlottedDeletePathTest extends DeletePathTestBase(ENTERPRISE.DEFAULT, Slott
 class SlottedDeleteDetachPathTest extends DeleteDetachPathTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedDeleteExpressionTest extends DeleteExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedDeleteDetachExpressionTest extends DeleteDetachExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class PipelinedRemoveLabelsTest extends RemoveLabelsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)

@@ -170,7 +170,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
     //When
     val result = executeWith(
-      Configs.InterpretedAndSlotted,
+      Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (c:C) REMOVE c:C WITH count(c) AS single CALL db.labels() YIELD label RETURN label")
 
     // Then

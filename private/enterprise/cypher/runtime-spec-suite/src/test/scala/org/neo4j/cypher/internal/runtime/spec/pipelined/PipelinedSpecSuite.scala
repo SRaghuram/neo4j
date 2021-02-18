@@ -118,6 +118,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipTypeScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RemoveLabelsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrAntiSemiApplyTestBase
@@ -713,6 +714,10 @@ class PipelinedDeleteDetachExpressionNoFusingTest extends DeleteDetachExpression
 
 class PipelinedDeleteTypeSafetyTest extends DeleteTypeSafetyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedDeleteTypeSafetyNoFusingTest extends DeleteTypeSafetyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// REMOVE LABELS
+class PipelinedRemoveLabelsTest extends RemoveLabelsTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedRemoveLabelsNoFusingTest extends RemoveLabelsTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 object PipelinedDynamicLimitPropagationTest {
   val CONFIGURED_MORSEL_SIZE: Int = 100
