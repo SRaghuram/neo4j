@@ -1075,12 +1075,12 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
     }
 
   private def nodeIndexSeek(node: String,
-                        label: LabelToken,
-                        properties: Seq[IndexedProperty],
-                        valueExpr: QueryExpression[Expression],
-                        order: IndexOrder,
-                        unique: Boolean,
-                        plan: LogicalPlan): Option[NewTemplate] = {
+                            label: LabelToken,
+                            properties: Seq[IndexedProperty],
+                            valueExpr: QueryExpression[Expression],
+                            order: IndexOrder,
+                            unique: Boolean,
+                            plan: LogicalPlan): Option[NewTemplate] = {
     val needsLockingUnique = !readOnly && unique
     valueExpr match {
       case SingleQueryExpression(expr) =>
