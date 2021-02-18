@@ -7,7 +7,6 @@ package com.neo4j.dbms;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -62,7 +61,6 @@ class StartupOperator extends DbmsOperator
         // Only system is needed to be reconciled
         setDesired( Map.of(NAMED_SYSTEM_DATABASE_ID.name(), new EnterpriseDatabaseState( NAMED_SYSTEM_DATABASE_ID, STARTED ) ) );
         var result = trigger( ReconcilerRequest.simple() );
-        result.whenComplete( this::unsetDesired );
         result.join( NAMED_SYSTEM_DATABASE_ID );
         log.info( "'%s' database started", NAMED_SYSTEM_DATABASE_ID.name() );
         unsetDesired();
@@ -83,12 +81,11 @@ class StartupOperator extends DbmsOperator
             // Only these databases are needed to be reconciled
             setDesired( desiredUpdate );
             var result = trigger( ReconcilerRequest.simple() );
-            result.whenComplete( this::unsetDesired );
             result.await( batchedNames );
+            unsetDesired();
         } );
 
         log.info( "All databases were handled at startup" );
-        unsetDesired();
     }
 
     private synchronized void setDesired( Map<String,EnterpriseDatabaseState> desired )

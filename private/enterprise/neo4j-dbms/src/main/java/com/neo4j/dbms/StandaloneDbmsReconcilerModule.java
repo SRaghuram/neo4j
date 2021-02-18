@@ -108,7 +108,10 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         // from the transactional threads.
         reconciledTxTracker.enable( lastClosedTxId );
 
+        // When startup operator is done the system operator has to be triggered. This is to reconcile changes that
+        // might have been committed to the system database when startup operator was working.
         systemOperator.updateDesiredStates();
+        systemOperator.trigger( ReconcilerRequest.simple() );
     }
 
     /**
