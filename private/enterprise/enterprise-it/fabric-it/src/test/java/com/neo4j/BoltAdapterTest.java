@@ -336,7 +336,6 @@ class BoltAdapterTest
     {
         mockConfig();
 
-
         RxSession session = null;
         try
         {
@@ -374,7 +373,7 @@ class BoltAdapterTest
                 } );
 
             publishDefaultResult();
-            assertTrue( onCompleteCalled.await( 10, TimeUnit.SECONDS ) );
+            assertTrue( onCompleteCalled.await( 60, TimeUnit.SECONDS ) );
             verifyDefaultResult( records );
         }
         finally
