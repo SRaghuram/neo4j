@@ -140,6 +140,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.TriadicSelectionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.UniqueIndexDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnwindTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UserDefinedAggregationSupport
 import org.neo4j.cypher.internal.runtime.spec.tests.ValueHashJoinTestBase
@@ -599,10 +600,12 @@ class PipelinedProfileDbHitsNoFusingTest extends PipelinedDbHitsTestBase(NO_FUSI
                                          with NestedPlanDbHitsTestBase[EnterpriseRuntimeContext]
                                          with PipelinedSpecSuite
                                          with WriteOperatorsDbHitsTestBase[EnterpriseRuntimeContext]
+                                         with UniqueIndexDbHitsTestBase[EnterpriseRuntimeContext]
 class PipelinedProfileDbHitsTest extends PipelinedDbHitsTestBase(FUSING, PIPELINED, SIZE_HINT, canFuseOverPipelines = true)
                                  with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
                                  with PipelinedSpecSuite
                                  with WriteOperatorsDbHitsTestBase[EnterpriseRuntimeContext]
+                                 with UniqueIndexDbHitsTestBase[EnterpriseRuntimeContext]
 
 class PipelinedProfileMemoryNoFusingTest extends ProfileMemoryTestBase(NO_FUSING, PIPELINED)
                                          with ProfilePipelinedNoFusingMemoryTestBase

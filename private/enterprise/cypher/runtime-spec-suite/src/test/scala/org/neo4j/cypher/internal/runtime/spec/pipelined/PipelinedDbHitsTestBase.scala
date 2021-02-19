@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.Edition
-import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseOnlyDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileDbHitsTestBase
 
 abstract class PipelinedDbHitsTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],
@@ -32,4 +31,3 @@ abstract class PipelinedDbHitsTestBase[CONTEXT <: RuntimeContext](edition: Editi
                                 cartesianProductChunkSize = ENTERPRISE.MORSEL_SIZE,
                                 canFuseOverPipelines = canFuseOverPipelines,
                                 createsRelValueInExpand = false)
-  with EnterpriseOnlyDbHitsTestBase[CONTEXT]
