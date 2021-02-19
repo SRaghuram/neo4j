@@ -617,9 +617,7 @@ class EagerizationAcceptanceTest
     assertStats(result, nodesCreated = 1, nodesDeleted = 2)
   }
 
-  ignore("should not introduce eagerness between DELETE and MERGE for nodes when deleting variable not bound for same label") {
-    // TODO: Delete must know what label(s) on nodes it deletes to be able to solve this
-
+  test("should introduce eagerness between DELETE and MERGE for nodes when deleting variable not bound for same label") {
     createLabeledNode("B")
     createLabeledNode("B")
     createLabeledNode("C")
@@ -628,13 +626,13 @@ class EagerizationAcceptanceTest
       """
         |MATCH (b:B)
         |MATCH (c:C)
-        |DELETE b
+        |DELETE b // We can't statically outrule that b:C, so we have to be eager both before and after this DELETE.
         |MERGE (:C)
         |RETURN count(*)
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(2))
     assertStats(result, nodesCreated = 0, nodesDeleted = 2)
     result.columnAs[Long]("count(*)").next shouldBe 8
   }
@@ -892,13 +890,6 @@ class EagerizationAcceptanceTest
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
     result.columnAs[Long]("count").next shouldBe 4
     assertStats(result, nodesCreated = 4)
-  }
-
-  ignore("should not be eager when creating single node after matching on pattern with relationship and also matching on label") {
-    // TODO: Implement RelationShipBoundNodeEffect. Then figure out with which Configuration to call executeWith
-    val query = "MATCH (:L) MATCH ()--() CREATE ()"
-    executeWith(Configs.All, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
   }
 
   test("should not be eager when creating single node after matching on empty node") {
@@ -1563,8 +1554,7 @@ class EagerizationAcceptanceTest
     result.columnAs[Long]("count(*)").next shouldBe 2
   }
 
-  // TODO: This does not work on 2.3 either
-  ignore("should introduce eagerness between MATCH, UNWIND, DELETE nodes in path") {
+  test("should introduce eagerness between MATCH, UNWIND, DELETE nodes in path") {
     val a = createNode()
     val b = createNode()
     relate(a, b)
@@ -1577,10 +1567,10 @@ class EagerizationAcceptanceTest
         |RETURN count(*)
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     assertStats(result, nodesDeleted = 2, relationshipsDeleted = 2)
-    result.columnAs[Long]("count(*)").next shouldBe 2
+    result.columnAs[Long]("count(*)").next shouldBe 4
   }
 
   test("should not introduce eagerness for MATCH nodes and MERGE relationships") {
@@ -1763,64 +1753,64 @@ class EagerizationAcceptanceTest
     assertStats(result, nodesCreated = 2, propertiesWritten = 1, labelsAdded = 2)
   }
 
-  ignore("does not need to be eager when merging on the same label, merges match") {
+  test("does not need to be eager when merging on the same label, merges match") {
     createLabeledNode("L1")
     createLabeledNode("L1")
     val query = "MERGE(:L1) MERGE(p:L1) ON CREATE SET p.name = 'Blaine' RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
     result.columnAs[Long]("count(*)").next shouldBe 4
     assertStats(result)
   }
 
-  ignore("does not need to be eager when merging on the same label, merges create") {
+  test("does not need to be eager when merging on the same label, merges create") {
     createNode()
     val query = "MERGE(:L1) MERGE(p:L1) ON CREATE SET p.name = 'Blaine' RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
     result.columnAs[Long]("count(*)").next shouldBe 1
     assertStats(result, nodesCreated = 1, labelsAdded = 1)
   }
 
-  ignore("does not need to be eager when right side creates nodes for left side, merges match") {
+  test("does not need to be eager when right side creates nodes for left side, merges match") {
     createNode()
     createLabeledNode("Person")
     val query = "MERGE() MERGE(p: Person) ON CREATE SET p.name = 'Blaine' RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStats(result)
   }
 
-  ignore("does not need to be eager when right side creates nodes for left side, 2nd merge create") {
+  test("does not need to be eager when right side creates nodes for left side, 2nd merge create") {
     createNode()
     createNode()
     val query = "MERGE() MERGE(p: Person) ON CREATE SET p.name = 'Blaine' RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStats(result, nodesCreated = 1, labelsAdded = 1, propertiesWritten = 1)
   }
 
-  ignore("does not need to be eager when no merge has labels, merges match") {
+  test("does not need to be eager when no merge has labels, merges match") {
     createNode()
     val query = "MERGE() MERGE(p) ON CREATE SET p.name = 'Blaine' RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
     result.columnAs[Long]("count(*)").next shouldBe 1
     assertStats(result)
   }
 
-  ignore("does not need to be eager when no merge has labels, merges create") {
+  test("does not need to be eager when no merge has labels, merges create") {
     val query = "MERGE() MERGE(p) ON CREATE SET p.name = 'Blaine' RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
     result.columnAs[Long]("count(*)").next shouldBe 1
     assertStats(result, nodesCreated = 1)
   }
