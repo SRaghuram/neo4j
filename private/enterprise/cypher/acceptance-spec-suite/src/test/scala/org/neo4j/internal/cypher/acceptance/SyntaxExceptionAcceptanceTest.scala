@@ -40,7 +40,7 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
   test("should raise error when missing return columns") {
     test(
       "match (s) return",
-      "Unexpected end of input: expected whitespace, GRAPH, DISTINCT, '*' or an expression (line 1, column 17)"
+      "Invalid input '': expected \"GRAPH\", \"*\" or an expression (line 1, column 17 (offset: 16))"
     )
   }
 
