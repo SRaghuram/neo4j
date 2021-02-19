@@ -749,7 +749,8 @@ class ManyQueriesNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
         seekExpression.generatePredicate(seekValues.map(_.ir)),
         indexReadSession(queryIndexId),
         loadField(DATA_READ),
-        CURSOR_POOL)
+        CURSOR_POOL,
+        loadField(executionEventField))
     } else {
       invokeStatic(createCursorsMethod,
         seekExpression.generatePredicate(seekValues.map(_.ir)),
@@ -757,7 +758,8 @@ class ManyQueriesNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
         indexOrder(order),
         constant(needsValues),
         loadField(DATA_READ),
-        CURSOR_POOL)
+        CURSOR_POOL,
+        loadField(executionEventField))
     }
   }
 
@@ -794,7 +796,8 @@ class CompositeNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
         arrayOf[Array[PropertyIndexQuery]](predicates: _*),
         indexReadSession(queryIndexId),
         loadField(DATA_READ),
-        CURSOR_POOL)
+        CURSOR_POOL,
+        loadField(executionEventField))
     } else {
       invokeStatic(ManyQueriesNodeIndexSeekTaskTemplate.compositeCreateCursorsMethod,
         arrayOf[Array[PropertyIndexQuery]](predicates: _*),
@@ -802,7 +805,8 @@ class CompositeNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
         indexOrder(order),
         constant(needsValues),
         loadField(DATA_READ),
-        CURSOR_POOL)
+        CURSOR_POOL,
+        loadField(executionEventField))
     }
   }
 
@@ -817,12 +821,14 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
                     order: IndexOrder,
                     needsValues: Boolean,
                     read: Read,
-                    cursorPools: CursorPools): Array[NodeValueIndexCursor] = {
+                    cursorPools: CursorPools,
+                    tracer: KernelReadTracer): Array[NodeValueIndexCursor] = {
     val cursors = new Array[NodeValueIndexCursor](predicates.length)
     val pool = cursorPools.nodeValueIndexCursorPool
     var i = 0
     while (i < cursors.length) {
       val cursor = pool.allocate()
+      cursor.setTracer(tracer)
       read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, needsValues || order != IndexOrder.NONE), predicates(i))
       cursors(i) = cursor
       i += 1
@@ -833,10 +839,12 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
   def createUniqueCursors(predicates: Array[PropertyIndexQuery],
                           index: IndexReadSession,
                           read: Read,
-                          cursorPools: CursorPools): Array[NodeValueIndexCursor] = {
+                          cursorPools: CursorPools,
+                          tracer: KernelReadTracer): Array[NodeValueIndexCursor] = {
     val cursors = new Array[NodeValueIndexCursor](predicates.length)
     val pool = cursorPools.nodeValueIndexCursorPool
     val cursor = pool.allocate()
+    cursor.setTracer(tracer)
     var i = 0
     try {
       while (i < cursors.length) {
@@ -871,13 +879,15 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
                              order: IndexOrder,
                              needsValues: Boolean,
                              read: Read,
-                             cursorPools: CursorPools): Array[NodeValueIndexCursor] = {
+                             cursorPools: CursorPools,
+                             tracer: KernelReadTracer): Array[NodeValueIndexCursor] = {
     val combinedPredicates = combine(predicates)
     val cursors = new Array[NodeValueIndexCursor](combinedPredicates.length)
     val pool = cursorPools.nodeValueIndexCursorPool
     var i = 0
     while (i < cursors.length) {
       val cursor = pool.allocate()
+      cursor.setTracer(tracer)
       val queries = combinedPredicates(i)
       val reallyNeedsValues = needsValues || order != IndexOrder.NONE
       val actualValues =
@@ -902,11 +912,13 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
   def createUniqueCompositeCursors(predicates: Array[Array[PropertyIndexQuery]],
                                    index: IndexReadSession,
                                    read: Read,
-                                   cursorPools: CursorPools): Array[NodeValueIndexCursor] = {
+                                   cursorPools: CursorPools,
+                                   tracer: KernelReadTracer): Array[NodeValueIndexCursor] = {
     val combinedPredicates = combine(predicates)
     val cursors = new Array[NodeValueIndexCursor](combinedPredicates.length)
     val pool = cursorPools.nodeValueIndexCursorPool
     val cursor = pool.allocate()
+    cursor.setTracer(tracer)
     var i = 0
     try {
       while (i < cursors.length) {
@@ -955,13 +967,13 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
   }
 
   val createCursorsMethod: Method =
-    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[PropertyIndexQuery], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("createCursors")
+    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[PropertyIndexQuery], IndexReadSession, IndexOrder, Boolean, Read, CursorPools, KernelReadTracer]("createCursors")
 
   val createUniqueCursorsMethod: Method =
-    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[PropertyIndexQuery], IndexReadSession, Read, CursorPools]("createUniqueCursors")
+    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[PropertyIndexQuery], IndexReadSession, Read, CursorPools, KernelReadTracer]("createUniqueCursors")
 
   val compositeCreateCursorsMethod: Method =
-    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[Array[PropertyIndexQuery]], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("compositeCreateCursors")
+    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[Array[PropertyIndexQuery]], IndexReadSession, IndexOrder, Boolean, Read, CursorPools, KernelReadTracer]("compositeCreateCursors")
 
   val compositeGetPropertyMethod: Method =
     method[ManyQueriesNodeIndexSeekTaskTemplate,
@@ -971,7 +983,7 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
       Int]("getPropertyValue")
 
   val createUniqueCompositeCursorsMethod: Method =
-    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[Array[PropertyIndexQuery]], IndexReadSession, Read, CursorPools]("createUniqueCompositeCursors")
+    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[Array[PropertyIndexQuery]], IndexReadSession, Read, CursorPools, KernelReadTracer]("createUniqueCompositeCursors")
 
   val compositeQueryIteratorMethod: Method =
     method[ManyQueriesNodeIndexSeekTaskTemplate, CompositePredicateIterator, Array[Array[PropertyIndexQuery]]]("compositeQueryIterator")

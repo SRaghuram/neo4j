@@ -38,6 +38,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.EagerTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EitherTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EmptyResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseNodeIndexSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseOnlyDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EsotericAssertSameNodeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExhaustiveLimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
@@ -202,6 +203,7 @@ class SlottedProfileDbHitsTest extends LegacyDbHitsTestBase(ENTERPRISE.DEFAULT, 
                                with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
                                with NestedPlanDbHitsTestBase[EnterpriseRuntimeContext]
                                with WriteOperatorsDbHitsTestBase[EnterpriseRuntimeContext]
+                               with EnterpriseOnlyDbHitsTestBase[EnterpriseRuntimeContext]
 class SlottedProfilePageCacheStatsTest extends ProfilePageCacheStatsTestBase(canFuseOverPipelines = false, ENTERPRISE.DEFAULT, SlottedRuntime)
                                        with UpdatingProfilePageCacheStatsTestBase[EnterpriseRuntimeContext]
 class SlottedProfileMemoryTest extends ProfileMemoryTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
