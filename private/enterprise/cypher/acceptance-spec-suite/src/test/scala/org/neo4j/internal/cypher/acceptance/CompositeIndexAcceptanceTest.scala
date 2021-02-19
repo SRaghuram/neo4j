@@ -5,11 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.OffsetTime
-import java.time.ZoneOffset
-
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
@@ -24,6 +19,10 @@ import org.scalatest.exceptions.TestFailedException
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
 
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.OffsetTime
+import java.time.ZoneOffset
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 /**
@@ -465,17 +464,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                 .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true, caches = true)
                 .withRows(0)
                 .withExactVariables("s")
-              or
-              includeSomewhere.aPlan("AntiConditionalApply")
-                .withLHS(
-                  includeSomewhere.aPlan("Expand(All)")
-                    .onTopOf(
-                      includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)")
-                        .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true, caches = true)
-                        .withRows(0)
-                        .withExactVariables("s")
-                    )
-                )
             )
           )
       }))
