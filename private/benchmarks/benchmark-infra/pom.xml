@@ -15,6 +15,7 @@
 	<properties>
 		<slf4j.version>1.7.16</slf4j.version>
 		<license-text.header>../build/license-header.txt</license-text.header>
+		<jodah-failsafe.version>2.0.1</jodah-failsafe.version>
 	</properties>
 
 	<modules>
@@ -31,6 +32,13 @@
 				<artifactId>slf4j-simple</artifactId>
 				<version>${slf4j.version}</version>
 			</dependency>
+			<dependency>
+				<groupId>net.jodah</groupId>
+				<artifactId>failsafe</artifactId>
+				<version>${jodah-failsafe.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
 			<dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-api</artifactId>
