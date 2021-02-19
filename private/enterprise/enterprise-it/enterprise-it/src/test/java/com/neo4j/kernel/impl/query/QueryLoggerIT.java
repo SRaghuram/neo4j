@@ -792,7 +792,10 @@ class QueryLoggerIT
                 "RETURN {     answer: 42 \t }", "{     answer: ****** \t }",
                 "RETURN {     answers: [ 42,       {key: false } ], accurate: false }",
                 "RETURN {     answers: [ ******,       {key: ****** } ], accurate: ****** }",
-                "MATCH (n) WHERE n.secret = NULL RETURN n", "MATCH (n) WHERE n.secret = ****** RETURN n"
+                "MATCH (n) WHERE n.secret = NULL RETURN n", "MATCH (n) WHERE n.secret = ****** RETURN n",
+                "MATCH (n {creditCard:123456}) RETURN n", "MATCH (n {creditCard:******}) RETURN n",
+                "WITH 1 AS one, true AS notFalse RETURN one, notFalse", "WITH ****** AS one, ****** AS notFalse RETURN one, notFalse",
+                "CREATE ()-[r:Type {answer: 42}]->()", "CREATE ()-[r:Type {answer: ******}]->()"
         );
 
         ArrayList<String> expected = new ArrayList<>( toTest.size() );
