@@ -60,9 +60,8 @@ public class StateMachineCommitHelper
 
     public TransactionToApply newTransactionToApply( TransactionRepresentation txRepresentation, long commandIndex, LongConsumer txCommittedCallback )
     {
-        var versionContext = versionContextSupplier.getVersionContext();
         var cursorTracer = pageCacheTracer.createPageCursorTracer( STATE_MACHINE_COMMIT_HELPER_TAG );
-        var txToApply = new TransactionToApply( txRepresentation, versionContext, cursorTracer );
+        var txToApply = new TransactionToApply( txRepresentation, versionContextSupplier, cursorTracer );
         txToApply.onClose( committedTxId ->
         {
             try

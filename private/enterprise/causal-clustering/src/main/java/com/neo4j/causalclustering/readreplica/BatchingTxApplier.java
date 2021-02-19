@@ -110,7 +110,7 @@ public class BatchingTxApplier extends LifecycleAdapter
         }
 
         var cursorTracer = pageCacheTracer.createPageCursorTracer( CLUSTERING_BATCHING_TRANSACTION_TAG );
-        var toApply = new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.getVersionContext(), cursorTracer );
+        var toApply = new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier, cursorTracer );
         toApply.onClose( txId ->
         {
             databaseEventDispatch.fireTransactionCommitted( txId );
