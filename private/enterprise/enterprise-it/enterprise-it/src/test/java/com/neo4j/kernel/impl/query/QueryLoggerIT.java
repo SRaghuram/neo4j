@@ -5,6 +5,8 @@
  */
 package com.neo4j.kernel.impl.query;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
@@ -32,6 +34,7 @@ import java.util.TimeZone;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -47,6 +50,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.logging.FormattedLogFormat;
 import org.neo4j.logging.LogTimeZone;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -95,6 +99,7 @@ class QueryLoggerIT
     private GraphDatabaseFacade systemDb;
     private GraphDatabaseFacade database;
     private DatabaseManagementService databaseManagementService;
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp()
@@ -274,6 +279,122 @@ class QueryLoggerIT
         assertEquals( 2, logLines.size() );
         assertThat( logLines.get( 0 ), containsString( "Query started:" ) );
         assertThat( logLines.get( 0 ), containsString( " 0 B -" ) );
+    }
+
+    @Test
+    void shouldLogQueryPlan() throws Throwable
+    {
+        // turn on query logging
+        databaseBuilder.setConfig( auth_enabled, true )
+                       .setConfig( logs_directory, logsDirectory.toAbsolutePath() )
+                       .setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.log_queries_plan, true );
+        buildDatabase();
+
+        // run query
+        executeQuery( "MATCH (n) RETURN n", emptyMap() );
+
+        databaseManagementService.shutdown();
+
+        // THEN
+        List<String> logLines = readAllLines( logFilename );
+
+        assertTrue( logLines.stream().filter( line -> line.contains( "Query plan:" ) ).count() == 1 );
+        assertTrue( logLines.stream().anyMatch( line -> line.contains( "+ProduceResults" ) ) );
+    }
+
+    @Test
+    void shouldStructuredLogQueryPlan() throws Throwable
+    {
+        // turn on query logging
+        databaseBuilder.setConfig( auth_enabled, true )
+                       .setConfig( logs_directory, logsDirectory.toAbsolutePath() )
+                       .setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseInternalSettings.log_format, FormattedLogFormat.JSON_FORMAT )
+                       .setConfig( GraphDatabaseSettings.log_queries_plan, true );
+        buildDatabase();
+
+        // run query
+        executeQuery( "MATCH (n) RETURN n", emptyMap() );
+
+        databaseManagementService.shutdown();
+
+        // THEN
+        List<String> lines = readAllLines( logFilename );
+        assertTrue( lines.size() == 1 );
+        JsonNode logLine = objectMapper.readTree( lines.get( 0 ) );
+
+        assertTrue( logLine.get( "queryPlan" ).asText().contains( "+ProduceResults" ) );
+    }
+
+    @Test
+    void shouldNotLogQueryPlan() throws Throwable
+    {
+        // turn on query logging
+        databaseBuilder.setConfig( auth_enabled, true )
+                       .setConfig( logs_directory, logsDirectory.toAbsolutePath() )
+                       .setConfig( log_queries, LogQueryLevel.INFO );
+        buildDatabase();
+
+        // run query
+        executeQuery( "MATCH (n) RETURN n", emptyMap() );
+
+        databaseManagementService.shutdown();
+
+        // THEN
+        List<String> logLines = readAllLines( logFilename );
+
+        assertFalse( logLines.stream().anyMatch( line -> line.contains( "Query plan:" ) ) );
+        assertFalse( logLines.stream().anyMatch( line -> line.contains( "+ProduceResults" ) ) );
+    }
+
+    @Test
+    void shouldNotStructuredLogQueryPlan() throws Throwable
+    {
+        // turn on query logging
+        databaseBuilder.setConfig( auth_enabled, true )
+                       .setConfig( logs_directory, logsDirectory.toAbsolutePath() )
+                       .setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseInternalSettings.log_format, FormattedLogFormat.JSON_FORMAT );
+        buildDatabase();
+
+        // run query
+        executeQuery( "MATCH (n) RETURN n", emptyMap() );
+
+        databaseManagementService.shutdown();
+
+        // THEN
+        List<String> lines = readAllLines( logFilename );
+        assertTrue( lines.size() == 1 );
+        JsonNode logLine = objectMapper.readTree( lines.get( 0 ) );
+
+        assertFalse( logLine.has( "queryPlan" ) );
+    }
+
+    @Test
+    void shouldLogQueryPlanWhenConfigUpdated() throws Throwable
+    {
+        // turn on query logging
+        databaseBuilder.setConfig( auth_enabled, true )
+                       .setConfig( logs_directory, logsDirectory.toAbsolutePath() )
+                       .setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseInternalSettings.log_format, FormattedLogFormat.JSON_FORMAT );
+        buildDatabase();
+
+        // run query
+        executeQuery( "MATCH (n) RETURN n", emptyMap() );
+        executeQuery( "CALL dbms.setConfigValue('dbms.logs.query.plan_description_enabled', 'true')", emptyMap() );
+        executeQuery( "MATCH (n) RETURN n", emptyMap() );
+
+        databaseManagementService.shutdown();
+
+        // THEN
+        List<String> lines = readAllLines( logFilename );
+        assertTrue( lines.size() == 3 );
+        JsonNode planLoggerDisabled = objectMapper.readTree( lines.get( 0 ) );
+        JsonNode planLoggerEnabled = objectMapper.readTree( lines.get( 2 ) );
+        assertFalse( planLoggerDisabled.has( "queryPlan" ) );
+        assertTrue( planLoggerEnabled.has( "queryPlan" ) );
     }
 
     @Test

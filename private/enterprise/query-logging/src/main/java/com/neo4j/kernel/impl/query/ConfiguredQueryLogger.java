@@ -41,6 +41,7 @@ class ConfiguredQueryLogger implements QueryLogger
     private final boolean logRuntime;
     private final boolean verboseLogging;
     private final boolean rawLogging;
+    private final boolean logPlan;
 
     ConfiguredQueryLogger( LogExtended log, Config config )
     {
@@ -54,6 +55,7 @@ class ConfiguredQueryLogger implements QueryLogger
         this.logRuntime = config.get( GraphDatabaseSettings.log_queries_runtime_logging_enabled );
         this.verboseLogging = config.get( GraphDatabaseSettings.log_queries ) == LogQueryLevel.VERBOSE;
         this.rawLogging = config.get( GraphDatabaseSettings.log_queries_early_raw_logging_enabled );
+        this.logPlan = config.get( GraphDatabaseSettings.log_queries_plan );
     }
 
     @Override
@@ -172,6 +174,18 @@ class ConfiguredQueryLogger implements QueryLogger
             {
                 sb.append( " - " ).append( reason.split( System.lineSeparator() )[0] );
             }
+            if ( logPlan && snapshot.queryPlanSupplier() != null )
+            {
+                sb.append( "\nQuery plan:\n" );
+                try
+                {
+                    sb.append( snapshot.queryPlanSupplier().get().toString() );
+                }
+                catch ( Exception e )
+                {
+                    sb.append( "Failed to get plan description: " ).append( e.getMessage() );
+                }
+            }
         }
 
         @Override
@@ -221,6 +235,17 @@ class ConfiguredQueryLogger implements QueryLogger
             if ( reason != null )
             {
                 consumer.add( "failureReason", reason );
+            }
+            if ( logPlan && snapshot.queryPlanSupplier() != null )
+            {
+                try
+                {
+                    consumer.add("queryPlan", snapshot.queryPlanSupplier().get().toString() );
+                }
+                catch ( Exception e )
+                {
+                    consumer.add( "queryPlan" , "Failed to get plan description: " + e.getMessage() );
+                }
             }
         }
     }
