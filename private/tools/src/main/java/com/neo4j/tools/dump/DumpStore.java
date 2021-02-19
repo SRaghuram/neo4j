@@ -135,7 +135,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         }
         DatabaseFile databaseFile = DatabaseFile.fileOf( file.getFileName().toString() ).orElseThrow( illegalArgumentExceptionSupplier( fileName ) );
         StoreType storeType = StoreType.typeOf( databaseFile ).orElseThrow( illegalArgumentExceptionSupplier( fileName ) );
-        try ( NeoStores neoStores = createStoreFactory.apply( file ).openNeoStores( storeType ) )
+        try ( NeoStores neoStores = createStoreFactory.apply( file ).openNeoStores( storeTypeIncludingAuxiliaryStores( storeType ) ) )
         {
             switch ( storeType )
             {
@@ -170,6 +170,15 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
                 throw new IllegalArgumentException( "Unsupported store type: " + storeType );
             }
         }
+    }
+
+    private static StoreType[] storeTypeIncludingAuxiliaryStores( StoreType storeType )
+    {
+        if ( storeType == StoreType.SCHEMA )
+        {
+            return new StoreType[]{storeType, StoreType.LABEL_TOKEN, StoreType.RELATIONSHIP_TYPE_TOKEN};
+        }
+        return new StoreType[]{storeType};
     }
 
     private static Supplier<IllegalArgumentException> illegalArgumentExceptionSupplier( String fileName )
@@ -256,7 +265,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
                 @Override
                 protected Object transform( SchemaRecord record ) throws Exception
                 {
-                    return record.inUse() ? schemaRuleAccess.loadSingleSchemaRule( record.getId(), NULL ) : null;
+                    return record.inUse() ? schemaRuleAccess.loadSingleSchemaRule( record.getId(), NULL ).userDescription( tokenHolders ) : null;
                 }
             }.dump( store, ids );
         }
