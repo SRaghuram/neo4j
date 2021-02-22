@@ -6,15 +6,14 @@
 package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
+import com.neo4j.test.causalclustering.ClusterConfig;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.HashMap;
-import java.util.Map;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -24,7 +23,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 
 import static com.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
-import static java.util.Collections.emptyMap;
 
 class Resources
 {
@@ -46,22 +44,29 @@ class Resources
         this.pageCache = pageCache;
         this.logProvider = logProvider;
 
-        int numberOfCores = config.numberOfCores();
-        int numberOfEdges = config.numberOfEdges();
-        String workingDirectory = config.workingDir();
+        var numberOfCores = config.numberOfCores();
+        var numberOfReadReplicas = config.numberOfEdges();
+        var workingDirectory = config.workingDir();
 
         this.clusterDir = ensureExistsAndEmpty( Path.of( workingDirectory, "cluster" ) );
         this.backupDir = ensureExistsAndEmpty( Path.of( workingDirectory, "backups" ) );
 
-        Map<String,String> coreParams = new HashMap<>();
-        Map<String,String> readReplicaParams = new HashMap<>();
+        var coreParams = new HashMap<String,String>();
+        var readReplicaParams = new HashMap<String,String>();
 
         config.populateCoreParams( coreParams );
         config.populateReadReplicaParams( readReplicaParams );
 
-        DiscoveryServiceFactory discoveryServiceFactory = new AkkaDiscoveryServiceFactory();
-        cluster = new Cluster( clusterDir, numberOfCores, numberOfEdges, discoveryServiceFactory, coreParams, emptyMap(), readReplicaParams,
-                emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
+        ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
+                .withNumberOfCoreMembers( numberOfCores )
+                .withNumberOfReadReplicas( numberOfReadReplicas )
+                .withDiscoveryServiceType( DiscoveryServiceType.AKKA )
+                .withSharedCoreParams( coreParams )
+                .withSharedReadReplicaParams( readReplicaParams )
+                .withRecordFormat( Standard.LATEST_NAME )
+                .withIpFamily( IpFamily.IPV4 )
+                .useWildcard( false );
+        cluster = ClusterConfig.createCluster( clusterDir, clusterConfig );
     }
 
     public Cluster cluster()

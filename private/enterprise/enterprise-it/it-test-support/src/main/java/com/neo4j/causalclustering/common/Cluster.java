@@ -74,6 +74,7 @@ import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.ports.PortAuthority;
 
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -92,6 +93,40 @@ import static org.neo4j.util.concurrent.Futures.combine;
 
 public class Cluster implements ServerAddressResolver
 {
+    public static Cluster createWithCores( Path parentDir, int noOfCoreMembers, int noOfReadReplicas,
+            DiscoveryServiceFactory discoveryServiceFactory,
+            Map<String,String> coreParams,
+            Map<String,IntFunction<String>> instanceCoreParams,
+            Map<String,String> readReplicaParams,
+            Map<String,IntFunction<String>> instanceReadReplicaParams,
+            String recordFormat, IpFamily ipFamily, boolean useWildcard )
+    {
+        return new Cluster( parentDir, noOfCoreMembers, noOfReadReplicas,
+                discoveryServiceFactory,
+                coreParams,
+                instanceCoreParams,
+                readReplicaParams,
+                instanceReadReplicaParams,
+                recordFormat,
+                ipFamily,
+                useWildcard );
+    }
+
+    public static Cluster createWithStandalone( Path parentDir, int noOfReadReplicas,
+            DiscoveryServiceFactory discoveryServiceFactory,
+            Map<String,String> standaloneParams,
+            Map<String,String> readReplicaParams,
+            Map<String,IntFunction<String>> instanceReadReplicaParams,
+            String recordFormat, IpFamily ipFamily, boolean useWildcard )
+    {
+        return new Cluster( parentDir, noOfReadReplicas,
+                discoveryServiceFactory,
+                standaloneParams,
+                readReplicaParams,
+                instanceReadReplicaParams,
+                recordFormat, ipFamily, useWildcard );
+    }
+
     private static final int DEFAULT_TIMEOUT_MS = (int) MINUTES.toMillis( 3 );
     private static final int DEFAULT_CLUSTER_SIZE = 3;
 
@@ -107,16 +142,19 @@ public class Cluster implements ServerAddressResolver
     private final String defaultListenHost;
     private final String defaultAdvertisedHost;
 
+    private final StandaloneMember standalone;
     private final Map<Integer,CoreClusterMember> coreMembers = new ConcurrentHashMap<>();
     private final Map<Integer,ReadReplica> readReplicas = new ConcurrentHashMap<>();
     private final Logger log;
     private int highestCoreIndex;
     private int highestReplicaIndex;
 
-    public Cluster( Path parentDir, int noOfCoreMembers, int noOfReadReplicas, DiscoveryServiceFactory discoveryServiceFactory,
+    private Cluster( Path parentDir, int noOfCoreMembers, int noOfReadReplicas,
+            DiscoveryServiceFactory discoveryServiceFactory,
             Map<String,String> coreParams,
             Map<String,IntFunction<String>> instanceCoreParams,
-            Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
+            Map<String,String> readReplicaParams,
+            Map<String,IntFunction<String>> instanceReadReplicaParams,
             String recordFormat, IpFamily ipFamily, boolean useWildcard )
     {
         this.discoveryServiceFactory = discoveryServiceFactory;
@@ -128,9 +166,36 @@ public class Cluster implements ServerAddressResolver
         this.recordFormat = recordFormat;
         defaultListenHost = useWildcard ? ipFamily.wildcardAddress() : ipFamily.localhostAddress();
         defaultAdvertisedHost = ipFamily.localhostName();
-        var initialHosts = initialHosts( noOfCoreMembers, coreParams, instanceCoreParams );
+        List<SocketAddress> initialHosts = initialHosts( noOfCoreMembers, coreParams, instanceCoreParams );
+        this.standalone = null;
         createCoreMembers( noOfCoreMembers, initialHosts, coreParams, instanceCoreParams, recordFormat );
-        createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat );
+        createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat,
+                ignored -> PortAuthority.allocatePort() );
+        this.log = LoggerFactory.getLogger( this.getClass() );
+    }
+
+    private Cluster( Path parentDir,
+            int noOfReadReplicas,
+            DiscoveryServiceFactory discoveryServiceFactory,
+            Map<String,String> standaloneParams,
+            Map<String,String> readReplicaParams,
+            Map<String,IntFunction<String>> instanceReadReplicaParams,
+            String recordFormat, IpFamily ipFamily, boolean useWildcard )
+    {
+        this.discoveryServiceFactory = discoveryServiceFactory;
+        this.parentDir = parentDir;
+        this.coreParams = standaloneParams;
+        this.instanceCoreParams = Map.of();
+        this.readReplicaParams = readReplicaParams;
+        this.instanceReadReplicaParams = instanceReadReplicaParams;
+        this.recordFormat = recordFormat;
+        defaultListenHost = useWildcard ? ipFamily.wildcardAddress() : ipFamily.localhostAddress();
+        defaultAdvertisedHost = ipFamily.localhostName();
+        List<SocketAddress> initialHosts = initialHosts( 1, standaloneParams, emptyMap() );
+        this.standalone = createStandalone( initialHosts, standaloneParams, recordFormat );
+        initialHosts.addAll( initialHosts( noOfReadReplicas, readReplicaParams, instanceReadReplicaParams ) );
+        createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat,
+                index -> initialHosts.get( initialHosts.size() - index - 1 ).getPort() );
         this.log = LoggerFactory.getLogger( this.getClass() );
     }
 
@@ -144,6 +209,10 @@ public class Cluster implements ServerAddressResolver
 
     public void start() throws InterruptedException, ExecutionException
     {
+        if ( standalone != null )
+        {
+            startMembers( standalone );
+        }
         startCoreMembers();
         startReadReplicas();
     }
@@ -153,6 +222,11 @@ public class Cluster implements ServerAddressResolver
         return coreMembers.values().stream()
                 .filter( db -> db.defaultDatabase().getDependencyResolver().resolveDependency( DatabaseHealth.class ).isHealthy() )
                 .collect( Collectors.toSet() );
+    }
+
+    public StandaloneMember getStandaloneMember()
+    {
+        return standalone;
     }
 
     public CoreClusterMember getCoreMemberByIndex( int index )
@@ -225,7 +299,8 @@ public class Cluster implements ServerAddressResolver
     private ReadReplica addReadReplica( int index, String recordFormat, Monitors monitors )
     {
         List<SocketAddress> initialHosts = extractInitialHosts( coreMembers );
-        ReadReplica member = createReadReplica( index, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat, monitors );
+        ReadReplica member = createReadReplica( index, PortAuthority.allocatePort(),
+                initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat, monitors );
 
         readReplicas.put( index, member );
         return member;
@@ -235,6 +310,10 @@ public class Cluster implements ServerAddressResolver
     {
         try ( ErrorHandler errorHandler = new ErrorHandler( "Error when trying to shutdown cluster" ) )
         {
+            if ( standalone != null )
+            {
+                shutdownMembers( List.of( standalone ), errorHandler );
+            }
             shutdownMembers( coreMembers(), errorHandler );
             shutdownMembers( readReplicas(), errorHandler );
         }
@@ -375,8 +454,9 @@ public class Cluster implements ServerAddressResolver
     }
 
     /**
-     * Return a randomly selected member that matches any of the provided roles.
-     * N.b. Use {@link #awaitCoreMemberWithRole} to assert that a member is returned and allow time for cluster changes such as elections }
+     * Return a randomly selected member that matches any of the provided roles. N.b. Use {@link #awaitCoreMemberWithRole} to assert that a member is returned
+     * and allow time for cluster changes such as elections }
+     *
      * @param roles
      * @return null if no members are found matching any of the provided roles.
      */
@@ -397,7 +477,8 @@ public class Cluster implements ServerAddressResolver
 
     private List<CoreClusterMember> getAllActiveMembersWithAnyRole( String databaseName, Role... roles )
     {
-        return getAllMembersWithAnyRole( databaseName, roles ).stream().filter( member -> {
+        return getAllMembersWithAnyRole( databaseName, roles ).stream().filter( member ->
+        {
             try
             {
                 var managementService = member.managementService();
@@ -497,10 +578,10 @@ public class Cluster implements ServerAddressResolver
     public void awaitAllCoresJoinedAllRaftGroups( Set<String> databases, long timeout, TimeUnit timeUnit ) throws TimeoutException
     {
         await( () -> getAllCoresJoinedAllRaftGroups( databases ),
-               timeout,
-               timeUnit,
-               1,
-               TimeUnit.SECONDS
+                timeout,
+                timeUnit,
+                1,
+                TimeUnit.SECONDS
         );
     }
 
@@ -508,9 +589,9 @@ public class Cluster implements ServerAddressResolver
     {
         var coreMembers = Set.copyOf( this.coreMembers.values() );
         var expectedMembersPerDb = databases.stream()
-                                            .collect( Collectors.toMap( Function.identity(), dbName -> expectedMembers( coreMembers, dbName ) ) );
+                .collect( Collectors.toMap( Function.identity(), dbName -> expectedMembers( coreMembers, dbName ) ) );
         var allCoreDatabasePairs = coreMembers.stream()
-                                              .flatMap( core -> databases.stream().map( db -> Pair.of( core, db ) ) );
+                .flatMap( core -> databases.stream().map( db -> Pair.of( core, db ) ) );
 
         return allCoreDatabasePairs.map( coreDatabase -> votingMembersContainAllExpected( coreDatabase.first(), coreDatabase.other(), expectedMembersPerDb ) )
                 .reduce( true, Boolean::logicalAnd );
@@ -519,14 +600,14 @@ public class Cluster implements ServerAddressResolver
     private boolean votingMembersContainAllExpected( CoreClusterMember coreMember, String databaseName, Map<String,Set<RaftMemberId>> expectedMembersPerDb )
     {
         var expectedMembers = expectedMembersPerDb.getOrDefault( databaseName, Set.of() );
-        var votingMembers =  votingMembers( coreMember, databaseName );
+        var votingMembers = votingMembers( coreMember, databaseName );
         if ( !votingMembers.containsAll( expectedMembers ) )
         {
             log.warn( () -> String.format( "I am %s. My voting members are %s for database %s. Expecting members %s",
-                                           coreMember.serverId(),
-                                           votingMembers,
-                                           databaseName,
-                                           expectedMembers ) );
+                    coreMember.serverId(),
+                    votingMembers,
+                    databaseName,
+                    expectedMembers ) );
             return false;
         }
         return true;
@@ -540,19 +621,19 @@ public class Cluster implements ServerAddressResolver
     private Set<RaftMemberId> expectedMembers( Collection<CoreClusterMember> coreMembers, String databaseName )
     {
         return coreMembers.stream()
-                          .flatMap( member ->
-                          {
-                              try
-                              {
-                                  return Stream.of( member.raftMemberIdFor( member.databaseId( databaseName ) ) );
-                              }
-                              catch ( IllegalStateException e )
-                              {
-                                  //IllegalStateException thrown when RaftMemberId is not yet registered in CoreIdentityModule
-                                  return Stream.empty();
-                              }
-                          } )
-                          .collect( Collectors.toSet() );
+                .flatMap( member ->
+                {
+                    try
+                    {
+                        return Stream.of( member.raftMemberIdFor( member.databaseId( databaseName ) ) );
+                    }
+                    catch ( IllegalStateException e )
+                    {
+                        //IllegalStateException thrown when RaftMemberId is not yet registered in CoreIdentityModule
+                        return Stream.empty();
+                    }
+                } )
+                .collect( Collectors.toSet() );
     }
 
     public int numberOfCoreMembersReportedByTopology( String databaseName )
@@ -562,7 +643,7 @@ public class Cluster implements ServerAddressResolver
 
     public List<Integer> numberOfCoreMembersReportedByTopologyOnAllCores( String databaseName )
     {
-        return numberOfMembersReportedByCoreTopologyOnAllCores( databaseName, CoreTopologyService::coreTopologyForDatabase ).collect(toList());
+        return numberOfMembersReportedByCoreTopologyOnAllCores( databaseName, CoreTopologyService::coreTopologyForDatabase ).collect( toList() );
     }
 
     public int numberOfReadReplicaMembersReportedByTopology( String databaseName )
@@ -572,7 +653,7 @@ public class Cluster implements ServerAddressResolver
 
     private int numberOfMembersReportedByCoreTopology( String databaseName, BiFunction<CoreTopologyService,NamedDatabaseId,Topology<?>> topologySelector )
     {
-        return numberOfMembersReportedByCoreTopologyOnAllCores(databaseName, topologySelector)
+        return numberOfMembersReportedByCoreTopologyOnAllCores( databaseName, topologySelector )
                 .findAny()
                 .orElse( 0 );
     }
@@ -586,12 +667,12 @@ public class Cluster implements ServerAddressResolver
                 .stream()
                 .filter( c -> c.managementService() != null && c.database( databaseName ) != null )
                 .map( coreClusterMember ->
-                      {
-                          var db = coreClusterMember.database( databaseName );
-                          var coreTopologyService = db.getDependencyResolver().resolveDependency( CoreTopologyService.class );
-                          var databaseId = coreClusterMember.databaseId( databaseName );
-                          return topologySelector.apply( coreTopologyService, databaseId ).servers().size();
-                      }
+                        {
+                            var db = coreClusterMember.database( databaseName );
+                            var coreTopologyService = db.getDependencyResolver().resolveDependency( CoreTopologyService.class );
+                            var databaseId = coreClusterMember.databaseId( databaseName );
+                            return topologySelector.apply( coreTopologyService, databaseId ).servers().size();
+                        }
                 );
     }
 
@@ -626,7 +707,7 @@ public class Cluster implements ServerAddressResolver
     public CoreClusterMember coreTx( String databaseName, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
             throws Exception
     {
-      return coreTx( databaseName, Role.LEADER, op, timeout, timeUnit );
+        return coreTx( databaseName, Role.LEADER, op, timeout, timeUnit );
     }
 
     /**
@@ -636,7 +717,7 @@ public class Cluster implements ServerAddressResolver
     public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
             throws Exception
     {
-        return coreTx( databaseName, role, op, timeout, timeUnit,  x -> EnterpriseSecurityContext.AUTH_DISABLED );
+        return coreTx( databaseName, role, op, timeout, timeUnit, x -> EnterpriseSecurityContext.AUTH_DISABLED );
     }
 
     /**
@@ -644,24 +725,24 @@ public class Cluster implements ServerAddressResolver
      */
     @SuppressWarnings( "SameParameterValue" )
     public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit,
-                                     String username, String password )
+            String username, String password )
             throws Exception
     {
-        return coreTx( databaseName, role, op, timeout, timeUnit, db -> {
-            var authManager = db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class);
-            return authManager.login(newBasicAuthToken(username, password));
-        });
+        return coreTx( databaseName, role, op, timeout, timeUnit, db ->
+        {
+            var authManager = db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
+            return authManager.login( newBasicAuthToken( username, password ) );
+        } );
     }
 
     /**
      * Perform a transaction against a member with given role of the core cluster, retrying as necessary.
-     *
-     * Transactions may only successfully be committed against the leader of a cluster,
-     * but it is useful to be able to attempt transactions against other members,
-     * for the purposes of testing error handling.
+     * <p>
+     * Transactions may only successfully be committed against the leader of a cluster, but it is useful to be able to attempt transactions against other
+     * members, for the purposes of testing error handling.
      */
     public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit,
-                                     ThrowingFunction<GraphDatabaseFacade, LoginContext, InvalidAuthTokenException> securityContextProvider )
+            ThrowingFunction<GraphDatabaseFacade,LoginContext,InvalidAuthTokenException> securityContextProvider )
             throws Exception
     {
         ThrowingSupplier<CoreClusterMember,Exception> supplier = () ->
@@ -673,7 +754,7 @@ public class Cluster implements ServerAddressResolver
                 throw new DatabaseShutdownException();
             }
 
-            try ( Transaction tx = db.beginTransaction( KernelTransaction.Type.EXPLICIT, securityContextProvider.apply( db )) )
+            try ( Transaction tx = db.beginTransaction( KernelTransaction.Type.EXPLICIT, securityContextProvider.apply( db ) ) )
             {
                 op.accept( db, tx );
                 return member;
@@ -703,6 +784,21 @@ public class Cluster implements ServerAddressResolver
         return coreMembers.values().stream()
                 .map( CoreClusterMember::discoveryAddress )
                 .collect( toList() );
+    }
+
+    private StandaloneMember createStandalone( List<SocketAddress> initialHosts, Map<String,String> standaloneParams, String recordFormat )
+    {
+        var txPort = PortAuthority.allocatePort();
+        var boltPort = PortAuthority.allocatePort();
+        var intraClusterBoltPort = PortAuthority.allocatePort();
+        var loopbackBoltFile = Path.of( parentDir.toString(), "loopback.sock" );
+        var httpPort = PortAuthority.allocatePort();
+        var backupPort = PortAuthority.allocatePort();
+        var listenHost = getListenHost( 0, standaloneParams, emptyMap() );
+        var advertisedHost = getAdvertisedHost( 0, standaloneParams, emptyMap() );
+
+        return new StandaloneMember( initialHosts.get( 0 ).getPort(), txPort, boltPort, intraClusterBoltPort, loopbackBoltFile, httpPort, backupPort,
+                initialHosts, discoveryServiceFactory, recordFormat, parentDir, standaloneParams, listenHost, advertisedHost );
     }
 
     private void createCoreMembers( final int noOfCoreMembers,
@@ -767,6 +863,7 @@ public class Cluster implements ServerAddressResolver
     }
 
     private ReadReplica createReadReplica( int index,
+            int discoveryPort,
             List<SocketAddress> initialHosts,
             Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams,
@@ -779,7 +876,6 @@ public class Cluster implements ServerAddressResolver
         var httpPort = PortAuthority.allocatePort();
         var txPort = PortAuthority.allocatePort();
         var backupPort = PortAuthority.allocatePort();
-        var discoveryPort = PortAuthority.allocatePort();
         var listenHost = getListenHost( index, extraParams, instanceExtraParams );
         var advertisedHost = getAdvertisedHost( index, extraParams, instanceExtraParams );
 
@@ -839,12 +935,14 @@ public class Cluster implements ServerAddressResolver
             final List<SocketAddress> initialHosts,
             Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams,
-            String recordFormat )
+            String recordFormat,
+            Function<Integer,Integer> discoveryPort )
     {
         for ( int i = 0; i < noOfReadReplicas; i++ )
         {
             ReadReplica readReplica = createReadReplica(
                     i,
+                    discoveryPort.apply( i ),
                     initialHosts,
                     extraParams,
                     instanceExtraParams,

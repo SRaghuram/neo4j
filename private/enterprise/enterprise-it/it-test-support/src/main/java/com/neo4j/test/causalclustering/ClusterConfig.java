@@ -22,8 +22,9 @@ import static com.neo4j.causalclustering.discovery.IpFamily.IPV4;
 public class ClusterConfig
 {
     private int noCoreMembers = 3;
-    private int noReadReplicas = 3;
+    private int noReadReplicas = 2;
     private DiscoveryServiceType discoveryServiceType = DiscoveryServiceType.AKKA;
+    private final Map<String,String> standaloneParams = new HashMap<>();
     private final Map<String,String> coreParams = new HashMap<>();
     private final Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
     private final Map<String,String> readReplicaParams = new HashMap<>();
@@ -43,8 +44,15 @@ public class ClusterConfig
 
     public static Cluster createCluster( Path directory, ClusterConfig clusterConfig )
     {
-        return new Cluster( directory, clusterConfig.noCoreMembers, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.factory(),
+        return Cluster.createWithCores( directory, clusterConfig.noCoreMembers, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.factory(),
                 clusterConfig.coreParams, clusterConfig.instanceCoreParams, clusterConfig.readReplicaParams, clusterConfig.instanceReadReplicaParams,
+                clusterConfig.recordFormat, clusterConfig.ipFamily, clusterConfig.useWildcard );
+    }
+
+    public static Cluster createStandaloneCluster( Path directory, ClusterConfig clusterConfig )
+    {
+        return Cluster.createWithStandalone( directory, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.factory(),
+                clusterConfig.standaloneParams, clusterConfig.readReplicaParams, clusterConfig.instanceReadReplicaParams,
                 clusterConfig.recordFormat, clusterConfig.ipFamily, clusterConfig.useWildcard );
     }
 
@@ -63,6 +71,18 @@ public class ClusterConfig
     public ClusterConfig withDiscoveryServiceType( DiscoveryServiceType discoveryServiceType )
     {
         this.discoveryServiceType = discoveryServiceType;
+        return this;
+    }
+
+    public ClusterConfig withStandaloneParams( Map<String,String> params )
+    {
+        this.coreParams.putAll( params );
+        return this;
+    }
+
+    public ClusterConfig withStandaloneParams( Setting<?> key, String value )
+    {
+        this.coreParams.put( key.name(), value );
         return this;
     }
 
