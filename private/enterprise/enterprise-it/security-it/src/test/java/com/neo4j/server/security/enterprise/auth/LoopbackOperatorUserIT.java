@@ -363,6 +363,24 @@ class LoopbackOperatorUserIT
                 .hasRootCauseMessage( "No password has been set for the loopback operator. Run `neo4j-admin set-operator-password <password>`." );
     }
 
+    @Test
+    void shouldFailToStartWithExistingSocketFile() throws Exception
+    {
+        //GIVEN that a fake file exists
+        LISTEN_FILE.toFile().createNewFile();
+
+        //THEN we should not be able to start the server
+        assertThatThrownBy( () -> setupOperatorUserAndSystemDatabase( true, true, false )
+        ).hasRootCauseMessage( "Loopback listen file: " + LISTEN_FILE + " already exists." );
+
+        //BUT THEN we should be able to start with the delete flag set
+        setupOperatorUserAndSystemDatabase( true, true, true );
+
+        //AND make a connection
+        establishConnection();
+        authenticateAsLoopback();
+    }
+
     private Session loginBolt()
     {
         var ip = Inet4Address.getLoopbackAddress().getHostAddress();
@@ -389,25 +407,26 @@ class LoopbackOperatorUserIT
 
     private void setupRestricted() throws IOException
     {
-        setupOperatorUserAndSystemDatabase( true, true );
+        setupOperatorUserAndSystemDatabase( true, true, false );
     }
 
     private void setupRestricted( boolean blocked ) throws IOException
     {
-        setupOperatorUserAndSystemDatabase( true, blocked );
+        setupOperatorUserAndSystemDatabase( true, blocked, false );
     }
 
     private void setupUnrestricted() throws IOException
     {
-        setupOperatorUserAndSystemDatabase( false, false );
+        setupOperatorUserAndSystemDatabase( false, false, false );
     }
 
-    private void setupOperatorUserAndSystemDatabase( boolean restrictUpgrade, boolean blockDatabase ) throws IOException
+    private void setupOperatorUserAndSystemDatabase( boolean restrictUpgrade, boolean blockDatabase, boolean deleteSocket ) throws IOException
     {
         setOperatorPassword();
         final Map<Setting<?>,Object> config =
                 Map.of( BoltConnectorInternalSettings.enable_loopback_auth, restrictUpgrade || blockDatabase,
                         BoltConnectorInternalSettings.unsupported_loopback_listen_file, LISTEN_FILE,
+                        BoltConnectorInternalSettings.unsupported_loopback_delete, deleteSocket,
                         GraphDatabaseInternalSettings.block_upgrade_procedures, restrictUpgrade,
                         GraphDatabaseInternalSettings.block_create_drop_database, blockDatabase,
                         GraphDatabaseInternalSettings.block_start_stop_database, blockDatabase );
