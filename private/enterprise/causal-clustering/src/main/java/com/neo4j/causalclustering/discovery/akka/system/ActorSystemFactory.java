@@ -12,6 +12,7 @@ import akka.actor.setup.ActorSystemSetup;
 import akka.remote.artery.tcp.SSLEngineProvider;
 import akka.remote.artery.tcp.SSLEngineProviderSetup;
 import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
+import com.neo4j.configuration.MinFormationMembers;
 import com.typesafe.config.ConfigRenderOptions;
 
 import java.util.Optional;
@@ -30,13 +31,13 @@ public class ActorSystemFactory
 
     public ActorSystemFactory( Optional<SSLEngineProvider> sslEngineProvider,
                                DiscoveryFirstStartupDetector firstStartupDetector, Config config,
-                               LogProvider logProvider )
+                               LogProvider logProvider, MinFormationMembers minFormationMembers )
     {
         this.logProvider = logProvider;
         this.sslEngineProvider = sslEngineProvider;
         TypesafeConfigService.ArteryTransport arteryTransport =
                 sslEngineProvider.isPresent() ? TypesafeConfigService.ArteryTransport.TLS_TCP : TypesafeConfigService.ArteryTransport.TCP;
-        this.configService = new TypesafeConfigService( arteryTransport, firstStartupDetector, config );
+        this.configService = new TypesafeConfigService( arteryTransport, firstStartupDetector, config , minFormationMembers );
         this.log = logProvider.getLog( getClass() );
     }
 

@@ -5,9 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.akka
 
-import java.util.concurrent.Callable
-import java.util.concurrent.TimeUnit
-
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.BootstrapSetup
@@ -28,6 +25,7 @@ import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonito
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import com.neo4j.configuration.CausalClusteringSettings
+import com.neo4j.configuration.MinFormationMembers
 import com.neo4j.dbms.EnterpriseDatabaseState
 import com.neo4j.dbms.EnterpriseOperatorState
 import org.assertj.core.api.Condition
@@ -42,6 +40,8 @@ import org.neo4j.test.assertion.Assert.assertEventually
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.junit.JUnitRunner
 
+import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
@@ -53,9 +53,10 @@ object BaseAkkaIT {
 
   def config: TSConf = {
     val discoveryListenPort = 0
-    val config = Config.defaults(CausalClusteringSettings.discovery_listen_address, new SocketAddress( "localhost", discoveryListenPort ) )
+    val config = Config.defaults(CausalClusteringSettings.discovery_listen_address, new SocketAddress("localhost", discoveryListenPort))
 
-    new TypesafeConfigService(ArteryTransport.TCP, new TestFirstStartupDetector(true), config).generate()
+    val minFormationMembers = MinFormationMembers.from(config);
+    new TypesafeConfigService(ArteryTransport.TCP, new TestFirstStartupDetector(true), config, minFormationMembers).generate()
   }
 
   def bootstrapSetup: BootstrapSetup =

@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.member.DefaultServerSnapshot;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
-import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import org.neo4j.collection.Dependencies;
@@ -96,8 +95,6 @@ public class DiscoveryModule
 
     public TopologyService standaloneTopologyService( ServerIdentity identity )
     {
-        // TODO inject this setting somehow differently
-        globalConfig.set( CausalClusteringInternalSettings.middleware_akka_min_number_of_members_at_formation, 1 );
         RemoteMembersResolver remoteMembersResolver = chooseResolver( globalConfig, logService );
         TopologyService topologyService = discoveryServiceFactory.standaloneTopologyService( globalConfig, identity, jobScheduler, debugLog, userLog,
                                                                                              remoteMembersResolver, resolveStrategy( globalConfig ),
@@ -108,5 +105,4 @@ public class DiscoveryModule
         globalDependencies.satisfyDependency( topologyService ); // for tests
         return topologyService;
     }
-
 }

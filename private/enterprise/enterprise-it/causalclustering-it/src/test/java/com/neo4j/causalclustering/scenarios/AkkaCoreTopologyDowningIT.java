@@ -22,6 +22,7 @@ import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.MinFormationMembers;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matchers;
@@ -264,10 +265,11 @@ class AkkaCoreTopologyDowningIT
                 () -> Files.newOutputStream( testDirectory.createFile( "coreTopologyDowningIT_topologyService_" + myPort ) )
         );
         var logProvider = new Log4jLogProvider( logOutput );
+        var minFormationMembers = MinFormationMembers.from( config );
 
         var firstStartupDetector = new TestFirstStartupDetector( true );
-        var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider );
-        var actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider );
+        var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider, minFormationMembers );
+        var actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider, minFormationMembers );
         var databaseIdRepository = new TestDatabaseIdRepository();
         Map<NamedDatabaseId,DatabaseState> states = Map.of( databaseIdRepository.defaultDatabase(),
                                                             new EnterpriseDatabaseState( databaseIdRepository.defaultDatabase(), STARTED ) );
@@ -307,14 +309,15 @@ class AkkaCoreTopologyDowningIT
     private static class TestActorSystemLifecycle extends ActorSystemLifecycle
     {
         TestActorSystemLifecycle( ActorSystemFactory actorSystemFactory, Function<Config,RemoteMembersResolver> resolverFactory,
-                                  Config config, LogProvider logProvider )
+                                  Config config, LogProvider logProvider, MinFormationMembers minFormationMembers )
         {
-            this( actorSystemFactory, resolverFactory.apply( config ), config, logProvider );
+            this( actorSystemFactory, resolverFactory.apply( config ), config, logProvider, minFormationMembers );
         }
 
-        private TestActorSystemLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, Config config, LogProvider logProvider )
+        private TestActorSystemLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, Config config, LogProvider logProvider,
+                                          MinFormationMembers minFormationMembers )
         {
-            super( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider );
+            super( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider, minFormationMembers );
         }
 
         void down( int port )

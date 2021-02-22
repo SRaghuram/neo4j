@@ -42,6 +42,7 @@ import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.MinFormationMembers;
 import com.typesafe.config.ConfigFactory;
 
 import java.nio.file.Path;
@@ -61,6 +62,7 @@ public final class TypesafeConfigService
     static final String DISCOVERY_SINK_DISPATCHER = "discovery-to-neo4j-dispatcher";
     static final String DISCOVERY_DEFAULT_DISPATCHER = "default-dispatcher"; // Akka's name, do not change
     static final String LOGGING_DISPATCHER = "logging-dispatcher";
+    private final MinFormationMembers minFormationMembers;
 
     public enum ArteryTransport
     {
@@ -80,11 +82,13 @@ public final class TypesafeConfigService
     private final Config config;
     private final ArteryTransport arteryTransport;
 
-    public TypesafeConfigService( ArteryTransport arteryTransport, DiscoveryFirstStartupDetector firstStartupDetector, Config config )
+    public TypesafeConfigService( ArteryTransport arteryTransport, DiscoveryFirstStartupDetector firstStartupDetector, Config config,
+                                  MinFormationMembers minFormationMembers )
     {
         this.firstStartupDetector = firstStartupDetector;
         this.config = config;
         this.arteryTransport = arteryTransport;
+        this.minFormationMembers = minFormationMembers;
     }
 
     public com.typesafe.config.Config generate()
@@ -160,8 +164,7 @@ public final class TypesafeConfigService
     {
         Map<String,Object> configMap = new HashMap<>();
 
-        int minClusterSizeAtFormation = config.get( CausalClusteringInternalSettings.middleware_akka_min_number_of_members_at_formation );
-        configMap.put( "akka.cluster.min-nr-of-members", minClusterSizeAtFormation );
+        configMap.put( "akka.cluster.min-nr-of-members", minFormationMembers.value() );
 
         Setting<Duration> seedNodeTimeoutConfiguration = firstStartupDetector.isFirstStartup() ?
                                                          CausalClusteringInternalSettings.middleware_akka_seed_node_timeout_on_first_start :

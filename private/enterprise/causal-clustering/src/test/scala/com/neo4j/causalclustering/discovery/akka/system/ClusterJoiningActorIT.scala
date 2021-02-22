@@ -5,10 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.akka.system
 
-import java.util
-import java.util.Collections
-import java.util.concurrent.TimeUnit
-
 import akka.actor.ActorRef
 import akka.actor.Address
 import akka.cluster.Cluster
@@ -17,6 +13,7 @@ import com.neo4j.causalclustering.discovery.NoOpHostnameResolver
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.configuration.CausalClusteringInternalSettings
 import com.neo4j.configuration.CausalClusteringSettings
+import com.neo4j.configuration.MinFormationMembers
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.mockito.Mockito.atLeastOnce
@@ -24,6 +21,9 @@ import org.mockito.Mockito.verify
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.SocketAddress
 
+import java.util
+import java.util.Collections
+import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.concurrent.duration.Duration
 
@@ -101,7 +101,8 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
     val self = Address("akka", system.name, "myHost", 1234 )
     Mockito.when(cluster.selfAddress).thenReturn(self)
 
-    val props = ClusterJoiningActor.props(cluster, mock[ActorRef], resolver, config)
+    val minFormationMembers = MinFormationMembers.from(config);
+    val props = ClusterJoiningActor.props(cluster, mock[ActorRef], resolver, config, minFormationMembers)
 
     val actorRef = system.actorOf(props)
   }

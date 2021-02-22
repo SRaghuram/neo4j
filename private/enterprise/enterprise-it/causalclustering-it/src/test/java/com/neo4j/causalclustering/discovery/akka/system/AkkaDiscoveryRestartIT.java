@@ -20,6 +20,7 @@ import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
+import com.neo4j.configuration.MinFormationMembers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -139,11 +140,11 @@ public class AkkaDiscoveryRestartIT
                 DatabaseStateService databaseStateService, Panicker panicker )
         {
             ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forConfig( config);
-
+            var minFormationMembers = MinFormationMembers.from( config );
             return new TestAkkaMemberCoreTopologyService(
                     config,
                     myIdentity,
-                    actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader ),
+                    actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, minFormationMembers ),
                     logProvider,
                     userLogProvider,
                     catchupAddressRetryStrategy,
@@ -176,19 +177,21 @@ public class AkkaDiscoveryRestartIT
         }
 
         protected ActorSystemLifecycle actorSystemLifecycle( Config config, LogProvider logProvider, RemoteMembersResolver resolver,
-                SslPolicyLoader sslPolicyLoader )
+                SslPolicyLoader sslPolicyLoader, MinFormationMembers minFormationMembers )
         {
             return new ActorSystemLifecycle(
-                    actorSystemFactory( sslPolicyLoader, config, logProvider ),
+                    actorSystemFactory( sslPolicyLoader, config, logProvider, minFormationMembers ),
                     resolver,
                     new JoinMessageFactory( resolver ),
                     config,
-                    logProvider );
+                    logProvider, minFormationMembers );
         }
 
-        protected ActorSystemFactory actorSystemFactory( SslPolicyLoader ignored, Config config, LogProvider logProvider )
+        protected ActorSystemFactory actorSystemFactory( SslPolicyLoader ignored, Config config, LogProvider logProvider ,
+                                                         MinFormationMembers minFormationMembers )
         {
-            return new ActorSystemFactory( Optional.empty(), new TestFirstStartupDetector( () -> this.firstStartup ), config, logProvider );
+            return new ActorSystemFactory( Optional.empty(), new TestFirstStartupDetector( () -> this.firstStartup ), config, logProvider,
+                                           minFormationMembers );
         }
     }
 

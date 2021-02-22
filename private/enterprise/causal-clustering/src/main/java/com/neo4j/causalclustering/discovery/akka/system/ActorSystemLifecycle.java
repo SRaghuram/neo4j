@@ -28,6 +28,7 @@ import com.neo4j.causalclustering.discovery.akka.AkkaActorSystemRestartStrategy;
 import com.neo4j.causalclustering.discovery.akka.Restartable;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.MinFormationMembers;
 import scala.Option;
 import scala.concurrent.duration.FiniteDuration;
 
@@ -63,9 +64,10 @@ public class ActorSystemLifecycle
 
     @VisibleForTesting
     protected ActorSystemComponents actorSystemComponents;
+    private MinFormationMembers minFormationMembers;
 
     public ActorSystemLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, JoinMessageFactory joinMessageFactory,
-                                 Config config, LogProvider logProvider )
+                                 Config config, LogProvider logProvider, MinFormationMembers minFormationMembers )
     {
         this.actorSystemFactory = actorSystemFactory;
         this.resolver = resolver;
@@ -74,13 +76,14 @@ public class ActorSystemLifecycle
         this.log = logProvider.getLog( getClass() );
         this.actorSystemRestartStrategy = new AkkaActorSystemRestartStrategy.RestartWhenMajorityUnreachableOrSingletonFirstSeed( resolver );
         this.actorSystemShutdownTimeout = this.config.get( CausalClusteringInternalSettings.akka_shutdown_timeout );
+        this.minFormationMembers = minFormationMembers;
     }
 
     public void createClusterActorSystem( Restartable akkaRestarter )
     {
         this.actorSystemComponents = new ActorSystemComponents( actorSystemFactory,  ProviderSelection.cluster() );
 
-        Props props = ClusterJoiningActor.props( cluster(), startRestartNeededListeningActor(akkaRestarter), resolver, config );
+        Props props = ClusterJoiningActor.props( cluster(), startRestartNeededListeningActor( akkaRestarter ), resolver, config, minFormationMembers );
         applicationActorOf( props, ClusterJoiningActor.NAME ).tell( joinMessageFactory.message(), ActorRef.noSender() );
     }
 

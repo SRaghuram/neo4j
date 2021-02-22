@@ -21,6 +21,7 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForServerId;
+import com.neo4j.configuration.MinFormationMembers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
@@ -131,8 +132,9 @@ class AkkaDistributedDataLeakIT
                     .build();
             var firstStartupDetector = new TestFirstStartupDetector( true );
 
+            var minFormationMembers = MinFormationMembers.from( config );
             var logProvider = NullLogProvider.getInstance();
-            var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider );
+            var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider, minFormationMembers );
             actorSystemComponents = new ActorSystemComponents( actorSystemFactory, ProviderSelection.cluster() );
             actorSystemComponents.cluster().joinSeedNodes(
                     singletonList( new Address( AKKA_SCHEME, actorSystemComponents.cluster().system().name(), "localhost", port ) ) );

@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.MinFormationMembers;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -31,13 +32,15 @@ import static com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigSer
 public class ClusterJoiningActor extends AbstractActorWithTimersAndLogging
 {
     static final String AKKA_SCHEME = "akka";
-    private final int minMembersAtFormation;
+    private final MinFormationMembers minFormationMembers;
     private final ActorRef restartNeededListeningActor;
     private final boolean allowAnyCoreToBootstrapAkkaCluster;
 
-    public static Props props( Cluster cluster, ActorRef restartNeededListeningActor, RemoteMembersResolver resolver, Config config )
+    public static Props props( Cluster cluster, ActorRef restartNeededListeningActor, RemoteMembersResolver resolver, Config config,
+                               MinFormationMembers minFormationMembers )
     {
-        return Props.create( ClusterJoiningActor.class, () -> new ClusterJoiningActor( cluster, restartNeededListeningActor, resolver, config ) );
+        return Props.create( ClusterJoiningActor.class, () -> new ClusterJoiningActor( cluster, restartNeededListeningActor, resolver, config,
+                                                                                       minFormationMembers ) );
     }
 
     public static final String NAME = "joiner";
@@ -48,13 +51,14 @@ public class ClusterJoiningActor extends AbstractActorWithTimersAndLogging
     private final RemoteMembersResolver remoteMembersResolver;
     private final Duration retry;
 
-    private ClusterJoiningActor( Cluster cluster, ActorRef restartNeededListeningActor, RemoteMembersResolver remoteMembersResolver, Config config )
+    private ClusterJoiningActor( Cluster cluster, ActorRef restartNeededListeningActor, RemoteMembersResolver remoteMembersResolver, Config config,
+                                 MinFormationMembers minFormationMembers )
     {
         this.cluster = cluster;
         this.restartNeededListeningActor = restartNeededListeningActor;
         this.remoteMembersResolver = remoteMembersResolver;
         this.retry = config.get( CausalClusteringInternalSettings.cluster_binding_retry_timeout );
-        this.minMembersAtFormation = config.get( CausalClusteringInternalSettings.middleware_akka_min_number_of_members_at_formation );
+        this.minFormationMembers = minFormationMembers;
         this.allowAnyCoreToBootstrapAkkaCluster = config.get( CausalClusteringInternalSettings.middleware_akka_allow_any_core_to_bootstrap );
     }
 
@@ -140,7 +144,7 @@ public class ClusterJoiningActor extends AbstractActorWithTimersAndLogging
 
         if ( currentClusterState != null
              && currentClusterState.members().size() > 0
-             && currentClusterState.members().size() < minMembersAtFormation
+             && currentClusterState.members().size() < minFormationMembers.value()
              && currentClusterState.members().contains( myself )
              && currentClusterState.getUnreachable().size() == 0
         )

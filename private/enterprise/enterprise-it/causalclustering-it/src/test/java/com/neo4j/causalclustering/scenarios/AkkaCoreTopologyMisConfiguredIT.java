@@ -19,6 +19,7 @@ import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
 import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.MinFormationMembers;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matchers;
@@ -81,12 +82,14 @@ class AkkaCoreTopologyMisConfiguredIT
                 .set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG )
                 .build();
 
+        var minFormationMembers = MinFormationMembers.from( config );
         var logProvider = NullLogProvider.getInstance();
         var jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         var firstStartupDetector = new TestFirstStartupDetector( true );
-        var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider  );
+        var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider, minFormationMembers );
         var resolver = NoOpHostnameResolver.resolver( config );
-        var actorSystemLifecycle = new ActorSystemLifecycle( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider );
+        var actorSystemLifecycle =
+                new ActorSystemLifecycle( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider, minFormationMembers );
         var databaseIdRepository = new TestDatabaseIdRepository();
         var panicker = DummyPanicService.PANICKER;
         Map<NamedDatabaseId,DatabaseState> states = Map.of( databaseIdRepository.defaultDatabase(),

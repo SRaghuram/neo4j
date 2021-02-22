@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery.akka.system;
 
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.MinFormationMembers;
 import scala.concurrent.Await;
 import scala.concurrent.duration.FiniteDuration;
 
@@ -22,9 +23,10 @@ import org.neo4j.logging.LogProvider;
 public class ActorSystemUncleanShutdownLifecycle extends ActorSystemLifecycle
 {
     private final Duration shutdownTimeout;
-    public ActorSystemUncleanShutdownLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, Config config, LogProvider logProvider )
+    public ActorSystemUncleanShutdownLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, Config config, LogProvider logProvider,
+                                                MinFormationMembers minFormationMembers )
     {
-        super( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider );
+        super( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider, minFormationMembers );
         shutdownTimeout = config.get( CausalClusteringInternalSettings.akka_shutdown_timeout );
     }
 

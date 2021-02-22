@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.discovery.TestFirstStartupDetector
 import com.neo4j.causalclustering.discovery.akka.NeoSuite
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import com.neo4j.configuration.CausalClusteringSettings
+import com.neo4j.configuration.MinFormationMembers
 import org.junit.runner.RunWith
 import org.neo4j.configuration.Config
 import org.neo4j.logging.AssertableLogProvider
@@ -65,7 +66,11 @@ class LoggingActorIT extends NeoSuite {
   abstract class Fixture(logLevel: Level) {
 
     val config = Config.defaults(CausalClusteringSettings.middleware_logging_level, logLevel)
-    val testSystem = ActorSystem("testSystem", new TypesafeConfigService(ArteryTransport.TCP, new TestFirstStartupDetector(true), config).generate())
+
+    val minFormationMembers = MinFormationMembers.from(config);
+
+    val testSystem = ActorSystem("testSystem", new TypesafeConfigService(ArteryTransport.TCP,
+      new TestFirstStartupDetector(true), config, minFormationMembers).generate())
     val loggingContext = "LoggingActorIT"
     val logProvider = new AssertableLogProvider(true)
     LoggingFilter.enable(logProvider)

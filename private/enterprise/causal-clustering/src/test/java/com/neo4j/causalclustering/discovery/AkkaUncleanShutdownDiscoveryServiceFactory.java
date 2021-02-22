@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemUncleanShutdownLifecycle;
+import com.neo4j.configuration.MinFormationMembers;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.LogProvider;
@@ -18,12 +19,14 @@ public class AkkaUncleanShutdownDiscoveryServiceFactory extends AkkaDiscoverySer
     @Override
     protected ActorSystemLifecycle actorSystemLifecycle( Config config, LogProvider logProvider, RemoteMembersResolver resolver,
                                                          SslPolicyLoader sslPolicyLoader,
-                                                         DiscoveryFirstStartupDetector firstStartupDetector )
+                                                         DiscoveryFirstStartupDetector firstStartupDetector,
+                                                         MinFormationMembers minFormationMembers )
     {
         return new ActorSystemUncleanShutdownLifecycle(
-                actorSystemFactory( sslPolicyLoader, firstStartupDetector, config, logProvider ),
+                actorSystemFactory( sslPolicyLoader, firstStartupDetector, config, logProvider, minFormationMembers ),
                 resolver,
                 config,
-                logProvider );
+                logProvider,
+                minFormationMembers );
     }
 }
