@@ -91,7 +91,6 @@ public abstract class BaseEndToEndIT
          *
          * @param recordingDir folder containing profiler recordings
          * @param profilers    list of profilers that were used
-
          */
         void assertOnRecordings( Path recordingDir, List<ProfilerType> profilers ) throws Exception;
     }
@@ -205,13 +204,13 @@ public abstract class BaseEndToEndIT
     /**
      * Executes run report benchmarks test.
      *
-     * @param scriptName name of the run script
-     * @param toolJar path to tool toolJar
-     * @param profilers list of profilers to run with
-     * @param processArgs tool process arguments
+     * @param scriptName          name of the run script
+     * @param toolJar             path to tool toolJar
+     * @param profilers           list of profilers to run with
+     * @param processArgs         tool process arguments
      * @param recordingsAssertion additional assertions to perform on profiler recordings
-     * @param recordingDirsCount number of recording directories
-     * @param expectedRecording profiler recordings that should be uploaded to S3 and written to results store
+     * @param recordingDirsCount  number of recording directories
+     * @param expectedRecording   profiler recordings that should be uploaded to S3 and written to results store
      */
     public void runReportBenchmarks( String scriptName,
                                      Path toolJar,
@@ -234,13 +233,13 @@ public abstract class BaseEndToEndIT
     /**
      * Executes run report benchmarks test.
      *
-     * @param scriptName         name of the run script
-     * @param toolJar            path to tool toolJar
-     * @param profilers          list of profilers to run with
-     * @param processArgs        tool process arguments
-     * @oaram recordingsAssertion custom assertions
+     * @param scriptName          name of the run script
+     * @param toolJar             path to tool toolJar
+     * @param profilers           list of profilers to run with
+     * @param processArgs         tool process arguments
+     * @param recordingsAssertion custom assertions
      * @param recordingDirsCount
-     * @param expectedExitCode   expected eun report script exit code
+     * @param expectedExitCode    expected eun report script exit code
      * @param expectedRecording
      */
     public void runReportBenchmarks( String scriptName,
@@ -402,7 +401,8 @@ public abstract class BaseEndToEndIT
 
     protected void assertErrorNodeCount( int nodeCount )
     {
-        try ( Session session = GraphDatabase.driver( boltUri ).session() )
+        try ( Driver driver = GraphDatabase.driver( boltUri );
+              Session session = driver.session() )
         {
 
             Long errCount = session
