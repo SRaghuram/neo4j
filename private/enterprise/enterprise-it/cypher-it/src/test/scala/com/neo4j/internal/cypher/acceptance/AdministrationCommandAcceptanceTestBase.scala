@@ -76,7 +76,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val PERMISSION_DENIED_REMOVE_ROLE: String = "Permission denied for REMOVE ROLE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_SET_PASSWORDS: String = "Permission denied for SET PASSWORDS." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_SET_USER_STATUS: String = "Permission denied for SET USER STATUS." + helpfulCheckUserPrivilegeErrorText
-  val PERMISSION_DENIED_SET_USER_DEFAULT_DATABASE: String = "Permission denied for SET USER DEFAULT DATABASE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_SET_USER_HOME_DATABASE: String = "Permission denied for SET USER HOME DATABASE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_SET_PASSWORDS_OR_USER_STATUS: String = "Permission denied for SET PASSWORDS and/or SET USER STATUS." + helpfulCheckUserPrivilegeErrorText
 
   val roleName: String = "custom"
@@ -204,26 +204,27 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(GraphDatabaseSettings.auth_enabled -> TRUE)
 
   def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false,
-           passwordChangeRequired: Boolean = true, defaultDatabase: String = DEFAULT_DATABASE_NAME): Map[String, Any] = {
+           passwordChangeRequired: Boolean = true, home: String = null): Map[String, Any] = {
     val rolesWithPublic = roles.sorted :+ PredefinedRoles.PUBLIC
-    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
+    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired, "home" -> home)
   }
 
-  def adminUser(username: String, passwordChangeRequired: Boolean = true, defaultDatabase: String = DEFAULT_DATABASE_NAME): Map[String, Any] = {
+  def adminUser(username: String, passwordChangeRequired: Boolean = true): Map[String, Any] = {
     val rolesWithPublic = Seq(PredefinedRoles.ADMIN, PredefinedRoles.PUBLIC)
-    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> false, "passwordChangeRequired" -> passwordChangeRequired)
+    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> false, "passwordChangeRequired" -> passwordChangeRequired, "home" -> null)
   }
 
-  def db(name: String, status: String = onlineStatus, default: Boolean = false, systemDefault: Boolean = false): Map[String, Any] =
+  def db(name: String, status: String = onlineStatus, home: Boolean = false, default: Boolean = false): Map[String, Any] =
     Map("name" -> name,
       "address" -> "localhost:7687",
       "role" -> "standalone",
       "requestedStatus" -> status,
       "currentStatus" -> status,
       "error" -> "",
-      "default" -> systemDefault)
+      "default" -> default,
+      "home" -> home)
 
-  def defaultDb(name: String = DEFAULT_DATABASE_NAME, status: String = onlineStatus): Map[String, String] =
+  def homeOrDefaultDb(name: String = DEFAULT_DATABASE_NAME, status: String = onlineStatus): Map[String, String] =
     Map("name" -> name,
       "address" -> "localhost:7687",
       "role" -> "standalone",
@@ -385,6 +386,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "DROP USER" -> adminAction("drop_user"),
     "SHOW USER" -> adminAction("show_user"),
     "SET USER STATUS" -> adminAction("set_user_status"),
+    "SET USER HOME DATABASE" -> adminAction("set_user_home_database"),
     "SET PASSWORDS" -> adminAction("set_passwords"),
     "ALTER USER" -> adminAction("alter_user"),
     "USER MANAGEMENT" -> adminAction("user_management"),

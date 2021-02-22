@@ -13,6 +13,7 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDataba
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_0_35;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_10_43D4;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_1_36;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_2_40;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_3_41D1;
@@ -85,6 +86,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         KnownEnterpriseSecurityComponentVersion version7 = new EnterpriseSecurityComponentVersion_7_42D7( log, version6 );
         KnownEnterpriseSecurityComponentVersion version8 = new EnterpriseSecurityComponentVersion_8_42P1( log, version7 );
         KnownEnterpriseSecurityComponentVersion version9 = new EnterpriseSecurityComponentVersion_9_43D1( log, version8 );
+        KnownEnterpriseSecurityComponentVersion version10 = new EnterpriseSecurityComponentVersion_10_43D4( log, version9 );
 
         knownSecurityComponentVersions.add( version0 );
         knownSecurityComponentVersions.add( version1 );
@@ -96,6 +98,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         knownSecurityComponentVersions.add( version7 );
         knownSecurityComponentVersions.add( version8 );
         knownSecurityComponentVersions.add( version9 );
+        knownSecurityComponentVersions.add( version10 );
         knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_Future( log, knownSecurityComponentVersions.latestComponentVersion() ) );
     }
 

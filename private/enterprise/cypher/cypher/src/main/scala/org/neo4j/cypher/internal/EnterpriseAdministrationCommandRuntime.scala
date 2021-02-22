@@ -232,7 +232,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |WITH u, r.name as roleNames ORDER BY roleNames
           |WITH u, collect(roleNames) as roles
           |WITH u.name as user, roles + 'PUBLIC' as roles, u.passwordChangeRequired AS passwordChangeRequired,
-          |u.suspended AS suspended
+          |u.suspended AS suspended, u.homeDatabase as home
           ${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
           |""".stripMargin,
         VirtualValues.EMPTY_MAP,
@@ -252,7 +252,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |WHERE user <> ""
            |OPTIONAL MATCH (u:User)
            |WHERE u.name = $$`$currentUserKey`
-           |WITH user, roles, passwordChangeRequired, coalesce(u.suspended, false) AS suspended
+           |WITH user, roles, passwordChangeRequired, coalesce(u.suspended, false) AS suspended, u.homeDatabase as home
            |${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
            |""".stripMargin,
         VirtualValues.EMPTY_MAP,

@@ -121,6 +121,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
       granted(adminAction("create_user")).role(roleName).map,
       granted(adminAction("drop_user")).role(roleName).map,
       granted(adminAction("set_user_status")).role(roleName).map,
+      granted(adminAction("set_user_home_database")).role(roleName).map,
       granted(adminAction("set_passwords")).role(roleName).map,
       granted(adminAction("alter_user")).role(roleName).map,
       granted(adminAction("show_user")).role(roleName).map,

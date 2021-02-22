@@ -947,7 +947,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // Confirm default database
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(newDefaultDatabase)))
+    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(homeOrDefaultDb(newDefaultDatabase)))
 
     // THEN: confirm privilege
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -1384,7 +1384,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute(s"CREATE database $newDefaultDatabase")
 
     // Confirm default database
-    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(DEFAULT_DATABASE_NAME)))
+    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(homeOrDefaultDb(DEFAULT_DATABASE_NAME)))
 
     // WHEN: Grant on default database
     execute(s"GRANT CONSTRAINT MANAGEMENT ON DEFAULT DATABASE TO role")
@@ -1417,7 +1417,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // Confirm default database
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(newDefaultDatabase)))
+    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(homeOrDefaultDb(newDefaultDatabase)))
 
     // THEN: confirm privilege
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -1577,7 +1577,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute(s"CREATE database $newDefaultDatabase")
 
     // Confirm default database
-    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(DEFAULT_DATABASE_NAME)))
+    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(homeOrDefaultDb(DEFAULT_DATABASE_NAME)))
 
     // WHEN: Grant on default database
     execute(s"GRANT NAME MANAGEMENT ON DEFAULT DATABASE TO role")
@@ -1614,7 +1614,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // Confirm default database
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(newDefaultDatabase)))
+    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(homeOrDefaultDb(newDefaultDatabase)))
 
     // THEN: confirm privilege
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(

@@ -36,9 +36,9 @@ class CommandsRoutingTest
 
     private static Driver clientDriver;
     private static TestFabric testFabric;
-    private static DriverUtils mega = new DriverUtils( "mega" );
-    private static DriverUtils neo4j = new DriverUtils( "neo4j" );
-    private static DriverUtils system = new DriverUtils( "system" );
+    private static final DriverUtils mega = new DriverUtils( "mega" );
+    private static final DriverUtils neo4j = new DriverUtils( "neo4j" );
+    private static final DriverUtils system = new DriverUtils( "system" );
 
     @BeforeAll
     static void beforeAll()
@@ -277,7 +277,7 @@ class CommandsRoutingTest
         } );
 
         assertThat( r.size() ).isGreaterThanOrEqualTo( 1 );
-        assertThat( r.get( 0 ).keys() ).containsExactly( "user", "roles", "passwordChangeRequired", "suspended");
+        assertThat( r.get( 0 ).keys() ).containsExactly( "user", "roles", "passwordChangeRequired", "suspended", "home");
     }
 
     @Test
@@ -352,7 +352,7 @@ class CommandsRoutingTest
         } );
 
         assertThat( r.size() ).isGreaterThanOrEqualTo( 1 );
-        assertThat( r.get( 0 ).keys() ).containsExactly( "name", "address", "role", "requestedStatus", "currentStatus", "error", "default" );
+        assertThat( r.get( 0 ).keys() ).containsExactly( "name", "address", "role", "requestedStatus", "currentStatus", "error", "default", "home" );
     }
 
     @Test
@@ -384,7 +384,7 @@ class CommandsRoutingTest
 
         assertThat( r.size() ).isEqualTo( 1 );
         assertThat( r ).extracting( stringColumn( "name" ) ).containsExactly( "my-db" );
-        assertThat( r.get( 0 ).keys() ).containsExactly( "name", "address", "role", "requestedStatus", "currentStatus", "error", "default" );
+        assertThat( r.get( 0 ).keys() ).containsExactly( "name", "address", "role", "requestedStatus", "currentStatus", "error", "default", "home" );
     }
 
     @Test

@@ -373,6 +373,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       row.get("roles") should be(Array("custom", "PUBLIC"))
       row.get("passwordChangeRequired") shouldBe false
       row.get("suspended") shouldBe false
+      row.get("home") shouldBe null
     }) should be(1)
   }
 
@@ -404,6 +405,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
         row.get("roles") should be(Array("custom", "PUBLIC"))
         row.get("passwordChangeRequired") shouldBe false
         row.get("suspended") shouldBe false
+        row.get("home") shouldBe null
       }) should be(1)
   }
 
@@ -425,11 +427,11 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW CURRENT USER") should have size 0
   }
 
-  ignore("should show current user with default database") {
+  test("should show current user with home database") {
     // GIVEN
     setup()
     setupUserWithCustomRole()
-    execute(s"AlTER USER $username SET DEFAULT DATABASE foo")
+    execute(s"AlTER USER $username SET HOME DATABASE foo")
 
     // WHEN
     executeOnSystem("joe", "soap", "SHOW CURRENT USER",
@@ -439,7 +441,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
         row.get("roles") should be(Array("custom", "PUBLIC"))
         row.get("passwordChangeRequired") shouldBe false
         row.get("suspended") shouldBe false
-        row.get("defaultDatabase") shouldBe "foo"
+        row.get("home") shouldBe "foo"
       }) should be(1)
   }
 
@@ -612,13 +614,13 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin("foo", "password", AuthenticationResult.FAILURE)
   }
 
-  ignore("should create user with all parameters") {
+  test("should create user with all parameters") {
     // WHEN
-    execute(s"CREATE USER foo SET PLAINTEXT PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED SET DEFAULT DATABASE $DEFAULT_DATABASE_NAME")
+    execute(s"CREATE USER foo SET PLAINTEXT PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED SET HOME DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("foo", passwordChangeRequired = false, suspended = true,
-      defaultDatabase = DEFAULT_DATABASE_NAME))
+      home = DEFAULT_DATABASE_NAME))
   }
 
   test("should fail when creating already existing user") {
@@ -861,28 +863,28 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  ignore("should create user with default database") {
+  test("should create user with home database") {
     // GIVEN
     val username = "foo"
     execute("CREATE DATABASE bar")
 
     // WHEN
-    execute(s"CREATE USER $username SET PASSWORD $$password SET DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
+    execute(s"CREATE USER $username SET PASSWORD $$password SET HOME DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, defaultDatabase = "bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, home = "bar"))
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  ignore("should create user with default database that does not exist") {
+  test("should create user with home database that does not exist") {
     // GIVEN
     val username = "foo"
 
     // WHEN
-    execute(s"CREATE USER $username SET PASSWORD $$password SET DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
+    execute(s"CREATE USER $username SET PASSWORD $$password SET HOME DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, defaultDatabase = "bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, home = "bar"))
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
@@ -1570,54 +1572,54 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  ignore("should alter users default database") {
+  test("should alter users home database") {
     // GIVEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
     execute("CREATE DATABASE bar")
     execute("GRANT ACCESS ON DATABASE bar to PUBLIC")
 
     // WHEN
-    execute(s"ALTER USER foo SET DEFAULT DATABASE bar")
+    execute(s"ALTER USER foo SET HOME DATABASE bar")
 
     // THEN
     executeOnSystem("foo", "password", "SHOW DATABASE bar", resultHandler = (row, _) => {
       // THEN
       row.get("name") should be("bar")
-      withClue("bar should be default database: ")(row.get("default") shouldBe true)
-      withClue("bar should not be system default database: ")(row.get("systemDefault") shouldBe false)
+      withClue("bar should be home database: ")(row.get("home") shouldBe true)
+      withClue("bar should not be system default database: ")(row.get("default") shouldBe false)
     }) should be (1)
   }
 
-  ignore("should alter users default database with parameter") {
+  test("should alter users home database with parameter") {
     // GIVEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
     execute("CREATE DATABASE bar")
     execute("GRANT ACCESS ON DATABASE bar to PUBLIC")
 
     // WHEN
-    execute(s"ALTER USER foo SET DEFAULT DATABASE $$db", Map("db" -> "bar"))
+    execute(s"ALTER USER foo SET HOME DATABASE $$db", Map("db" -> "bar"))
 
     // THEN
     executeOnSystem("foo", "password", "SHOW DATABASE bar", resultHandler = (row, _) => {
       // THEN
       row.get("name") should be("bar")
-      withClue("bar should be default database: ")(row.get("default") shouldBe true)
-      withClue("bar should not be system default database: ")(row.get("systemDefault") shouldBe false)
+      withClue("bar should be home database: ")(row.get("home") shouldBe true)
+      withClue("bar should not be system default database: ")(row.get("default") shouldBe false)
     }) should be (1)
   }
 
-  ignore("should alter users default database to non-existent database") {
+  test("should alter users home database to non-existent database") {
     // GIVEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
 
     // WHEN
-    execute(s"ALTER USER foo SET DEFAULT DATABASE $$db", Map("db" -> "doesnotexist"))
+    execute(s"ALTER USER foo SET HOME DATABASE $$db", Map("db" -> "doesnotexist"))
 
     // THEN
     executeOnSystem("foo", "password", "SHOW CURRENT USER", resultHandler = (row, _) => {
       // THEN
       row.get("user") should be("foo")
-      row.get("defaultDatabase") shouldBe "doesnotexist"
+      row.get("home") shouldBe "doesnotexist"
     }) should be (1)
   }
 
@@ -2166,20 +2168,20 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       })
   }
 
-  ignore("should set default database and connect to that database") {
+  test("should set home database") {
 
     // GIVEN
     execute("CREATE DATABASE foo")
-    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED SET DEFAULT DATABASE foo")
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED SET HOME DATABASE foo")
 
     // WHEN / THEN
-    executeOnSystem("alice", "abc", "SHOW DEFAULT DATABASE",
+    executeOnSystem("alice", "abc", "SHOW HOME DATABASE",
       resultHandler = (row, _) => {
         row.get("name").equals("foo")
-      })
+      }) should be (1)
   }
 
-  ignore("should retain privileges granted on default database when the default database is changed") {
+  test("should retain privileges granted on default/home database when the home database is changed") {
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -2205,7 +2207,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("ALTER USER alice SET DEFAULT DATABASE foo")
+    execute("ALTER USER alice SET HOME DATABASE foo")
 
     // WHEN / THEN
     executeOn("foo", "alice", "abc", "CREATE(n:DbLabel{dbNameProp:'foo'}) RETURN n.dbNameProp",

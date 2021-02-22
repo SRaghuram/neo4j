@@ -13,6 +13,15 @@ import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D4
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.collection.Dependencies
 import org.neo4j.configuration.Config
@@ -52,9 +61,8 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
     setVersion(None)
   }
 
-  def unsupportedBefore41(version: EnterpriseSecurityGraphComponentVersion): Option[Class[_]] = if (version == EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40 ||
-                                                                   version == EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1)
-    Some(classOf[UnsupportedOperationException]) else None
+  def unsupportedBefore41(version: EnterpriseSecurityGraphComponentVersion): Option[Class[_]] =
+    if (version == ENTERPRISE_SECURITY_40 || version == ENTERPRISE_SECURITY_41D1) Some(classOf[UnsupportedOperationException]) else None
 
   val allSupported: EnterpriseSecurityGraphComponentVersion => Option[Class[_]] = _ => None
 
@@ -70,7 +78,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
 
   def defaultAdminPrivilegesFor(replace: String, version: EnterpriseSecurityGraphComponentVersion): Set[Map[String, AnyRef]] = {
     val adminPrivileges = version match {
-      case EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_40 => Set(
+      case ENTERPRISE_SECURITY_40                              => Set(
         granted(access).role("admin").map,
         granted(read).role("admin").node("*").map,
         granted(traverse).role("admin").node("*").map,
@@ -82,9 +90,9 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
         granted(adminAction("schema")).role("admin").map,
         granted(adminAction("admin")).role("admin").map
       )
-      case EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41D1 | EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41 |
-           EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4 | EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6 |
-           EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7 | EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1 => Set(
+      case ENTERPRISE_SECURITY_41D1 | ENTERPRISE_SECURITY_41 |
+           ENTERPRISE_SECURITY_42D4 | ENTERPRISE_SECURITY_42D6 |
+           ENTERPRISE_SECURITY_42D7 | ENTERPRISE_SECURITY_42P1 => Set(
         granted(access).role("admin").map,
         granted(matchPrivilege).role("admin").node("*").map,
         granted(matchPrivilege).role("admin").relationship("*").map,
@@ -95,8 +103,8 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
         granted(constraintManagement).role("admin").map,
         granted(adminAction("admin")).role("admin").map
       )
-      case EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1 => defaultRolePrivileges
-      case _            => throw new IllegalArgumentException(s"Unsupported version: $version")
+      case ENTERPRISE_SECURITY_43D1 | ENTERPRISE_SECURITY_43D4 => defaultRolePrivileges
+      case _                                                   => throw new IllegalArgumentException(s"Unsupported version: $version")
     }
     adminPrivileges.foldLeft(Set.empty[Map[String, AnyRef]]) {
       case (acc, row) if row("role") == "admin" =>

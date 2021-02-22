@@ -329,11 +329,11 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
       }
   }
 
-  //// SET USER DEFAULT DATABASE
+  //// SET USER HOME DATABASE
 
-  Seq("user management", "alter user", "set user default database").foreach {
+  Seq("user management", "alter user", "set user home database").foreach {
     privilege =>
-      ignore(s"should enforce privilege for setting user default database with $privilege") {
+      test(s"should enforce privilege for setting user home database with $privilege") {
         // GIVEN
         setupUserWithCustomRole("foo", "123")
         execute("CREATE DATABASE bar")
@@ -343,8 +343,8 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         execute(s"GRANT $privilege ON DBMS TO custom")
 
         // THEN
-        executeOnSystem("foo", "123", "ALTER USER foo SET DEFAULT DATABASE bar")
-        executeOnSystem("foo", "123", "SHOW DEFAULT DATABASE", resultHandler = (row, _) => {
+        executeOnSystem("foo", "123", "ALTER USER foo SET HOME DATABASE bar")
+        executeOnSystem("foo", "123", "SHOW HOME DATABASE", resultHandler = (row, _) => {
           row.get("name") should be ("bar")
         }) should be (1)
 
@@ -353,11 +353,11 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
         // THEN
         the[AuthorizationViolationException] thrownBy {
-          executeOnSystem("foo", "123", "ALTER USER user SET DEFAULT DATABASE neo4j")
-        } should have message PERMISSION_DENIED_SET_USER_DEFAULT_DATABASE
+          executeOnSystem("foo", "123", "ALTER USER user SET HOME DATABASE neo4j")
+        } should have message PERMISSION_DENIED_SET_USER_HOME_DATABASE
       }
 
-      ignore(s"should fail setting user default database when denied $privilege") {
+      test(s"should fail setting user home database when denied $privilege") {
         // GIVEN
         setupUserWithCustomAdminRole("foo", "bar")
 
@@ -367,15 +367,15 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
         // THEN
         the[AuthorizationViolationException] thrownBy {
-          executeOnSystem("foo", "bar", "ALTER USER user SET DEFAULT DATABASE neo4j")
-        } should have message PERMISSION_DENIED_SET_USER_DEFAULT_DATABASE
+          executeOnSystem("foo", "bar", "ALTER USER user SET HOME DATABASE neo4j")
+        } should have message PERMISSION_DENIED_SET_USER_HOME_DATABASE
       }
 
   }
 
   Seq("user management", "create user").foreach {
     privilege =>
-      ignore(s"should enforce privilege when creating a user with a default database with $privilege") {
+      test(s"should enforce privilege when creating a user with a home database with $privilege") {
         // GIVEN
         setupUserWithCustomRole("foo", password)
         execute("CREATE DATABASE bar")
@@ -385,8 +385,8 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         execute(s"GRANT $privilege ON DBMS TO custom")
 
         // THEN
-        executeOnSystem("foo", password, s"CREATE USER bob SET PASSWORD '$password' CHANGE NOT REQUIRED SET DEFAULT DATABASE bar")
-        executeOnSystem("bob", password, "SHOW DEFAULT DATABASE", resultHandler = (row, _) => {
+        executeOnSystem("foo", password, s"CREATE USER bob SET PASSWORD '$password' CHANGE NOT REQUIRED SET HOME DATABASE bar")
+        executeOnSystem("bob", password, "SHOW HOME DATABASE", resultHandler = (row, _) => {
           row.get("name") should be ("bar")
         }) should be (1)
       }

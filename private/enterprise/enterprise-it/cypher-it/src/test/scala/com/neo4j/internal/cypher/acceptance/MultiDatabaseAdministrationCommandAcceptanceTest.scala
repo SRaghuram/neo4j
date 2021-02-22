@@ -306,7 +306,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
+    result.toList should be(List(db(DEFAULT_DATABASE_NAME, home = true, default = true)))
   }
 
   test(s"should show database $DEFAULT_DATABASE_NAME with parameter") {
@@ -317,7 +317,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASE $db", Map("db" -> DEFAULT_DATABASE_NAME))
 
     // THEN
-    result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
+    result.toList should be(List(db(DEFAULT_DATABASE_NAME, home = true, default = true)))
   }
 
   test("should show database with yield") {
@@ -470,6 +470,105 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       // THEN
       row.get("name") should be ("foo")
     }) should be (1)
+  }
+
+  // SHOW HOME DATABASE
+
+  test("should have default as home database for anonymous user") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    execute("SHOW HOME DATABASE").toList should be(List(homeOrDefaultDb(DEFAULT_DATABASE_NAME)))
+  }
+
+  test("should be empty result when default database is dropped") {
+    // GIVEN
+    setup()
+    execute(s"DROP DATABASE $DEFAULT_DATABASE_NAME WAIT")
+
+    // WHEN
+    execute("SHOW HOME DATABASE").toList should be(empty)
+  }
+
+  test("should have default as home database when no home set") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
+    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED")
+
+    // WHEN
+    executeOnSystem("user", "123", "SHOW HOME DATABASE", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be (DEFAULT_DATABASE_NAME)
+    }) should be (1)
+  }
+
+  test("should show home database for user") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
+    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED SET HOME DATABASE foo")
+
+    // WHEN
+    executeOnSystem("user", "123", "SHOW HOME DATABASE", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be ("foo")
+    }) should be (1)
+  }
+
+  test("should show home database for user, even when default database is dropped") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
+    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED SET HOME DATABASE foo")
+    execute(s"DROP DATABASE $DEFAULT_DATABASE_NAME WAIT")
+
+    // WHEN
+    executeOnSystem("user", "123", "SHOW HOME DATABASE", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be ("foo")
+    }) should be (1)
+  }
+
+  test("should show home database for user, even when stopped") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
+    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED SET HOME DATABASE foo")
+    execute("STOP DATABASE foo WAIT")
+
+    // WHEN
+    executeOnSystem("user", "123", "SHOW HOME DATABASE", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be ("foo")
+      row.get("currentStatus") should be ("offline")
+    }) should be (1)
+  }
+
+  test("should get no result, when home doesn't exist") {
+    // GIVEN
+    setup()
+    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED SET HOME DATABASE foo")
+
+    // WHEN
+    executeOnSystem("user", "123", "SHOW HOME DATABASE") should be (0)
+  }
+
+  // yield, where and alias tests
+
+  test("should show home home database with YIELD AND aliases") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val result = execute(s"SHOW HOME DATABASE YIELD name as foo WHERE foo = '$DEFAULT_DATABASE_NAME' RETURN foo").toList
+    result.size shouldBe 1
+    result.head("foo") should be(DEFAULT_DATABASE_NAME)
   }
 
   test("should show default database with YIELD and aliases") {
@@ -846,7 +945,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASE foo")
 
     // THEN
-    result.toList should be(List(db("foo", default = true, systemDefault = true)))
+    result.toList should be(List(db("foo", home = true, default = true)))
 
     // WHEN
     val result2 = execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
@@ -895,7 +994,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW USERS WHERE user = 'bar'")
 
     // THEN
-    result.toSet should be(Set(user("bar", defaultDatabase = "foo")))
+    result.toSet should be(Set(user("bar", home = "foo")))
   }
 
   ignore("should retain user default database when database is created") {
@@ -907,13 +1006,13 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"CREATE USER $username SET PASSWORD $$password SET DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, defaultDatabase = "bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, home = "bar"))
 
     // WHEN
     execute("CREATE DATABASE bar WAIT")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, defaultDatabase = "bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, home = "bar"))
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
@@ -930,7 +1029,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("DROP DATABASE bar")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, defaultDatabase = "bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, home = "bar"))
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
@@ -945,7 +1044,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val fooResult = execute("SHOW DATABASE foo")
 
     // THEN
-    neoResult.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
+    neoResult.toSet should be(Set(db(DEFAULT_DATABASE_NAME, home = true, default = true)))
     fooResult.toSet should be(Set(db("foo")))
 
     // GIVEN
@@ -958,7 +1057,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     neoResult2.toSet should be(Set(db(DEFAULT_DATABASE_NAME)))
-    fooResult2.toSet should be(Set(db("foo", default = true, systemDefault = true)))
+    fooResult2.toSet should be(Set(db("foo", home = true, default = true)))
   }
 
   test("should start a stopped database when it becomes default") {
@@ -984,7 +1083,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     // The new default database should be started when the system is restarted
-    result2.toSet should be(Set(db("foo", default = true, systemDefault = true)))
+    result2.toSet should be(Set(db("foo", home = true, default = true)))
   }
 
   test("should show database using mixed case name") {
@@ -1007,7 +1106,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
+    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, home = true, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should show custom default and system databases") {
@@ -1020,7 +1119,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db("foo", default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
+    result.toSet should be(Set(db("foo", home = true, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should show databases for switch of default database") {
@@ -1033,7 +1132,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db("foo"), db(SYSTEM_DATABASE_NAME)))
+    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, home = true, default = true), db("foo"), db(SYSTEM_DATABASE_NAME)))
 
     // GIVEN
     config.set(default_database, "foo")
@@ -1043,7 +1142,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result2 = execute("SHOW DATABASES")
 
     // THEN
-    result2.toSet should be(Set(db(DEFAULT_DATABASE_NAME), db("foo", default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
+    result2.toSet should be(Set(db(DEFAULT_DATABASE_NAME), db("foo", home = true, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should show default database") {
@@ -1054,7 +1153,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DEFAULT DATABASE")
 
     // THEN
-    result.toList should be(List(defaultDb(status = onlineStatus)))
+    result.toList should be(List(homeOrDefaultDb(status = onlineStatus)))
   }
 
   test("should show custom default database using show default database command") {
@@ -1067,7 +1166,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DEFAULT DATABASE")
 
     // THEN
-    result.toList should be(List(defaultDb(name = "foo")))
+    result.toList should be(List(homeOrDefaultDb(name = "foo")))
 
     // WHEN
     val oldDefaultName = DEFAULT_DATABASE_NAME
@@ -1086,7 +1185,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DEFAULT DATABASE")
 
     // THEN
-    result.toSet should be(Set(defaultDb()))
+    result.toSet should be(Set(homeOrDefaultDb()))
 
     // GIVEN
     execute("CREATE database foo")
@@ -1097,7 +1196,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result2 = execute("SHOW DEFAULT DATABASE")
 
     // THEN
-    result2.toSet should be(Set(defaultDb(name = "foo")))
+    result2.toSet should be(Set(homeOrDefaultDb(name = "foo")))
   }
 
   test("should fail when showing databases when credentials expired") {
@@ -1255,7 +1354,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"CREATE DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, home = true, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should set default to false when recreating config specified default database and new default exists") {
@@ -1270,7 +1369,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"CREATE DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME), db("foo", default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME), db("foo", home = true, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should change default database according to config when restarting") {
@@ -1285,7 +1384,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     initSystemGraph(defaultConfig)
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db("foo"), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, home = true, default = true), db("foo"), db(SYSTEM_DATABASE_NAME)))
   }
 
   private def setDefaultDatabase(name: String, default: Boolean = true): Unit = {
@@ -1319,7 +1418,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, home = true, default = true)))
     executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(publicPrivileges("joe"))
@@ -1444,7 +1543,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, home = true, default = true)))
     executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1571,7 +1670,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"CREATE OR REPLACE DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toList should be(List(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toList should be(List(db(DEFAULT_DATABASE_NAME, home = true, default = true)))
     execute("SHOW DATABASES").toList.size should equal(2)
   }
 
@@ -1697,7 +1796,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // WHEN
     execute("DROP DATABASE baz")
-    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, home = true, default = true), db(SYSTEM_DATABASE_NAME)))
 
     // THEN
     the[DatabaseNotFoundException] thrownBy {
@@ -1828,7 +1927,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"CREATE DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, home = true, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should drop custom default database") {
@@ -1847,7 +1946,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("CREATE DATABASE foo")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db("foo", default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", home = true, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   // Tests for starting databases
@@ -2140,7 +2239,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, status = offlineStatus, default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
+      db(DEFAULT_DATABASE_NAME, status = offlineStatus, home = true, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should stop custom default database") {
@@ -2153,7 +2252,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("STOP DATABASE foo")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db("foo", status = offlineStatus, default = true, systemDefault = true),
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", status = offlineStatus, home = true, default = true),
       db(SYSTEM_DATABASE_NAME)))
   }
 
@@ -2165,7 +2264,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // WHEN
     execute(s"STOP DATABASE $DEFAULT_DATABASE_NAME")
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, status = offlineStatus, default = true, systemDefault = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, status = offlineStatus, home = true, default = true)))
 
     // THEN
     the[DatabaseShutdownException] thrownBy {

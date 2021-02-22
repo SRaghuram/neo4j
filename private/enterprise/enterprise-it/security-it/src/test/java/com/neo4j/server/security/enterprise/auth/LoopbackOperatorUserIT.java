@@ -457,11 +457,11 @@ class LoopbackOperatorUserIT
                                                       ValueUtils.asMapValue( emptyMap() ), SYSTEM_DATABASE_NAME ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgSuccess() ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgRecord( eqRecord( stringEquals( "neo4j" ), anyValue(), anyValue(), anyValue(),
-                                                                                          anyValue(), anyValue(), anyValue() ) ) ) );
-        assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgRecord( eqRecord( stringEquals( "operational" ), anyValue(), anyValue(),
                                                                                           anyValue(), anyValue(), anyValue(), anyValue() ) ) ) );
+        assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgRecord( eqRecord( stringEquals( "operational" ), anyValue(), anyValue(),
+                                                                                          anyValue(), anyValue(), anyValue(), anyValue(), anyValue() ) ) ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgRecord( eqRecord( stringEquals( "system" ), anyValue(), anyValue(), anyValue(),
-                                                                                          anyValue(), anyValue(), anyValue() ) ) ) );
+                                                                                          anyValue(), anyValue(), anyValue(), anyValue() ) ) ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgSuccess() ) );
     }
 
@@ -485,7 +485,7 @@ class LoopbackOperatorUserIT
                                                       ValueUtils.asMapValue( emptyMap() ), SYSTEM_DATABASE_NAME ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgSuccess() ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgRecord( eqRecord( stringEquals( "system" ), anyValue(), anyValue(), anyValue(),
-                                                                                          anyValue(), anyValue(), anyValue() ) ) ) );
+                                                                                          anyValue(), anyValue(), anyValue(), anyValue() ) ) ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgSuccess() ) );
     }
 

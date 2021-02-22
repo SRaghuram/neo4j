@@ -274,7 +274,8 @@ class SystemGraphComponentsTest
                 Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6, REQUIRES_UPGRADE ),
                 Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7, REQUIRES_UPGRADE ),
                 Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1, REQUIRES_UPGRADE ),
-                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1, CURRENT )
+                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1, REQUIRES_UPGRADE ),
+                Arguments.arguments( EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D4, CURRENT )
         );
     }
 

@@ -470,4 +470,76 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     // THEN
     exception.getMessage should include("Using YIELD or WHERE to list indexes is not supported in this Cypher version.")
   }
+
+  test("SET HOME DATABASE for CREATE USER should not work with CYPHER 3.5 and 4.2") {
+    Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+      withClue(version) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"$version CREATE USER foo SET PASSWORD 'abc123' SET HOME DATABASE db1")
+        }
+
+        // THEN
+        exception.getMessage should include("Creating a user with a home database is not supported in this Cypher version.")
+      }
+    })
+  }
+
+  test("SET HOME DATABASE for ALTER USER should not work with CYPHER 3.5 and 4.2") {
+    Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+      withClue(version) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"$version ALTER USER foo SET HOME DATABASE db1")
+        }
+
+        // THEN
+        exception.getMessage should include("Updating a user with a home database is not supported in this Cypher version.")
+      }
+    })
+  }
+
+  test("REMOVE HOME DATABASE for ALTER USER should not work with CYPHER 3.5 and 4.2") {
+    Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+      withClue(version) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"$version ALTER USER foo REMOVE HOME DATABASE")
+        }
+
+        // THEN
+        exception.getMessage should include("Updating a user with a home database is not supported in this Cypher version.")
+      }
+    })
+  }
+
+  Seq(("GRANT", "TO"), ("DENY", "TO"), ("REVOKE", "FROM")).foreach {
+    case (action, preposition) =>
+      test(s"$action SET USER HOME DATABASE should not work with CYPHER 3.5 and 4.2") {
+        Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+          withClue(version) {
+            // WHEN
+            val exception = the[SyntaxException] thrownBy {
+              executeSingle(s"$version $action SET USER HOME DATABASE ON DBMS $preposition role")
+            }
+            // THEN
+            exception.getMessage should include("SET USER HOME DATABASE privilege is not supported in this Cypher version.")
+          }
+        })
+      }
+  }
+
+  test("SHOW HOME DATABASE should not work with CYPHER 3.5 and 4.2") {
+    Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+      withClue(version) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"$version SHOW HOME DATABASE")
+        }
+
+        // THEN
+        exception.getMessage should include("`SHOW HOME DATABASE` is not supported in this Cypher version.")
+      }
+    })
+  }
 }
