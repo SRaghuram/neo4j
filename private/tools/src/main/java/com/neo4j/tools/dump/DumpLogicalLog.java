@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.TimeZone;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -34,8 +33,6 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader;
 import org.neo4j.storageengine.api.StorageCommand;
 
-import static java.util.TimeZone.getTimeZone;
-import static org.neo4j.internal.helpers.Format.DEFAULT_TIME_ZONE;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 /**
@@ -115,12 +112,10 @@ public class DumpLogicalLog
     private static class TransactionRegexCriteria implements Predicate<LogEntry[]>
     {
         private final Pattern pattern;
-        private final TimeZone timeZone;
 
-        TransactionRegexCriteria( String regex, TimeZone timeZone )
+        TransactionRegexCriteria( String regex )
         {
             this.pattern = Pattern.compile( regex );
-            this.timeZone = timeZone;
         }
 
         @Override
@@ -128,7 +123,7 @@ public class DumpLogicalLog
         {
             for ( LogEntry entry : transaction )
             {
-                if ( pattern.matcher( entry.toString( timeZone ) ).find() )
+                if ( pattern.matcher( entry.toString() ).find() )
                 {
                     return true;
                 }
@@ -139,12 +134,10 @@ public class DumpLogicalLog
 
     public static class ConsistencyCheckOutputCriteria implements Predicate<LogEntry[]>, Function<LogEntry,String>
     {
-        private final TimeZone timeZone;
         private final InconsistentRecords inconsistencies;
 
-        public ConsistencyCheckOutputCriteria( String ccFile, TimeZone timeZone ) throws IOException
+        public ConsistencyCheckOutputCriteria( String ccFile ) throws IOException
         {
-            this.timeZone = timeZone;
             inconsistencies = new InconsistentRecords();
             new InconsistencyReportReader( inconsistencies ).read( Path.of( ccFile ) );
         }
@@ -206,7 +199,7 @@ public class DumpLogicalLog
         @Override
         public String apply( LogEntry logEntry )
         {
-            String result = logEntry.toString( timeZone );
+            String result = logEntry.toString();
             if ( matches( logEntry ) )
             {
                 result += "  <----";
@@ -233,9 +226,8 @@ public class DumpLogicalLog
     public static void main( String[] args ) throws IOException
     {
         Args arguments = Args.withFlags( TO_FILE, LENIENT ).parse( args );
-        TimeZone timeZone = parseTimeZoneConfig( arguments );
-        Predicate<LogEntry[]> filter = parseFilter( arguments, timeZone );
-        Function<LogEntry,String> serializer = parseSerializer( filter, timeZone );
+        Predicate<LogEntry[]> filter = parseFilter( arguments );
+        Function<LogEntry,String> serializer = parseSerializer( filter );
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
               Printer printer = getPrinter( arguments ) )
         {
@@ -248,26 +240,26 @@ public class DumpLogicalLog
     }
 
     @SuppressWarnings( "unchecked" )
-    private static Function<LogEntry,String> parseSerializer( Predicate<LogEntry[]> filter, TimeZone timeZone )
+    private static Function<LogEntry,String> parseSerializer( Predicate<LogEntry[]> filter )
     {
         if ( filter instanceof Function )
         {
             return (Function<LogEntry,String>) filter;
         }
-        return logEntry -> logEntry.toString( timeZone );
+        return LogEntry::toString;
     }
 
-    private static Predicate<LogEntry[]> parseFilter( Args arguments, TimeZone timeZone ) throws IOException
+    private static Predicate<LogEntry[]> parseFilter( Args arguments ) throws IOException
     {
         String regex = arguments.get( TX_FILTER );
         if ( regex != null )
         {
-            return new TransactionRegexCriteria( regex, timeZone );
+            return new TransactionRegexCriteria( regex );
         }
         String cc = arguments.get( CC_FILTER );
         if ( cc != null )
         {
-            return new ConsistencyCheckOutputCriteria( cc, timeZone );
+            return new ConsistencyCheckOutputCriteria( cc );
         }
         return null;
     }
@@ -329,10 +321,5 @@ public class DumpLogicalLog
                 out.close();
             }
         }
-    }
-
-    public static TimeZone parseTimeZoneConfig( Args arguments )
-    {
-        return getTimeZone( arguments.get( "timezone", DEFAULT_TIME_ZONE.getID() ) );
     }
 }

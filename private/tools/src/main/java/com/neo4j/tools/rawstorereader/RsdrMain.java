@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -287,7 +286,6 @@ public class RsdrMain
             final long toLine,
             final Pattern pattern ) throws IOException
     {
-        TimeZone timeZone = TimeZone.getDefault();
         long lineCount = -1;
         while ( cursor.next() )
         {
@@ -301,7 +299,7 @@ public class RsdrMain
             {
                 continue;
             }
-            String str = logEntry.toString( timeZone );
+            String str = logEntry.toString();
             if ( pattern == null || pattern.matcher( str ).find() )
             {
                 console.printf( "%s%n", str );
