@@ -26,7 +26,7 @@ class EnterpriseDbmsExtensionTest
     {
         Events testEvents = EngineTestKit.engine( ENGINE_ID )
                                          .selectors( selectClass( EnterpriseDbmsExtensionEnforceAnnotations.class ) ).execute()
-                                         .all();
+                                         .allEvents();
 
         testEvents.assertThatEvents().haveExactly( 1,
                 event( finishedWithFailure( instanceOf( IllegalArgumentException.class ),
@@ -38,7 +38,7 @@ class EnterpriseDbmsExtensionTest
     {
         Events testEvents = EngineTestKit.engine( ENGINE_ID )
                                          .selectors( selectClass( EnterpriseDbmsExtensionMixImpermanent.NestedTest.class ) ).execute()
-                                         .all();
+                                         .allEvents();
 
         testEvents.assertThatEvents().haveExactly( 1,
                 event( finishedWithFailure( instanceOf( ExtensionContextException.class ) ) ) );

@@ -16,7 +16,7 @@
     <packaging>jar</packaging>
 
     <properties>
-        <prometheus.client.version>0.9.0</prometheus.client.version>
+        <prometheus.client.version>0.10.0</prometheus.client.version>
         <moduleName>com.neo4j.metrics</moduleName>
     </properties>
 
