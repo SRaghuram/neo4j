@@ -6,7 +6,7 @@
 set -eux
 
 env=
-s3_dest_datasets_url="s3://benchmarking.neo4j.com/datasets/macro"
+s3_dest_datasets_url="s3://storage.benchmarking.neo4j.today/datasets/macro"
 
 while (("$#")); do
   case "$1" in
@@ -63,7 +63,7 @@ if [[ ! -f "target/macro.jar" ]]; then
 fi
 
 id=$(uuidgen)
-base_artifacts_uri="s3://benchmarking.neo4j.com/artifacts/upgrader/$id"
+base_artifacts_uri="s3://storage.benchmarking.neo4j.today/artifacts/upgrader/$id"
 
 # copy script and macro jar to s3
 aws s3 cp upgrade-all-stores.sh "$base_artifacts_uri/upgrade-all-stores.sh"
@@ -74,9 +74,13 @@ json_parameters='{ "--base-artifact-uri" : "'$base_artifacts_uri'","--new-neo4j-
 
 job_name=$(echo "macro_workload_store_upgrade_${new_neo4j_version}_${old_neo4j_version}" | sed 's/\./_/g')
 
+
+# get queue name from stack output
+job_queue=$(aws cloudformation describe-stacks --stack-name benchmarking-batch-infrastructure-$env --query 'Stacks[].Outputs[?OutputKey==`MacroUpgradeQueue`][OutputValue]' --output text)
+
 # submit upgrade job
 aws batch submit-job \
   --job-name "$job_name" \
-  --job-queue "MacroUpgradeQueue-$env" \
+  --job-queue "$job_queue" \
   --job-definition "macro-upgrade-definition-openjdk11-$env" \
   --parameters "$json_parameters"
