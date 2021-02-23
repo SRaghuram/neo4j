@@ -10,7 +10,7 @@ dataSet=
 dbName=
 rootDbDir=
 rootCsvDir=
-recordings_base_uri=s3://benchmarking.neo4j.com/datasets/ldbc
+recordings_base_uri=s3://storage.benchmarking.neo4j.com/datasets/ldbc
 
 while (("$#")); do
   case "$1" in

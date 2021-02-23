@@ -18,6 +18,11 @@ fi
 
 new_neo4j_version="${1}"
 old_neo4j_version="${2}"
+# default s3 destination base
+s3_dest_datasets_url="s3://storage.benchmarking.neo4j.com/datasets/macro"
+
+all_args=("$@")
+optional_args=("${all_args[@]:2}")
 
 db_and_workloads_record_format=(
  "accesscontrol;accesscontrol;high_limit"
@@ -61,7 +66,7 @@ for i in "${db_and_workloads_record_format[@]}"; do
     echo "---------------"
     echo Working on file: "${zip_file}"
     echo With workload: "${workload}"
-    aws s3 cp s3://benchmarking.neo4j.com/datasets/macro/"${old_neo4j_version}"-enterprise-datasets/"${zip_file}" ./ --no-progress
+    aws s3 cp "${s3_dest_datasets_url}/${old_neo4j_version}-enterprise-datasets/${zip_file}" ./ --no-progress
     tar xzvf "${zip_file}"
     rm "${zip_file}"
 
@@ -72,7 +77,7 @@ for i in "${db_and_workloads_record_format[@]}"; do
                                --record-format "${record_format}"
 
     tar -cvzf "${zip_file}" "${db_name}"
-    aws s3 cp "${zip_file}" s3://benchmarking.neo4j.com/datasets/macro/"${new_neo4j_version}"-enterprise-datasets/"${zip_file}" --no-progress
+    aws s3 cp "${zip_file}" "${s3_dest_datasets_url}/${old_neo4j_version}-enterprise-datasets/${zip_file}" --no-progress
     rm "${zip_file}"
     rm -r "${db_name}"
 done
