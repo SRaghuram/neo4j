@@ -3565,6 +3565,21 @@ class EagerizationAcceptanceTest
     assertStats(result, propertiesWritten = 8)
   }
 
+  test("shortestPath relationships should be included in eagerness analysis") {
+    val a1 = createLabeledNode("A")
+    val a2 = createLabeledNode("A")
+    val b = createLabeledNode("B")
+    createLabeledNode("B")
+    relate(a1, b, "T")
+    relate(a2, b, "T")
+    val query = "MATCH p = shortestPath((a:A)-[:T*]-(b:B)), (c) CREATE (a)-[:T]->(c) RETURN count(*) as count"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    result.columnAs[Int]("count").next should equal(8)
+    assertStats(result, relationshipsCreated = 8)
+  }
+
   private def testEagerPlanComparisonStrategy(expectedEagerCount: Int,
                                               expectPlansToFailPredicate: TestConfiguration = TestConfiguration.empty,
                                               optimalEagerCount: Int = -1): PlanComparisonStrategy = {
