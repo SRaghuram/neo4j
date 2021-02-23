@@ -10,6 +10,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringExclude;
+import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.net.URI;
 
@@ -22,6 +25,7 @@ public class ResultStoreCredentials
     }
 
     private final String username;
+    @ToStringExclude
     private final String password;
     private final URI uri;
 
@@ -60,5 +64,11 @@ public class ResultStoreCredentials
     public int hashCode()
     {
         return HashCodeBuilder.reflectionHashCode( this );
+    }
+
+    @Override
+    public String toString()
+    {
+        return ToStringBuilder.reflectionToString( this, ToStringStyle.SHORT_PREFIX_STYLE );
     }
 }
