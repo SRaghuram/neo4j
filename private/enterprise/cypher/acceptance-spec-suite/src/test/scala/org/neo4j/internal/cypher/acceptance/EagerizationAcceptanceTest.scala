@@ -432,6 +432,30 @@ class EagerizationAcceptanceTest
     assertStats(result, relationshipsCreated = 2)
   }
 
+  test("should not introduce eagerness between MATCH by node id and CREATE node with overlapping labels if stable on node id") {
+    val a = createLabeledNode("A", "B")
+    createLabeledNode("A", "B")
+    createLabeledNode("B")
+    val query = s"MATCH (a:A), (b:B) WHERE id(a) = ${a.getId} CREATE (:A) RETURN count(*) as count"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+    result.columnAs[Int]("count").next should equal(3)
+    assertStats(result, nodesCreated = 3, labelsAdded = 3)
+  }
+
+  test("should not introduce eagerness between MATCH by node id and REMOVE node with overlapping labels if stable on node id") {
+    val a = createLabeledNode("A")
+    createLabeledNode("A")
+    createNode()
+    val query = s"MATCH (a:A), (b) WHERE id(a) = ${a.getId} REMOVE b:A RETURN count(*) as count"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+    result.columnAs[Int]("count").next should equal(3)
+    assertStats(result, labelsRemoved = 2)
+  }
+
   test("should not introduce eagerness between MATCH and CREATE relationships when properties don't overlap") {
     val a = createNode()
     val b = createNode()
@@ -524,6 +548,29 @@ class EagerizationAcceptanceTest
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, relationshipsCreated = 2)
+  }
+
+  test("should introduce eagerness between MATCH and CREATE relationships with same relationship type as part of predicate") {
+    // This query will never be able to return any data, as no relationship can have both :T and :T2.
+    // Eagerness analysis should nevertheless include t:T into consideration.
+    val query = "MATCH (a)-[t:T2]-(b) WHERE t:T CREATE (a)-[:T]->(b) RETURN count(*) as count"
+
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+  }
+
+  test("should introduce eagerness between CREATE relationship and MATCH with same type") {
+    val a = createNode()
+    val b = createNode()
+    relate(a, b, "R")
+    relate(a, b, "R")
+    val query = "UNWIND [1, 2] AS i CREATE ()-[r:R]->() WITH r MATCH ()-[r2:R]->() RETURN count(*) as count"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+
+    result.columnAs[Int]("count").next should equal(8)
+    assertStats(result, relationshipsCreated = 2, nodesCreated = 4)
   }
 
   // TESTS FOR DELETE AND MERGE
@@ -1395,7 +1442,7 @@ class EagerizationAcceptanceTest
         |OPTIONAL MATCH (b:Bar)
         |REMOVE b:Bar
         |RETURN b""".stripMargin
-    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.size shouldEqual 4
   }
 
@@ -1976,7 +2023,7 @@ class EagerizationAcceptanceTest
     val query = "MATCH (n { prop: 20 }) SET n.prop = 10 RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
     result.columnAs[Long]("count(*)").next shouldBe 1
     assertStats(result, propertiesWritten = 1)
   }
@@ -1995,7 +2042,7 @@ class EagerizationAcceptanceTest
     val query = "MATCH (n:Node {prop:5}) SET n.prop = 10 RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
     result.columnAs[Long]("count(*)").next shouldBe 0
   }
 
@@ -2047,18 +2094,6 @@ class EagerizationAcceptanceTest
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStats(result, propertiesWritten = 2)
-  }
-
-  test("match property on left-side followed by property write does not need eager") {
-    createNode()
-    createNode(Map("id" -> 0))
-
-    val query = "MATCH (b {id: 0}) SET b.id = 1 RETURN count(*)"
-
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
-    result.columnAs[Long]("count(*)").next shouldBe 1
-    assertStats(result, propertiesWritten = 1)
   }
 
   test("matching node property, writing relationship property should not be eager") {
@@ -2251,7 +2286,7 @@ class EagerizationAcceptanceTest
     val query = "MATCH (n {prop: 42}) CREATE (m) WITH * MATCH (o) SET n.prop = 42 RETURN count(*) as count"
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(2, optimalEagerCount = 1))
     result.columnAs[Int]("count").next should equal(12)
     assertStats(result, propertiesWritten = 12, nodesCreated = 2)
   }
@@ -2639,17 +2674,17 @@ class EagerizationAcceptanceTest
     result.columnAs[Long]("count(*)").next shouldBe 6
   }
 
-  ignore("should not be eager if creating relationship from left-most relationship") {
-    // TODO enable when we have rel type scan
+  test("should not be eager if creating relationship from left-most relationship (inlined REL-type)") {
+    restartWithConfig(databaseConfig() ++ Map(RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store -> java.lang.Boolean.TRUE))
     relate(createNode(), createNode(), "REL")
     relate(createNode(), createNode(), "REL")
 
     val query = "MATCH ()-[r:REL]->() CREATE ()-[:REL]->() RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
 
-    assertStats(result, relationshipsCreated = 2)
+    assertStats(result, nodesCreated = 4, relationshipsCreated = 2)
     result.columnAs[Long]("count(*)").next shouldBe 2
   }
 
@@ -2668,7 +2703,7 @@ class EagerizationAcceptanceTest
     createLabeledNode(Map("prop" -> 2), "Label")
     createNode()
     val query = "MATCH (m:Label), (n) WHERE m.prop = 2 WITH *, 1 AS foo MATCH (m) WHERE m:Label REMOVE n:Label RETURN count(*)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     assertStats(result, labelsRemoved = 1)
@@ -3239,8 +3274,7 @@ class EagerizationAcceptanceTest
     result.toList should equal(List(Map("count(*)" -> 1)))
   }
 
-  //TODO fix Stableness
-  ignore("unstable iterator and property predicates followed by set must be eager") {
+  test("unstable iterator and property predicates followed by set must be eager") {
     createLabeledNode(Map("prop" -> 42), "L")
     createLabeledNode("L")
     createNode()
@@ -3365,6 +3399,157 @@ class EagerizationAcceptanceTest
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     assertStats(result, nodesDeleted = 3, relationshipsDeleted = 2)
+  }
+
+  test("should be eager if setting property from only node that is found by an AllNodeScan") {
+    createLabeledNode(Map("prop" -> 1))
+    createNode()
+
+    val query = "MATCH (m {prop: 1}) WITH m, 1 AS foo MATCH (n) SET n.prop = 1 RETURN count(*)"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+
+    assertStats(result, propertiesWritten = 2)
+    result.columnAs[Long]("count(*)").next shouldBe 2
+  }
+
+  test("should be eager if setting property from left-most node that is found by an AllNodeScan") {
+    createLabeledNode(Map("prop" -> 1))
+    createNode()
+
+    val query = "MATCH (m {prop: 1}), (n) SET n.prop = 1 RETURN count(*)"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+
+    assertStats(result, propertiesWritten = 2)
+    result.columnAs[Long]("count(*)").next shouldBe 2
+  }
+
+  test("should not have to be eager if setting same label on stable iterator, but that label is not the one used in NodeByLabelScan") {
+    for(_ <- 0 until 20) createLabeledNode("N", "M")
+    for(_ <- 0 until 10) createLabeledNode("N")
+    for(_ <- 0 until 20) createLabeledNode("M")
+    // Start with :N
+
+    val query = "MATCH (n:N:M) SET n:M RETURN count(*)"
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, optimalEagerCount = 0))
+
+    assertStats(result, labelsAdded = 0)
+    result.columnAs[Long]("count(*)").next shouldBe 20
+  }
+
+  test("should be eager if setting same label on stable iterator through different variable and that label is not the one used in NodeByLabelScan") {
+    for(_ <- 0 until 20) createLabeledNode("N", "M")
+    for(_ <- 0 until 10) createLabeledNode("N")
+    for(_ <- 0 until 20) createLabeledNode("M")
+    // Start with :N
+
+    val query = "MATCH (n:N:M), (x) SET x:M RETURN count(*)"
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+
+    assertStats(result, labelsAdded = 10)
+    result.columnAs[Long]("count(*)").next shouldBe 1000
+  }
+
+  test("should be eager if setting property from left-most node that is found by an IndexScan on different property") {
+    createLabeledNode(Map("prop" -> 1, "foo" -> 1), "Lol")
+    createLabeledNode(Map("prop" -> 1, "foo" -> 2), "Lol")
+    createLabeledNode(Map("prop" -> 2, "foo" -> 0), "Lol")
+    createNode()
+    graph.createIndex("Lol", "prop")
+
+    val query = "MATCH (m:Lol), (n) WHERE m.prop > 0 AND m.foo > 0 SET n.foo = 10 RETURN count(*)"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+
+    assertStats(result, propertiesWritten = 8)
+    result.columnAs[Long]("count(*)").next shouldBe 8
+  }
+
+  test("should be eager if setting property from left-most node that is found by an composite IndexScan with subsequent Filter on that property") {
+    createLabeledNode(Map("prop" -> 1, "foo" -> 1), "Lol")
+    createLabeledNode(Map("prop" -> 1, "foo" -> 2), "Lol")
+    createLabeledNode(Map("prop" -> 2, "foo" -> 0), "Lol")
+    createNode()
+    graph.createIndex("Lol", "prop", "foo")
+
+    val query = "MATCH (m:Lol), (n) WHERE m.prop IS NOT NULL AND m.foo > 0 SET n.foo = 10 RETURN count(*)"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+
+    assertStats(result, propertiesWritten = 8)
+    result.columnAs[Long]("count(*)").next shouldBe 8
+  }
+
+  test("should not be eager if setting property from left-most node that is found by an composite IndexSeek on that property") {
+    createLabeledNode(Map("prop" -> 1, "foo" -> 1), "Lol")
+    createLabeledNode(Map("prop" -> 1, "foo" -> 2), "Lol")
+    createLabeledNode(Map("prop" -> 2, "foo" -> 0), "Lol")
+    createNode()
+    graph.createIndex("Lol", "foo", "prop")
+
+    val query = "MATCH (m:Lol), (n) WHERE m.prop IS NOT NULL AND m.foo > 0 SET n.foo = 10 RETURN count(*)"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+
+    assertStats(result, propertiesWritten = 8)
+    result.columnAs[Long]("count(*)").next shouldBe 8
+  }
+
+  test("should be eager if a property predicate is not solved by stable index seek") {
+    createLabeledNode(Map("prop" -> 2), "Lol")
+    createLabeledNode(Map("prop" -> 4), "Lol")
+    createLabeledNode(Map("prop" -> 9), "Lol")
+    createNode()
+    graph.createIndex("Lol", "prop")
+
+    val query = "MATCH (m:Lol), (n) WHERE m.prop > 0 AND m.prop % 2 = 0 SET n.prop = 8 RETURN count(*)"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+
+    assertStats(result, propertiesWritten = 8)
+    result.columnAs[Long]("count(*)").next shouldBe 8
+  }
+
+  test("should not be eager for multiple combined equality predicates solved by stable index seeks") {
+    createLabeledNode(Map("prop" -> 1), "Lol")
+    createLabeledNode(Map("prop" -> 2), "Lol")
+    createLabeledNode(Map("prop" -> 5), "Lol")
+    createNode()
+    graph.createIndex("Lol", "prop")
+
+    val query = "MATCH (m:Lol), (n) WHERE m.prop IN [1,2,3] SET n.prop = 3 RETURN count(*)"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+
+    result.columnAs[Long]("count(*)").next shouldBe 8
+    assertStats(result, propertiesWritten = 8)
+  }
+
+  test("should not be eager for range predicates solved by stable index seek") {
+    createLabeledNode(Map("prop" -> 1), "Lol")
+    createLabeledNode(Map("prop" -> 2), "Lol")
+    createLabeledNode(Map("prop" -> 5), "Lol")
+    createNode()
+    graph.createIndex("Lol", "prop")
+
+    val query = "MATCH (m:Lol), (n) WHERE m.prop >= 1 AND m.prop <= 3 SET n.prop = 3 RETURN count(*)"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+
+    result.columnAs[Long]("count(*)").next shouldBe 8
+    assertStats(result, propertiesWritten = 8)
   }
 
   private def testEagerPlanComparisonStrategy(expectedEagerCount: Int,
