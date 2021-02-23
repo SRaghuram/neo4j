@@ -21,9 +21,6 @@ old_neo4j_version="${2}"
 # default s3 destination base
 s3_dest_datasets_url="s3://storage.benchmarking.neo4j.com/datasets/macro"
 
-all_args=("$@")
-optional_args=("${all_args[@]:2}")
-
 db_and_workloads_record_format=(
  "accesscontrol;accesscontrol;high_limit"
  "bubble_eye;bubble_eye;high_limit"
