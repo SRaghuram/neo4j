@@ -22,6 +22,7 @@ import org.neo4j.driver.types.Node;
 import org.neo4j.driver.types.Path;
 import org.neo4j.driver.types.Point;
 import org.neo4j.driver.types.Relationship;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.stream.SourceTagging;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.values.AnyValue;
@@ -63,10 +64,18 @@ class RecordConverter
         this.sourceTagValue = 0;
     }
 
-    RecordConverter( long sourceTag )
+    RecordConverter( ExecutionOptions options )
     {
-        this.hasSourceTag = true;
-        this.sourceTagValue = SourceTagging.makeSourceTag( sourceTag );
+        this.hasSourceTag = options.addSourceTag();
+
+        if ( hasSourceTag )
+        {
+            this.sourceTagValue = SourceTagging.makeSourceTag( options.sourceId() );
+        }
+        else
+        {
+            this.sourceTagValue = 0;
+        }
     }
 
     AnyValue convertValue( Value driverValue )

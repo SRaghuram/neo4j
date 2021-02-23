@@ -26,6 +26,7 @@ import org.neo4j.driver.Values;
 import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxTransaction;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
@@ -294,7 +295,7 @@ class ParameterConversionTest
         var transactionIfo = mock( FabricTransactionInfo.class );
         when( transactionIfo.getTxTimeout() ).thenReturn( Duration.ZERO );
 
-        var tx = pooledDriver.beginTransaction( location, null, transactionIfo, List.of() ).block();
+        var tx = pooledDriver.beginTransaction( location, new ExecutionOptions(), null, transactionIfo, List.of() ).block();
         var converter = new RecordConverter();
         var driverValue = Values.value( params );
         var serverValue = (MapValue) converter.convertValue( driverValue );

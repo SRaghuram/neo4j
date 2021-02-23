@@ -30,6 +30,7 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.InternalBookmark;
 import org.neo4j.driver.summary.ResultSummary;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.FabricException;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.fabric.stream.Records;
@@ -58,6 +59,7 @@ class AsyncPooledDriverTest
     private final AsyncTransaction asyncTransaction = mock( AsyncTransaction.class );
 
     private final Location.Remote location = new Location.Remote.External( 0, null, null, null );
+    private final ExecutionOptions options = new ExecutionOptions();
     private final FabricTransactionInfo transactionInfo = new FabricTransactionInfo( null, null, null, null, false, Duration.ZERO, null, null );
 
     @BeforeEach
@@ -78,7 +80,7 @@ class AsyncPooledDriverTest
         var cursor = new TestStatementResultCursor( List.of( "a", "b" ), List.of( createDriverRecord( "a1", "b1" ) ) );
         when( asyncTransaction.runAsync( any(), anyMap() ) ).thenReturn( CompletableFuture.completedFuture( cursor ) );
 
-        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, options, AccessMode.WRITE, transactionInfo, List.of() ).block();
         var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
         var columns = statementResult.columns().collectList().block();
 
@@ -100,7 +102,7 @@ class AsyncPooledDriverTest
         var cursor = new TestStatementResultCursor( List.of( "a", "b" ), List.of() );
         when( asyncTransaction.runAsync( any(), anyMap() ) ).thenReturn( CompletableFuture.completedFuture( cursor ) );
 
-        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, options, AccessMode.WRITE, transactionInfo, List.of() ).block();
         var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
         var columns = statementResult.columns().collectList().block();
 
@@ -133,7 +135,7 @@ class AsyncPooledDriverTest
         when( asyncTransaction.runAsync( any(), anyMap() ) )
                 .thenReturn( failedFuture( new ClientException( Status.Statement.SyntaxError.code().serialize(), "Something went wrong" ) ));
 
-        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, options, AccessMode.WRITE, transactionInfo, List.of() ).block();
         var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
 
         try
@@ -158,7 +160,7 @@ class AsyncPooledDriverTest
         when( asyncTransaction.runAsync( any(), anyMap() ) )
                 .thenReturn( failedFuture( new ClientException( "SomeCode", "Something went wrong" ) ));
 
-        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, options, AccessMode.WRITE, transactionInfo, List.of() ).block();
         var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
 
         try
@@ -183,7 +185,7 @@ class AsyncPooledDriverTest
         when( asyncTransaction.runAsync( any(), anyMap() ) )
                 .thenReturn( failedFuture( new DatabaseException( Status.Statement.ExecutionFailed.code().serialize(), "Something went wrong" ) ));
 
-        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, options, AccessMode.WRITE, transactionInfo, List.of() ).block();
         var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
 
         try
@@ -208,7 +210,7 @@ class AsyncPooledDriverTest
         when( asyncTransaction.runAsync( any(), anyMap() ) )
                 .thenReturn( failedFuture( new DatabaseException( "SomeCode", "Something went wrong" ) ));
 
-        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, options, AccessMode.WRITE, transactionInfo, List.of() ).block();
         var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
 
         try
@@ -236,7 +238,7 @@ class AsyncPooledDriverTest
         ) );
         when( asyncTransaction.runAsync( any(), anyMap() ) ).thenReturn( CompletableFuture.completedFuture( cursor ) );
 
-        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, options, AccessMode.WRITE, transactionInfo, List.of() ).block();
         var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
 
         var records = statementResult.records().limitRate( batchSize ).collectList().block();

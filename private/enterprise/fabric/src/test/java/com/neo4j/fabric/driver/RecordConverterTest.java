@@ -27,6 +27,7 @@ import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.internal.InternalNode;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.values.AnyValue;
@@ -198,8 +199,8 @@ class RecordConverterTest
     void testNodeWithSourceTag()
     {
         Value n = execute( "CREATE (n:LABEL_1:LABEL_2 {key1: 'Hello', arrayKey: ['a', 'b' ]}) RETURN n" );
-        RecordConverter c1 = new RecordConverter( 1 );
-        RecordConverter c2 = new RecordConverter( 2 );
+        RecordConverter c1 = new RecordConverter( new ExecutionOptions( 1 ) );
+        RecordConverter c2 = new RecordConverter( new ExecutionOptions( 2 ) );
         NodeValue n1a = (NodeValue) c1.convertValue( n );
         NodeValue n1b = (NodeValue) c1.convertValue( n );
         NodeValue n2 = (NodeValue) c2.convertValue( n );
@@ -212,7 +213,7 @@ class RecordConverterTest
     void testNodeWithLargeSourceTag()
     {
         Value n = new org.neo4j.driver.internal.value.NodeValue( new InternalNode( 1L ) );
-        RecordConverter c = new RecordConverter( 0x3FFF );
+        RecordConverter c = new RecordConverter( new ExecutionOptions( 0x3FFF ) );
         NodeValue nv = (NodeValue) c.convertValue( n );
         assertEquals( 0xFFFC000000000001L, nv.id() );
     }
@@ -221,7 +222,7 @@ class RecordConverterTest
     void testNodeWithSourceTagAndLargeId()
     {
         Value n = new org.neo4j.driver.internal.value.NodeValue( new InternalNode( 1L << 49 ) );
-        RecordConverter c = new RecordConverter( 1 );
+        RecordConverter c = new RecordConverter( new ExecutionOptions( 1 ) );
         NodeValue nv = (NodeValue) c.convertValue( n );
         assertEquals( 0x0006000000000000L, nv.id() );
     }
@@ -249,8 +250,8 @@ class RecordConverterTest
     void testRelationshipWithSourceTag()
     {
         Value n = execute( "CREATE (n1) - [r:TYPE_1 {key1: 'Hello', arrayKey: ['a', 'b' ]}] -> (n2) RETURN r" );
-        RecordConverter c1 = new RecordConverter( 1 );
-        RecordConverter c2 = new RecordConverter( 2 );
+        RecordConverter c1 = new RecordConverter( new ExecutionOptions( 1 ) );
+        RecordConverter c2 = new RecordConverter( new ExecutionOptions( 2 ) );
         RelationshipValue r1a = (RelationshipValue) c1.convertValue( n );
         RelationshipValue r1b = (RelationshipValue) c1.convertValue( n );
         RelationshipValue r2 = (RelationshipValue) c2.convertValue( n );

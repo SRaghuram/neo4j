@@ -20,6 +20,7 @@ import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.fabric.stream.Record;
 import org.neo4j.fabric.transaction.FabricTransactionInfo;
@@ -39,7 +40,7 @@ class RxPooledDriver extends PooledDriver
     }
 
     @Override
-    public AutoCommitStatementResult run( String query, MapValue params, Location.Remote location, AccessMode accessMode,
+    public AutoCommitStatementResult run( String query, MapValue params, Location.Remote location, ExecutionOptions options, AccessMode accessMode,
             FabricTransactionInfo transactionInfo, List<RemoteBookmark> bookmarks )
     {
         var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
@@ -51,12 +52,12 @@ class RxPooledDriver extends PooledDriver
         var transactionConfig = getTransactionConfig( transactionInfo );
         var rxResult = session.run( query, paramMap, transactionConfig );
 
-        return new StatementResultImpl( session, rxResult, location.getGraphId() );
+        return new StatementResultImpl( session, rxResult, options );
     }
 
     @Override
-    public Mono<FabricDriverTransaction> beginTransaction( Location.Remote location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
-            List<RemoteBookmark> bookmarks )
+    public Mono<FabricDriverTransaction> beginTransaction( Location.Remote location, ExecutionOptions options, AccessMode accessMode,
+            FabricTransactionInfo transactionInfo, List<RemoteBookmark> bookmarks )
     {
         var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
         var session = driver.rxSession( sessionConfig );
@@ -65,7 +66,7 @@ class RxPooledDriver extends PooledDriver
 
         return driverTransaction
                 .onErrorMap( Neo4jException.class, Utils::translateError )
-                .map( tx -> (FabricDriverTransaction) new FabricDriverRxTransaction( tx, session, location ) )
+                .map( tx -> (FabricDriverTransaction) new FabricDriverRxTransaction( tx, session, options ) )
                 .cache();
     }
 
@@ -82,11 +83,11 @@ class RxPooledDriver extends PooledDriver
         private final RxResult rxResult;
         private final CompletableFuture<RemoteBookmark> bookmarkFuture = new CompletableFuture<>();
 
-        StatementResultImpl( RxSession session, RxResult rxResult, long sourceTag )
+        StatementResultImpl( RxSession session, RxResult rxResult, ExecutionOptions options )
         {
             super( Mono.from( rxResult.keys() ).flatMapMany( Flux::fromIterable ),
                     Mono.from( rxResult.consume() ),
-                    sourceTag, session::close
+                    options, session::close
             );
             this.session = session;
             this.rxResult = rxResult;

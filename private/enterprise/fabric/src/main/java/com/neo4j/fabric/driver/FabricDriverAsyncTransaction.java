@@ -16,8 +16,8 @@ import org.neo4j.driver.async.AsyncTransaction;
 import org.neo4j.driver.async.ResultCursor;
 import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.FabricException;
-import org.neo4j.fabric.executor.Location;
 import org.neo4j.fabric.stream.Record;
 import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.values.virtual.MapValue;
@@ -31,13 +31,13 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
 
     private final AsyncTransaction asyncTransaction;
     private final AsyncSession asyncSession;
-    private final Location.Remote location;
+    private final ExecutionOptions options;
 
-    FabricDriverAsyncTransaction( AsyncTransaction asyncTransaction, AsyncSession asyncSession, Location.Remote location )
+    FabricDriverAsyncTransaction( AsyncTransaction asyncTransaction, AsyncSession asyncSession, ExecutionOptions options )
     {
         this.asyncTransaction = asyncTransaction;
         this.asyncSession = asyncSession;
-        this.location = location;
+        this.options = options;
     }
 
     @Override
@@ -60,7 +60,7 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
     {
         var paramMap = (Map<String,Object>) parameterConverter.convertValue( params );
         var statementResultCursor = Mono.fromFuture( asyncTransaction.runAsync( query, paramMap ).toCompletableFuture() );
-        return new StatementResultImpl( statementResultCursor, location.getGraphId() );
+        return new StatementResultImpl( statementResultCursor, options );
     }
 
     private class StatementResultImpl extends AbstractRemoteStatementResult
@@ -69,14 +69,14 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
         private final Mono<ResultCursor> statementResultCursor;
         private final RecordConverter recordConverter;
 
-        StatementResultImpl( Mono<ResultCursor> statementResultCursor, long sourceTag )
+        StatementResultImpl( Mono<ResultCursor> statementResultCursor, ExecutionOptions options )
         {
             super( statementResultCursor.map( ResultCursor::keys ).flatMapMany( Flux::fromIterable ),
                     statementResultCursor.map( ResultCursor::consumeAsync ).flatMap( Mono::fromCompletionStage ),
-                    sourceTag,
+                    options,
                     primaryException );
             this.statementResultCursor = statementResultCursor;
-            this.recordConverter = new RecordConverter( sourceTag );
+            this.recordConverter = new RecordConverter( options );
         }
 
         @Override

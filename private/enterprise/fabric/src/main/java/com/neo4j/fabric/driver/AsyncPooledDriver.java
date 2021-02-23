@@ -21,6 +21,7 @@ import org.neo4j.driver.async.AsyncTransaction;
 import org.neo4j.driver.async.ResultCursor;
 import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.fabric.stream.Record;
 import org.neo4j.fabric.transaction.FabricTransactionInfo;
@@ -40,7 +41,7 @@ public class AsyncPooledDriver extends PooledDriver
     }
 
     @Override
-    public AutoCommitStatementResult run( String query, MapValue params, Location.Remote location, AccessMode accessMode,
+    public AutoCommitStatementResult run( String query, MapValue params, Location.Remote location, ExecutionOptions options, AccessMode accessMode,
             FabricTransactionInfo transactionInfo, List<RemoteBookmark> bookmarks )
     {
         var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
@@ -52,12 +53,12 @@ public class AsyncPooledDriver extends PooledDriver
         var transactionConfig = getTransactionConfig( transactionInfo );
 
         var resultCursor = Mono.fromFuture( session.runAsync( query, paramMap, transactionConfig ).toCompletableFuture() );
-        return new StatementResultImpl( session, resultCursor, location.getGraphId() );
+        return new StatementResultImpl( session, resultCursor, options );
     }
 
     @Override
-    public Mono<FabricDriverTransaction> beginTransaction( Location.Remote location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
-            List<RemoteBookmark> bookmarks )
+    public Mono<FabricDriverTransaction> beginTransaction( Location.Remote location, ExecutionOptions options, AccessMode accessMode,
+            FabricTransactionInfo transactionInfo, List<RemoteBookmark> bookmarks )
     {
         var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
         var session = driver.asyncSession( sessionConfig );
@@ -66,7 +67,7 @@ public class AsyncPooledDriver extends PooledDriver
 
         return Mono.fromFuture( driverTransaction.toCompletableFuture() )
                    .onErrorMap( Neo4jException.class, Utils::translateError )
-                   .map( tx -> (FabricDriverTransaction) new FabricDriverAsyncTransaction( tx, session, location ) )
+                   .map( tx -> (FabricDriverTransaction) new FabricDriverAsyncTransaction( tx, session, options ) )
                    .cache();
     }
 
@@ -84,14 +85,14 @@ public class AsyncPooledDriver extends PooledDriver
         private final RecordConverter recordConverter;
         private final CompletableFuture<RemoteBookmark> bookmarkFuture = new CompletableFuture<>();
 
-        StatementResultImpl( AsyncSession session, Mono<ResultCursor> statementResultCursor, long sourceTag )
+        StatementResultImpl( AsyncSession session, Mono<ResultCursor> statementResultCursor, ExecutionOptions options )
         {
             super( statementResultCursor.map( ResultCursor::keys ).flatMapMany( Flux::fromIterable ),
                     statementResultCursor.map(ResultCursor::consumeAsync ).flatMap( Mono::fromCompletionStage ),
-                    sourceTag, session::closeAsync );
+                    options, session::closeAsync );
             this.session = session;
             this.statementResultCursor = statementResultCursor;
-            this.recordConverter = new RecordConverter( sourceTag );
+            this.recordConverter = new RecordConverter( options );
         }
 
         @Override

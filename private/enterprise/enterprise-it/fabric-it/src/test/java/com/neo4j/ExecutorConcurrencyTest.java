@@ -87,7 +87,7 @@ class ExecutorConcurrencyTest
 
         var counter = new AtomicInteger( 0 );
 
-        when( fabricRemoteTransactionContext.run( any(), any(), any(), any() ) ).thenAnswer( invocationOnMock ->
+        when( fabricRemoteTransactionContext.run( any(), any(), any(), any(), any() ) ).thenAnswer( invocationOnMock ->
         {
             int queryCount = counter.getAndIncrement();
             return Mono.just( remoteQueryRecords.get( queryCount ).statementResult );

@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.fabric.bookmark.TransactionBookmarkManager;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.FabricRemoteExecutor;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.fabric.executor.SingleDbTransaction;
@@ -59,13 +60,14 @@ public class FabricRemoteExecutorImpl implements FabricRemoteExecutor
             this.bookmarkManager = bookmarkManager;
         }
 
-        public Mono<StatementResult> run( Location.Remote location, String query, TransactionMode transactionMode, MapValue params )
+        public Mono<StatementResult> run( Location.Remote location, ExecutionOptions executionOptions, String query, TransactionMode transactionMode,
+                MapValue params )
         {
-            var driverTx = getOrCreateTx( location, transactionMode );
+            var driverTx = getOrCreateTx( location, executionOptions, transactionMode );
             return runInTx( driverTx, query, params );
         }
 
-        private Mono<FabricDriverTransaction> getOrCreateTx( Location.Remote location, TransactionMode transactionMode )
+        private Mono<FabricDriverTransaction> getOrCreateTx( Location.Remote location, ExecutionOptions executionOptions, TransactionMode transactionMode )
         {
             var existingTx = driverTransactions.get( location.getGraphId() );
             if ( existingTx != null )
@@ -81,21 +83,21 @@ public class FabricRemoteExecutorImpl implements FabricRemoteExecutor
                 case DEFINITELY_WRITE:
                     return compositeTransaction.startWritingTransaction( location, () ->
                     {
-                        var tx = beginDriverTx( location, AccessMode.WRITE );
+                        var tx = beginDriverTx( location, executionOptions, AccessMode.WRITE );
                         return new DriverTxWrapper( tx, location, bookmarkManager );
                     } );
 
                 case MAYBE_WRITE:
                     return compositeTransaction.startReadingTransaction( location, () ->
                     {
-                        var tx = beginDriverTx( location, AccessMode.WRITE );
+                        var tx = beginDriverTx( location, executionOptions, AccessMode.WRITE );
                         return new DriverTxWrapper( tx, location, bookmarkManager );
                     } );
 
                 case DEFINITELY_READ:
                     return compositeTransaction.startReadingOnlyTransaction( location, () ->
                     {
-                        var tx = beginDriverTx( location, AccessMode.READ );
+                        var tx = beginDriverTx( location, executionOptions, AccessMode.READ );
                         return new DriverTxWrapper( tx, location, bookmarkManager );
                     } );
                 default:
@@ -118,11 +120,11 @@ public class FabricRemoteExecutorImpl implements FabricRemoteExecutor
             }
         }
 
-        private Mono<FabricDriverTransaction> beginDriverTx( Location.Remote location, AccessMode accessMode )
+        private Mono<FabricDriverTransaction> beginDriverTx( Location.Remote location, ExecutionOptions executionOptions, AccessMode accessMode )
         {
             var driver = getDriver( location );
             var bookmarks = bookmarkManager.getBookmarksForRemote( location );
-            return driver.beginTransaction( location, accessMode, transactionInfo, bookmarks );
+            return driver.beginTransaction( location, executionOptions, accessMode, transactionInfo, bookmarks );
         }
 
         private PooledDriver getDriver( Location.Remote location )

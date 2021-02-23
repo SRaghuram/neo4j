@@ -43,6 +43,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ssl.ClientAuth;
 import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.driver.exceptions.ServiceUnavailableException;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.neo4j.logging.NullLogProvider;
@@ -214,7 +215,8 @@ abstract class AbstractDriverSslTest
         when( transactionInfo.getTxTimeout() ).thenReturn( Duration.ZERO );
         try
         {
-            driver.run( "RETURN 1", MapValue.EMPTY, new Location.Remote.External( 0, null, null, null ), AccessMode.WRITE, transactionInfo, List.of() )
+            var location = new Location.Remote.External( 0, null, null, null );
+            driver.run( "RETURN 1", MapValue.EMPTY, location, new ExecutionOptions(), AccessMode.WRITE, transactionInfo, List.of() )
                     .columns()
                     .collectList()
                     .block();

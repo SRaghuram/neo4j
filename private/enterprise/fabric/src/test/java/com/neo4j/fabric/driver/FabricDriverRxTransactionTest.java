@@ -15,6 +15,7 @@ import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxTransaction;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.FabricException;
 import org.neo4j.fabric.executor.FabricSecondaryException;
 import org.neo4j.fabric.executor.Location;
@@ -40,7 +41,7 @@ class FabricDriverRxTransactionTest
         var secondRxResult = mockRxResult( new DatabaseException( "", "Secondary Error" ) );
         when( rxTransaction.run( any(), anyMap() ) ).thenReturn( firstRxResult, secondRxResult );
 
-        var fabricDriverTransaction = new FabricDriverRxTransaction( rxTransaction, rxSession, location );
+        var fabricDriverTransaction = new FabricDriverRxTransaction( rxTransaction, rxSession, new ExecutionOptions() );
         var result1 = fabricDriverTransaction.run( "", MapValue.EMPTY );
         var result2 = fabricDriverTransaction.run( "", MapValue.EMPTY );
 

@@ -16,8 +16,8 @@ import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.FabricException;
-import org.neo4j.fabric.executor.Location;
 import org.neo4j.fabric.stream.Record;
 import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.values.virtual.MapValue;
@@ -31,13 +31,13 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
 
     private final RxTransaction rxTransaction;
     private final RxSession rxSession;
-    private final Location.Remote location;
+    private final ExecutionOptions options;
 
-    FabricDriverRxTransaction( RxTransaction rxTransaction, RxSession rxSession, Location.Remote location )
+    FabricDriverRxTransaction( RxTransaction rxTransaction, RxSession rxSession, ExecutionOptions options )
     {
         this.rxTransaction = rxTransaction;
         this.rxSession = rxSession;
-        this.location = location;
+        this.options = options;
     }
 
     @Override
@@ -60,7 +60,7 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
     {
         var paramMap = (Map<String,Object>) parameterConverter.convertValue( params );
         var rxStatementResult = rxTransaction.run( query, paramMap );
-        return new StatementResultImpl( rxStatementResult, location.getGraphId() );
+        return new StatementResultImpl( rxStatementResult, options );
     }
 
     private class StatementResultImpl extends AbstractRemoteStatementResult
@@ -68,11 +68,11 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
 
         private final RxResult rxStatementResult;
 
-        StatementResultImpl( RxResult rxStatementResult, long sourceTag )
+        StatementResultImpl( RxResult rxStatementResult, ExecutionOptions options )
         {
             super( Mono.from( rxStatementResult.keys() ).flatMapMany( Flux::fromIterable ),
                     Mono.from( rxStatementResult.consume() ),
-                    sourceTag,
+                    options,
                     primaryException );
             this.rxStatementResult = rxStatementResult;
         }

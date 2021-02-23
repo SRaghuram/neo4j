@@ -205,7 +205,7 @@ class TransactionTest
     private void mockShardDriver( PooledDriver shardDriver, Mono<FabricDriverTransaction> transaction )
     {
         reset( shardDriver );
-        when( shardDriver.beginTransaction( any(), any(), any(), any() ) ).thenReturn( transaction );
+        when( shardDriver.beginTransaction( any(), any(), any(), any(), any() ) ).thenReturn( transaction );
 
         doAnswer( invocationOnMock ->
         {

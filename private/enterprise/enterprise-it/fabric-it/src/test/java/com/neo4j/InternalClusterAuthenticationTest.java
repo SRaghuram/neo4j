@@ -47,6 +47,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.exceptions.AuthenticationException;
 import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.FabricException;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.fabric.transaction.FabricTransactionInfo;
@@ -248,7 +249,7 @@ class InternalClusterAuthenticationTest
     {
         var txInfo = mock( FabricTransactionInfo.class );
         when( txInfo.getTxTimeout() ).thenReturn( Duration.ZERO );
-        var tx = driver.beginTransaction( location, AccessMode.READ, txInfo, List.of() ).block();
+        var tx = driver.beginTransaction( location, new ExecutionOptions(), AccessMode.READ, txInfo, List.of() ).block();
         var records = tx.run( "MATCH (n) RETURN n", MapValue.EMPTY ).records().collectList().block();
         assertEquals( expectedNodeCount, records.size() );
         tx.commit().block();

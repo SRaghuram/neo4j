@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.driver.summary.ResultSummary;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.FabricException;
 import org.neo4j.fabric.executor.FabricSecondaryException;
 import org.neo4j.fabric.stream.Record;
@@ -34,27 +35,28 @@ abstract class AbstractRemoteStatementResult implements StatementResult
     private final AtomicReference<FabricException> primaryException;
     private boolean completionInvoked;
 
-    AbstractRemoteStatementResult( Flux<String> columns, Mono<ResultSummary> summary, long sourceTag, AtomicReference<FabricException> primaryException )
+    AbstractRemoteStatementResult( Flux<String> columns, Mono<ResultSummary> summary, ExecutionOptions options,
+            AtomicReference<FabricException> primaryException )
     {
-        this( columns, summary, sourceTag, primaryException, () ->
+        this( columns, summary, options, primaryException, () ->
         {
         } );
     }
 
-    AbstractRemoteStatementResult( Flux<String> columns, Mono<ResultSummary> summary, long sourceTag, Runnable completionListener )
+    AbstractRemoteStatementResult( Flux<String> columns, Mono<ResultSummary> summary, ExecutionOptions options, Runnable completionListener )
     {
-        this( columns, summary, sourceTag, new AtomicReference<>(), completionListener );
+        this( columns, summary, options, new AtomicReference<>(), completionListener );
     }
 
-    private AbstractRemoteStatementResult( Flux<String> columns, Mono<ResultSummary> summary, long sourceTag, AtomicReference<FabricException> primaryException,
-            Runnable completionListener )
+    private AbstractRemoteStatementResult( Flux<String> columns, Mono<ResultSummary> summary, ExecutionOptions options,
+            AtomicReference<FabricException> primaryException, Runnable completionListener )
     {
         this.columns = columns;
         this.summary = summary;
         // TODO: This is totally wrong, but real value is required before summary is available.
         // Either we do analysis in fabric and send in here, or we make sure value is not needed until after execution
         this.executionType = Mono.just( QueryExecutionType.query( QueryExecutionType.QueryType.READ_WRITE ) );
-        recordConverter = new RecordConverter( sourceTag );
+        recordConverter = new RecordConverter( options );
         this.completionListener = completionListener;
         this.primaryException = primaryException;
     }

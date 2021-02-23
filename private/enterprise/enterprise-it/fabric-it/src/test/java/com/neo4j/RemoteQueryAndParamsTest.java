@@ -83,7 +83,7 @@ class RemoteQueryAndParamsTest
     {
         remoteTx = createMockFabricDriverTransaction( mockResult() );
         PooledDriver driver = mock( PooledDriver.class );
-        when( driver.beginTransaction( any(), any(), any(), any() ) ).thenReturn( Mono.just( remoteTx ) );
+        when( driver.beginTransaction( any(), any(), any(), any(), any() ) ).thenReturn( Mono.just( remoteTx ) );
         doReturn( driver ).when( driverPool ).getDriver( any(), any() );
     }
 

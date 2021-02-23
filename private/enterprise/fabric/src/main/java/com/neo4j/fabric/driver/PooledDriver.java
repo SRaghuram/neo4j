@@ -20,6 +20,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.TransactionConfig;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.ExecutionOptions;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.neo4j.values.virtual.MapValue;
@@ -42,11 +43,11 @@ public abstract class PooledDriver
         releaseCallback.accept( this );
     }
 
-    public abstract AutoCommitStatementResult run( String query, MapValue params, Location.Remote location, AccessMode accessMode,
-            FabricTransactionInfo transactionInfo, List<RemoteBookmark> bookmarks  );
+    public abstract AutoCommitStatementResult run( String query, MapValue params, Location.Remote location, ExecutionOptions options,
+            AccessMode accessMode, FabricTransactionInfo transactionInfo, List<RemoteBookmark> bookmarks  );
 
-    public abstract Mono<FabricDriverTransaction> beginTransaction( Location.Remote location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
-            List<RemoteBookmark> bookmarks );
+    public abstract Mono<FabricDriverTransaction> beginTransaction( Location.Remote location, ExecutionOptions options, AccessMode accessMode,
+            FabricTransactionInfo transactionInfo, List<RemoteBookmark> bookmarks );
 
     AtomicInteger getReferenceCounter()
     {

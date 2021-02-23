@@ -27,6 +27,8 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Value;
+import org.neo4j.driver.types.Entity;
+import org.neo4j.fabric.stream.SourceTagging;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -74,10 +76,11 @@ public abstract class ClusterTestSupport
                 "CREATE (d:Person {name: 'Dave',  uid: 3, age: 60})",
                 "WITH *",
                 "UNWIND [c, d] AS person",
-                "RETURN person.name AS name" );
+                "RETURN person.name AS name, person" );
         var fooWriterResult = run( writeDriver, "neo4j", AccessMode.WRITE,
                                    session -> session.writeTransaction( tx -> tx.run(  createQuery ).list() ) );
         assertEquals( List.of( "Carrie", "Dave" ), getNames( fooWriterResult ) );
+        verifyPersonIdsNotTagged( fooWriterResult );
 
         var matchQueryWithoutUse = joinAsLines(
                 "MATCH (person:Person )",
@@ -93,16 +96,18 @@ public abstract class ClusterTestSupport
         var matchQueryWithUse = joinAsLines(
                 "USE foo",
                 "MATCH (person:Person )",
-                "RETURN person.name AS name"
+                "RETURN person.name AS name, person"
         );
 
         var fooFollowerResult = run( fooFollowerDriver, "neo4j", AccessMode.READ,
                                      session -> session.writeTransaction( tx -> tx.run( matchQueryWithUse ).list() ));
         assertEquals( List.of( "Anna", "Bob", "Carrie", "Dave" ), getNames( fooFollowerResult ) );
+        verifyPersonIdsNotTagged( fooFollowerResult );
 
         var fooReadReplicaResult = run( readReplicaDriver, "neo4j", AccessMode.READ,
                                         session -> session.writeTransaction( tx -> tx.run( matchQueryWithUse ).list() ));
         assertEquals( List.of( "Anna", "Bob", "Carrie", "Dave" ), getNames( fooReadReplicaResult ) );
+        verifyPersonIdsNotTagged( fooReadReplicaResult );
     }
 
     protected <T> T run( Driver driver, String databaseName, AccessMode mode, Function<Session,T> workload )
@@ -206,5 +211,17 @@ public abstract class ClusterTestSupport
                                        .withoutEncryption()
                                        .withMaxConnectionPoolSize( 3 )
                                        .build() );
+    }
+
+    private void verifyPersonIdsNotTagged( List<Record> records )
+    {
+        var smallestTag = SourceTagging.makeSourceTag( 1 );
+
+        var result = records.stream()
+                            .map( record -> record.get( "person" ) )
+                            .map( Value::asNode )
+                            .map( Entity::id )
+                            .allMatch( id -> id < smallestTag );
+        assertTrue( result );
     }
 }
