@@ -420,6 +420,19 @@ class EagerizationAcceptanceTest
     assertStats(result, relationshipsCreated = 2)
   }
 
+  test("should be eager for label overlap when reading label in an OR") {
+    for(_ <- 0 until 10) createLabeledNode("A", "B")
+    for(_ <- 0 until 10) createLabeledNode("B", "B2")
+    for(_ <- 0 until 10) createLabeledNode("B", "B3")
+    val query = "MATCH (a:A) WITH a, 1 AS foo MATCH (a), (b:B) WHERE b:B2 OR b:B3 SET a:B2 RETURN count(*) as count"
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+
+    result.columnAs[Int]("count").next should equal(200)
+    assertStats(result, labelsAdded = 10)
+  }
+
   test("should not introduce eagerness between MATCH by relationship id and CREATE relationships with overlapping relationship types if stable on relationship id") {
     val a = createNode()
     val b = createNode()
