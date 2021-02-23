@@ -6,6 +6,7 @@
 package com.neo4j.dbms.commandline;
 
 import com.neo4j.dbms.commandline.storeutil.StoreCopy;
+import com.neo4j.dbms.commandline.storeutil.TokenProperty;
 import picocli.CommandLine;
 
 import java.io.Closeable;
@@ -147,7 +148,7 @@ public class StoreCopyCommand extends AbstractCommand
             showDefaultValue = NEVER,
             converter = ComboTypeConverter.class
     )
-    private List<List<String>> skipNodeProperties = new ArrayList<>();
+    private List<TokenProperty> skipNodeProperties = new ArrayList<>();
 
     @Option(
             names = "--keep-only-node-properties",
@@ -158,7 +159,7 @@ public class StoreCopyCommand extends AbstractCommand
             showDefaultValue = NEVER,
             converter = ComboTypeConverter.class
     )
-    private List<List<String>> keepOnlyNodeProperties = new ArrayList<>();
+    private List<TokenProperty> keepOnlyNodeProperties = new ArrayList<>();
 
     @Option(
             names = "--skip-relationship-properties",
@@ -168,7 +169,7 @@ public class StoreCopyCommand extends AbstractCommand
             showDefaultValue = NEVER,
             converter = ComboTypeConverter.class
     )
-    private List<List<String>> skipRelationshipProperties = new ArrayList<>();
+    private List<TokenProperty> skipRelationshipProperties = new ArrayList<>();
 
     @Option(
             names = "--keep-only-relationship-properties",
@@ -179,7 +180,7 @@ public class StoreCopyCommand extends AbstractCommand
             showDefaultValue = NEVER,
             converter = ComboTypeConverter.class
     )
-    private List<List<String>> keepOnlyRelationshipProperties = new ArrayList<>();
+    private List<TokenProperty> keepOnlyRelationshipProperties = new ArrayList<>();
 
     @Option(
             names = "--skip-relationships",
@@ -464,13 +465,19 @@ public class StoreCopyCommand extends AbstractCommand
         }
     }
 
-    static class ComboTypeConverter implements CommandLine.ITypeConverter<List<List<String>>>
+    static class ComboTypeConverter implements CommandLine.ITypeConverter<List<TokenProperty>>
     {
         @Override
-        public List<List<String>> convert( String value )
+        public List<TokenProperty> convert( String value )
         {
-            return quoteAwareSplit( value, ',', false ).stream()
-                                                       .map( s -> quoteAwareSplit( s, '.', true ) ).collect( Collectors.toList() );
+            return quoteAwareSplit( value, ',', false ).stream().map( s -> quoteAwareSplit( s, '.', true ) ).map( strings ->
+            {
+                if ( strings.size() != 2 )
+                {
+                    throw new CommandLine.TypeConversionException( "Malformed property combo '" + strings + "', should be `token.property`" );
+                }
+                return new TokenProperty( strings.get( 0 ), strings.get( 1 ) );
+            } ).collect( Collectors.toList() );
         }
     }
 }

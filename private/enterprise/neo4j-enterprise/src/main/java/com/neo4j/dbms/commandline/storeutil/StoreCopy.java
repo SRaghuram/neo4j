@@ -140,10 +140,10 @@ public class StoreCopy
     private final List<String> keepOnlyNodesWithLabels;
     private final List<String> skipLabels;
     private final List<String> skipProperties;
-    private final List<List<String>> skipNodeProperties;
-    private final List<List<String>> keepOnlyNodeProperties;
-    private final List<List<String>> skipRelationshipProperties;
-    private final List<List<String>> keepOnlyRelationshipProperties;
+    private final List<TokenProperty> skipNodeProperties;
+    private final List<TokenProperty> keepOnlyNodeProperties;
+    private final List<TokenProperty> skipRelationshipProperties;
+    private final List<TokenProperty> keepOnlyRelationshipProperties;
     private final List<String> skipRelationships;
     private final PrintStream out;
     private final SystemNanoClock clock;
@@ -166,8 +166,8 @@ public class StoreCopy
 
     public StoreCopy( DatabaseLayout from, Config config, FormatEnum format,
                       List<String> deleteNodesWithLabels, List<String> keepOnlyNodesWithLabels, List<String> skipLabels,
-                      List<String> skipProperties, List<List<String>> skipNodeProperties, List<List<String>> keepOnlyNodeProperties,
-                      List<List<String>> skipRelationshipProperties, List<List<String>> keepOnlyRelationshipProperties,
+                      List<String> skipProperties, List<TokenProperty> skipNodeProperties, List<TokenProperty> keepOnlyNodeProperties,
+                      List<TokenProperty> skipRelationshipProperties, List<TokenProperty> keepOnlyRelationshipProperties,
                       List<String> skipRelationships, boolean verbose, PrintStream out,
                       PageCacheTracer pageCacheTracer, SystemNanoClock clock )
     {
@@ -539,8 +539,9 @@ public class StoreCopy
 
     private static StoreCopyFilter convertFilter( List<String> deleteNodesWithLabels,
                                                   List<String> keepOnlyNodesWithLabels, List<String> skipLabels,
-                                                  List<String> skipProperties, List<List<String>> skipNodeProperties, List<List<String>> keepOnlyNodeProperties,
-                                                  List<List<String>> skipRelationshipProperties, List<List<String>> keepOnlyRelationshipProperties,
+                                                  List<String> skipProperties, List<TokenProperty> skipNodeProperties,
+                                                  List<TokenProperty> keepOnlyNodeProperties,
+                                                  List<TokenProperty> skipRelationshipProperties, List<TokenProperty> keepOnlyRelationshipProperties,
                                                   List<String> skipRelationships,
                                                   TokenHolders tokenHolders, StoreCopyStats stats )
     {
@@ -576,28 +577,21 @@ public class StoreCopy
         return labelIds;
     }
 
-    private static ImmutableIntObjectMap<ImmutableIntSet> getPropertyComboTokenIds( List<List<String>> propertiesWithOwningEntityTokens,
+    private static ImmutableIntObjectMap<ImmutableIntSet> getPropertyComboTokenIds( List<TokenProperty> propertiesWithOwningEntityTokens,
             TokenHolder propertyKeyTokens, TokenHolder owningEntityTokens, boolean groupByOwningEntity )
     {
         MutableIntObjectMap<MutableIntSet> propertyComboTokens = new IntObjectHashMap<>();
-
-        for ( List<String> oneOwningEntityTokenAndProperty : propertiesWithOwningEntityTokens )
+        for ( var tokenProperty : propertiesWithOwningEntityTokens )
         {
-            if ( oneOwningEntityTokenAndProperty.size() != 2 )
-            {
-                throw new RuntimeException(
-                        "Malformed property combo '" + oneOwningEntityTokenAndProperty + "', should be " + owningEntityTokens.getTokenType() + ".property" );
-            }
-
-            int propId = propertyKeyTokens.getIdByName( oneOwningEntityTokenAndProperty.get( 1 ) );
+            int propId = propertyKeyTokens.getIdByName( tokenProperty.getPropertyName() );
             if ( propId == TokenConstants.NO_TOKEN )
             {
-                throw new RuntimeException( "Unable to find token: for " + oneOwningEntityTokenAndProperty.get( 1 ) );
+                throw new RuntimeException( "Unable to find token: for " + tokenProperty.getPropertyName() );
             }
-            int owningEntityTokenId = owningEntityTokens.getIdByName( oneOwningEntityTokenAndProperty.get( 0 ) );
+            int owningEntityTokenId = owningEntityTokens.getIdByName( tokenProperty.getTokenName() );
             if ( owningEntityTokenId == TokenConstants.NO_TOKEN )
             {
-                throw new RuntimeException( "Unable to find token: for " + oneOwningEntityTokenAndProperty.get( 0 ) );
+                throw new RuntimeException( "Unable to find token: for " + tokenProperty.getTokenName() );
             }
 
             if ( groupByOwningEntity )
