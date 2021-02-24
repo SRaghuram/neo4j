@@ -76,7 +76,8 @@ job_name=$(echo "macro_workload_store_upgrade_${new_neo4j_version}_${old_neo4j_v
 
 
 # get queue name from stack output
-job_queue=$(aws cloudformation describe-stacks --stack-name benchmarking-batch-infrastructure-$env --query 'Stacks[].Outputs[?OutputKey==`MacroUpgradeQueue`][OutputValue]' --output text)
+# shellcheck disable=SC2016
+job_queue=$(aws cloudformation describe-stacks --stack-name "benchmarking-batch-infrastructure-$env" --query 'Stacks[].Outputs[?OutputKey==`MacroUpgradeQueue`][OutputValue]' --output text)
 
 # submit upgrade job
 aws batch submit-job \
