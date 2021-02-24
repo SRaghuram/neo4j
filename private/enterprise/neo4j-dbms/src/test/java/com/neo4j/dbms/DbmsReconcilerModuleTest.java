@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -161,10 +162,12 @@ class DbmsReconcilerModuleTest
         var startOperator = new LocalDbmsOperator( idRepository );
         startOperator.startDatabase( fooId.name() );
         var startException = assertThrows( Exception.class,
-                () -> reconcilerModule.reconciler.reconcile( List.of( startOperator ), ReconcilerRequest.priorityTarget( fooId ).build() ).awaitAll(),
+                () -> reconcilerModule.reconciler.reconcile( List.of( startOperator ), ReconcilerRequest.priorityTarget( fooId ).build() ).joinAll(),
                 "dirty to not dropped not allowed" );
         // then DIRTY state DB should not able to start
-        assertTrue( startException.getMessage().contains( "unsupported state transition" ) );
+        var message = startException.getCause().getMessage();
+        var match = message.contains( "unsupported state transition" );
+        assertTrue( Exceptions.contains( startException, "unsupported state transition", IllegalArgumentException.class ) );
 
         // when
         dropDatabase( fooId, reconcilerModule );

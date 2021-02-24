@@ -11,10 +11,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletionException;
 
 import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -24,7 +25,6 @@ import org.neo4j.monitoring.DatabaseHealth;
 import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -86,8 +86,8 @@ class DbmsReconcilerIT
         var reconcilerResult = reconciler.reconcile( List.of( fixedOperator ), ReconcilerRequest.simple() );
 
         // then
-        var error = assertThrows( CompletionException.class, () -> reconcilerResult.await( db.databaseId() ) );
-        assertThat( error.getCause().getMessage() ).contains( "unsupported state transition" );
+        var error = assertThrows( DatabaseManagementException.class, () -> reconcilerResult.join( db.databaseId() ) );
+        assertTrue( Exceptions.contains( error, "unsupported state transition", IllegalArgumentException.class ) );
         assertEquals( EnterpriseOperatorState.STARTED, databaseStateService.stateOfDatabase( db.databaseId() ).operatorState() );
         assertTrue( databaseStateService.causeOfFailure( db.databaseId() ).isPresent() );
     }
@@ -102,7 +102,7 @@ class DbmsReconcilerIT
 
         // a failed database
         var reconcilerResult = reconciler.reconcile( List.of( fixedOperator ), ReconcilerRequest.simple() );
-        assertThrows( CompletionException.class, () -> reconcilerResult.await( db.databaseId() ) );
+        assertThrows( DatabaseManagementException.class, () -> reconcilerResult.join( db.databaseId() ) );
         assertTrue( databaseStateService.causeOfFailure( db.databaseId() ).isPresent(), "Database is expected to be failed" );
 
         // when
