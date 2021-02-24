@@ -74,7 +74,7 @@ for i in "${db_and_workloads_record_format[@]}"; do
                                --record-format "${record_format}"
 
     tar -cvzf "${zip_file}" "${db_name}"
-    aws s3 cp "${zip_file}" "${s3_dest_datasets_url}/${old_neo4j_version}-enterprise-datasets/${zip_file}" --no-progress
+    aws s3 cp "${zip_file}" "${s3_dest_datasets_url}/${new_neo4j_version}-enterprise-datasets/${zip_file}" --no-progress
     rm "${zip_file}"
     rm -r "${db_name}"
 done
