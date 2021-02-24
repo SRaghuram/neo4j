@@ -17,7 +17,7 @@
 
     <properties>
         <moduleName>com.neo4j.clusterdockertests</moduleName>
-        <default.jupiter.test.timeout>2h</default.jupiter.test.timeout>
+        <default.jupiter.test.timeout>10m</default.jupiter.test.timeout>
         <causal-cluster-testcontainer-extension.version>2020.0.7</causal-cluster-testcontainer-extension.version>
         <ThreadLeakageGuardExtension.PRINT_ONLY>true</ThreadLeakageGuardExtension.PRINT_ONLY>
         <ThreadLeakageGuardExtension.MAXIMUM_WAIT_TIME_MILLIS>3000</ThreadLeakageGuardExtension.MAXIMUM_WAIT_TIME_MILLIS>
