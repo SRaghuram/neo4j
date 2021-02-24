@@ -15,6 +15,7 @@ import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.ActiveLock;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceType;
+import org.neo4j.memory.MemoryTracker;
 
 /**
  * Each member of the cluster uses its own {@link LeaderOnlyLockManager} which wraps a local {@link Locks} manager.
@@ -82,7 +83,7 @@ public class LeaderOnlyLockManager implements Locks
         }
 
         @Override
-        public void initialize( LeaseClient leaseClient, long transactionId )
+        public void initialize( LeaseClient leaseClient, long transactionId, MemoryTracker memoryTracker )
         {
             this.leaseClient = leaseClient;
         }

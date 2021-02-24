@@ -14,6 +14,7 @@ import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.ActiveLock;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceType;
+import org.neo4j.memory.MemoryTracker;
 
 public class ReadReplicaLockManager implements Locks
 {
@@ -36,7 +37,7 @@ public class ReadReplicaLockManager implements Locks
     private static class Client implements Locks.Client
     {
         @Override
-        public void initialize( LeaseClient leaseClient, long transactionId )
+        public void initialize( LeaseClient leaseClient, long transactionId, MemoryTracker memoryTracker )
         {
         }
 

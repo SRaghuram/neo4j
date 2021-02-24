@@ -12,6 +12,7 @@ import org.neo4j.kernel.impl.api.LeaseException;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceTypes;
+import org.neo4j.memory.EmptyMemoryTracker;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doThrow;
@@ -33,7 +34,7 @@ class LeaderOnlyLockManagerTest
 
         // when
         Locks.Client leaderLockClient = lockManager.newClient();
-        leaderLockClient.initialize( leaseClient, 7 );
+        leaderLockClient.initialize( leaseClient, 7, EmptyMemoryTracker.INSTANCE );
         leaderLockClient.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0L );
     }
 
@@ -51,7 +52,7 @@ class LeaderOnlyLockManagerTest
 
         // when
         Locks.Client lockClient = lockManager.newClient();
-        lockClient.initialize( leaseClient, 8 );
+        lockClient.initialize( leaseClient, 8, EmptyMemoryTracker.INSTANCE );
         assertThrows( LeaseException.class, () -> lockClient.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0L ) );
     }
 }
