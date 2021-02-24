@@ -94,13 +94,13 @@ public final class DeveloperWorkflow
     private static final String EXTENSION_SCRIPT_BASH =
             // if there is a neo4j-browser jar in the docker image already copy it to the devlib directory.
             // browser is an optional runtime dependency that isn't part of the monorepo but it's helpful for debugging to keep it around.
-            "( ! compgen -G '/var/lib/neo4j/lib/neo4j-browser*.jar' >/dev/null ) || mv /var/lib/neo4j/lib/neo4j-browser*.jar /var/lib/neo4j/devlib/\n" +
+            "find '/var/lib/neo4j/lib/' -type f -iname 'neo4j-browser*.jar' -exec mv -t /var/lib/neo4j/devlib/ {} + >/dev/null\n" +
 
             // delete all the jars that came with the docker image (if there are still any present)
             "( ! compgen -G '/var/lib/neo4j/lib/*' >/dev/null ) || rm /var/lib/neo4j/lib/*\n" +
 
-            // move the mounted jars to the place that the neo4j startup script expects them to be
-            "mv /var/lib/neo4j/lib /var/lib/neo4j/oldlib && mv /var/lib/neo4j/devlib /var/lib/neo4j/lib\n" +
+            // link the mounted jars to the place that the neo4j startup script expects them to be
+            "ln -s /var/lib/neo4j/devlib/* /var/lib/neo4j/lib/\n" +
 
             // print something to stdout - we use this check the logs to be sure that the dev workflow was run.
             "echo 'dev extension script completed.'\n";
