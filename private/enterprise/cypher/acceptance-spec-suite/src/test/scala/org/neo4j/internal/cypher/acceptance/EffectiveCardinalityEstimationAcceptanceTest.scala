@@ -10,6 +10,7 @@ import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.compiler.planner.logical.PlannerDefaults
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithRuntimeDependantAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
@@ -183,6 +184,58 @@ class EffectiveCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSui
           )
       }
     ))
+  }
+
+  test("should estimate rows with selectivity through Apply") {
+    val nodeCount = 100
+    val limit = 10
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val query = s"EXPLAIN MATCH (n) CALL { WITH n MATCH (m) WHERE m.prop = m.prop RETURN m } RETURN n, m LIMIT $limit"
+
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithAssertion(
+        plan  => {
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+            .withLHS(aPlan("Limit").withEstimatedRows(limit)
+              .withLHS(aPlan("Filter").withEstimatedRows(limit)
+                .withLHS(aPlan("Apply").withEstimatedRows(Math.round(limit.toDouble / PlannerDefaults.DEFAULT_PROPERTY_SELECTIVITY.factor))
+                  .withRHS(aPlan("AllNodesScan").withEstimatedRows(Math.round(limit.toDouble / PlannerDefaults.DEFAULT_PROPERTY_SELECTIVITY.factor)))
+                  .withLHS(aPlan("AllNodesScan").withEstimatedRows(1))
+                )
+              )
+            )
+        }
+      ))
+  }
+
+  test("should estimate rows with selectivity through Apply when multiple loop invocations are needed to fulfil LIMIT") {
+    val nodeCount = 50
+    val limit = 100
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val query = s"EXPLAIN MATCH (n) CALL { WITH n MATCH (m) WHERE m.prop = m.prop RETURN m } RETURN n, m LIMIT $limit"
+
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithAssertion(
+        plan  => {
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+            .withLHS(aPlan("Limit").withEstimatedRows(limit)
+              .withLHS(aPlan("Filter").withEstimatedRows(limit)
+                .withLHS(aPlan("Apply").withEstimatedRows(Math.round(limit.toDouble / PlannerDefaults.DEFAULT_PROPERTY_SELECTIVITY.factor))
+                  .withRHS(aPlan("AllNodesScan").withEstimatedRows(Math.round(limit.toDouble / PlannerDefaults.DEFAULT_PROPERTY_SELECTIVITY.factor)))
+                  .withLHS(aPlan("AllNodesScan").withEstimatedRows(Math.round(limit.toDouble / PlannerDefaults.DEFAULT_PROPERTY_SELECTIVITY.factor / nodeCount)))
+                )
+              )
+            )
+        }
+      ))
   }
 
   test("should estimate rows with selectivity through NodeHashJoin") {
