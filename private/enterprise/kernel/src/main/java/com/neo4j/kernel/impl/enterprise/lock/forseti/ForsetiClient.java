@@ -41,12 +41,12 @@ import org.neo4j.lock.LockWaitEvent;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.ResourceTypes;
 import org.neo4j.lock.WaitStrategy;
-import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.memory.HeapEstimator;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.time.SystemNanoClock;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static org.neo4j.lock.LockType.EXCLUSIVE;
 import static org.neo4j.lock.LockType.SHARED;
 
@@ -134,7 +134,7 @@ public class ForsetiClient implements Locks.Client
      */
     private volatile ForsetiLockManager.Lock waitingForLock;
     private volatile long userTransactionId;
-    private volatile MemoryTracker memoryTracker = EmptyMemoryTracker.INSTANCE; // TODO: remove
+    private volatile MemoryTracker memoryTracker;
     private static final long CONCURRENT_NODE_SIZE = HeapEstimator.LONG_SIZE + HeapEstimator.HASH_MAP_NODE_SHALLOW_SIZE;
 
     public ForsetiClient( int id, ConcurrentMap<Long,ForsetiLockManager.Lock>[] lockMaps,
@@ -167,7 +167,7 @@ public class ForsetiClient implements Locks.Client
     public void initialize( LeaseClient leaseClient, long transactionId, MemoryTracker memoryTracker )
     {
         this.userTransactionId = transactionId;
-        this.memoryTracker = memoryTracker;
+        this.memoryTracker = requireNonNull( memoryTracker );
     }
 
     @Override
@@ -876,7 +876,7 @@ public class ForsetiClient implements Locks.Client
             throws AcquireLockTimeoutException
     {
         int tries = 0;
-        boolean holdsSharedLock = sharedLockCounts[resourceType.typeId()].containsKey( resourceId );
+        boolean holdsSharedLock = getSharedLockCount( resourceType ).containsKey( resourceId );
         if ( !holdsSharedLock )
         {
             // We don't hold the shared lock, we need to grab it to upgrade it to an exclusive one

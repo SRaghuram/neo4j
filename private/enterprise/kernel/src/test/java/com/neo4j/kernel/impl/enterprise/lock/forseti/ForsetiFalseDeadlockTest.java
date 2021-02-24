@@ -21,12 +21,14 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.function.ThrowingAction;
+import org.neo4j.kernel.impl.api.LeaseService.NoLeaseClient;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.community.CommunityLockManger;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.LockWaitStrategies;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.WaitStrategy;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.time.Clocks;
 import org.neo4j.util.concurrent.BinaryLatch;
 
@@ -142,6 +144,9 @@ class ForsetiFalseDeadlockTest
         try ( Locks.Client a = manager.newClient();
               Locks.Client b = manager.newClient() )
         {
+            a.initialize( NoLeaseClient.INSTANCE, 1, EmptyMemoryTracker.INSTANCE );
+            b.initialize( NoLeaseClient.INSTANCE, 2, EmptyMemoryTracker.INSTANCE );
+
             BinaryLatch startLatch = new BinaryLatch();
             BlockedCallable callA = new BlockedCallable( startLatch,
                     () -> workloadA( fixture, a, resourceType, iterations ) );

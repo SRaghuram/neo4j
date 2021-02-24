@@ -9,7 +9,9 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.impl.locking.Locks;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.kernel.api.exceptions.Status.General.ForbiddenOnReadOnlyDatabase;
 import static org.neo4j.kernel.api.exceptions.Status.statusCodeOf;
 import static org.neo4j.lock.LockTracer.NONE;
@@ -17,41 +19,30 @@ import static org.neo4j.lock.ResourceTypes.NODE;
 
 class ReadReplicaLockManagerTest
 {
-    private ReadReplicaLockManager lockManager = new ReadReplicaLockManager();
-    private Locks.Client lockClient = lockManager.newClient();
+    private final ReadReplicaLockManager lockManager = new ReadReplicaLockManager();
+    private final Locks.Client lockClient = lockManager.newClient();
 
     @Test
     void shouldThrowOnAcquireExclusiveLock()
     {
-        try
-        {
-            // when
-            lockClient.acquireExclusive( NONE, NODE, 1 );
-        }
-        catch ( Exception e )
-        {
-            assertEquals( ForbiddenOnReadOnlyDatabase, statusCodeOf( e ) );
-        }
+        var e = assertThrows( Exception.class, () -> lockClient.acquireExclusive( NONE, NODE, 1 ) );
+        assertEquals( ForbiddenOnReadOnlyDatabase, statusCodeOf( e ) );
     }
 
     @Test
     void shouldThrowOnTryAcquireExclusiveLock()
     {
-        try
-        {
-            // when
-            lockClient.tryExclusiveLock( NODE, 1 );
-        }
-        catch ( Exception e )
-        {
-            assertEquals( ForbiddenOnReadOnlyDatabase, statusCodeOf( e ) );
-        }
+        var e = assertThrows( Exception.class, () -> lockClient.tryExclusiveLock( NODE, 1 ) );
+        assertEquals( ForbiddenOnReadOnlyDatabase, statusCodeOf( e ) );
     }
 
     @Test
     void shouldAcceptSharedLocks()
     {
-        lockClient.acquireShared( NONE, NODE, 1 );
-        lockClient.trySharedLock( NODE, 1 );
+        assertDoesNotThrow( () ->
+        {
+            lockClient.acquireShared( NONE, NODE, 1 );
+            lockClient.trySharedLock( NODE, 1 );
+        } );
     }
 }

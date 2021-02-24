@@ -85,6 +85,7 @@ public class LeaderOnlyLockManager implements Locks
         @Override
         public void initialize( LeaseClient leaseClient, long transactionId, MemoryTracker memoryTracker )
         {
+            this.localClient.initialize( leaseClient, transactionId, memoryTracker );
             this.leaseClient = leaseClient;
         }
 
