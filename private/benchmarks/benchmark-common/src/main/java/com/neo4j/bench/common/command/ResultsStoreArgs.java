@@ -38,21 +38,21 @@ public class ResultsStoreArgs
                                    uri );
     }
 
-    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
+    public static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_USER},
             description = "Username for Neo4j database server that stores benchmarking results",
             title = "Results Store Username" )
     private String resultsStoreUsername;
 
-    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
+    public static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_PASSWORD},
             description = "Password for Neo4j database server that stores benchmarking results",
             title = "Results Store Password" )
     private String resultsStorePassword;
 
-    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
+    public static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_URI},
             description = "URI to Neo4j database server for storing benchmarking results",
