@@ -286,12 +286,21 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
       val compareResults = expectSucceed - expectedDifferentResults
       val baseScenario = extractBaseScenario(expectSucceed, compareResults)
       val explicitlyRequestedExperimentalScenarios = expectSucceed.scenarios intersect Configs.Experimental.scenarios
+      val baseScenarioWithEagerUpdateStrategy = baseScenario.copy(extraPreParserOptions = Some("updateStrategy=eager"))
 
-      val positiveResults = ((Configs.All.scenarios ++ Configs.Experimental.scenarios) - baseScenario).flatMap {
+      /**
+       * Extra scenarios are expected to succeed and (potentially) return the same result as the base scenario.
+       * Plan comparisons are not run for extra scenarios.
+       *
+       * @return `true` if this scenario is not part of Configs.All + Configs.Experimental.
+       */
+      def isExtraScenario(scenario: TestScenario): Boolean = scenario == baseScenarioWithEagerUpdateStrategy
+
+      val positiveResults = ((Configs.All.scenarios ++ Configs.Experimental.scenarios) + baseScenarioWithEagerUpdateStrategy - baseScenario).flatMap {
         thisScenario =>
           executeScenario(thisScenario,
                           query,
-                          expectSucceed.containsScenario(thisScenario),
+                          expectSucceed.containsScenario(thisScenario) || isExtraScenario(thisScenario),
                           executeBefore,
                           params,
                           resultAssertionInTx,
@@ -316,9 +325,11 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
 
       positiveResults.foreach {
         case (scenario, result) =>
-          planComparisonStrategy.compare(expectSucceed, scenario, result)
+          if (!isExtraScenario(scenario)) {
+            planComparisonStrategy.compare(expectSucceed, scenario, result)
+          }
 
-          if (!compareResults.containsScenario(scenario)) {
+          if (!compareResults.containsScenario(scenario) && !isExtraScenario(scenario)) {
             assertResultsNotSame(result, baseResult, query, s"Unexpectedly (but correctly!)\n${scenario.name} returned same results as ${baseScenario.name}")
           } else if (assertEqualResult) {
             assertResultsSame(result, baseResult, query, s"${scenario.name} returned different results than ${baseScenario.name}")

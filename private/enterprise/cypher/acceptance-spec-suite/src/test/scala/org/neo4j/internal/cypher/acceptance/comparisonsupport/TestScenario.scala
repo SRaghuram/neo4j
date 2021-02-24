@@ -18,17 +18,19 @@ import scala.util.Try
 /**
  * A single scenario, which can be composed to configurations.
  */
-case class TestScenario(planner: Planner, runtime: Runtime) extends Assertions {
+case class TestScenario(planner: Planner,
+                        runtime: Runtime,
+                        extraPreParserOptions: Option[String] = None
+                       ) extends Assertions {
 
   override def toString: String = name
 
-  def name: String = {
-    val plannerName = planner.preparserOption
-    val runtimeName = runtime.preparserOption
-    s"$plannerName $runtimeName"
-  }
+  def name: String = preparserOptions
 
-  def preparserOptions: String = List(planner.preparserOption, runtime.preparserOption).mkString(" ")
+  def preparserOptions: String = {
+    val strings = List(planner.preparserOption, runtime.preparserOption) ++ extraPreParserOptions
+    strings.mkString(" ")
+  }
 
   def checkResultForSuccess(query: String, internalExecutionResult: RewindableExecutionResult, silentUnexpectedSuccess: Boolean): Unit = {
     val ScenarioConfig(reportedRuntime, reportedPlanner) = extractConfiguration(internalExecutionResult)
