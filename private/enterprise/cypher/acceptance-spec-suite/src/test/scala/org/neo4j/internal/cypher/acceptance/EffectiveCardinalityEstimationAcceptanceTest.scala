@@ -9,7 +9,9 @@ import org.neo4j.collection.RawIterator
 import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.compiler.planner.logical.PlannerDefaults
+import org.neo4j.cypher.internal.compiler.planner.logical.cardinality.IndependenceCombiner
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
+import org.neo4j.cypher.internal.util.Selectivity
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithRuntimeDependantAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
@@ -231,6 +233,93 @@ class EffectiveCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSui
                 .withLHS(aPlan("Apply").withEstimatedRows(Math.round(limit.toDouble / PlannerDefaults.DEFAULT_PROPERTY_SELECTIVITY.factor))
                   .withRHS(aPlan("AllNodesScan").withEstimatedRows(Math.round(limit.toDouble / PlannerDefaults.DEFAULT_PROPERTY_SELECTIVITY.factor)))
                   .withLHS(aPlan("AllNodesScan").withEstimatedRows(Math.round(limit.toDouble / PlannerDefaults.DEFAULT_PROPERTY_SELECTIVITY.factor / nodeCount)))
+                )
+              )
+            )
+        }
+      ))
+  }
+
+  test("should estimate rows with selectivity through Union - LHS and RHS work reduction") {
+    val ns = 50
+    val ms = 60
+    val limit = 10
+    (0 until ns).foreach(_ => createLabeledNode("N"))
+    (0 until ms).foreach(_ => createLabeledNode("M"))
+
+    val query = s"EXPLAIN CALL { MATCH (n:N) RETURN n UNION ALL MATCH (n:M) RETURN n } RETURN n LIMIT $limit"
+
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithAssertion(
+        plan  => {
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+            .withLHS(aPlan("Limit").withEstimatedRows(limit)
+              .withLHS(aPlan("Union").withEstimatedRows(limit)
+                .withRHS(includeSomewhere.aPlan("NodeByLabelScan").withEstimatedRows(0))
+                .withLHS(includeSomewhere.aPlan("NodeByLabelScan").withEstimatedRows(limit))
+              )
+            )
+        }
+      ))
+  }
+
+  test("should estimate rows with selectivity through Union - only RHS work reduction") {
+    val ns = 50
+    val ms = 60
+    val limit = 70
+    (0 until ns).foreach(_ => createLabeledNode("N"))
+    (0 until ms).foreach(_ => createLabeledNode("M"))
+
+    val query = s"EXPLAIN CALL { MATCH (n:N) RETURN n UNION ALL MATCH (n:M) RETURN n } RETURN n LIMIT $limit"
+
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithAssertion(
+        plan  => {
+          plan should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+            .withLHS(aPlan("Limit").withEstimatedRows(limit)
+              .withLHS(aPlan("Union").withEstimatedRows(limit)
+                .withRHS(includeSomewhere.aPlan("NodeByLabelScan").withEstimatedRows(limit - ns))
+                .withLHS(includeSomewhere.aPlan("NodeByLabelScan").withEstimatedRows(ns))
+              )
+            )
+        }
+      ))
+  }
+
+  test("should estimate rows with selectivity through OrderedUnion") {
+    val ns = 50
+    val ms = 60
+    val limit = 70
+
+    (0 until ns).foreach(_ => createLabeledNode("N"))
+    (0 until ms).foreach(_ => createLabeledNode("M"))
+
+    val nSel = Selectivity(ns.toDouble / (ns + ms))
+    val mSel = Selectivity(ms.toDouble / (ns + ms))
+    val orSel = IndependenceCombiner.orTogetherSelectivities(Seq(nSel, mSel)).get
+    val nmEstimate = (ns + ms) * orSel.factor
+    val limitFactor = limit / nmEstimate
+
+    val query = s"EXPLAIN MATCH (n) WHERE n:N OR n:M RETURN n LIMIT $limit"
+
+    executeWith(Configs.InterpretedAndSlotted,
+      query,
+      assertEqualResult = false,
+      executeExpectedFailures = false,
+      planComparisonStrategy = ComparePlansWithAssertion(
+        plan  => {
+          plan should includeSomewhere.aPlan("ProduceResults").withEstimatedRows(limit)
+            .withLHS(aPlan("Limit").withEstimatedRows(limit)
+              .withLHS(aPlan("OrderedDistinct").withEstimatedRows(limit)
+                .withLHS(aPlan("OrderedUnion").withEstimatedRows(Math.round((ns + ms) * limitFactor))
+                  .withRHS(includeSomewhere.aPlan("NodeByLabelScan").withEstimatedRows(Math.round(ms * limitFactor)))
+                  .withLHS(includeSomewhere.aPlan("NodeByLabelScan").withEstimatedRows(Math.round(ns * limitFactor)))
                 )
               )
             )
