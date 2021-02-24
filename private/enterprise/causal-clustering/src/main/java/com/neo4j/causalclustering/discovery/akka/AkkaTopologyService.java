@@ -67,7 +67,7 @@ import org.neo4j.util.VisibleForTesting;
 import static akka.actor.ActorRef.noSender;
 import static com.neo4j.causalclustering.error_handling.DbmsPanicReason.IrrecoverableDiscoveryFailure;
 
-public abstract class AkkaMemberTopologyService extends SafeLifecycle implements TopologyService, Restartable
+public abstract class AkkaTopologyService extends SafeLifecycle implements TopologyService, Restartable
 {
     protected final ActorSystemLifecycle actorSystemLifecycle;
     private final LogProvider logProvider;
@@ -94,10 +94,10 @@ public abstract class AkkaMemberTopologyService extends SafeLifecycle implements
     protected volatile ActorRef databaseStateActorRef;
     protected volatile GlobalTopologyState globalTopologyState;
 
-    public AkkaMemberTopologyService( Config config, ServerIdentity myIdentity, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
-                                      LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, ActorSystemRestarter actorSystemRestarter,
-                                      ServerSnapshotFactory serverSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
-                                      DatabaseStateService databaseStateService, Panicker panicker )
+    public AkkaTopologyService( Config config, ServerIdentity myIdentity, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
+                                LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, ActorSystemRestarter actorSystemRestarter,
+                                ServerSnapshotFactory serverSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
+                                DatabaseStateService databaseStateService, Panicker panicker )
     {
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;

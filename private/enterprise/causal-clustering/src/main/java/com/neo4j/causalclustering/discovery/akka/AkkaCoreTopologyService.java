@@ -48,23 +48,23 @@ import org.neo4j.scheduler.JobScheduler;
 import static akka.actor.ActorRef.noSender;
 import static java.lang.String.format;
 
-public class AkkaMemberCoreTopologyService extends AkkaMemberTopologyService implements CoreTopologyService
+public class AkkaCoreTopologyService extends AkkaTopologyService implements CoreTopologyService
 {
     private final Map<NamedDatabaseId,LeaderInfo> localLeadersByDatabaseId = new ConcurrentHashMap<>();
     private final CoreServerIdentity myIdentity;
-    public AkkaMemberCoreTopologyService( Config config,
-                                          CoreServerIdentity myIdentity,
-                                          ActorSystemLifecycle actorSystemLifecycle,
-                                          LogProvider logProvider,
-                                          LogProvider userLogProvider,
-                                          RetryStrategy catchupAddressRetryStrategy,
-                                          ActorSystemRestarter actorSystemRestarter,
-                                          ServerSnapshotFactory serverSnapshotFactory,
-                                          JobScheduler jobScheduler,
-                                          Clock clock,
-                                          Monitors monitors,
-                                          DatabaseStateService databaseStateService,
-                                          Panicker panicker )
+    public AkkaCoreTopologyService( Config config,
+                                    CoreServerIdentity myIdentity,
+                                    ActorSystemLifecycle actorSystemLifecycle,
+                                    LogProvider logProvider,
+                                    LogProvider userLogProvider,
+                                    RetryStrategy catchupAddressRetryStrategy,
+                                    ActorSystemRestarter actorSystemRestarter,
+                                    ServerSnapshotFactory serverSnapshotFactory,
+                                    JobScheduler jobScheduler,
+                                    Clock clock,
+                                    Monitors monitors,
+                                    DatabaseStateService databaseStateService,
+                                    Panicker panicker )
     {
         super( config,
                myIdentity,

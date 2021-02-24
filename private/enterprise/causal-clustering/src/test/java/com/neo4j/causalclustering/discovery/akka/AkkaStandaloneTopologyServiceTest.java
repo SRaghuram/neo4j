@@ -45,7 +45,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
-class AkkaMemberStandaloneTopologyServiceTest
+class AkkaStandaloneTopologyServiceTest
 {
     private Config config = Config.defaults();
     private CoreServerIdentity myIdentity = new InMemoryCoreServerIdentity();
@@ -61,7 +61,7 @@ class AkkaMemberStandaloneTopologyServiceTest
     private ActorSystem system;
     private ActorSystemLifecycle systemLifecycle;
     private TestKit testKit;
-    private AkkaMemberStandaloneTopologyService service;
+    private AkkaStandaloneTopologyService service;
     private NamedDatabaseId databaseId1;
     private NamedDatabaseId databaseId2;
     private RaftMemberId raftMemberId;
@@ -87,7 +87,7 @@ class AkkaMemberStandaloneTopologyServiceTest
                            return testKit.getRef();
                        } );
 
-        service = new AkkaMemberStandaloneTopologyService(
+        service = new AkkaStandaloneTopologyService(
                 config,
                 myIdentity,
                 systemLifecycle,

@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.ActorSystemRestarter;
-import com.neo4j.causalclustering.discovery.akka.AkkaMemberCoreTopologyService;
+import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
 import com.neo4j.causalclustering.error_handling.Panicker;
@@ -53,7 +53,7 @@ public class AkkaDiscoveryRestartIT
     private static final int CLUSTER_SIZE = 3;
     private static final long TIMEOUT = 60;
 
-    private final List<TestAkkaMemberCoreTopologyService> discoServices = new ArrayList<>();
+    private final List<TestAkkaCoreTopologyService> discoServices = new ArrayList<>();
     private final Random random = new Random();
 
     private TestAkkaCoreTopologyServiceFactory discoServiceFactory;
@@ -64,11 +64,11 @@ public class AkkaDiscoveryRestartIT
         int stablePort = PortAuthority.allocatePort();
         discoServiceFactory = new TestAkkaCoreTopologyServiceFactory();
 
-        discoServices.add( (TestAkkaMemberCoreTopologyService) coreTopologyService( stablePort, discoServiceFactory, stablePort ) );
+        discoServices.add( (TestAkkaCoreTopologyService) coreTopologyService( stablePort, discoServiceFactory, stablePort ) );
 
         for ( int i = 0; i < CLUSTER_SIZE - 1; i++ )
         {
-            discoServices.add( (TestAkkaMemberCoreTopologyService) coreTopologyService( stablePort, discoServiceFactory ) );
+            discoServices.add( (TestAkkaCoreTopologyService) coreTopologyService( stablePort, discoServiceFactory ) );
         }
 
         for ( var topologyService : discoServices )
@@ -133,7 +133,7 @@ public class AkkaDiscoveryRestartIT
         private Boolean firstStartup = true;
 
         @Override
-        public TestAkkaMemberCoreTopologyService coreTopologyService(
+        public TestAkkaCoreTopologyService coreTopologyService(
                 Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler, LogProvider logProvider, LogProvider userLogProvider,
                 RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy, SslPolicyLoader sslPolicyLoader,
                 ServerSnapshotFactory serverSnapshotFactory, DiscoveryFirstStartupDetector firstStartupDetector, Monitors monitors, Clock clock,
@@ -141,7 +141,7 @@ public class AkkaDiscoveryRestartIT
         {
             ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forConfig( config);
             var minFormationMembers = MinFormationMembers.from( config );
-            return new TestAkkaMemberCoreTopologyService(
+            return new TestAkkaCoreTopologyService(
                     config,
                     myIdentity,
                     actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, minFormationMembers ),
@@ -195,11 +195,11 @@ public class AkkaDiscoveryRestartIT
         }
     }
 
-    private static class TestAkkaMemberCoreTopologyService extends AkkaMemberCoreTopologyService
+    private static class TestAkkaCoreTopologyService extends AkkaCoreTopologyService
     {
         private final ActorSystemLifecycle actorSystemLifecycle;
 
-        TestAkkaMemberCoreTopologyService(
+        TestAkkaCoreTopologyService(
                 Config config, CoreServerIdentity identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
                 LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, ActorSystemRestarter actorSystemRestarter,
                 ServerSnapshotFactory serverSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,

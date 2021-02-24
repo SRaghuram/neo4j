@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.ActorSystemRestarter;
-import com.neo4j.causalclustering.discovery.akka.AkkaMemberCoreTopologyService;
-import com.neo4j.causalclustering.discovery.akka.AkkaMemberTopologyService;
+import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
+import com.neo4j.causalclustering.discovery.akka.AkkaTopologyService;
 import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
@@ -68,7 +68,7 @@ class AkkaCoreTopologyMisConfiguredIT
         stopShutdown( akkaCoreTopologyService3 );
     }
 
-    private static AkkaMemberTopologyService createAndStart( int myPort, int... otherPorts ) throws Exception
+    private static AkkaTopologyService createAndStart( int myPort, int... otherPorts ) throws Exception
     {
         var initialDiscoMembers = IntStream.concat( IntStream.of( myPort ), IntStream.of( otherPorts ) )
                 .mapToObj( port -> new SocketAddress( "LOCALHOST", port ) )
@@ -96,7 +96,7 @@ class AkkaCoreTopologyMisConfiguredIT
                 new EnterpriseDatabaseState( databaseIdRepository.defaultDatabase(), STARTED ) );
         var databaseStateService = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
         var myIdentity = new InMemoryCoreServerIdentity();
-        var service = new AkkaMemberCoreTopologyService(
+        var service = new AkkaCoreTopologyService(
                 config,
                 myIdentity,
                 actorSystemLifecycle,

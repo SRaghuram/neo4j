@@ -38,20 +38,20 @@ import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
     @Override
-    public final AkkaMemberCoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler,
-                                                                    LogProvider logProvider, LogProvider userLogProvider,
-                                                                    RemoteMembersResolver remoteMembersResolver,
-                                                                    RetryStrategy catchupAddressRetryStrategy,
-                                                                    SslPolicyLoader sslPolicyLoader, ServerSnapshotFactory serverSnapshotFactory,
-                                                                    DiscoveryFirstStartupDetector firstStartupDetector,
-                                                                    Monitors monitors, Clock clock, DatabaseStateService databaseStateService,
-                                                                    Panicker panicker )
+    public final AkkaCoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler,
+                                                              LogProvider logProvider, LogProvider userLogProvider,
+                                                              RemoteMembersResolver remoteMembersResolver,
+                                                              RetryStrategy catchupAddressRetryStrategy,
+                                                              SslPolicyLoader sslPolicyLoader, ServerSnapshotFactory serverSnapshotFactory,
+                                                              DiscoveryFirstStartupDetector firstStartupDetector,
+                                                              Monitors monitors, Clock clock, DatabaseStateService databaseStateService,
+                                                              Panicker panicker )
     {
         ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forConfig( config );
         var minFormationMembers = MinFormationMembers.from( config );
         var actorSystem = actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, firstStartupDetector,
                                                 minFormationMembers );
-        return new AkkaMemberCoreTopologyService(
+        return new AkkaCoreTopologyService(
                 config,
                 myIdentity,
                 actorSystem,
@@ -119,7 +119,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
         ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forConfig( config );
         var minFormationMembers = new MinFormationMembers( 1 );
 
-        return new AkkaMemberStandaloneTopologyService(
+        return new AkkaStandaloneTopologyService(
                 config,
                 myIdentity,
                 actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, () -> true, minFormationMembers ),
