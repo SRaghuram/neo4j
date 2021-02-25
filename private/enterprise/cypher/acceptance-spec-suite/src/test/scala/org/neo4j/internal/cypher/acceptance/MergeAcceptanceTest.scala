@@ -206,7 +206,7 @@ class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |MATCH (m:M)
         |MERGE (n)-[:REL]->(m)
         |RETURN n, m""".stripMargin,
-      expectedDifferentResults = Configs.All // Creating the second n, so different results are expected
+      assertEqualResult = false // Creating the second n, so different results are expected
     )
 
     assertStats(result, relationshipsCreated = 1, nodesCreated = 1)

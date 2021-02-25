@@ -113,7 +113,7 @@ class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     val query =
       """MATCH (a:A)-[*1..2]-(b:B)
         |RETURN DISTINCT a, b
-        |ORDER BY a""".stripMargin
+        |ORDER BY a, b""".stripMargin
 
     //when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, planComparisonStrategy =

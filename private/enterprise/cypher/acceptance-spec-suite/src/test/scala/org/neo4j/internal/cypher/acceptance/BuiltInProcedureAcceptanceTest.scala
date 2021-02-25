@@ -67,7 +67,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     graph.createUniqueConstraint("Department", "prop")
 
     // When
-    val result = executeWith(Configs.ProcedureCallRead, "CALL db.schema.visualization()", expectedDifferentResults = Configs.All).toList
+    val result = executeWith(Configs.ProcedureCallRead, "CALL db.schema.visualization()", assertEqualResult = false).toList
 
     // Then
     result.size should equal(1)
