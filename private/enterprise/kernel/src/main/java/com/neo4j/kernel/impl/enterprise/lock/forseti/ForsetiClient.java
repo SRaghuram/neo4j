@@ -233,6 +233,7 @@ public class ForsetiClient implements Locks.Client
                         if ( lockMap.putIfAbsent( resourceId, mySharedLock ) == null )
                         {
                             // Success, we now hold the shared lock.
+                            memoryTracker.allocateHeap( CONCURRENT_NODE_SIZE );
                             break;
                         }
                         else
@@ -247,6 +248,7 @@ public class ForsetiClient implements Locks.Client
                         if ( ((SharedLock) existingLock).acquire( this ) )
                         {
                             // Success!
+                            memoryTracker.allocateHeap( CONCURRENT_NODE_SIZE );
                             break;
                         }
                     }
