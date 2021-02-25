@@ -19,7 +19,7 @@ fi
 new_neo4j_version="${1}"
 old_neo4j_version="${2}"
 # default s3 destination base
-s3_dest_datasets_url="s3://storage.benchmarking.neo4j.com/datasets/macro"
+s3_dest_datasets_url="s3://storage.benchmarking.neo4j.today/datasets/macro"
 
 db_and_workloads_record_format=(
  "accesscontrol;accesscontrol;high_limit"

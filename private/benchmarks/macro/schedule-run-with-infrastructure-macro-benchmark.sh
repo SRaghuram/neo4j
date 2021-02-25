@@ -114,7 +114,7 @@ neo4j_commit=$(git rev-parse HEAD)
 triggered_by=$(whoami)
 parent_teamcity_build="-1"
 teamcity_build="$RANDOM"
-artifact_base_uri=s3://storage.benchmarking.neo4j.com/artifacts/macro/
+artifact_base_uri=s3://storage.benchmarking.neo4j.today/artifacts/macro/
 
 $java_cmd -jar $benchmark_infra_scheduler_jar \
   schedule \
