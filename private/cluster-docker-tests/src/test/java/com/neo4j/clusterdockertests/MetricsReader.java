@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -72,15 +73,15 @@ public class MetricsReader
         private final Logger log = LoggerFactory.getLogger( this.getClass() );
         private final Map<String,Consumer<Map<String,Value>>> expectations = new HashMap<>();
 
-        <T> MetricExpectations add( Pair<String,MetricParser<T>> metricDefinition, Function<T,Assert<?,T>> assertion )
+        <T> MetricExpectations add( Pair<String,MetricParser<T>> metricDefinition, BiFunction<String,T,Assert<?,T>> assertion )
         {
             return add( metricDefinition.first(), metricDefinition.other(), assertion );
         }
 
-        <T> MetricExpectations add( String key, MetricParser<T> parser, Function<T,Assert<?,T>> assertion )
+        <T> MetricExpectations add( String key, MetricParser<T> parser, BiFunction<String,T,Assert<?,T>> assertion )
         {
             assertThat( expectations ).as( "cannot set multiple expectations on a single metric" ).doesNotContainKey( key );
-            expectations.put( key, a -> assertion.apply( parser.parse( a ) ) );
+            expectations.put( key, a -> assertion.apply( key, parser.parse( a ) ) );
             return this;
         }
 
@@ -106,13 +107,13 @@ public class MetricsReader
         }
     }
 
-    public static Function<Long,Assert<?,Long>> isLessThanOrEqualTo( int expected )
+    public static BiFunction<String,Long,Assert<?,Long>> isLessThanOrEqualTo( int expected )
     {
-        return m -> assertThat( m ).isLessThanOrEqualTo( expected );
+        return ( k, m ) -> assertThat( m ).as( k ).isLessThanOrEqualTo( expected );
     }
 
-    public static Function<Long,Assert<?,Long>> isEqualTo( int expected )
+    public static BiFunction<String,Long,Assert<?,Long>> isEqualTo( int expected )
     {
-        return m -> assertThat( m ).isEqualTo( expected );
+        return ( k, m ) -> assertThat( m ).as( k ).isEqualTo( expected );
     }
 }
