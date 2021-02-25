@@ -363,7 +363,10 @@ public class ForsetiClient implements Locks.Client
                 }
 
                 heldLocks.put( resourceId, 1 );
-                memoryTracker.allocateHeap( CONCURRENT_NODE_SIZE );
+                if ( existingLock == null )
+                {
+                    memoryTracker.allocateHeap( CONCURRENT_NODE_SIZE );
+                }
             }
         }
         finally
@@ -842,7 +845,7 @@ public class ForsetiClient implements Locks.Client
             // Also cleaning updater reference that can hold lock in memory
             ((SharedLock) lock).cleanUpdateHolder();
             lockMap.remove( resourceId );
-            memoryTracker.releaseHeap( CONCURRENT_NODE_SIZE );
+        memoryTracker.releaseHeap( CONCURRENT_NODE_SIZE );
         }
     }
 
