@@ -13,9 +13,12 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
@@ -29,11 +32,14 @@ import org.neo4j.test.extension.Inject;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow;
 
+@DriverExtension
 @ClusterExtension
 @TestInstance( PER_METHOD )
 class LeaderTransferIT
@@ -47,6 +53,9 @@ class LeaderTransferIT
 
     @Inject
     private ClusterFactory clusterFactory;
+
+    @Inject
+    private DriverFactory driverFactory;
 
     Cluster setUpCluster() throws ExecutionException, InterruptedException
     {
@@ -89,6 +98,8 @@ class LeaderTransferIT
 
         assertLeaderIsOnCorrectMember( cluster, DEFAULT_DATABASE_NAME, additionalCore );
         assertLeaderIsOnCorrectMember( cluster, SYSTEM_DATABASE_NAME, additionalCore );
+
+        assertLeadershipsReportedToUserAreUnbalanced( cluster, 2 );
     }
 
     @Test
@@ -133,6 +144,19 @@ class LeaderTransferIT
 
         assertDatabaseEventuallyStarted( databaseFoo, cluster );
         assertLeaderIsOnCorrectMember( cluster, databaseFoo, additionalCore );
+
+        assertLeadershipsReportedToUserAreUnbalanced( cluster, 3 );
+    }
+
+    private void assertLeadershipsReportedToUserAreUnbalanced( Cluster cluster, int expectedNumberOfDatabases ) throws IOException
+    {
+        var clusterChecker = driverFactory.clusterChecker( cluster );
+        assertEventuallyDoesNotThrow( "leaderships should NOT be well balanced",
+                                      () -> assertThat( clusterChecker.areLeadershipsWellBalanced( expectedNumberOfDatabases ) )
+                                              .isFalse(),
+                                      1,
+                                      TimeUnit.MINUTES
+        );
     }
 
     @Test
@@ -171,12 +195,25 @@ class LeaderTransferIT
         // then
         assertEventually( "New member has leaderships", () -> hasAnyLeaderships( cluster, newMember, dbNames ),
                           identity, 3, TimeUnit.MINUTES );
+
+        assertLeadershipsReportedToUserAreBalanced( cluster, 2 + dbNames.size() );
+    }
+
+    private void assertLeadershipsReportedToUserAreBalanced( Cluster cluster, int expectedNumberOfDatabases ) throws IOException
+    {
+        var clusterChecker = driverFactory.clusterChecker( cluster );
+        assertEventuallyDoesNotThrow( "leaderships should be well balanced",
+                                      () -> assertThat( clusterChecker.areLeadershipsWellBalanced( expectedNumberOfDatabases ) )
+                                              .isTrue(),
+                                      1,
+                                      TimeUnit.MINUTES
+        );
     }
 
     private static void assertLeaderIsOnCorrectMember( Cluster cluster, String database, CoreClusterMember desiredLeader )
     {
         assertEventually( "leader is on correct member " + desiredLeader, () -> cluster.awaitLeader( database ),
-                coreClusterMember -> coreClusterMember.serverId().equals( desiredLeader.serverId() ), 1, TimeUnit.MINUTES );
+                          coreClusterMember -> coreClusterMember.serverId().equals( desiredLeader.serverId() ), 1, TimeUnit.MINUTES );
     }
 
     private static boolean hasAnyLeaderships( Cluster cluster, CoreClusterMember member, List<String> dbNames )

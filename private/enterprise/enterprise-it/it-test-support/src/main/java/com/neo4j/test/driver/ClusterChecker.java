@@ -208,4 +208,25 @@ public final class ClusterChecker implements AutoCloseable
             throw new RuntimeException( e );
         }
     }
+
+    private int numberOfServers()
+    {
+        return driverCache.size();
+    }
+
+    public boolean areLeadershipsWellBalanced( int expectedNumberOfDatabases ) throws InterruptedException, ExecutionException, TimeoutException
+    {
+        var results = assertCypherResponseMatchesOnAllServers( "SHOW DATABASES YIELD name, address, role WHERE role='leader'" );
+
+        List<String> databases = results.stream().map( r -> r.get( "name" ).asString() ).distinct().collect( Collectors.toList() );
+        assertThat( databases ).hasSize( expectedNumberOfDatabases );
+        var totalNumberOfDatabases = databases.size();
+
+        var dbsPerAddress = results.stream().collect( Collectors.groupingBy( r -> r.get( "address" ) ) );
+
+        var mostDatabaseLeaderships = dbsPerAddress.values().stream().mapToInt( List::size ).max().getAsInt();
+        var fewestDatabaseLeaderships = dbsPerAddress.size() < numberOfServers() ? 0
+                                                                                 : dbsPerAddress.values().stream().mapToInt( List::size ).min().getAsInt();
+        return mostDatabaseLeaderships == fewestDatabaseLeaderships || mostDatabaseLeaderships == fewestDatabaseLeaderships + 1;
+    }
 }

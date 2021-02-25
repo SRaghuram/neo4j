@@ -5,6 +5,7 @@
  */
 package com.neo4j.clusterdockertests;
 
+import com.neo4j.test.driver.ClusterChecker;
 import com.neo4j.test.driver.DriverExtension;
 import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -21,10 +22,15 @@ import org.testcontainers.containers.Neo4jContainer;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.junit.jupiter.causal_cluster.CausalCluster;
 import org.neo4j.junit.jupiter.causal_cluster.CoreModifier;
 import org.neo4j.junit.jupiter.causal_cluster.NeedsCausalCluster;
@@ -36,6 +42,7 @@ import static com.neo4j.clusterdockertests.MetricsReader.isEqualTo;
 import static com.neo4j.clusterdockertests.MetricsReader.replicatedDataMetric;
 import static com.neo4j.configuration.MetricsSettings.metrics_filter;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 @NeedsCausalCluster
@@ -52,9 +59,11 @@ public class ExampleTest
     private static Neo4jCluster cluster;
 
     private final Logger log = LoggerFactory.getLogger( this.getClass() );
+    private final MetricsReader metricsReader = new MetricsReader();
 
     private Driver driver;
-    private final MetricsReader metricsReader = new MetricsReader();
+    private ClusterChecker clusterChecker;
+    private int expectedNumberOfDatabases = 2;
 
     @CoreModifier
     private static Neo4jContainer<?> configure( Neo4jContainer<?> input ) throws IOException
@@ -81,6 +90,12 @@ public class ExampleTest
         driver = driverFactory.graphDatabaseDriver( cluster.getURIs() );
         // make sure that cluster is ready to go before we start
         driver.verifyConnectivity();
+        clusterChecker = driverFactory.clusterChecker(
+                cluster.getAllServersOfType( Neo4jServer.Type.CORE_SERVER )
+                       .stream()
+                       .map( Neo4jServer::getDirectBoltUri )
+                       .collect( Collectors.toSet() )
+        );
     }
 
     @AfterEach
@@ -96,7 +111,11 @@ public class ExampleTest
         // when
         Set<Neo4jServer> stopped = cluster.stopRandomServers( 1 );
 
-        Thread.sleep( 100 );
+        try ( var session = driver.session( SessionConfig.forDatabase( "system" ) ) )
+        {
+            session.writeTransaction( tx -> tx.run( "CREATE DATABASE `stopStartOneServerTest` WAIT" ).consume() );
+            expectedNumberOfDatabases += 1;
+        }
 
         // when
         Set<Neo4jServer> started = cluster.startServers( stopped );
@@ -105,16 +124,21 @@ public class ExampleTest
         // then
         assertThat( started ).containsExactlyInAnyOrderElementsOf( stopped );
         driver.verifyConnectivity();
-        checkMetrics();
+        assertEventuallyDoesNotThrow( "Check Leaderships", this::checkLeaderships, 2, TimeUnit.MINUTES );
+        assertEventuallyDoesNotThrow( "Check Metrics", this::checkMetrics, 2, TimeUnit.MINUTES );
     }
 
     @Test
-    void killStartOneServerTest() throws Neo4jCluster.Neo4jTimeoutException, InterruptedException
+    void killStartOneServerTest() throws Exception
     {
         // when
         Set<Neo4jServer> stopped = cluster.killRandomServers( 1 );
 
-        Thread.sleep( 100 );
+        try ( var session = driver.session( SessionConfig.forDatabase( "system" ) ) )
+        {
+            session.writeTransaction( tx -> tx.run( "CREATE DATABASE `killStartOneServerTest` WAIT" ).consume() );
+            expectedNumberOfDatabases += 1;
+        }
 
         // when
         Set<Neo4jServer> started = cluster.startServers( stopped );
@@ -123,13 +147,14 @@ public class ExampleTest
         // then
         assertThat( started ).containsExactlyInAnyOrderElementsOf( stopped );
         driver.verifyConnectivity();
-        checkMetrics();
+        assertEventuallyDoesNotThrow( "Check Leaderships", this::checkLeaderships, 2, TimeUnit.MINUTES );
+        assertEventuallyDoesNotThrow( "Check Metrics", this::checkMetrics, 2, TimeUnit.MINUTES );
     }
 
-    private void checkMetrics()
+    private void checkMetrics() throws IOException
     {
         var expectations = new MetricsReader.MetricExpectations()
-                .add( replicatedDataMetric( "per_db_leader_name.visible" ), isEqualTo( 2 ) );
+                .add( replicatedDataMetric( "per_db_leader_name.visible" ), isEqualTo( expectedNumberOfDatabases ) );
 
         for ( var server : cluster.getAllServers() )
         {
@@ -137,10 +162,13 @@ public class ExampleTest
             {
                 metricsReader.checkExpectations( driver, expectations );
             }
-            catch ( IOException e )
-            {
-                e.printStackTrace();
-            }
         }
+    }
+
+    private void checkLeaderships() throws InterruptedException, ExecutionException, TimeoutException
+    {
+        assertThat( clusterChecker.areLeadershipsWellBalanced( expectedNumberOfDatabases ) )
+                .as( "leaderships should be well balanced" )
+                .isTrue();
     }
 }
