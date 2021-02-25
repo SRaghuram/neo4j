@@ -62,15 +62,14 @@ class RecoveryProtocol
 
     State run() throws IOException, DamagedLogStorageException, DisposedException
     {
-        State state = new State();
         SortedMap<Long,Path> files = fileNames.getAllFiles( fileSystem, log );
 
         if ( files.entrySet().isEmpty() )
         {
-            state.segments = new Segments( fileSystem, fileNames, readerPool, emptyList(), marshalSelector, logProvider, -1, memoryTracker );
-            state.segments.rotate( -1, -1, -1 );
-            state.terms = new Terms( -1, -1 );
-            return state;
+            var segments = new Segments( fileSystem, fileNames, readerPool, emptyList(), marshalSelector, logProvider, -1, memoryTracker );
+            segments.rotate( -1, -1, -1 );
+            var terms = new Terms( -1, -1 );
+            return new State( segments, terms );
         }
 
         List<SegmentFile> segmentFiles = new ArrayList<>();
@@ -79,6 +78,9 @@ class RecoveryProtocol
         long expectedSegmentNumber = files.firstKey();
         boolean mustRecoverLastHeader = false;
         boolean skip = true; // the first file is treated the same as a skip
+
+        long prevIndex = -1;
+        long prevTerm = -1;
 
         for ( Map.Entry<Long,Path> entry : files.entrySet() )
         {
@@ -122,8 +124,8 @@ class RecoveryProtocol
 
             if ( skip )
             {
-                state.prevIndex = segment.header().prevIndex();
-                state.prevTerm = segment.header().prevTerm();
+                prevIndex = segment.header().prevIndex();
+                prevTerm = segment.header().prevTerm();
                 skip = false;
             }
 
@@ -132,22 +134,22 @@ class RecoveryProtocol
 
         assert segment != null;
 
-        state.appendIndex = segment.header().prevIndex();
-        state.terms = new Terms( segment.header().prevIndex(), segment.header().prevTerm() );
+        long appendIndex = segment.header().prevIndex();
+        var terms = new Terms( segment.header().prevIndex(), segment.header().prevTerm() );
 
         try ( IOCursor<EntryRecord> cursor = segment.getCursor( segment.header().prevIndex() + 1 ) )
         {
             while ( cursor.next() )
             {
                 EntryRecord entry = cursor.get();
-                state.appendIndex = entry.logIndex();
-                state.terms.append( state.appendIndex, entry.logEntry().term() );
+                appendIndex = entry.logIndex();
+                terms.append( appendIndex, entry.logEntry().term() );
             }
         }
 
         if ( mustRecoverLastHeader )
         {
-            SegmentHeader header = new SegmentHeader( state.appendIndex, expectedSegmentNumber, state.appendIndex, state.terms.latest() );
+            SegmentHeader header = new SegmentHeader( appendIndex, expectedSegmentNumber, appendIndex, terms.latest() );
             log.warn( "Recovering last file based on next-to-last file. " + header );
 
             Path file = fileNames.getForSegment( expectedSegmentNumber );
@@ -158,10 +160,9 @@ class RecoveryProtocol
             segmentFiles.add( segment );
         }
 
-        state.segments = new Segments( fileSystem, fileNames, readerPool, segmentFiles, marshalSelector, logProvider,
+        var segments = new Segments( fileSystem, fileNames, readerPool, segmentFiles, marshalSelector, logProvider,
                 segment.header().segmentNumber(), memoryTracker );
-
-        return state;
+        return new State( segments, terms, appendIndex, prevIndex, prevTerm );
     }
 
     private static SegmentHeader loadHeader(

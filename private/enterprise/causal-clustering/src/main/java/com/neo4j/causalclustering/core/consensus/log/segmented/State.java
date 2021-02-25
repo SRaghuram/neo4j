@@ -8,14 +8,68 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 /**
  * Collects all the state that must be recovered after a restart.
  */
-public class State
+class State
 {
-    Segments segments;
-    Terms terms;
+    private final Segments segments;
+    private final Terms terms;
 
-    long prevIndex = -1;
-    long prevTerm = -1;
-    long appendIndex = -1;
+    private long prevIndex;
+    private long prevTerm;
+    private long appendIndex;
+
+    State( Segments segments, Terms terms )
+    {
+        this( segments, terms, -1, -1, -1 );
+    }
+
+    State( Segments segments, Terms terms, long appendIndex, long prevIndex, long prevTerm )
+    {
+        this.segments = segments;
+        this.terms = terms;
+        this.appendIndex = appendIndex;
+        this.prevIndex = prevIndex;
+        this.prevTerm = prevTerm;
+    }
+
+    void setPrevIndex( long prevIndex )
+    {
+        this.prevIndex = prevIndex;
+    }
+
+    void setPrevTerm( long prevTerm )
+    {
+        this.prevTerm = prevTerm;
+    }
+
+    void setAppendIndex( long appendIndex )
+    {
+        this.appendIndex = appendIndex;
+    }
+
+    long prevIndex()
+    {
+        return prevIndex;
+    }
+
+    long prevTerm()
+    {
+        return prevTerm;
+    }
+
+    long appendIndex()
+    {
+        return appendIndex;
+    }
+
+    Segments segments()
+    {
+        return segments;
+    }
+
+    Terms terms()
+    {
+        return terms;
+    }
 
     @Override
     public String toString()

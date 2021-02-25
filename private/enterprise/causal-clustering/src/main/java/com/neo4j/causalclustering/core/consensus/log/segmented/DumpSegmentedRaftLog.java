@@ -50,7 +50,7 @@ class DumpSegmentedRaftLog
         //TODO: Update to provide a proper MarshalSelector (although in this dump tool its probably just the latest?)
         RecoveryProtocol recoveryProtocol =
                 new RecoveryProtocol( fileSystem, fileNames, readerPool, ignored -> marshal, logProvider, memoryTracker );
-        Segments segments = recoveryProtocol.run().segments;
+        Segments segments = recoveryProtocol.run().segments();
 
         segments.visit( segment -> {
                 logsFound[0]++;

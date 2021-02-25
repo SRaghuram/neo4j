@@ -112,10 +112,10 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
          * As an obvious optimization, we don't need to rotate if the file contains only the header, such as is
          * the case of a newly created log.
          */
-        SegmentFile lastSegment = state.segments.last();
+        SegmentFile lastSegment = state.segments().last();
         if ( lastSegment.size() > lastSegment.header().recordOffset() )
         {
-            rotateSegment( state.appendIndex, state.appendIndex, state.terms.latest() );
+            rotateSegment( state.appendIndex(), state.appendIndex(), state.terms().latest() );
         }
 
         readerPoolPruner = scheduler.scheduleRecurring( Group.RAFT_READER_POOL_PRUNER,
@@ -130,7 +130,7 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
             readerPoolPruner.cancel();
         }
         readerPool.close();
-        state.segments.close();
+        state.segments().close();
     }
 
     @Override
@@ -142,11 +142,11 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
         {
             for ( RaftLogEntry entry : entries )
             {
-                state.appendIndex++;
-                state.terms.append( state.appendIndex, entry.term() );
-                state.segments.last().write( state.appendIndex, entry );
+                state.setAppendIndex( state.appendIndex() + 1 );
+                state.terms().append( state.appendIndex(), entry.term() );
+                state.segments().last().write( state.appendIndex(), entry );
             }
-            state.segments.last().flush();
+            state.segments().last().flush();
         }
         catch ( Throwable e )
         {
@@ -154,12 +154,12 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
             throw e;
         }
 
-        if ( state.segments.last().position() >= rotateAtSize )
+        if ( state.segments().last().position() >= rotateAtSize )
         {
-            rotateSegment( state.appendIndex, state.appendIndex, state.terms.latest() );
+            rotateSegment( state.appendIndex(), state.appendIndex(), state.terms().latest() );
         }
 
-        return state.appendIndex;
+        return state.appendIndex();
     }
 
     private void ensureOk()
@@ -174,54 +174,54 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     public synchronized void truncate( long fromIndex ) throws IOException
     {
         log.debug( "Truncate from index %d", fromIndex );
-        if ( state.appendIndex < fromIndex )
+        if ( state.appendIndex() < fromIndex )
         {
             throw new IllegalArgumentException( "Cannot truncate at index " + fromIndex + " when append index is " +
-                                                state.appendIndex );
+                                                state.appendIndex() );
         }
 
         long newAppendIndex = fromIndex - 1;
         long newTerm = readEntryTerm( newAppendIndex );
-        truncateSegment( state.appendIndex, newAppendIndex, newTerm );
+        truncateSegment( state.appendIndex(), newAppendIndex, newTerm );
 
-        state.appendIndex = newAppendIndex;
-        state.terms.truncate( fromIndex );
+        state.setAppendIndex( newAppendIndex );
+        state.terms().truncate( fromIndex );
     }
 
     private void rotateSegment( long prevFileLastIndex, long prevIndex, long prevTerm ) throws IOException
     {
-        state.segments.last().closeWriter();
-        state.segments.rotate( prevFileLastIndex, prevIndex, prevTerm );
+        state.segments().last().closeWriter();
+        state.segments().rotate( prevFileLastIndex, prevIndex, prevTerm );
     }
 
     private void truncateSegment( long prevFileLastIndex, long prevIndex, long prevTerm ) throws IOException
     {
-        state.segments.last().closeWriter();
-        state.segments.truncate( prevFileLastIndex, prevIndex, prevTerm );
+        state.segments().last().closeWriter();
+        state.segments().truncate( prevFileLastIndex, prevIndex, prevTerm );
     }
 
     private void skipSegment( long prevFileLastIndex, long prevIndex, long prevTerm ) throws IOException
     {
-        state.segments.last().closeWriter();
-        state.segments.skip( prevFileLastIndex, prevIndex, prevTerm );
+        state.segments().last().closeWriter();
+        state.segments().skip( prevFileLastIndex, prevIndex, prevTerm );
     }
 
     @Override
     public long appendIndex()
     {
-        return state.appendIndex;
+        return state.appendIndex();
     }
 
     @Override
     public long prevIndex()
     {
-        return state.prevIndex;
+        return state.prevIndex();
     }
 
     @Override
     public RaftLogCursor getEntryCursor( long fromIndex )
     {
-        final IOCursor<EntryRecord> inner = new EntryCursor( state.segments, fromIndex );
+        final IOCursor<EntryRecord> inner = new EntryCursor( state.segments(), fromIndex );
         return new SegmentedRaftLogCursor( fromIndex, inner );
     }
 
@@ -229,24 +229,24 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     public synchronized long skip( long newIndex, long newTerm ) throws IOException
     {
         log.info( "Skipping from {index: %d, term: %d} to {index: %d, term: %d}",
-                state.appendIndex, state.terms.latest(), newIndex, newTerm );
+                state.appendIndex(), state.terms().latest(), newIndex, newTerm );
 
-        if ( state.appendIndex < newIndex )
+        if ( state.appendIndex() < newIndex )
         {
-            skipSegment( state.appendIndex, newIndex, newTerm );
-            state.terms.skip( newIndex, newTerm );
+            skipSegment( state.appendIndex(), newIndex, newTerm );
+            state.terms().skip( newIndex, newTerm );
 
-            state.prevIndex = newIndex;
-            state.prevTerm = newTerm;
-            state.appendIndex = newIndex;
+            state.setPrevIndex( newIndex );
+            state.setPrevTerm( newTerm );
+            state.setAppendIndex( newIndex );
         }
 
-        return state.appendIndex;
+        return state.appendIndex();
     }
 
     private RaftLogEntry readLogEntry( long logIndex ) throws IOException
     {
-        try ( IOCursor<EntryRecord> cursor = new EntryCursor( state.segments, logIndex ) )
+        try ( IOCursor<EntryRecord> cursor = new EntryCursor( state.segments(), logIndex ) )
         {
             return cursor.next() ? cursor.get().logEntry() : null;
         }
@@ -255,12 +255,12 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     @Override
     public long readEntryTerm( long logIndex ) throws IOException
     {
-        if ( logIndex > state.appendIndex )
+        if ( logIndex > state.appendIndex() )
         {
             return -1;
         }
-        long term = state.terms.get( logIndex );
-        if ( term == -1 && logIndex >= state.prevIndex )
+        long term = state.terms().get( logIndex );
+        if ( term == -1 && logIndex >= state.prevIndex() )
         {
             RaftLogEntry entry = readLogEntry( logIndex );
             term = (entry != null) ? entry.term() : -1;
@@ -269,29 +269,29 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     }
 
     @Override
-    public long prune( long safeIndex )
+    public synchronized long prune( long safeIndex )
     {
         log.debug( "Prune to %s. Current state is %s", safeIndex, state );
-        long pruneIndex = pruner.getIndexToPruneFrom( safeIndex, state.segments );
-        SegmentFile oldestNotDisposed = state.segments.prune( pruneIndex );
+        long pruneIndex = pruner.getIndexToPruneFrom( safeIndex, state.segments() );
+        SegmentFile oldestNotDisposed = state.segments().prune( pruneIndex );
 
         long newPrevIndex = oldestNotDisposed.header().prevIndex();
         long newPrevTerm = oldestNotDisposed.header().prevTerm();
 
-        if ( newPrevIndex > state.prevIndex )
+        if ( newPrevIndex > state.prevIndex() )
         {
-            state.prevIndex = newPrevIndex;
+            state.setPrevIndex( newPrevIndex );
         }
 
-        if ( newPrevTerm > state.prevTerm )
+        if ( newPrevTerm > state.prevTerm() )
         {
-            state.prevTerm = newPrevTerm;
+            state.setPrevTerm( newPrevTerm );
         }
 
         log.debug( "Updated state is now %s", state );
 
-        state.terms.prune( state.prevIndex );
+        state.terms().prune( state.prevIndex() );
 
-        return state.prevIndex;
+        return state.prevIndex();
     }
 }

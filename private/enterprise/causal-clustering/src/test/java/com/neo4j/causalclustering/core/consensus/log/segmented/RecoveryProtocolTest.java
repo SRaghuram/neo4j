@@ -56,11 +56,11 @@ class RecoveryProtocolTest
         State state = protocol.run();
 
         // then
-        Assertions.assertEquals( -1, state.appendIndex );
-        Assertions.assertEquals( -1, state.terms.latest() );
-        Assertions.assertEquals( -1, state.prevIndex );
-        Assertions.assertEquals( -1, state.prevTerm );
-        Assertions.assertEquals( 0, state.segments.last().header().segmentNumber() );
+        Assertions.assertEquals( -1, state.appendIndex() );
+        Assertions.assertEquals( -1, state.terms().latest() );
+        Assertions.assertEquals( -1, state.prevIndex() );
+        Assertions.assertEquals( -1, state.prevTerm() );
+        Assertions.assertEquals( 0, state.segments().last().header().segmentNumber() );
     }
 
     @Test
@@ -154,7 +154,7 @@ class RecoveryProtocolTest
 
         // when
         State state = protocol.run();
-        SegmentFile newFile = state.segments.rotate( 20, 20, 1 );
+        SegmentFile newFile = state.segments().rotate( 20, 20, 1 );
 
         // then
         Assertions.assertEquals( 20, newFile.header().prevFileLastIndex() );
@@ -175,7 +175,7 @@ class RecoveryProtocolTest
 
         // when
         State state = protocol.run();
-        SegmentFile newFile = state.segments.truncate( 20, 15, 0 );
+        SegmentFile newFile = state.segments().truncate( 20, 15, 0 );
 
         // then
         Assertions.assertEquals( 20, newFile.header().prevFileLastIndex() );
@@ -196,7 +196,7 @@ class RecoveryProtocolTest
 
         // when
         State state = protocol.run();
-        SegmentFile newFile = state.segments.skip( 20, 40, 2 );
+        SegmentFile newFile = state.segments().skip( 20, 40, 2 );
 
         // then
         Assertions.assertEquals( 20, newFile.header().prevFileLastIndex() );
@@ -231,15 +231,15 @@ class RecoveryProtocolTest
         State state = protocol.run();
 
         // then
-        Assertions.assertEquals( bootstrapIndex, state.prevIndex );
-        Assertions.assertEquals( bootstrapTerm, state.prevTerm );
+        Assertions.assertEquals( bootstrapIndex, state.prevIndex() );
+        Assertions.assertEquals( bootstrapTerm, state.prevTerm() );
 
-        Assertions.assertEquals( -1, state.terms.get( -1 ) );
-        Assertions.assertEquals( -1, state.terms.get( bootstrapIndex - 1 ) );
-        Assertions.assertEquals( bootstrapTerm, state.terms.get( bootstrapIndex ) );
-        Assertions.assertEquals( -1, state.terms.get( bootstrapIndex + 1 ) );
+        Assertions.assertEquals( -1, state.terms().get( -1 ) );
+        Assertions.assertEquals( -1, state.terms().get( bootstrapIndex - 1 ) );
+        Assertions.assertEquals( bootstrapTerm, state.terms().get( bootstrapIndex ) );
+        Assertions.assertEquals( -1, state.terms().get( bootstrapIndex + 1 ) );
 
-        Assertions.assertEquals( bootstrapTerm, state.terms.latest() );
+        Assertions.assertEquals( bootstrapTerm, state.terms().latest() );
     }
 
     @Test
@@ -256,17 +256,17 @@ class RecoveryProtocolTest
         State state = protocol.run();
 
         // then
-        Assertions.assertEquals( 2000, state.prevIndex );
-        Assertions.assertEquals( 999, state.prevTerm );
+        Assertions.assertEquals( 2000, state.prevIndex() );
+        Assertions.assertEquals( 999, state.prevTerm() );
 
-        Assertions.assertEquals( -1, state.terms.get( 20 ) );
-        Assertions.assertEquals( -1, state.terms.get( 200 ) );
-        Assertions.assertEquals( -1, state.terms.get( 1999 ) );
+        Assertions.assertEquals( -1, state.terms().get( 20 ) );
+        Assertions.assertEquals( -1, state.terms().get( 200 ) );
+        Assertions.assertEquals( -1, state.terms().get( 1999 ) );
 
-        Assertions.assertEquals( 999, state.terms.get( 2000 ) );
-        Assertions.assertEquals( -1, state.terms.get( 2001 ) );
+        Assertions.assertEquals( 999, state.terms().get( 2000 ) );
+        Assertions.assertEquals( -1, state.terms().get( 2001 ) );
 
-        Assertions.assertEquals( 999, state.terms.latest() );
+        Assertions.assertEquals( 999, state.terms().latest() );
     }
 
     private void createLogFile( FileSystemAbstraction fsa, long prevFileLastIndex, long fileNameVersion,

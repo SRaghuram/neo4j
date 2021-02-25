@@ -97,8 +97,8 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         // We use a temporary RecoveryProtocol to get the file to chop
         RecoveryProtocol recovery = createRecoveryProtocol();
         State recoveryState = recovery.run();
-        String logFilename = recoveryState.segments.last().getFilename();
-        recoveryState.segments.close();
+        String logFilename = recoveryState.segments().last().getFilename();
+        recoveryState.segments().close();
         Path logFile = logDirectory.resolve( logFilename );
 
         // When
@@ -124,8 +124,8 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         // We use a temporary RecoveryProtocol to get the file to chop
         RecoveryProtocol recovery = createRecoveryProtocol();
         State recoveryState = recovery.run();
-        String logFilename = recoveryState.segments.last().getFilename();
-        recoveryState.segments.close();
+        String logFilename = recoveryState.segments().last().getFilename();
+        recoveryState.segments().close();
         Path logFile = logDirectory.resolve( logFilename );
 
         // When
@@ -151,8 +151,8 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         // We use a temporary RecoveryProtocol to get the file to chop
         RecoveryProtocol recovery = createRecoveryProtocol();
         State recoveryState = recovery.run();
-        String logFilename = recoveryState.segments.last().getFilename();
-        recoveryState.segments.close();
+        String logFilename = recoveryState.segments().last().getFilename();
+        recoveryState.segments().close();
         Path logFile = logDirectory.resolve( logFilename );
         StoreChannel lastFile = fs.write( logFile );
         long currentSize = lastFile.size();
@@ -206,7 +206,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
             lastFile.close();
             recovery = createRecoveryProtocol();
             State state = recovery.run();
-            state.segments.close();
+            state.segments().close();
         }
     }
 }
