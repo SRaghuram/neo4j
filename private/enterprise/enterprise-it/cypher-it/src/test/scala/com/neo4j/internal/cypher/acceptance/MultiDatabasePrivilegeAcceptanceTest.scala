@@ -98,7 +98,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute("DENY STOP ON DEFAULT DATABASE TO $r", Map("r" -> "role"))
+    execute("DENY STOP ON HOME DATABASE TO $r", Map("r" -> "role"))
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -139,7 +139,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute("DENY ACCESS ON DEFAULT DATABASE TO $role", Map("role" -> "custom"))
+    execute("DENY ACCESS ON HOME DATABASE TO $role", Map("role" -> "custom"))
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -148,7 +148,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute("REVOKE GRANT ACCESS ON DEFAULT DATABASE FROM $role", Map("role" -> "custom"))
+    execute("REVOKE GRANT ACCESS ON HOME DATABASE FROM $role", Map("role" -> "custom"))
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -258,7 +258,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("CREATE ROLE role")
 
     // WHEN
-    execute("GRANT ACCESS ON DEFAULT DATABASE TO role")
+    execute("GRANT ACCESS ON HOME DATABASE TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -266,8 +266,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute("REVOKE GRANT ACCESS ON DEFAULT DATABASE FROM role")
-    execute("DENY START ON DEFAULT DATABASE TO role")
+    execute("REVOKE GRANT ACCESS ON HOME DATABASE FROM role")
+    execute("DENY START ON HOME DATABASE TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -275,8 +275,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute("REVOKE DENY START ON DEFAULT DATABASE FROM role")
-    execute("GRANT STOP ON DEFAULT DATABASE TO role")
+    execute("REVOKE DENY START ON HOME DATABASE FROM role")
+    execute("GRANT STOP ON HOME DATABASE TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -284,7 +284,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute("REVOKE STOP ON DEFAULT DATABASE FROM role")
+    execute("REVOKE STOP ON HOME DATABASE FROM role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
@@ -500,8 +500,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus, home = true, default = true)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus)))
 
-    // WHEN: Grant on default database
-    execute(s"GRANT START ON DEFAULT DATABASE TO role")
+    // WHEN: Grant ON HOME DATABASE
+    execute(s"GRANT START ON HOME DATABASE TO role")
 
     // THEN: Get privilege on default
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(startDatabase).database(DEFAULT).role("role").map))
@@ -743,8 +743,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, onlineStatus, home = true, default = true)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus)))
 
-    // WHEN: Grant on default database
-    execute(s"GRANT STOP ON DEFAULT DATABASE TO role")
+    // WHEN: Grant ON HOME DATABASE
+    execute(s"GRANT STOP ON HOME DATABASE TO role")
 
     // THEN: Get privilege on default
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(stopDatabase).database(DEFAULT).role("role").map))
@@ -885,8 +885,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase)))
     execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(homeOrDefaultDb(DEFAULT_DATABASE_NAME)))
 
-    // WHEN: Grant on default database
-    execute(s"GRANT ACCESS ON DEFAULT DATABASE TO role")
+    // WHEN: Grant ON HOME DATABASE
+    execute(s"GRANT ACCESS ON HOME DATABASE TO role")
 
     // THEN: Get privilege on default
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(access).database(DEFAULT).role("role").map))
@@ -922,7 +922,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     clearPublicRole()
 
     // WHEN
-    execute("GRANT ALL ON DEFAULT DATABASE TO custom")
+    execute("GRANT ALL ON HOME DATABASE TO custom")
 
     // THEN
     executeOnDBMSDefault("alice", "abc", "MATCH (n) RETURN n") should be(0)

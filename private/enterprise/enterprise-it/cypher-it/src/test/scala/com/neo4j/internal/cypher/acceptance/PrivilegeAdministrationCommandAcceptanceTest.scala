@@ -627,7 +627,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     test(s"should show privileges as ${optionalRevoke.toLowerCase}commands") {
       // WHEN
       execute(s"SHOW PRIVILEGES AS ${optionalRevoke}COMMANDS").columnAs[String]("command").toSet should be(Set(
-        s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition `PUBLIC`",
+        s"${optionalRevoke}GRANT ACCESS ON HOME DATABASE $preposition `PUBLIC`",
         s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition `PUBLIC`",
         s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition `PUBLIC`",
 
@@ -748,7 +748,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       // WHEN
       execute(s"SHOW USER user PRIVILEGES AS ${optionalRevoke}COMMANDS").columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition $$role",
-        s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition $$role",
+        s"${optionalRevoke}GRANT ACCESS ON HOME DATABASE $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition $$role",
         s"${optionalRevoke}DENY EXECUTE PROCEDURE * ON DBMS $preposition $$role",
@@ -763,7 +763,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       // WHEN
       execute(s"SHOW USER $$user PRIVILEGES AS ${optionalRevoke}COMMANDS", Map("user" -> "user")).columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition $$role",
-        s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition $$role",
+        s"${optionalRevoke}GRANT ACCESS ON HOME DATABASE $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition $$role"
       ))
@@ -777,7 +777,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       executeOnSystem("joe", "soap", s"SHOW USER PRIVILEGES AS ${optionalRevoke}COMMANDS YIELD command ORDER BY command", resultHandler = (row, idx) => {
         idx match {
           case 0 => row.get("command") should be(s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition $$role")
-          case 1 => row.get("command") should be(s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition $$role")
+          case 1 => row.get("command") should be(s"${optionalRevoke}GRANT ACCESS ON HOME DATABASE $preposition $$role")
           case 2 => row.get("command") should be(s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition $$role")
           case 3 => row.get("command") should be(s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition $$role")
           case _ => fail()
@@ -794,9 +794,34 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       // WHEN
       execute(s"SHOW USER foo, $$bar, $$baz PRIVILEGES AS ${optionalRevoke}COMMANDS", Map("bar" -> "bar", "baz" -> "baz")).columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition $$role",
-        s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition $$role",
+        s"${optionalRevoke}GRANT ACCESS ON HOME DATABASE $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition $$role"
+      ))
+    }
+
+    test(s"should translate ${optionalRevoke.toLowerCase}commands with ON DEFAULT DATABASE to ON HOME DATABASE privileges") {
+      // GIVEN
+      setupUserWithCustomRole(access = false)
+      clearPublicRole()
+      execute(s"GRANT ACCESS ON DEFAULT DATABASE TO $roleName")
+
+      // WHEN
+      execute(s"SHOW USER $username PRIVILEGES AS ${optionalRevoke}COMMAND").columnAs[String]("command").toSet should be(Set(
+        s"${optionalRevoke}GRANT ACCESS ON HOME DATABASE $preposition $$role",
+      ))
+    }
+
+    test(s"should translate ${optionalRevoke.toLowerCase}commands with ON DEFAULT GRAPH to ON HOME GRAPH privileges") {
+      // GIVEN
+      setupUserWithCustomRole(access = false)
+      clearPublicRole()
+      execute(s"GRANT TRAVERSE ON DEFAULT GRAPH TO $roleName")
+
+      // WHEN
+      execute(s"SHOW USER $username PRIVILEGES AS ${optionalRevoke}COMMAND").columnAs[String]("command").toSet should be(Set(
+        s"${optionalRevoke}GRANT TRAVERSE ON HOME GRAPH NODE * $preposition $$role",
+        s"${optionalRevoke}GRANT TRAVERSE ON HOME GRAPH RELATIONSHIP * $preposition $$role",
       ))
     }
 
@@ -855,7 +880,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
       // THEN
       execute(s"SHOW USER bar PRIVILEGES AS ${optionalRevoke}COMMANDS").columnAs[String]("command").toSet should be(Set(
-        s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition $$role",
+        s"${optionalRevoke}GRANT ACCESS ON HOME DATABASE $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition $$role"
       ))
@@ -1221,6 +1246,54 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       granted(read).role("custom").graph("bar").property("prop").node("A").map,
       denied(matchPrivilege).role("custom").graph("bar").property("prop4").node("D").map
     ))
+  }
+
+  test("privilege on DEFAULT DATABASE should be revoked when using HOME DATABASE") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+    execute("GRANT ACCESS ON DEFAULT DATABASE TO custom")
+
+    // WHEN
+    execute("REVOKE ACCESS ON HOME DATABASE FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet shouldBe empty
+  }
+
+  test("privilege on HOME DATABASE should be revoked when using DEFAULT DATABASE") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+    execute("GRANT STOP ON HOME DATABASE TO custom")
+
+    // WHEN
+    execute("REVOKE STOP ON DEFAULT DATABASE FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet shouldBe empty
+  }
+
+  test("privilege on HOME GRAPH should be revoked when using DEFAULT GRAPH") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+    execute("GRANT TRAVERSE ON DEFAULT GRAPH TO custom")
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON HOME GRAPH FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet shouldBe empty
+  }
+
+  test("privilege on DEFAULT GRAPH should be revoked when using HOME GRAPH") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+    execute("GRANT TRAVERSE ON HOME GRAPH TO custom")
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON DEFAULT GRAPH FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet shouldBe empty
   }
 
   // Tests for granting and denying privileges on properties

@@ -174,7 +174,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute(s"$grantOrDenyCommand READ {*} ON GRAPH * TO custom")
         execute(s"$grantOrDenyCommand READ {*} ON GRAPH foo TO custom")
         execute(s"$grantOrDenyCommand READ {*} ON GRAPH bar TO custom")
-        execute(s"$grantOrDenyCommand READ {*} ON DEFAULT GRAPH TO custom")
+        execute(s"$grantOrDenyCommand READ {*} ON HOME GRAPH TO custom")
 
         // WHEN
         execute(s"REVOKE $revokeType READ {*} ON GRAPH foo FROM custom")

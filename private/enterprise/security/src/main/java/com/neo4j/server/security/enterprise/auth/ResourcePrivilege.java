@@ -354,7 +354,7 @@ public class ResourcePrivilege
         }
         else if ( defaultDatabase )
         {
-            return "DEFAULT " + keyword;
+            return "HOME " + keyword;
         }
         else
         {

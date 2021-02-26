@@ -56,7 +56,7 @@ class CommandsRoutingTest
             tx.run( "CREATE USER myUser SET PASSWORD 'password'" );
             tx.run( "CREATE ROLE myRole" );
             tx.run( "GRANT ROLE myRole TO myUser" );
-            tx.run( "GRANT ACCESS ON DEFAULT DATABASE TO myRole" );
+            tx.run( "GRANT ACCESS ON HOME DATABASE TO myRole" );
             tx.commit();
         } );
     }

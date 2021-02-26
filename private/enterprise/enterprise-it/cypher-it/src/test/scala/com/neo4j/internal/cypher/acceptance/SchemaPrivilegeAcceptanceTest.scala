@@ -380,7 +380,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("CREATE ROLE role")
 
     // WHEN
-    execute("GRANT INDEX ON DEFAULT DATABASE TO role")
+    execute("GRANT INDEX ON HOME DATABASE TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -388,7 +388,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
 
     // WHEN
-    execute("REVOKE INDEX ON DEFAULT DATABASE FROM role")
+    execute("REVOKE INDEX ON HOME DATABASE FROM role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
@@ -400,7 +400,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("CREATE ROLE role")
 
     // WHEN
-    execute("GRANT CONSTRAINT ON DEFAULT DATABASE TO role")
+    execute("GRANT CONSTRAINT ON HOME DATABASE TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -408,7 +408,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
 
     // WHEN
-    execute("REVOKE CONSTRAINT ON DEFAULT DATABASE FROM role")
+    execute("REVOKE CONSTRAINT ON HOME DATABASE FROM role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
@@ -420,7 +420,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("CREATE ROLE role")
 
     // WHEN
-    execute("GRANT NAME ON DEFAULT DATABASE TO role")
+    execute("GRANT NAME ON HOME DATABASE TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -428,7 +428,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
 
     // WHEN
-    execute("REVOKE NAME ON DEFAULT DATABASE FROM role")
+    execute("REVOKE NAME ON HOME DATABASE FROM role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
@@ -812,7 +812,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     graph.createIndexWithName(indexName, labelString, propString)
     setupUserWithCustomRole()
     execute("CREATE DATABASE foo")
-    execute("GRANT SHOW INDEX ON DEFAULT DATABASE TO custom")
+    execute("GRANT SHOW INDEX ON HOME DATABASE TO custom")
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
@@ -917,7 +917,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute(s"CREATE database $newDefaultDatabase")
 
     // WHEN: Grant on default database
-    execute(s"GRANT INDEX MANAGEMENT ON DEFAULT DATABASE TO role")
+    execute(s"GRANT INDEX MANAGEMENT ON HOME DATABASE TO role")
 
     // THEN: Get privilege on default
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -1280,7 +1280,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     graph.createUniqueConstraintWithName(constraintName, labelString, propString)
     setupUserWithCustomRole()
     execute("CREATE DATABASE foo")
-    execute("GRANT SHOW CONSTRAINT ON DEFAULT DATABASE TO custom")
+    execute("GRANT SHOW CONSTRAINT ON HOME DATABASE TO custom")
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
@@ -1387,7 +1387,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(homeOrDefaultDb(DEFAULT_DATABASE_NAME)))
 
     // WHEN: Grant on default database
-    execute(s"GRANT CONSTRAINT MANAGEMENT ON DEFAULT DATABASE TO role")
+    execute(s"GRANT CONSTRAINT MANAGEMENT ON HOME DATABASE TO role")
 
     // THEN: Get privilege on default
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -1580,7 +1580,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(homeOrDefaultDb(DEFAULT_DATABASE_NAME)))
 
     // WHEN: Grant on default database
-    execute(s"GRANT NAME MANAGEMENT ON DEFAULT DATABASE TO role")
+    execute(s"GRANT NAME MANAGEMENT ON HOME DATABASE TO role")
 
     // THEN: Get privilege on default
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(

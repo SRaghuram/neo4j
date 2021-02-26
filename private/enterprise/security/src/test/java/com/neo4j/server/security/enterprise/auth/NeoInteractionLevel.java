@@ -26,7 +26,7 @@ public interface NeoInteractionLevel<S>
     {
         try ( Transaction tx = getSystemGraph().beginTx() )
         {
-            tx.execute( "REVOKE ACCESS ON DEFAULT DATABASE FROM PUBLIC" );
+            tx.execute( "REVOKE ACCESS ON HOME DATABASE FROM PUBLIC" );
             tx.commit();
         }
     }

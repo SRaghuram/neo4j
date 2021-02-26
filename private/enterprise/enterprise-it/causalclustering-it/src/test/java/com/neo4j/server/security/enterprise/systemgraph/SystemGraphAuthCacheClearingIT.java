@@ -125,7 +125,7 @@ class SystemGraphAuthCacheClearingIT
 
         try ( Transaction tx = systemDb.beginTransaction( EXPLICIT, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
-            tx.execute( "REVOKE ACCESS ON DEFAULT DATABASE FROM PUBLIC" );
+            tx.execute( "REVOKE ACCESS ON HOME DATABASE FROM PUBLIC" );
             tx.execute( "CREATE USER foo SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
             tx.execute( "CREATE ROLE role" );
             tx.execute( "GRANT ROLE role TO foo" );
@@ -204,7 +204,7 @@ class SystemGraphAuthCacheClearingIT
 
         cluster.systemTx( ( sys, tx ) ->
         {
-            tx.execute( "REVOKE ACCESS ON DEFAULT DATABASE FROM PUBLIC" );
+            tx.execute( "REVOKE ACCESS ON HOME DATABASE FROM PUBLIC" );
             tx.execute( "CREATE USER foo SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
             tx.execute( "CREATE ROLE role" );
             tx.execute( "GRANT ROLE role TO foo" );

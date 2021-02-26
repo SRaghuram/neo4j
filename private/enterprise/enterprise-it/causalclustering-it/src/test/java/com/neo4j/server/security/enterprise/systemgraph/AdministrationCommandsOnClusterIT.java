@@ -1041,9 +1041,9 @@ class AdministrationCommandsOnClusterIT
     }
 
     @Test
-    void denyAccessOnDefaultDatabase() throws Exception
+    void denyAccessOnHomeDatabase() throws Exception
     {
-        assertClusterBehaviourOnGrantDeny( "deny", "ACCESS ON DEFAULT DATABASE", "access" );
+        assertClusterBehaviourOnGrantDeny( "deny", "ACCESS ON HOME DATABASE", "access" );
     }
 
     @Test

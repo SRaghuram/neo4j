@@ -796,7 +796,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     }) should be (2)
   }
 
-  test("Should show default database that a user has been given access to") {
+  test("Should show home database that a user has been given access to") {
     // GIVEN
     setup(defaultConfig)
     clearPublicRole()
@@ -805,7 +805,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("CREATE DATABASE baz")
     execute("CREATE ROLE blub")
     execute("GRANT ROLE blub TO foo")
-    execute("GRANT ACCESS ON DEFAULT DATABASE TO blub")
+    execute("GRANT ACCESS ON HOME DATABASE TO blub")
 
     executeOnSystem("foo", "bar", "SHOW DATABASES", resultHandler = (row, _) => {
       row.get("name") should (be ("system") or be ("neo4j"))

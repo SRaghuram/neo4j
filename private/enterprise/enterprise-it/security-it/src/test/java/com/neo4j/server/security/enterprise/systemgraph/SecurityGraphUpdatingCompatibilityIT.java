@@ -88,8 +88,9 @@ class SecurityGraphUpdatingCompatibilityIT extends SecurityGraphCompatibilityTes
                     new PrivilegeCommand( "SHOW TRANSACTIONS ON DATABASE *", GRANT_DENY_REVOKE ),
                     new PrivilegeCommand( "TERMINATE TRANSACTIONS ON DATABASE *", GRANT_DENY_REVOKE ),
 
-                    // default database
-                    new PrivilegeCommand( "ACCESS ON DEFAULT DATABASE", GRANT_DENY_REVOKE )
+                    // home (default) database
+                    new PrivilegeCommand( "ACCESS ON DEFAULT DATABASE", GRANT_DENY_REVOKE ),
+                    new PrivilegeCommand( "ACCESS ON HOME DATABASE", GRANT_DENY_REVOKE )
             ),
             EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41, Set.of(
                     // user management

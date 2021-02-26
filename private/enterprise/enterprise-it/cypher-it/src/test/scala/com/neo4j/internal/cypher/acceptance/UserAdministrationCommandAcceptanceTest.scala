@@ -2181,14 +2181,14 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       }) should be (1)
   }
 
-  test("should retain privileges granted on default/home database when the home database is changed") {
+  test("should retain privileges granted on home database when the home database is changed") {
 
     // GIVEN
     execute("CREATE DATABASE foo")
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("CREATE ROLE aliceRole")
     execute("GRANT ROLE aliceRole TO alice")
-    execute("GRANT ALL ON DEFAULT DATABASE TO aliceRole")
+    execute("GRANT ALL ON HOME DATABASE TO aliceRole")
 
     Seq("foo", "neo4j").foreach { db =>
       selectDatabase(db)
@@ -2196,8 +2196,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute("CALL db.createProperty('dbNameProp')")
     }
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT CREATE ON DEFAULT GRAPH NODE DbLabel TO aliceRole")
-    execute("GRANT SET PROPERTY {dbNameProp} ON DEFAULT GRAPH NODE DbLabel TO aliceRole")
+    execute("GRANT CREATE ON HOME GRAPH NODE DbLabel TO aliceRole")
+    execute("GRANT SET PROPERTY {dbNameProp} ON HOME GRAPH NODE DbLabel TO aliceRole")
 
     // WHEN / THEN
     executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "CREATE(n:DbLabel{dbNameProp:'neo4j'}) RETURN n.dbNameProp",

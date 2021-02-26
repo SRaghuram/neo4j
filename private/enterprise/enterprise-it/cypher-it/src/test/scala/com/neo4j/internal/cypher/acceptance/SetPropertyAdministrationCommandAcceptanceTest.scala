@@ -60,12 +60,12 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
         ))
       }
 
-      test(s"should $grantOrDeny set property privilege to custom role for the default graph and all properties") {
+      test(s"should $grantOrDeny set property privilege to custom role for the home graph and all properties") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grantOrDenyCommand SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+        execute(s"$grantOrDenyCommand SET PROPERTY {*} ON HOME GRAPH TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -479,10 +479,10 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       execute("MATCH (n{prop:'value'}) RETURN n").toSet should be(empty)
     }
 
-    test("grant set property on default graph") {
+    test("grant set property on home graph") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("GRANT SET PROPERTY {*} ON HOME GRAPH TO custom")
       execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -496,10 +496,10 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       execute("MATCH(n) RETURN n.prop").toSet should be(Set(Map("n.prop" -> "newVal")))
     }
 
-    test("grant set property to null on default graph") {
+    test("grant set property to null on home graph") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("GRANT SET PROPERTY {*} ON HOME GRAPH TO custom")
       execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -513,11 +513,11 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       execute("match (n{prop:'value'}) return n").toSet should have size 0
     }
 
-    test("grant set property on default graph, should not allow on other graph") {
+    test("grant set property on home graph, should not allow on other graph") {
       // GIVEN
       execute("CREATE DATABASE foo")
       setupUserWithCustomRole()
-      execute("GRANT SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("GRANT SET PROPERTY {*} ON HOME GRAPH TO custom")
       execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
       selectDatabase("foo")
@@ -529,11 +529,11 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
     }
 
-    test("deny set property on default graph") {
+    test("deny set property on home graph") {
       // GIVEN
       setupUserWithCustomRole()
       execute("GRANT SET PROPERTY {*} ON GRAPH * TO custom")
-      execute("DENY SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("DENY SET PROPERTY {*} ON HOME GRAPH TO custom")
       execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -546,11 +546,11 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
     }
 
-    test("deny set property to null on default graph") {
+    test("deny set property to null on home graph") {
       // GIVEN
       setupUserWithCustomRole()
       execute("GRANT SET PROPERTY {*} ON GRAPH * TO custom")
-      execute("DENY SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("DENY SET PROPERTY {*} ON HOME GRAPH TO custom")
       execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -563,12 +563,12 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
     }
 
-    test("deny set property on default graph, but still allow on other graphs") {
+    test("deny set property on home graph, but still allow on other graphs") {
       // GIVEN
       setupUserWithCustomRole()
       execute("CREATE DATABASE foo")
       execute("GRANT SET PROPERTY {*} ON GRAPH * TO custom")
-      execute("DENY SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("DENY SET PROPERTY {*} ON HOME GRAPH TO custom")
       execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
       selectDatabase("foo")

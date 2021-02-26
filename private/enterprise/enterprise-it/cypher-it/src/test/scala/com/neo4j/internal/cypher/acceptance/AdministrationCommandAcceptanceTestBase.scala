@@ -451,11 +451,11 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "READ {prop} ON GRAPH * NODES *" -> Set(read ++ Map("segment" -> "NODE(*)", "resource" -> "property(prop)")),
     "MATCH {prop} ON GRAPH * NODES A " -> Set(matchPrivilege ++ Map("segment" -> "NODE(A)", "resource" -> "property(prop)")),
     "WRITE ON GRAPH *" -> Set(write ++ Map("segment" -> "NODE(*)"), write ++ Map("segment" -> "RELATIONSHIP(*)")),
-    "SET LABEL foo ON DEFAULT GRAPH" -> Set(setLabel ++ Map("resource" -> "label(foo)", "graph" -> "DEFAULT")),
+    "SET LABEL foo ON HOME GRAPH" -> Set(setLabel ++ Map("resource" -> "label(foo)", "graph" -> "DEFAULT")),
     "REMOVE LABEL * ON GRAPH neo4j" -> Set(removeLabel ++ Map("resource" -> "all_labels", "graph" -> "neo4j")),
     "CREATE ON GRAPH * RELATIONSHIPS *" -> Set(create ++ Map("segment" -> "RELATIONSHIP(*)")),
     "DELETE ON GRAPHS * NODE A" -> Set(delete ++ Map("segment" -> "NODE(A)")),
-    "SET PROPERTY {prop} ON DEFAULT GRAPH" -> Set(setProperty ++ Map("segment" -> "NODE(*)", "resource" -> "property(prop)", "graph" -> "DEFAULT"),
+    "SET PROPERTY {prop} ON HOME GRAPH" -> Set(setProperty ++ Map("segment" -> "NODE(*)", "resource" -> "property(prop)", "graph" -> "DEFAULT"),
                                                   setProperty ++ Map("segment" -> "RELATIONSHIP(*)", "resource" -> "property(prop)", "graph" -> "DEFAULT")),
     "ALL GRAPH PRIVILEGES ON GRAPH *" -> Set(allGraphPrivileges)
   )
@@ -616,7 +616,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   def clearPublicRole(): Unit = {
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
+    execute(s"REVOKE ACCESS ON HOME DATABASE FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE PROCEDURES * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE FUNCTION * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
     execute("SHOW ROLE PUBLIC PRIVILEGES").toList should be(empty)

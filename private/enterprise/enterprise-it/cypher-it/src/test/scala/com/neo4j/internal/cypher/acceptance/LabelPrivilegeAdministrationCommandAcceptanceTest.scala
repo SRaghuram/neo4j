@@ -52,12 +52,12 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           ))
         }
 
-        test(s"should $grantOrDeny $verb privilege to custom role for a default graph and all labels") {
+        test(s"should $grantOrDeny $verb privilege to custom role for a home graph and all labels") {
           // GIVEN
           execute("CREATE ROLE custom")
 
           // WHEN
-          execute(s"$grantOrDenyCommand $verb LABEL * ON DEFAULT GRAPH TO custom")
+          execute(s"$grantOrDenyCommand $verb LABEL * ON HOME GRAPH TO custom")
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -644,11 +644,11 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
-  test("grant set label on default graph") {
+  test("grant set label on home graph") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT SET LABEL * ON DEFAULT GRAPH TO custom")
-    execute("GRANT TRAVERSE ON DEFAULT GRAPH TO custom")
+    execute("GRANT SET LABEL * ON HOME GRAPH TO custom")
+    execute("GRANT TRAVERSE ON HOME GRAPH TO custom")
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n)")
     execute("CALL db.createLabel('Label')")
@@ -660,11 +660,11 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("MATCH (n:Label) RETURN n").toSet should have size 1
   }
 
-  test("grant set named label on default graph") {
+  test("grant set named label on home graph") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT SET LABEL Label ON DEFAULT GRAPH TO custom")
-    execute("GRANT TRAVERSE ON DEFAULT GRAPH TO custom")
+    execute("GRANT SET LABEL Label ON HOME GRAPH TO custom")
+    execute("GRANT TRAVERSE ON HOME GRAPH TO custom")
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n)")
     execute("CALL db.createLabel('Label')")
@@ -676,11 +676,11 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("MATCH (n:Label) RETURN n").toSet should have size 1
   }
 
-  test("grant set different named label on default graph") {
+  test("grant set different named label on home graph") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT SET LABEL Label ON DEFAULT GRAPH TO custom")
-    execute("GRANT TRAVERSE ON DEFAULT GRAPH TO custom")
+    execute("GRANT SET LABEL Label ON HOME GRAPH TO custom")
+    execute("GRANT TRAVERSE ON HOME GRAPH TO custom")
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n)")
     execute("CALL db.createLabel('OtherLabel')")
@@ -692,10 +692,10 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   }
 
-  test("grant set label on default graph, should not allow on other graph") {
+  test("grant set label on home graph, should not allow on other graph") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT SET LABEL * ON DEFAULT GRAPH TO custom")
+    execute("GRANT SET LABEL * ON HOME GRAPH TO custom")
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
     execute("CREATE DATABASE foo")
     selectDatabase("foo")
@@ -708,11 +708,11 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
-  test("grant remove label on default graph") {
+  test("grant remove label on home graph") {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
-    execute("GRANT REMOVE LABEL * ON DEFAULT GRAPH TO custom")
+    execute("GRANT REMOVE LABEL * ON HOME GRAPH TO custom")
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:Label)")
 
@@ -723,12 +723,12 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("MATCH(n:Label) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 0)))
   }
 
-  test("deny remove label should override grant on default graph") {
+  test("deny remove label should override grant on home graph") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON DEFAULT GRAPH TO custom")
-    execute("GRANT REMOVE LABEL * ON DEFAULT GRAPH TO custom")
-    execute("DENY REMOVE LABEL Label ON DEFAULT GRAPH TO custom")
+    execute("GRANT MATCH {*} ON HOME GRAPH TO custom")
+    execute("GRANT REMOVE LABEL * ON HOME GRAPH TO custom")
+    execute("DENY REMOVE LABEL Label ON HOME GRAPH TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:Label)")
@@ -740,12 +740,12 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
-  test("deny set label on default graph, should allow on other graph") {
+  test("deny set label on home graph, should allow on other graph") {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
     execute("GRANT SET LABEL * ON GRAPH * TO custom")
-    execute("DENY SET LABEL * ON DEFAULT GRAPH TO custom")
+    execute("DENY SET LABEL * ON HOME GRAPH TO custom")
     execute("CREATE DATABASE foo")
     selectDatabase("foo")
     execute("CALL db.createLabel('Label')")
@@ -758,12 +758,12 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("MATCH(n:Label) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 1)))
   }
 
-  test("deny set label on default graph") {
+  test("deny set label on home graph") {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
     execute("GRANT SET LABEL * ON GRAPH * TO custom")
-    execute("DENY SET LABEL * ON DEFAULT GRAPH TO custom")
+    execute("DENY SET LABEL * ON HOME GRAPH TO custom")
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CALL db.createLabel('Label')")
     execute("CREATE (n)")

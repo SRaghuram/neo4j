@@ -65,12 +65,12 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
             ))
           }
 
-          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a default graph and all elements") {
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a home graph and all elements") {
             // GIVEN
             execute(s"CREATE ROLE $roleName")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $createOrDelete ON DEFAULT GRAPH ELEMENTS * TO $roleName")
+            execute(s"$grantOrDenyCommand $createOrDelete ON HOME GRAPH ELEMENTS * TO $roleName")
 
             // THEN
             execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
@@ -79,12 +79,12 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
             ))
           }
 
-          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a default graph and named elements") {
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a home graph and named elements") {
             // GIVEN
             execute(s"CREATE ROLE $roleName")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $createOrDelete ON DEFAULT GRAPH ELEMENTS A TO $roleName")
+            execute(s"$grantOrDenyCommand $createOrDelete ON HOME GRAPH ELEMENTS A TO $roleName")
 
             // THEN
             execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
@@ -93,12 +93,12 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
             ))
           }
 
-          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a default graph and named relationship") {
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a home graph and named relationship") {
             // GIVEN
             execute(s"CREATE ROLE $roleName")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $createOrDelete ON DEFAULT GRAPH RELATIONSHIPS Rel1, Rel2 TO $roleName")
+            execute(s"$grantOrDenyCommand $createOrDelete ON HOME GRAPH RELATIONSHIPS Rel1, Rel2 TO $roleName")
 
             // THEN
             execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
@@ -107,12 +107,12 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
             ))
           }
 
-          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a default graph and named node") {
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a home graph and named node") {
             // GIVEN
             execute(s"CREATE ROLE $roleName")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $createOrDelete ON DEFAULT GRAPH NODE A TO $roleName")
+            execute(s"$grantOrDenyCommand $createOrDelete ON HOME GRAPH NODE A TO $roleName")
 
             // THEN
             execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
@@ -444,10 +444,10 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     } should have message s"Create node with labels 'Foo,Bar' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
 
-  test("grant create on default graph") {
+  test("grant create on home graph") {
     // GIVEN
     setupUserWithCustomRole()
-    execute(s"GRANT CREATE ON DEFAULT GRAPH TO $roleName")
+    execute(s"GRANT CREATE ON HOME GRAPH TO $roleName")
 
     // WHEN
     executeOnDBMSDefault(username, password, "CREATE (n)")
@@ -456,10 +456,10 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 1)))
   }
 
-  test("grant create on default graph, should not allow on other graph") {
+  test("grant create on home graph, should not allow on other graph") {
     // GIVEN
     setupUserWithCustomRole()
-    execute(s"GRANT CREATE ON DEFAULT GRAPH TO $roleName")
+    execute(s"GRANT CREATE ON HOME GRAPH TO $roleName")
     execute(s"CREATE DATABASE $databaseString")
 
     // WHEN, THEN
@@ -468,11 +468,11 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     } should have message s"Create node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
 
-  test("deny create on default graph, should allow on other graph") {
+  test("deny create on home graph, should allow on other graph") {
     // GIVEN
     setupUserWithCustomRole()
     execute(s"GRANT CREATE ON GRAPH * TO $roleName")
-    execute(s"DENY CREATE ON DEFAULT GRAPH TO $roleName")
+    execute(s"DENY CREATE ON HOME GRAPH TO $roleName")
     execute(s"CREATE DATABASE $databaseString")
 
     // WHEN
@@ -572,11 +572,11 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     } should have message s"Delete node with labels 'A,B' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
 
-  test("grant delete on default graph") {
+  test("grant delete on home graph") {
     // GIVEN
     setupUserWithCustomRole()
     execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
-    execute(s"GRANT DELETE ON DEFAULT GRAPH TO $roleName")
+    execute(s"GRANT DELETE ON HOME GRAPH TO $roleName")
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n)")
 
@@ -587,11 +587,11 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 0)))
   }
 
-  test("grant delete on default graph, should not allow on other graph") {
+  test("grant delete on home graph, should not allow on other graph") {
     // GIVEN
     setupUserWithCustomRole()
     execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
-    execute(s"GRANT CREATE ON DEFAULT GRAPH TO $roleName")
+    execute(s"GRANT CREATE ON HOME GRAPH TO $roleName")
     execute(s"CREATE DATABASE $databaseString")
     selectDatabase(databaseString)
     execute("CREATE (n)")
@@ -602,11 +602,11 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     } should have message s"Delete node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
 
-  test("deny delete on default graph") {
+  test("deny delete on home graph") {
     // GIVEN
     setupUserWithCustomRole()
     execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
-    execute(s"DENY DELETE ON DEFAULT GRAPH TO $roleName")
+    execute(s"DENY DELETE ON HOME GRAPH TO $roleName")
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n)")
 

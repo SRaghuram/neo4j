@@ -136,7 +136,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
   }
 
-  test("read privilege for node should not imply traverse privilege on default graph") {
+  test("read privilege for node should not imply traverse privilege on home graph") {
     // GIVEN
     setupUserWithCustomRole()
 
@@ -144,7 +144,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("CREATE (n:A {name:'a'})")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ {name} ON DEFAULT GRAPH NODES A (*) TO custom")
+    execute("GRANT READ {name} ON HOME GRAPH NODES A (*) TO custom")
 
     // WHEN
     executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
@@ -164,7 +164,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]-() RETURN r.name") should be(0)
   }
 
-  test("traverse privilege on default graph") {
+  test("traverse privilege on home graph") {
     // GIVEN
     setupUserWithCustomRole()
 
@@ -172,7 +172,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("CREATE ()-[:REL {name:'a'}]->()")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON DEFAULT GRAPH RELATIONSHIPS REL TO custom")
+    execute("GRANT TRAVERSE ON HOME GRAPH RELATIONSHIPS REL TO custom")
 
     // WHEN
     executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]-() RETURN r.name") should be(0)
@@ -252,7 +252,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       }) should be(2)
   }
 
-  test("should see properties and nodes on default graph depending on granted traverse and read privileges for role") {
+  test("should see properties and nodes on home graph depending on granted traverse and read privileges for role") {
     // GIVEN
     setupMultiLabelData
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -262,18 +262,18 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("CREATE ROLE role3")
 
     execute("GRANT ACCESS ON DATABASE * TO role1")
-    execute("GRANT TRAVERSE ON DEFAULT GRAPH NODES * (*) TO role1")
-    execute("GRANT READ {*} ON DEFAULT GRAPH NODES * (*) TO role1")
+    execute("GRANT TRAVERSE ON HOME GRAPH NODES * (*) TO role1")
+    execute("GRANT READ {*} ON HOME GRAPH NODES * (*) TO role1")
 
     execute("GRANT ACCESS ON DATABASE * TO role2")
-    execute("GRANT TRAVERSE ON DEFAULT GRAPH NODES * (*) TO role2")
-    execute("GRANT READ {foo} ON DEFAULT GRAPH NODES A (*) TO role2")
-    execute("GRANT READ {bar} ON DEFAULT GRAPH NODES B (*) TO role2")
+    execute("GRANT TRAVERSE ON HOME GRAPH NODES * (*) TO role2")
+    execute("GRANT READ {foo} ON HOME GRAPH NODES A (*) TO role2")
+    execute("GRANT READ {bar} ON HOME GRAPH NODES B (*) TO role2")
 
     execute("GRANT ACCESS ON DATABASE * TO role3")
-    execute("GRANT TRAVERSE ON DEFAULT GRAPH NODES A (*) TO role3")
-    execute("GRANT READ {foo} ON DEFAULT GRAPH NODES A (*) TO role3")
-    execute("GRANT READ {bar} ON DEFAULT GRAPH NODES B (*) TO role3")
+    execute("GRANT TRAVERSE ON HOME GRAPH NODES A (*) TO role3")
+    execute("GRANT READ {foo} ON HOME GRAPH NODES A (*) TO role3")
+    execute("GRANT READ {bar} ON HOME GRAPH NODES B (*) TO role3")
 
     // WHEN
     an[AuthorizationViolationException] shouldBe thrownBy {

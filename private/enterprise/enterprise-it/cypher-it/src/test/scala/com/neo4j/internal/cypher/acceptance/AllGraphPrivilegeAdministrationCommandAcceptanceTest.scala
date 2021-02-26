@@ -30,12 +30,12 @@ class AllGraphPrivilegeAdministrationCommandAcceptanceTest extends Administratio
         execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(grantedOrDenied(allGraphPrivileges).role(roleName).map))
       }
 
-      test(s"should $grantOrDeny all graph privileges for default graph") {
+      test(s"should $grantOrDeny all graph privileges for home graph") {
         // GIVEN
         execute(s"CREATE ROLE $roleName")
 
         // WHEN
-        execute(s"$grantOrDenyCommand ALL GRAPH PRIVILEGES ON DEFAULT GRAPH TO $roleName")
+        execute(s"$grantOrDenyCommand ALL GRAPH PRIVILEGES ON HOME GRAPH TO $roleName")
 
         // THEN
         execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(grantedOrDenied(allGraphPrivileges).role(roleName).graph(DEFAULT).map))

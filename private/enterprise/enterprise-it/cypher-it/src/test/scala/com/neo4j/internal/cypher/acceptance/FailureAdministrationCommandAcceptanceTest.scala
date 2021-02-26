@@ -56,7 +56,7 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
 
   test("REVOKE GRANT from non-existing role should do nothing") {
     // WHEN
-    execute("REVOKE GRANT START ON DEFAULT DATABASE FROM wrongRole")
+    execute("REVOKE GRANT START ON HOME DATABASE FROM wrongRole")
 
     // THEN
     execute("SHOW ROLE wrongRole PRIVILEGES").toSet should be(Set.empty)

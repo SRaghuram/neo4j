@@ -336,13 +336,13 @@ class PrivilegesAsCommandsIT
     }
 
     @Test
-    void shouldSavePrivilegeOnDefaultDatabase()
+    void shouldSavePrivilegeOnHomeDatabase()
     {
         // GIVEN
         try ( Transaction tx = system.beginTx() )
         {
             tx.execute( "CREATE ROLE role" );
-            tx.execute( "GRANT ACCESS ON DEFAULT DATABASE TO role" );
+            tx.execute( "GRANT ACCESS ON HOME DATABASE TO role" );
             tx.commit();
         }
 
@@ -414,7 +414,7 @@ class PrivilegesAsCommandsIT
         try ( Transaction tx = system.beginTx() )
         {
             tx.execute( "CREATE ROLE role" );
-            tx.execute( "GRANT TRAVERSE ON DEFAULT GRAPH NODES * TO role" );
+            tx.execute( "GRANT TRAVERSE ON HOME GRAPH NODES * TO role" );
             tx.execute( "CREATE USER user SET PASSWORD 'abc123' CHANGE NOT REQUIRED" );
             tx.execute( "GRANT ROLE role TO user" );
             tx.commit();
@@ -509,7 +509,7 @@ class PrivilegesAsCommandsIT
         try ( Transaction tx = system.beginTx() )
         {
             tx.execute( "CREATE ROLE role" );
-            tx.execute( "GRANT CREATE INDEX ON DEFAULT DATABASE TO role" );
+            tx.execute( "GRANT CREATE INDEX ON HOME DATABASE TO role" );
             tx.execute( "CREATE USER foo SET PASSWORD 'abc123'" );
             tx.execute( "CREATE USER bar SET PASSWORD 'abc123'" );
 
@@ -538,7 +538,7 @@ class PrivilegesAsCommandsIT
         try ( Transaction tx = system.beginTx() )
         {
             tx.execute( "CREATE ROLE role" );
-            tx.execute( "GRANT WRITE ON DEFAULT GRAPH TO role" );
+            tx.execute( "GRANT WRITE ON HOME GRAPH TO role" );
             tx.execute( "CREATE USER foo SET PASSWORD 'secret'" );
             tx.execute( "CREATE USER bar SET PASSWORD 'm0r3s3Cr37' CHANGE NOT REQUIRED" );
 

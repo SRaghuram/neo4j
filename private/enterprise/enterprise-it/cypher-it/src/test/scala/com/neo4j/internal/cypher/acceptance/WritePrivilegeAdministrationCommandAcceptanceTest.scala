@@ -67,12 +67,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         ))
       }
 
-      test(s"should $grantOrDeny write privilege for default graph") {
+      test(s"should $grantOrDeny write privilege for home graph") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grantOrDenyCommand WRITE ON DEFAULT GRAPH TO custom")
+        execute(s"$grantOrDenyCommand WRITE ON HOME GRAPH TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(

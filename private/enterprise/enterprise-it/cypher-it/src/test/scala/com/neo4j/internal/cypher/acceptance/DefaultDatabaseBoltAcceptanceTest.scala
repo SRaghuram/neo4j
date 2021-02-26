@@ -223,8 +223,8 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET HOME DATABASE $fooDb")
     execute(s"CREATE ROLE $fooDbRole")
     execute(s"GRANT ROLE $fooDbRole TO $username")
-    execute(s"GRANT ALL ON DEFAULT DATABASE TO $fooDbRole")
-    execute(s"GRANT ALL ON DEFAULT GRAPH TO $fooDbRole")
+    execute(s"GRANT ALL ON HOME DATABASE TO $fooDbRole")
+    execute(s"GRANT ALL ON HOME GRAPH TO $fooDbRole")
 
     // WHEN
     val (driver, session) = driverExecutor(None)
@@ -253,8 +253,8 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET HOME DATABASE $fooDb")
     execute(s"CREATE ROLE $fooDbRole")
     execute(s"GRANT ROLE $fooDbRole TO $username")
-    execute(s"GRANT ALL ON DEFAULT DATABASE TO $fooDbRole")
-    execute(s"GRANT ALL ON DEFAULT GRAPH TO $fooDbRole")
+    execute(s"GRANT ALL ON HOME DATABASE TO $fooDbRole")
+    execute(s"GRANT ALL ON HOME GRAPH TO $fooDbRole")
 
     // WHEN
     var (driver, session) = driverExecutor(Some(fooDb))
@@ -314,8 +314,8 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
         tx.execute(s"CREATE OR REPLACE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED SET HOME DATABASE $fooDb").close()
         tx.execute(s"CREATE OR REPLACE ROLE $fooDbRole").close()
         tx.execute(s"GRANT ROLE $fooDbRole TO $username").close()
-        tx.execute(s"GRANT ALL ON DEFAULT DATABASE TO $fooDbRole").close()
-        tx.execute(s"GRANT ALL ON DEFAULT GRAPH TO $fooDbRole").close()
+        tx.execute(s"GRANT ALL ON HOME DATABASE TO $fooDbRole").close()
+        tx.execute(s"GRANT ALL ON HOME GRAPH TO $fooDbRole").close()
         tx.commit()
       })
 

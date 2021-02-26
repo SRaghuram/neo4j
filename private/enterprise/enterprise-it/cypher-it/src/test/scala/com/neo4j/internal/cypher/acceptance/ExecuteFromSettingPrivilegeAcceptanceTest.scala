@@ -19,7 +19,7 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
 
   override protected def onNewGraphDatabase(): Unit = {
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
+    execute(s"REVOKE ACCESS ON HOME DATABASE FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE PROCEDURES * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE FUNCTIONS * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
     execute("SHOW ROLE PUBLIC PRIVILEGES").toSet should be(grantedFromConfig("dbms.security.listUsers", PredefinedRoles.PUBLIC))
@@ -156,7 +156,7 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
     // WHEN restore PUBLIC role
     execute("GRANT EXECUTE FUNCTION * ON DBMS TO PUBLIC")
     execute("GRANT EXECUTE PROCEDURE * ON DBMS TO PUBLIC")
-    execute("GRANT ACCESS ON DEFAULT DATABASE TO PUBLIC")
+    execute("GRANT ACCESS ON HOME DATABASE TO PUBLIC")
 
     // THEN
     execute("SHOW ALL PRIVILEGES").toSet should be(defaultRolePrivileges ++

@@ -515,7 +515,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON HOME DATABASE TO custom" );
         authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION (readSubject,editorSubject) ON DATABASE * TO custom" );
         S subject = neo.login( "alice", "foo" );
 
@@ -556,7 +556,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "DENY SHOW TRANSACTION (editorSubject) ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "DENY SHOW TRANSACTION (editorSubject) ON HOME DATABASE TO custom" );
         authDisabledAdminstrationCommand( "DENY EXECUTE BOOSTED PROCEDURE dbms.* ON DBMS TO custom" );
         S subject = neo.login( "alice", "foo" );
 
@@ -823,7 +823,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "GRANT ALL ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ALL ON HOME DATABASE TO custom" );
         S subject = neo.login( "alice", "foo" );
 
         DoubleLatch latch = new DoubleLatch( 3, true );
@@ -1031,7 +1031,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON HOME DATABASE TO custom" );
         authDisabledAdminstrationCommand( "GRANT TERMINATE TRANSACTION (readSubject) ON DATABASE * TO custom" );
         S subject = neo.login( "alice", "foo" );
 
@@ -1076,7 +1076,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "DENY TERMINATE TRANSACTION (writeSubject) ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "DENY TERMINATE TRANSACTION (writeSubject) ON HOME DATABASE TO custom" );
         authDisabledAdminstrationCommand( "DENY EXECUTE BOOSTED PROCEDURE dbms.* ON DBMS TO custom" );
         S subject = neo.login( "alice", "foo" );
 
@@ -1167,7 +1167,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "GRANT ALL ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ALL ON HOME DATABASE TO custom" );
         S subject = neo.login( "alice", "foo" );
 
         DoubleLatch latch = new DoubleLatch( 2, true );
@@ -1287,7 +1287,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON HOME DATABASE TO custom" );
         authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION (readSubject,editorSubject) ON DATABASE * TO custom" );
         S subject = neo.login( "alice", "foo" );
 
@@ -1328,7 +1328,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "DENY SHOW TRANSACTION (writeSubject) ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "DENY SHOW TRANSACTION (writeSubject) ON HOME DATABASE TO custom" );
         authDisabledAdminstrationCommand( "DENY EXECUTE BOOSTED PROCEDURE dbms.* ON DBMS TO custom" );
         S subject = neo.login( "alice", "foo" );
 
@@ -1622,7 +1622,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "GRANT ALL ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ALL ON HOME DATABASE TO custom" );
         S subject = neo.login( "alice", "foo" );
 
         DoubleLatch latch = new DoubleLatch( 3, true );
@@ -1756,7 +1756,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON HOME DATABASE TO custom" );
         authDisabledAdminstrationCommand( "GRANT TERMINATE TRANSACTION (readSubject) ON DATABASE * TO custom" );
         S subject = neo.login( "alice", "foo" );
         executeTwoQueriesAndKillTheFirst( readSubject, writeSubject, subject );
@@ -1769,7 +1769,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "DENY TERMINATE TRANSACTION (writeSubject) ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "DENY TERMINATE TRANSACTION (writeSubject) ON HOME DATABASE TO custom" );
         authDisabledAdminstrationCommand( "DENY EXECUTE BOOSTED PROCEDURE dbms.* ON DBMS TO custom" );
         S subject = neo.login( "alice", "foo" );
         executeTwoQueriesAndKillTheFirst( readSubject, writeSubject, subject );
@@ -1890,7 +1890,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "GRANT ALL ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ALL ON HOME DATABASE TO custom" );
         S subject = neo.login( "alice", "foo" );
 
         executeQueryAndFailToKill( readSubject, subject );
@@ -2040,7 +2040,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON HOME DATABASE TO custom" );
         authDisabledAdminstrationCommand( "GRANT TRANSACTION MANAGEMENT (readSubject) ON DATABASE * TO custom" );
         S subject = neo.login( "alice", "foo" );
 
@@ -2085,7 +2085,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
         authDisabledAdminstrationCommand( "CREATE ROLE custom" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON HOME DATABASE TO custom" );
         authDisabledAdminstrationCommand( "GRANT TRANSACTION MANAGEMENT ON DATABASE * TO custom" );
         S subject = neo.login( "alice", "foo" );
         DoubleLatch transactionLatch = new DoubleLatch( 2 );

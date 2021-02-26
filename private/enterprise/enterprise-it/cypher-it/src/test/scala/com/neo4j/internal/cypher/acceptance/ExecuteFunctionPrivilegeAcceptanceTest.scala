@@ -29,7 +29,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     globalProcedures.registerFunction(classOf[TestFunction])
     globalProcedures.registerAggregationFunction(classOf[TestFunction])
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
+    execute(s"REVOKE ACCESS ON HOME DATABASE FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE FUNCTION * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE PROCEDURE * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
     execute("SHOW ROLE PUBLIC PRIVILEGES").toSet should be(grantedFromConfig("public.function", "PUBLIC"))
