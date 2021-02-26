@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.lock.ResourceTypes.NODE;
 
-public class ForsetiMemoryTrackingTest
+class ForsetiMemoryTrackingTest
 {
     private static final int ONE_LOCK_SIZE_ESTIMATE = 56;
     private GlobalMemoryGroupTracker memoryPool;
