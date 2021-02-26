@@ -9,7 +9,6 @@ import com.neo4j.test.driver.DriverExtension;
 import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -47,6 +46,7 @@ import static org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow;
 public class BigClusterAkkaTest
 {
     private static final AuthToken authToken = AuthTokens.basic( "neo4j", "password" );
+    private static final DriverFactory.InstanceConfig driverConfig = DriverFactory.instanceConfig().withAuthToken( authToken );
 
     @Inject
     private DriverFactory driverFactory;
@@ -64,15 +64,9 @@ public class BigClusterAkkaTest
     private static Neo4jContainer<?> configure( Neo4jContainer<?> input ) throws IOException
     {
         return DeveloperWorkflow.configureNeo4jContainerIfNecessary( input )
-                .withNeo4jConfig( "metrics.filter", "*" )
-                .withNeo4jConfig( "causal_clustering.minimum_core_cluster_size_at_formation", "5" )
-                .withNeo4jConfig( "causal_clustering.minimum_core_cluster_size_at_runtime", "5" );
-    }
-
-    @BeforeAll
-    void setUp()
-    {
-        driverFactory.setAuthToken( authToken );
+                                .withNeo4jConfig( "metrics.filter", "*" )
+                                .withNeo4jConfig( "causal_clustering.minimum_core_cluster_size_at_formation", "5" )
+                                .withNeo4jConfig( "causal_clustering.minimum_core_cluster_size_at_runtime", "5" );
     }
 
     @AfterAll
@@ -84,7 +78,7 @@ public class BigClusterAkkaTest
     @BeforeEach
     void before() throws IOException
     {
-        driver = driverFactory.graphDatabaseDriver( cluster.getURIs() );
+        driver = driverFactory.graphDatabaseDriver( cluster.getURIs(), driverConfig );
         // make sure that cluster is ready to go before we start
         driver.verifyConnectivity();
         // let's try to add a few extra databases
@@ -146,7 +140,9 @@ public class BigClusterAkkaTest
     {
         assertEventuallyDoesNotThrow( "metrics should look ok", () ->
         {
-            AkkaState.checkMetrics( cluster.getAllServersOfType( Neo4jServer.Type.CORE_SERVER ), driverFactory, databaseCount );
+            AkkaState.checkMetrics( cluster.getAllServersOfType( Neo4jServer.Type.CORE_SERVER ),
+                                    uri -> driverFactory.graphDatabaseDriver( uri, driverConfig ),
+                                    databaseCount );
         }, 2, TimeUnit.MINUTES, 15, TimeUnit.SECONDS );
     }
 }

@@ -8,7 +8,8 @@ package com.neo4j.clusterdockertests;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.driver.ClusterChecker;
-import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.ClusterCheckerExtension;
+import com.neo4j.test.driver.ClusterCheckerFactory;
 import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -62,7 +63,7 @@ import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @NeedsCausalCluster
-@DriverExtension
+@ClusterCheckerExtension
 @ExtendWith( DumpDockerLogs.class )
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 @TestMethodOrder( MethodOrderer.OrderAnnotation.class )
@@ -76,11 +77,15 @@ public class TestAkkaResilienceOne
     private static final Duration acceptableHeartbeatPause = Duration.ofSeconds( 30 );
 
     private static final AuthToken authToken = AuthTokens.basic( "neo4j", "password" );
+    private static final DriverFactory.InstanceConfig driverConfig = DriverFactory.instanceConfig().withAuthToken( authToken );
 
     @CausalCluster
     private static Neo4jCluster cluster;
 
     private final Logger log = LoggerFactory.getLogger( this.getClass() );
+
+    @Inject
+    private ClusterCheckerFactory clusterCheckerFactory;
 
     @Inject
     private DriverFactory driverFactory;
@@ -110,7 +115,6 @@ public class TestAkkaResilienceOne
     void setUp()
     {
         clusterSize = cluster.getAllServers().size();
-        driverFactory.setAuthToken( authToken );
     }
 
     @AfterAll
@@ -121,8 +125,9 @@ public class TestAkkaResilienceOne
     @BeforeEach
     void before() throws TimeoutException, Neo4jCluster.Neo4jTimeoutException, IOException
     {
-        clusterChecker = driverFactory.clusterChecker(
-                cluster.getAllServers().stream().map( Neo4jServer::getDirectBoltUri ).collect( Collectors.toList() )
+        clusterChecker = clusterCheckerFactory.clusterChecker(
+                cluster.getAllServers().stream().map( Neo4jServer::getDirectBoltUri ).collect( Collectors.toList() ),
+                driverConfig
         );
         assertThat( clusterChecker.size() ).isEqualTo( clusterSize );
 
@@ -416,10 +421,12 @@ public class TestAkkaResilienceOne
                 },
                 6, TimeUnit.MINUTES
         );
-        assertEventuallyDoesNotThrow( "metrics should look ok", () -> {
-            AkkaState.checkMetrics( cluster.getAllServersOfType( Neo4jServer.Type.CORE_SERVER ), driverFactory, 2 );
+        assertEventuallyDoesNotThrow( "metrics should look ok", () ->
+        {
+            AkkaState.checkMetrics( cluster.getAllServersOfType( Neo4jServer.Type.CORE_SERVER ),
+                                    uri -> driverFactory.graphDatabaseDriver( uri, driverConfig ),
+                                    2 );
         }, 2, TimeUnit.MINUTES, 15, TimeUnit.SECONDS );
-
     }
 
     private static URI getFirstAkkaSeed( ClusterChecker checker ) throws ExecutionException, InterruptedException, TimeoutException

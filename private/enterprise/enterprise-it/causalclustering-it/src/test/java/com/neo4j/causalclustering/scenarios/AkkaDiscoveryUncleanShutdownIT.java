@@ -13,8 +13,8 @@ import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import com.neo4j.test.driver.ClusterChecker;
-import com.neo4j.test.driver.DriverExtension;
-import com.neo4j.test.driver.DriverFactory;
+import com.neo4j.test.driver.ClusterCheckerExtension;
+import com.neo4j.test.driver.ClusterCheckerFactory;
 import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -57,7 +57,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow;
 
 @ClusterExtension
-@DriverExtension
+@ClusterCheckerExtension
 class AkkaDiscoveryUncleanShutdownIT
 {
     // May be possible to get rid of this with a broadcast + ack instead of a wait for stability
@@ -72,7 +72,7 @@ class AkkaDiscoveryUncleanShutdownIT
     private ClusterFactory clusterFactory;
 
     @Inject
-    private DriverFactory driverFactory;
+    private ClusterCheckerFactory clusterCheckerFactory;
 
     private Cluster cluster;
     private List<CoreClusterMember> runningCores;
@@ -240,7 +240,7 @@ class AkkaDiscoveryUncleanShutdownIT
 
     private void checkClusterHealthy() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
-        try ( ClusterChecker clusterChecker = driverFactory.clusterChecker( cluster ) )
+        try ( ClusterChecker clusterChecker = clusterCheckerFactory.clusterChecker( cluster ) )
         {
             clusterChecker.verifyConnectivity();
             clusterChecker.verifyClusterStateMatchesOnAllServers();

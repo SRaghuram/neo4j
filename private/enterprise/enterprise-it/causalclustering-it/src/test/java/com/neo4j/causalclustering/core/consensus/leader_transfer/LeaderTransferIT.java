@@ -13,7 +13,8 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.ClusterCheckerExtension;
+import com.neo4j.test.driver.ClusterCheckerFactory;
 import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -39,7 +40,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow;
 
-@DriverExtension
+@ClusterCheckerExtension
 @ClusterExtension
 @TestInstance( PER_METHOD )
 class LeaderTransferIT
@@ -56,6 +57,9 @@ class LeaderTransferIT
 
     @Inject
     private DriverFactory driverFactory;
+
+    @Inject
+    private ClusterCheckerFactory clusterCheckerFactory;
 
     Cluster setUpCluster() throws ExecutionException, InterruptedException
     {
@@ -150,7 +154,7 @@ class LeaderTransferIT
 
     private void assertLeadershipsReportedToUserAreUnbalanced( Cluster cluster, int expectedNumberOfDatabases ) throws IOException
     {
-        var clusterChecker = driverFactory.clusterChecker( cluster );
+        var clusterChecker = clusterCheckerFactory.clusterChecker( cluster );
         assertEventuallyDoesNotThrow( "leaderships should NOT be well balanced",
                                       () -> assertThat( clusterChecker.areLeadershipsWellBalanced( expectedNumberOfDatabases ) )
                                               .isFalse(),
@@ -201,7 +205,7 @@ class LeaderTransferIT
 
     private void assertLeadershipsReportedToUserAreBalanced( Cluster cluster, int expectedNumberOfDatabases ) throws IOException
     {
-        var clusterChecker = driverFactory.clusterChecker( cluster );
+        var clusterChecker = clusterCheckerFactory.clusterChecker( cluster );
         assertEventuallyDoesNotThrow( "leaderships should be well balanced",
                                       () -> assertThat( clusterChecker.areLeadershipsWellBalanced( expectedNumberOfDatabases ) )
                                               .isTrue(),

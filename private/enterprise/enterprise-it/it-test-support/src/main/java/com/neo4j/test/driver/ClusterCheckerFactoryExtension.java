@@ -13,24 +13,23 @@ import java.io.IOException;
 
 import org.neo4j.test.extension.StatefulFieldExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
-import org.neo4j.test.rule.TestDirectory;
 
-class DriverFactoryExtension extends StatefulFieldExtension<DriverFactory> implements AfterEachCallback
+class ClusterCheckerFactoryExtension extends StatefulFieldExtension<ClusterCheckerFactory> implements AfterEachCallback
 {
-    static final String DRIVER = "driver";
-    static final ExtensionContext.Namespace DRIVER_NAMESPACE = ExtensionContext.Namespace.create( DRIVER );
+    private static final String CLUSTER_CHECKER = "cluster_checker";
+    private static final ExtensionContext.Namespace CLUSTER_CHECKER_NAMESPACE = ExtensionContext.Namespace.create( CLUSTER_CHECKER );
 
-    private TestDirectory getTestDirectory( ExtensionContext context )
+    private DriverFactory getDriverFactory( ExtensionContext context )
     {
-        TestDirectory testDir = context
-                .getStore( TestDirectorySupportExtension.TEST_DIRECTORY_NAMESPACE )
-                .get( TestDirectorySupportExtension.TEST_DIRECTORY, TestDirectory.class );
-        if ( testDir == null )
+        DriverFactory driverFactory = context
+                .getStore( DriverFactoryExtension.DRIVER_NAMESPACE )
+                .get( DriverFactoryExtension.DRIVER, DriverFactory.class );
+        if ( driverFactory == null )
         {
             throw new IllegalStateException(
                     TestDirectorySupportExtension.class.getSimpleName() + " not in scope, make sure to add it before the " + getClass().getSimpleName() );
         }
-        return testDir;
+        return driverFactory;
     }
 
     @Override
@@ -52,24 +51,24 @@ class DriverFactoryExtension extends StatefulFieldExtension<DriverFactory> imple
     @Override
     protected String getFieldKey()
     {
-        return DRIVER;
+        return CLUSTER_CHECKER;
     }
 
     @Override
-    protected Class<DriverFactory> getFieldType()
+    protected Class<ClusterCheckerFactory> getFieldType()
     {
-        return DriverFactory.class;
+        return ClusterCheckerFactory.class;
     }
 
     @Override
-    protected DriverFactory createField( ExtensionContext extensionContext )
+    protected ClusterCheckerFactory createField( ExtensionContext extensionContext )
     {
-        return new DriverFactory( getTestDirectory( extensionContext ) );
+        return new ClusterCheckerFactory( getDriverFactory( extensionContext ) );
     }
 
     @Override
     protected ExtensionContext.Namespace getNameSpace()
     {
-        return DRIVER_NAMESPACE;
+        return CLUSTER_CHECKER_NAMESPACE;
     }
 }

@@ -5,16 +5,15 @@
  */
 package com.neo4j.test.driver;
 
-import com.neo4j.causalclustering.common.Cluster;
-
-import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 import org.neo4j.driver.AuthToken;
@@ -26,139 +25,143 @@ import org.neo4j.driver.Logger;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.net.ServerAddress;
 import org.neo4j.driver.net.ServerAddressResolver;
+import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.neo4j.io.IOUtils.closeAll;
-
-public class DriverFactory implements Closeable
+public class DriverFactory extends CloseableFactory
 {
+    static final InstanceConfig defaultConfig = new InstanceConfig( AuthTokens.none(), Level.DEBUG, null, false, null );
+
     private static final URI BOOTSTRAP_URI = URI.create( "neo4j://ignore.com" );
     static final String LOGS_DIR = "driver-logs";
 
     private final AtomicLong driverCounter = new AtomicLong();
-    private final LinkedList<AutoCloseable> closeableCollection = new LinkedList<>();
+    private final Map<Driver,Path> logFiles = new IdentityHashMap<>();
     private final TestDirectory testDirectory;
-
-    private AuthToken authToken = AuthTokens.none();
 
     DriverFactory( TestDirectory testDirectory )
     {
         this.testDirectory = testDirectory;
     }
 
-    public void setAuthToken( AuthToken authToken )
-    {
-        this.authToken = authToken;
-    }
-
-    private Log createNewLogFile() throws IOException
+    private Log createNewLogger( Path logFile, Level logLevel ) throws IOException
     {
         var fs = testDirectory.getFileSystem();
-        var logDir = testDirectory.homePath().resolve( LOGS_DIR );
-        fs.mkdir( logDir );
-        var outputStream = fs.openAsOutputStream( logDir.resolve( "driver-" + driverCounter.incrementAndGet() + ".log" ), false );
+        var outputStream = fs.openAsOutputStream( logFile, false );
         addCloseable( outputStream );
-        return new Log4jLogProvider( outputStream ).getLog( getClass() );
+        Log4jLogProvider log4jLogProvider = new Log4jLogProvider( outputStream, logLevel );
+        addCloseable( log4jLogProvider );
+        return log4jLogProvider.getLog( getClass() );
     }
 
-    private Logging createLogger( Log log )
+    private Path createNewLogFile() throws IOException
     {
-        return name -> new TranslatedLogger( log );
+        var logDir = getLogDir();
+        testDirectory.getFileSystem().mkdir( logDir );
+        return logDir.resolve( "driver-" + driverCounter.incrementAndGet() + ".log" );
     }
 
-    private Config.ConfigBuilder createDefaultConfigBuilder() throws IOException
+    private Path getLogDir()
     {
-        return Config.builder().withoutEncryption().withLogging( createLogger( createNewLogFile() ) );
+        return testDirectory.homePath().resolve( LOGS_DIR );
+    }
+
+    private Logging createLogger( Log log, Level logLevel )
+    {
+        return name -> new TranslatedLogger( log, logLevel );
+    }
+
+    private Config.ConfigBuilder createDefaultConfigBuilder( Path logFile, Level logLevel ) throws IOException
+    {
+        return Config.builder().withoutEncryption().withLogging( createLogger( createNewLogger( logFile, logLevel ), logLevel ) );
+    }
+
+    public static InstanceConfig instanceConfig()
+    {
+        return new InstanceConfig( defaultConfig.authToken, defaultConfig.logLevel, defaultConfig.resolver, defaultConfig.encryptionEnabled,
+                                   defaultConfig.additionalConfig );
     }
 
     public Driver graphDatabaseDriver( URI uri ) throws IOException
     {
-        return addCloseable( getDriver( uri ) );
+        return graphDatabaseDriver( uri, defaultConfig );
+    }
+
+    public Driver graphDatabaseDriver( URI uri, InstanceConfig config ) throws IOException
+    {
+        return getDriver( uri, config );
     }
 
     public Driver graphDatabaseDriver( String uri ) throws IOException
     {
-        return addCloseable( getDriver( URI.create( uri ) ) );
+        return graphDatabaseDriver( URI.create( uri ), defaultConfig );
+    }
+
+    public Driver graphDatabaseDriver( String uri, InstanceConfig config ) throws IOException
+    {
+        return getDriver( URI.create( uri ), config );
     }
 
     public Driver graphDatabaseDriver( Collection<URI> boltURIs ) throws IOException
     {
-        return graphDatabaseDriver( address -> address.host().equals( BOOTSTRAP_URI.getHost() )
-                                               ? boltURIs.stream().map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) ).collect( Collectors.toSet() )
-                                               : Set.of( address ) );
+        return graphDatabaseDriver( boltURIs, defaultConfig );
+    }
+
+    public Driver graphDatabaseDriver( Collection<URI> boltURIs, InstanceConfig config ) throws IOException
+    {
+        config = config.withResolver( address -> address.host().equals( BOOTSTRAP_URI.getHost() )
+                                                 ? boltURIs.stream().map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) )
+                                                           .collect( Collectors.toSet() )
+                                                 : Set.of( address ) );
+        return graphDatabaseDriver( BOOTSTRAP_URI, config );
     }
 
     public Driver graphDatabaseDriver( ServerAddressResolver resolver ) throws IOException
     {
-        return addCloseable( GraphDatabase.driver( BOOTSTRAP_URI, authToken, createDefaultConfigBuilder().withResolver( resolver ).build() ) );
+        return graphDatabaseDriver( resolver, defaultConfig );
     }
 
-    public ClusterChecker clusterChecker( Collection<URI> boltURIs ) throws IOException
+    public Driver graphDatabaseDriver( ServerAddressResolver resolver, InstanceConfig config ) throws IOException
     {
-        return addCloseable( ClusterChecker.fromBoltURIs( boltURIs, this::getDriver ) );
+        config = config.withResolver( resolver );
+        return getDriver( BOOTSTRAP_URI, config );
     }
 
-    public ClusterChecker clusterChecker( Cluster cluster ) throws IOException
+    private Driver getDriver( URI uri, InstanceConfig instanceConfig ) throws IOException
     {
-        List<URI> coreUris = cluster.coreMembers()
-                                    .stream()
-                                    .filter( c -> !c.isShutdown() )
-                                    .map( c -> URI.create( c.directURI() ) )
-                                    .collect( Collectors.toList() );
-        return clusterChecker( coreUris );
+        Path logFile = createNewLogFile();
+        var configBuilder = createDefaultConfigBuilder( logFile, instanceConfig.logLevel );
+        configBuilder = instanceConfig.fill( configBuilder );
+        Driver driver = GraphDatabase.driver( uri, instanceConfig.authToken, configBuilder.build() );
+        linkLogFileToDriver( driver, logFile );
+        return addCloseable( driver );
     }
 
-    private Driver getDriver( URI uri1 ) throws IOException
+    private void linkLogFileToDriver( Driver driver, Path logFile )
     {
-        return GraphDatabase.driver( uri1, authToken, createDefaultConfigBuilder().build() );
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-        // Shut down AutoCloseables in reverse order from the order they were created.
-        //
-        // Why? Here's a specific example. We do this:
-        //
-        //        addCloseable(new Driver(logFile=addCloseable(new FileOutputStream("my.log")))
-        //
-        // the List<AutoCloseable> looks like:
-        //
-        //        1: FileOutputStream@my.log
-        //        2: Driver(log=FileOutputStream@my.log)
-        //
-        // if we close the FileOutputStream *first* when the driver tries to write to the log during its own close() method an error is thrown :-(
-
-        closeAll( getCloseablesInReverseOrder() );
-    }
-
-    private synchronized AutoCloseable[] getCloseablesInReverseOrder()
-    {
-        var output = new AutoCloseable[closeableCollection.size()];
-        int i = 0;
-        while ( !closeableCollection.isEmpty() )
+        synchronized ( logFiles )
         {
-            output[i++] = closeableCollection.removeLast();
+            logFiles.put( driver, logFile );
         }
-        return output;
     }
 
-    private synchronized <T extends AutoCloseable> T addCloseable( T driver )
+    public Path getLogFile( Driver driver )
     {
-        closeableCollection.add( driver );
-        return driver;
+        return logFiles.get( driver );
     }
 
     private static final class TranslatedLogger implements Logger
     {
 
         private final Log log;
+        private final Level level;
 
-        private TranslatedLogger( Log log )
+        private TranslatedLogger( Log log, Level level )
         {
             this.log = log;
+            this.level = level;
         }
 
         @Override
@@ -206,7 +209,78 @@ public class DriverFactory implements Closeable
         @Override
         public boolean isDebugEnabled()
         {
-            return true;
+            return level == Level.DEBUG;
+        }
+    }
+
+    public static class InstanceConfig
+    {
+        private final AuthToken authToken;
+        private final Level logLevel;
+        private final ServerAddressResolver resolver;
+        private final UnaryOperator<Config.ConfigBuilder> additionalConfig;
+        private final boolean encryptionEnabled;
+
+        private InstanceConfig( AuthToken authToken, Level logLevel, ServerAddressResolver resolver,
+                                boolean encryptionEnabled, UnaryOperator<Config.ConfigBuilder> additionalConfig )
+        {
+
+            this.authToken = authToken;
+            this.logLevel = logLevel;
+            this.resolver = resolver;
+            this.encryptionEnabled = encryptionEnabled;
+            this.additionalConfig = additionalConfig;
+        }
+
+        public InstanceConfig withAuthToken( AuthToken authToken )
+        {
+            return new InstanceConfig( authToken, logLevel, resolver, encryptionEnabled, additionalConfig );
+        }
+
+        public InstanceConfig withLogLevel( Level logLevel )
+        {
+            return new InstanceConfig( authToken, logLevel, resolver, encryptionEnabled, additionalConfig );
+        }
+
+        /*
+        This is private because we expect people to supply the resolver in the call to the DriverFactory but the Drivers consider Resolver to be part of the
+        driver config so we set it inside the DriverFactory
+         */
+        private InstanceConfig withResolver( ServerAddressResolver resolver )
+        {
+            if ( this.resolver != null )
+            {
+                throw new IllegalStateException( "cannot set resolver multiple times" );
+            }
+            return new InstanceConfig( authToken, logLevel, resolver, encryptionEnabled, additionalConfig );
+        }
+
+        public InstanceConfig withEncryptionEnabled( boolean encryptionEnabled )
+        {
+            return new InstanceConfig( authToken, logLevel, resolver, encryptionEnabled, additionalConfig );
+        }
+
+        public InstanceConfig withAdditionalConfig( UnaryOperator<Config.ConfigBuilder> additionalConfig )
+        {
+            if ( this.additionalConfig != null )
+            {
+                throw new IllegalStateException( "cannot set additional config multiple times" );
+            }
+            return new InstanceConfig( authToken, logLevel, resolver, encryptionEnabled, additionalConfig );
+        }
+
+        public Config.ConfigBuilder fill( Config.ConfigBuilder builder )
+        {
+            if ( resolver != null )
+            {
+                builder = builder.withResolver( resolver );
+            }
+            if ( additionalConfig != null )
+            {
+                builder = additionalConfig.apply( builder );
+            }
+            builder = encryptionEnabled ? builder.withEncryption() : builder.withoutEncryption();
+            return builder;
         }
     }
 }

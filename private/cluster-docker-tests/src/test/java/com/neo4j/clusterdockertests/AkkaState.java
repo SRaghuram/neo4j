@@ -19,12 +19,14 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.Value;
+import org.neo4j.function.ThrowingFunction;
 import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer;
 
 import static com.neo4j.clusterdockertests.MetricsReader.isEqualTo;
@@ -68,7 +70,7 @@ final class AkkaState
         this.notUp = notUp;
     }
 
-    public static void checkMetrics( Set<Neo4jServer> servers, DriverFactory driverFactory, int databaseCount ) throws IOException
+    public static void checkMetrics( Set<Neo4jServer> servers, ThrowingFunction<URI, Driver, IOException> driverFactory, int databaseCount ) throws IOException
     {
         var metricsReader = new MetricsReader();
         var expectedMetrics = new MetricsReader.MetricExpectations();
@@ -85,7 +87,7 @@ final class AkkaState
         {
             if ( server.isContainerRunning() )
             {
-                try ( Driver driver = driverFactory.graphDatabaseDriver( server.getDirectBoltUri() ) )
+                try ( Driver driver = driverFactory.apply( server.getDirectBoltUri() ) )
                 {
                     metricsReader.checkExpectations( driver, expectedMetrics );
                 }

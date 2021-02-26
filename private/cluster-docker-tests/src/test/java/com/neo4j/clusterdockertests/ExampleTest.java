@@ -6,11 +6,11 @@
 package com.neo4j.clusterdockertests;
 
 import com.neo4j.test.driver.ClusterChecker;
-import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.ClusterCheckerExtension;
+import com.neo4j.test.driver.ClusterCheckerFactory;
 import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -20,6 +20,7 @@ import org.junit.platform.commons.logging.LoggerFactory;
 import org.testcontainers.containers.Neo4jContainer;
 
 import java.io.IOException;
+import java.net.URI;
 import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -46,14 +47,18 @@ import static org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 @NeedsCausalCluster
-@DriverExtension
+@ClusterCheckerExtension
 @ExtendWith( DumpDockerLogs.class )
 public class ExampleTest
 {
     private static final AuthToken authToken = AuthTokens.basic( "neo4j", "password" );
+    private static final DriverFactory.InstanceConfig driverConfig = DriverFactory.instanceConfig().withAuthToken( authToken );
 
     @Inject
     private DriverFactory driverFactory;
+
+    @Inject
+    private ClusterCheckerFactory clusterCheckerFactory;
 
     @CausalCluster
     private static Neo4jCluster cluster;
@@ -72,12 +77,6 @@ public class ExampleTest
                                 .withNeo4jConfig( metrics_filter.name(), "*" );
     }
 
-    @BeforeAll
-    void setUp()
-    {
-        driverFactory.setAuthToken( authToken );
-    }
-
     @AfterAll
     void tearDown()
     {
@@ -87,15 +86,15 @@ public class ExampleTest
     @BeforeEach
     void before() throws IOException
     {
-        driver = driverFactory.graphDatabaseDriver( cluster.getURIs() );
+        driver = driverFactory.graphDatabaseDriver( cluster.getURIs(), driverConfig );
         // make sure that cluster is ready to go before we start
         driver.verifyConnectivity();
-        clusterChecker = driverFactory.clusterChecker(
-                cluster.getAllServersOfType( Neo4jServer.Type.CORE_SERVER )
-                       .stream()
-                       .map( Neo4jServer::getDirectBoltUri )
-                       .collect( Collectors.toSet() )
-        );
+        Set<URI> boltURIs = cluster.getAllServersOfType( Neo4jServer.Type.CORE_SERVER )
+                                  .stream()
+                                  .map( Neo4jServer::getDirectBoltUri )
+                                  .collect( Collectors.toSet() );
+
+        clusterChecker = clusterCheckerFactory.clusterChecker( boltURIs, driverConfig );
     }
 
     @AfterEach
@@ -158,7 +157,7 @@ public class ExampleTest
 
         for ( var server : cluster.getAllServers() )
         {
-            try ( var driver = driverFactory.graphDatabaseDriver( server.getDirectBoltUri() ) )
+            try ( var driver = driverFactory.graphDatabaseDriver( server.getDirectBoltUri(), driverConfig ) )
             {
                 metricsReader.checkExpectations( driver, expectations );
             }
