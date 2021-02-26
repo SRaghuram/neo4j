@@ -7,7 +7,6 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.util
 import java.util.concurrent.ThreadLocalRandom
-
 import org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
@@ -16,6 +15,7 @@ import org.neo4j.cypher.internal.ast.NodeKeyConstraints
 import org.neo4j.cypher.internal.ast.RelExistsConstraints
 import org.neo4j.cypher.internal.ast.ShowConstraintType
 import org.neo4j.cypher.internal.ast.UniqueConstraints
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.schema.AnalyzerProvider
 import org.neo4j.graphdb.schema.IndexSettingImpl
 import org.neo4j.graphdb.schema.IndexSettingImpl.FULLTEXT_ANALYZER
@@ -118,6 +118,18 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     result.toList should be(List(defaultBtreeBriefOutput(1L)))
   }
 
+  test("should show index with brief output (deprecated)") {
+    // GIVEN
+    createDefaultBtreeIndex()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES BRIEF")
+
+    // THEN
+    result.toList should be(List(defaultBtreeBriefOutput(1L)))
+  }
+
   test("should show indexes in alphabetic order") {
     // GIVEN
     graph.createIndexWithName("poppy", label, propWhitespace)
@@ -180,27 +192,27 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     result.toList should be(List(defaultBtreeBriefOutput(1L)))
   }
 
-  test("should show btree index with verbose output") {
+  test("should show btree index with yield *") {
     // GIVEN
     createDefaultBtreeIndex()
     graph.awaitIndexesOnline()
 
     // WHEN
-    val result = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+    val result = executeSingle("SHOW INDEXES YIELD *")
 
     val options: List[Object] = result.columnAs("options").toList
     options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
     withoutColumns(result.toList, List("options")) should equal(List(defaultBtreeVerboseOutput(1L)))
   }
 
-  test("should show fulltext indexes with verbose output") {
+  test("should show fulltext indexes with yield *") {
     // GIVEN
     createDefaultFullTextNodeIndex()
     createDefaultFullTextRelIndex()
     graph.awaitIndexesOnline()
 
     // WHEN
-    val result = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+    val result = executeSingle("SHOW INDEXES YIELD *")
 
     // THEN
     val options: List[Object] = result.columnAs("options").toList
@@ -208,8 +220,26 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     withoutColumns(result.toList, List("options")) should equal(List(defaultFulltextNodeVerboseOutput(1L), defaultFulltextRelVerboseOutput(2L)))
   }
 
-  test("should show indexes backing constraints with verbose output") {
+  test("should show indexes backing constraints with yield *") {
     // GIVEN
+    createDefaultUniquenessConstraint()
+    createDefaultNodeKeyConstraint()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES YIELD *")
+
+    // THEN
+    val options: List[Object] = result.columnAs("options").toList
+    options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
+    withoutColumns(result.toList, List("options")) should equal(List(defaultUniquenessVerboseIndexOutput(1L), defaultNodeKeyVerboseIndexOutput(3L)))
+  }
+
+  test("should show all indexes with verbose output (deprecated)") {
+    // GIVEN
+    createDefaultBtreeIndex()
+    createDefaultFullTextNodeIndex()
+    createDefaultFullTextRelIndex()
     createDefaultUniquenessConstraint()
     createDefaultNodeKeyConstraint()
     graph.awaitIndexesOnline()
@@ -219,8 +249,19 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // THEN
     val options: List[Object] = result.columnAs("options").toList
-    options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
-    withoutColumns(result.toList, List("options")) should equal(List(defaultUniquenessVerboseIndexOutput(1L), defaultNodeKeyVerboseIndexOutput(3L)))
+    assertCorrectOptionsMap(options(0), defaultBtreeOptionsMap) // constraint1
+    assertCorrectOptionsMap(options(1), defaultBtreeOptionsMap) // constraint2
+    assertCorrectOptionsMap(options(2), defaultFulltextOptionsMap) // fulltext_node
+    assertCorrectOptionsMap(options(3), defaultFulltextOptionsMap) // fulltext_rel
+    assertCorrectOptionsMap(options(4), defaultBtreeOptionsMap) // my_index
+
+    withoutColumns(result.toList, List("options")) should equal(List(
+      defaultUniquenessVerboseIndexOutput(4L), // constraint1
+      defaultNodeKeyVerboseIndexOutput(6L), // constraint2
+      defaultFulltextNodeVerboseOutput(2L), // fulltext_node
+      defaultFulltextRelVerboseOutput(3L), // fulltext_rel
+      defaultBtreeVerboseOutput(1L), // my_index
+    ))
   }
 
   test("should show correct options for btree index with random options") {
@@ -229,7 +270,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     graph.awaitIndexesOnline()
 
     // WHEN
-    val result = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+    val result = executeSingle("SHOW INDEXES YIELD *")
 
     // THEN
     val options: List[Object] = result.columnAs("options").toList
@@ -244,7 +285,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     graph.awaitIndexesOnline()
 
     // WHEN
-    val result = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+    val result = executeSingle("SHOW INDEXES YIELD *")
 
     // THEN
     val options: List[Object] = result.columnAs("options").toList
@@ -259,7 +300,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     graph.awaitIndexesOnline()
 
     // WHEN
-    val result = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+    val result = executeSingle("SHOW INDEXES YIELD *")
 
     // THEN
     val options: List[Object] = result.columnAs("options").toList
@@ -313,6 +354,273 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     graph.awaitIndexesOnline()
     verifyCanDropAndRecreateIndexesUsingCreateStatement("CONSTRAINT")
+  }
+
+  // Filtering
+
+  test("should show index with yield") {
+    // GIVEN
+    createDefaultBtreeIndex()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES YIELD name, type")
+
+    // THEN
+    result.toList should be(List(defaultBtreeVerboseOutput(1L).filterKeys(k => Seq("name", "type").contains(k))))
+  }
+
+  test("should show index with yield, where and return and brief columns") {
+    // GIVEN
+    createDefaultIndexes()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES YIELD name, type WHERE type = 'BTREE' RETURN name, type")
+
+    // THEN
+    result.toList should be(List(defaultBtreeVerboseOutput(1L).filterKeys(k => Seq("name", "type").contains(k))))
+  }
+
+  test("should show index with yield, where and return and verbose columns") {
+    // GIVEN
+    createDefaultIndexes()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES YIELD name, type, createStatement WHERE type = 'BTREE' RETURN name, createStatement")
+
+    // THEN
+    result.toList should be(List(defaultBtreeVerboseOutput(1L).filterKeys(k => Seq("name", "createStatement").contains(k))))
+  }
+
+  test("should show index with full yield") {
+    createDefaultBtreeIndex()
+    createDefaultConstraints()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = execute("SHOW INDEXES YIELD name AS nm ORDER BY nm SKIP 1 LIMIT 10 WHERE nm starts with 'c' RETURN *")
+
+    // THEN
+    result.toList should be(List(Map("nm" -> "constraint2")))
+  }
+
+  test("should show index with yield, return and aggregations") {
+    // GIVEN
+    createDefaultConstraints()
+    createDefaultFullTextNodeIndex()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES YIELD name, type RETURN collect(name) as names, type order by size(names)")
+
+    // THEN
+    result.toList should be(List(
+      Map("names" -> List("fulltext_node"), "type" -> "FULLTEXT"),
+      Map("names" -> List("constraint1", "constraint2"), "type" -> "BTREE"),
+    ))
+  }
+
+  test("should show index with yield, where, return and aliasing") {
+    // GIVEN
+    createDefaultBtreeIndex()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES YIELD name as options, options as name where size(options) > 0 RETURN options as name")
+
+    // THEN
+    result.toList should be(List(defaultBtreeBriefOutput(1L).filterKeys(_ == "name")))
+  }
+
+  test("should show index with where") {
+    // GIVEN
+    createDefaultBtreeIndex()
+    createDefaultFullTextNodeIndex()
+    createDefaultFullTextRelIndex()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES WHERE type = 'BTREE'")
+
+    // THEN
+    result.toList should be(List(defaultBtreeBriefOutput(1L)))
+  }
+
+  test("should show indexes with where in alphabetic order") {
+    // GIVEN
+    graph.createIndexWithName("poppy", label, propWhitespace)
+    graph.createIndexWithName("benny", label2, prop, prop2)
+    graph.createIndexWithName("albert", label2, prop2)
+    graph.createIndexWithName("charlie", label, prop2)
+    graph.createIndexWithName("xavier", label, prop)
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES WHERE NOT name CONTAINS 'x'")
+
+    // THEN
+    result.columnAs("name").toList should equal(List("albert", "benny", "charlie", "poppy"))
+  }
+
+  test("should show index with where and exists sub-clause") {
+    // GIVEN
+    createLabeledNode(Map(prop -> "foo", prop2 -> "bar", prop3 -> "BTREE"), label)
+    createDefaultBtreeIndex()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle(
+      s"""SHOW INDEXES WHERE EXISTS {
+        | MATCH (n: $label {$prop3: type})
+        |}""".stripMargin)
+
+    // THEN
+    result.toList should be(List(defaultBtreeBriefOutput(1L)))
+  }
+
+  test("should show index with multiple order by") {
+    // GIVEN
+    createDefaultIndexes()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle(
+      s"""SHOW INDEXES YIELD * ORDER BY type DESC RETURN name, type ORDER BY name ASC""".stripMargin)
+
+    result.executionPlanDescription() should includeSomewhere.aPlan("Sort").containingArgument("name ASC")
+    result.executionPlanDescription() should includeSomewhere.aPlan("Sort").containingArgument("type DESC")
+
+    // THEN
+    result.toList should be(List(
+      Map("name" -> "fulltext_node", "type" -> "FULLTEXT"),
+      Map("name" -> "fulltext_rel", "type" -> "FULLTEXT"),
+      Map("name" -> "my_index", "type" -> "BTREE")
+    ))
+
+  }
+
+  test("should fail to show index with yield, return with aggregation and illegal order by") {
+    // GIVEN
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("SHOW INDEXES YIELD name, type RETURN collect(name) as names order by type")
+    }
+
+    // THEN
+    exception.getMessage should startWith("In a WITH/RETURN with DISTINCT or an aggregation, it is not possible to access variables declared before the WITH/RETURN: type")
+  }
+
+  test("should fail to show index with where on verbose column") {
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("SHOW INDEXES WHERE isEmpty(options)")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `options` not defined")
+  }
+
+  test("should fail to show index with where on non-existing columns") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("SHOW INDEXES WHERE foo = 'UNIQUE'")
+    }
+
+    // THEN
+    exception.getMessage should include("Variable `foo` not defined")
+  }
+
+  test("should fail to show index with additional clauses") {
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("SHOW INDEXES YIELD * WITH * MATCH (n) RETURN n")
+    }
+
+    // THEN
+    // should start with 'YIELD may only be followed by RETURN', but parboiled can't parse it (javaCC could)
+    exception.getMessage should startWith("Invalid input 'I': expected 'h/H'")
+  }
+
+  test("should fail to show index with clauses in front") {
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("UNWIND range(1,10) as b SHOW INDEXES YIELD * RETURN *")
+    }
+
+    // THEN
+    // should start with 'SHOW INDEXES may only be preceded by USE GRAPH', but parboiled can't parse it (javaCC could)
+    exception.getMessage should startWith("Invalid input 'H': expected 't/T' or 'e/E'")
+  }
+
+  test("should fail to show index with clauses inside") {
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("SHOW INDEXES WITH name, type RETURN *")
+    }
+
+    // THEN
+    // should start with 'SHOW INDEXES may only be followed by WHERE or YIELD', but parboiled can't parse it (javaCC could)
+    exception.getMessage should startWith("Invalid input 'I': expected 'h/H'")
+  }
+
+  test("should fail with incorrect clause order") {
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("SHOW INDEXES WHERE name = 'a' YIELD * RETURN *")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Invalid input 'Y': expected")
+  }
+
+  // Planner tests
+
+  test("show index plan BTREE and VERBOSE (deprecated)") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW BTREE INDEXES VERBOSE")
+
+    // THEN
+    result.executionPlanString() should include ("btreeIndexes, allColumns")
+  }
+
+  test("show index plan BTREE and YIELD *") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW BTREE INDEXES YIELD *")
+
+    // THEN
+    result.executionPlanString() should include ("btreeIndexes, allColumns")
+  }
+
+  test("show index plan ALL INDEXES and BRIEF (deprecated)") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW ALL INDEXES BRIEF")
+
+    // THEN
+    result.executionPlanString() should include ("allIndexes, defaultColumns")
+  }
+
+  test("show index plan SHOW INDEXES") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW INDEXES")
+
+    // THEN
+    result.executionPlanString() should include ("allIndexes, defaultColumns")
+  }
+
+  test("show index plan SHOW INDEXES with WHERE") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW INDEXES WHERE name STARTS WITH 'my'")
+
+    // THEN
+    result.executionPlanString() should include ("allIndexes, defaultColumns")
+    result.executionPlanString() should include ("name STARTS WITH \"my\"")
   }
 
   // SHOW CONSTRAINTS tests
@@ -490,7 +798,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     randomOptions.isDefined should be(true)
 
     // WHEN
-    val indexResult = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+    val indexResult = executeSingle("SHOW INDEXES YIELD *")
 
     // THEN
     val indexOptions: List[Object] = indexResult.columnAs("options").toList
@@ -515,7 +823,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     randomOptions.isDefined should be(true)
 
     // WHEN
-    val indexResult = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+    val indexResult = executeSingle("SHOW INDEXES YIELD *")
 
     // THEN
     val indexOptions: List[Object] = indexResult.columnAs("options").toList
@@ -763,7 +1071,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   private def verifyCanDropAndRecreateIndexesUsingCreateStatement(schemaType: String): Unit = {
     // GIVEN
-    val allIndexes = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+    val allIndexes = executeSingle("SHOW INDEXES YIELD *")
     val createStatements = allIndexes.columnAs("createStatement").toList
     val names = allIndexes.columnAs("name").toList
     val options = allIndexes.columnAs("options").toList
@@ -772,14 +1080,14 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     dropAllFromNames(names, schemaType)
 
     // THEN
-    executeSingle("SHOW INDEXES VERBOSE OUTPUT").toList should be(empty)
+    executeSingle("SHOW INDEXES YIELD *").toList should be(empty)
 
     // WHEN
     recreateAllFromCreateStatements(createStatements)
     graph.awaitIndexesOnline()
 
     // THEN
-    val result = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+    val result = executeSingle("SHOW INDEXES YIELD *")
 
     // The ids will not be the same and options is not comparable using CCS
     val skipColumns = List("id", "options")

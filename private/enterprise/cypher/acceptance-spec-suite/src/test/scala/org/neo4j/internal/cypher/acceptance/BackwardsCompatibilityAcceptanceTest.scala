@@ -450,4 +450,24 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
       }
     })
   }
+
+  test("SHOW INDEXES should not support WHERE, YIELD and RETURN with Cypher 4.2") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.2 SHOW INDEXES YIELD name WHERE name='foo' RETURN name")
+    }
+
+    // THEN
+    exception.getMessage should include("Using YIELD or WHERE to list indexes is not supported in this Cypher version.")
+  }
+
+  test("SHOW INDEXES should not support WHERE with Cypher 4.2") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.2 SHOW INDEX WHERE name='foo'")
+    }
+
+    // THEN
+    exception.getMessage should include("Using YIELD or WHERE to list indexes is not supported in this Cypher version.")
+  }
 }

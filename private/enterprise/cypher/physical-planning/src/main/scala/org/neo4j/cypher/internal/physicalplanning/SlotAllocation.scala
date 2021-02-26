@@ -31,6 +31,7 @@ import org.neo4j.cypher.internal.logical.plans.AssertSameNode
 import org.neo4j.cypher.internal.logical.plans.AssertingMultiNodeIndexSeek
 import org.neo4j.cypher.internal.logical.plans.CacheProperties
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
+import org.neo4j.cypher.internal.logical.plans.CommandLogicalPlan
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.Create
 import org.neo4j.cypher.internal.logical.plans.DeleteExpression
@@ -520,6 +521,10 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
       case leaf: RelationshipCountFromCountStore =>
         slots.newReference(leaf.idName, false, CTInteger)
+
+      case leaf: CommandLogicalPlan =>
+        for (v <- leaf.defaultColumns)
+          slots.newReference(v.variable.name, false, CTAny)
 
       case Input(nodes, relationships, variables, nullableInput) =>
         for (v <- nodes)

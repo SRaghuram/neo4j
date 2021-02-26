@@ -14,10 +14,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.driver.Driver;
@@ -114,11 +116,50 @@ class CommandsRoutingTest
         {
             var query = joinAsLines(
                     "USE mega.myGraph",
-                    "SHOW INDEXES VERBOSE"
+                    "SHOW INDEXES YIELD *"
             );
             return tx.run( query ).list();
         } );
         assertThat( names ).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource( strings = {"0", "49", "50", "101"} )
+    void testIndexManagementManyIndexes( String numberOfIndexes )
+    {
+        // GIVEN
+        int indexes = Integer.parseInt( numberOfIndexes );
+        var expectedLabels = new String[indexes];
+        for ( int i = 1; i <= indexes; i++ )
+        {
+            expectedLabels[i - 1] = String.format( "IxLabel%d", i );
+        }
+
+        inNeo4jTx( tx ->
+                   {
+                       for ( String label : expectedLabels )
+                       {
+                           tx.run( String.format( "CREATE INDEX %s IF NOT EXISTS FOR (n:%s) ON (n.id)", label, label ) );
+                       }
+                       return null;
+                   } );
+
+        // WHEN
+        List<Record> r = inNeo4jTx( tx -> tx.run( "SHOW ALL INDEXES" ).list() );
+
+        // THEN
+        assertThat( r.size() ).isEqualTo( indexes );
+        List<String> indexNames = r.stream().map( row -> row.get( "name" ).asString() ).collect( Collectors.toList() );
+        assertThat( indexNames ).containsExactlyInAnyOrder( expectedLabels );
+
+        inNeo4jTx( tx ->
+                   {
+                       for ( String label : expectedLabels )
+                       {
+                           tx.run( String.format( "DROP INDEX %s IF EXISTS", label ) );
+                       }
+                       return null;
+                   } );
     }
 
     @Test
