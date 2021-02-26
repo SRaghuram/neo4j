@@ -57,7 +57,7 @@ class Segments implements AutoCloseable
         populateRangeMap();
     }
 
-    private void populateRangeMap()
+    private synchronized void populateRangeMap()
     {
         for ( SegmentFile segment : allSegments )
         {

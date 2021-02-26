@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 
 import org.neo4j.cursor.IOCursor;
@@ -59,6 +60,8 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     private final MemoryTracker memoryTracker;
     private final JobScheduler scheduler;
     private final Log log;
+    private final ReentrantReadWriteLock.ReadLock readLock;
+    private final ReentrantReadWriteLock.WriteLock writeLock;
 
     private boolean needsRecovery;
     private final LogProvider logProvider;
@@ -84,82 +87,109 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
         this.readerPool = new ReaderPool( readerPoolSize, logProvider, fileNames, fileSystem, clock );
         this.pruner = new SegmentedRaftLogPruner( pruningStrategy );
         this.log = logProvider.getLog( getClass() );
+        var reentrantReadWriteLock = new ReentrantReadWriteLock();
+        readLock = reentrantReadWriteLock.readLock();
+        writeLock = reentrantReadWriteLock.writeLock();
     }
 
     @Override
-    public synchronized void start() throws IOException, DamagedLogStorageException, DisposedException
+    public void start() throws IOException, DamagedLogStorageException, DisposedException
     {
-        if ( Files.notExists( directory ) )
-        {
-            Files.createDirectories( directory );
-        }
-
+        writeLock.lock();
         try
         {
-            state = new RecoveryProtocol( fileSystem, fileNames, readerPool, marshalSelector, logProvider, memoryTracker ).run();
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( e );
-        }
-
-        log.info( "log started with recovered state %s", state );
-        /*
-         * Recovery guarantees that once complete the header of the last raft log file is intact. No such guarantee
-         * is made for the last log entry in the last file (or any of the files for that matter). To complete
-         * recovery we need to rotate away the last log file, so that any incomplete entries at the end of the last
-         * do not have entries appended after them, which would result in unaligned (and therefore wrong) reads.
-         * As an obvious optimization, we don't need to rotate if the file contains only the header, such as is
-         * the case of a newly created log.
-         */
-        SegmentFile lastSegment = state.segments().last();
-        if ( lastSegment.size() > lastSegment.header().recordOffset() )
-        {
-            rotateSegment( state.appendIndex(), state.appendIndex(), state.terms().latest() );
-        }
-
-        readerPoolPruner = scheduler.scheduleRecurring( Group.RAFT_READER_POOL_PRUNER,
-                () -> readerPool.prune( READER_POOL_MAX_AGE, MINUTES ), READER_POOL_MAX_AGE, READER_POOL_MAX_AGE, MINUTES );
-    }
-
-    @Override
-    public synchronized void stop() throws Exception
-    {
-        if ( readerPoolPruner != null )
-        {
-            readerPoolPruner.cancel();
-        }
-        readerPool.close();
-        state.segments().close();
-    }
-
-    @Override
-    public synchronized long append( RaftLogEntry... entries ) throws IOException
-    {
-        ensureOk();
-
-        try
-        {
-            for ( RaftLogEntry entry : entries )
+            if ( Files.notExists( directory ) )
             {
-                state.setAppendIndex( state.appendIndex() + 1 );
-                state.terms().append( state.appendIndex(), entry.term() );
-                state.segments().last().write( state.appendIndex(), entry );
+                Files.createDirectories( directory );
             }
-            state.segments().last().flush();
-        }
-        catch ( Throwable e )
-        {
-            needsRecovery = true;
-            throw e;
-        }
 
-        if ( state.segments().last().position() >= rotateAtSize )
-        {
-            rotateSegment( state.appendIndex(), state.appendIndex(), state.terms().latest() );
-        }
+            try
+            {
+                state = new RecoveryProtocol( fileSystem, fileNames, readerPool, marshalSelector, logProvider, memoryTracker ).run();
+            }
+            catch ( Exception e )
+            {
+                throw new RuntimeException( e );
+            }
 
-        return state.appendIndex();
+            log.info( "log started with recovered state %s", state );
+            /*
+             * Recovery guarantees that once complete the header of the last raft log file is intact. No such guarantee
+             * is made for the last log entry in the last file (or any of the files for that matter). To complete
+             * recovery we need to rotate away the last log file, so that any incomplete entries at the end of the last
+             * do not have entries appended after them, which would result in unaligned (and therefore wrong) reads.
+             * As an obvious optimization, we don't need to rotate if the file contains only the header, such as is
+             * the case of a newly created log.
+             */
+            SegmentFile lastSegment = state.segments().last();
+            if ( lastSegment.size() > lastSegment.header().recordOffset() )
+            {
+                rotateSegment( state.appendIndex(), state.appendIndex(), state.terms().latest() );
+            }
+
+            readerPoolPruner = scheduler.scheduleRecurring( Group.RAFT_READER_POOL_PRUNER,
+                    () -> readerPool.prune( READER_POOL_MAX_AGE, MINUTES ), READER_POOL_MAX_AGE, READER_POOL_MAX_AGE, MINUTES );
+        }
+        finally
+        {
+            writeLock.unlock();
+        }
+    }
+
+    @Override
+    public void stop() throws Exception
+    {
+        writeLock.lock();
+        try
+        {
+            if ( readerPoolPruner != null )
+            {
+                readerPoolPruner.cancel();
+            }
+            readerPool.close();
+            state.segments().close();
+        }
+        finally
+        {
+            writeLock.unlock();
+        }
+    }
+
+    @Override
+    public long append( RaftLogEntry... entries ) throws IOException
+    {
+        writeLock.lock();
+        try
+        {
+            ensureOk();
+
+            try
+            {
+                for ( RaftLogEntry entry : entries )
+                {
+                    state.setAppendIndex( state.appendIndex() + 1 );
+                    state.terms().append( state.appendIndex(), entry.term() );
+                    state.segments().last().write( state.appendIndex(), entry );
+                }
+                state.segments().last().flush();
+            }
+            catch ( Throwable e )
+            {
+                needsRecovery = true;
+                throw e;
+            }
+
+            if ( state.segments().last().position() >= rotateAtSize )
+            {
+                rotateSegment( state.appendIndex(), state.appendIndex(), state.terms().latest() );
+            }
+
+            return state.appendIndex();
+        }
+        finally
+        {
+            writeLock.unlock();
+        }
     }
 
     private void ensureOk()
@@ -171,21 +201,29 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     }
 
     @Override
-    public synchronized void truncate( long fromIndex ) throws IOException
+    public void truncate( long fromIndex ) throws IOException
     {
-        log.debug( "Truncate from index %d", fromIndex );
-        if ( state.appendIndex() < fromIndex )
+        writeLock.lock();
+        try
         {
-            throw new IllegalArgumentException( "Cannot truncate at index " + fromIndex + " when append index is " +
-                                                state.appendIndex() );
+            log.debug( "Truncate from index %d", fromIndex );
+            if ( state.appendIndex() < fromIndex )
+            {
+                throw new IllegalArgumentException( "Cannot truncate at index " + fromIndex + " when append index is " +
+                                                    state.appendIndex() );
+            }
+
+            long newAppendIndex = fromIndex - 1;
+            long newTerm = readEntryTerm( newAppendIndex );
+            truncateSegment( state.appendIndex(), newAppendIndex, newTerm );
+
+            state.setAppendIndex( newAppendIndex );
+            state.terms().truncate( fromIndex );
         }
-
-        long newAppendIndex = fromIndex - 1;
-        long newTerm = readEntryTerm( newAppendIndex );
-        truncateSegment( state.appendIndex(), newAppendIndex, newTerm );
-
-        state.setAppendIndex( newAppendIndex );
-        state.terms().truncate( fromIndex );
+        finally
+        {
+            writeLock.unlock();
+        }
     }
 
     private void rotateSegment( long prevFileLastIndex, long prevIndex, long prevTerm ) throws IOException
@@ -209,13 +247,29 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     @Override
     public long appendIndex()
     {
-        return state.appendIndex();
+        readLock.lock();
+        try
+        {
+            return state.appendIndex();
+        }
+        finally
+        {
+            readLock.unlock();
+        }
     }
 
     @Override
     public long prevIndex()
     {
-        return state.prevIndex();
+        readLock.lock();
+        try
+        {
+            return state.prevIndex();
+        }
+        finally
+        {
+            readLock.unlock();
+        }
     }
 
     @Override
@@ -226,22 +280,30 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     }
 
     @Override
-    public synchronized long skip( long newIndex, long newTerm ) throws IOException
+    public long skip( long newIndex, long newTerm ) throws IOException
     {
-        log.info( "Skipping from {index: %d, term: %d} to {index: %d, term: %d}",
-                state.appendIndex(), state.terms().latest(), newIndex, newTerm );
-
-        if ( state.appendIndex() < newIndex )
+        writeLock.lock();
+        try
         {
-            skipSegment( state.appendIndex(), newIndex, newTerm );
-            state.terms().skip( newIndex, newTerm );
+            log.info( "Skipping from {index: %d, term: %d} to {index: %d, term: %d}",
+                    state.appendIndex(), state.terms().latest(), newIndex, newTerm );
 
-            state.setPrevIndex( newIndex );
-            state.setPrevTerm( newTerm );
-            state.setAppendIndex( newIndex );
+            if ( state.appendIndex() < newIndex )
+            {
+                skipSegment( state.appendIndex(), newIndex, newTerm );
+                state.terms().skip( newIndex, newTerm );
+
+                state.setPrevIndex( newIndex );
+                state.setPrevTerm( newTerm );
+                state.setAppendIndex( newIndex );
+            }
+
+            return state.appendIndex();
         }
-
-        return state.appendIndex();
+        finally
+        {
+            writeLock.unlock();
+        }
     }
 
     private RaftLogEntry readLogEntry( long logIndex ) throws IOException
@@ -255,43 +317,60 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     @Override
     public long readEntryTerm( long logIndex ) throws IOException
     {
-        if ( logIndex > state.appendIndex() )
+        readLock.lock();
+        try
         {
-            return -1;
-        }
-        long term = state.terms().get( logIndex );
-        if ( term == -1 && logIndex >= state.prevIndex() )
-        {
+            if ( logIndex > state.appendIndex() )
+            {
+                return -1;
+            }
+            long term = state.terms().get( logIndex );
+            if ( term != -1 || logIndex < state.prevIndex() )
+            {
+                return term;
+            }
             RaftLogEntry entry = readLogEntry( logIndex );
             term = (entry != null) ? entry.term() : -1;
+            return term;
         }
-        return term;
+        finally
+        {
+            readLock.unlock();
+        }
     }
 
     @Override
-    public synchronized long prune( long safeIndex )
+    public long prune( long safeIndex )
     {
-        log.debug( "Prune to %s. Current state is %s", safeIndex, state );
-        long pruneIndex = pruner.getIndexToPruneFrom( safeIndex, state.segments() );
-        SegmentFile oldestNotDisposed = state.segments().prune( pruneIndex );
-
-        long newPrevIndex = oldestNotDisposed.header().prevIndex();
-        long newPrevTerm = oldestNotDisposed.header().prevTerm();
-
-        if ( newPrevIndex > state.prevIndex() )
+        writeLock.lock();
+        try
         {
-            state.setPrevIndex( newPrevIndex );
-        }
+            log.debug( "Prune to %s. Current state is %s", safeIndex, state );
+            long pruneIndex = pruner.getIndexToPruneFrom( safeIndex, state.segments() );
+            SegmentFile oldestNotDisposed = state.segments().prune( pruneIndex );
 
-        if ( newPrevTerm > state.prevTerm() )
+            long newPrevIndex = oldestNotDisposed.header().prevIndex();
+            long newPrevTerm = oldestNotDisposed.header().prevTerm();
+
+            if ( newPrevIndex > state.prevIndex() )
+            {
+                state.setPrevIndex( newPrevIndex );
+            }
+
+            if ( newPrevTerm > state.prevTerm() )
+            {
+                state.setPrevTerm( newPrevTerm );
+            }
+
+            log.debug( "Updated state is now %s", state );
+
+            state.terms().prune( state.prevIndex() );
+
+            return state.prevIndex();
+        }
+        finally
         {
-            state.setPrevTerm( newPrevTerm );
+            writeLock.unlock();
         }
-
-        log.debug( "Updated state is now %s", state );
-
-        state.terms().prune( state.prevIndex() );
-
-        return state.prevIndex();
     }
 }
