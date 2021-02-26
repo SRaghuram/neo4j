@@ -14,6 +14,7 @@
 
     <properties>
         <license-text.header>../build/license-header.txt</license-text.header>
+        <neo4j.enterprise.version>${project.version}</neo4j.enterprise.version>
     </properties>
 
     <licenses>
@@ -36,22 +37,22 @@
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-values</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.enterprise.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-io</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.enterprise.version}</version>
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise-kernel</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.enterprise.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j.app</groupId>
             <artifactId>neo4j-server</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.enterprise.version}</version>
         </dependency>
 
         <dependency>
@@ -88,6 +89,5 @@
         </dependency>
 
     </dependencies>
-
 
 </project>

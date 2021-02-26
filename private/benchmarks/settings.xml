@@ -6,21 +6,51 @@
 
 -->
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
                         https://maven.apache.org/xsd/settings-1.0.0.xsd">
-  <servers>
-    <server>
-      <id>neo4j-internal-snapshots</id>
-      <username>${env.ARTIFACTORY_USERNAME}</username>
-      <password>${env.ARTIFACTORY_PASSWORD}</password>
-    </server>
-    <server>
-      <id>neo4j-internal-releases</id>
-      <username>${env.ARTIFACTORY_USERNAME}</username>
-      <password>${env.ARTIFACTORY_PASSWORD}</password>
-    </server>
-  </servers>
+    <servers>
+        <server>
+            <id>neo4j-internal-snapshots</id>
+            <username>${env.ARTIFACTORY_USERNAME}</username>
+            <password>${env.ARTIFACTORY_PASSWORD}</password>
+        </server>
+        <server>
+            <id>neo4j-internal-releases</id>
+            <username>${env.ARTIFACTORY_USERNAME}</username>
+            <password>${env.ARTIFACTORY_PASSWORD}</password>
+        </server>
+        <server>
+            <id>neo4j-enterprise</id>
+            <username>${env.NEO4J_ENTERPRISE_BINTRAY_USERNAME}</username>
+            <password>${env.NEO4J_ENTERPRISE_BINTRAY_PASSWORD}</password>
+        </server>
+    </servers>
+
+    <profiles>
+        <profile>
+            <id>neo4j-enterprise</id>
+            <repositories>
+                <repository>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                    <id>neo4j-enterprise</id>
+                    <name>neo4j-enterprise</name>
+                    <url>http://m2.neo4j.com/enterprise</url>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                    <id>neo4j-enterprise</id>
+                    <name>neo4j-enterprise-plugins</name>
+                    <url>http://m2.neo4j.com/enterprise</url>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
 
 </settings>
-<!-- vim: set ts=2 sw=2: -->

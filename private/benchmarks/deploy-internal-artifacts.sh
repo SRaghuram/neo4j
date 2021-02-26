@@ -6,11 +6,16 @@
 set -eux
 
 version=
+neo4j_enterprise_version=
 
 while (("$#")); do
   case "$1" in
   --version)
     version=$2
+    shift 2
+    ;;
+  --neo4j-enterprise-version)
+    neo4j_enterprise_version=$2
     shift 2
     ;;
   --) # end of argument parsing
@@ -26,6 +31,11 @@ fi
 
 if [[ -z $version ]]; then
   echo "benchmarks.version property not set in benchmarks POM or not set from command line"
+  exit 1
+fi
+
+if [[ -z $neo4j_enterprise_version ]]; then
+  echo "Neo4j enterprise version was not set from command line"
   exit 1
 fi
 
@@ -45,9 +55,12 @@ modules_list=$(IFS=","; echo "${modules_names[*]}")
 # set versions, we need to call it on product root, otherwise things will not compile
 mvn versions:set -DnewVersion="$version" -DprocessAllModules=true
 
+# set neo4j enterprise version to point to GA version, as data generator depends on it
+mvn versions:set-property -Dproperty=neo4j.enterprise.version -DnewVersion="$neo4j_enterprise_version" -pl :benchmark-data-generator
+
 # compile and package, only the things we need
-mvn clean install -Dcheckstyle.skip -Drevapi.skip -DskipTests -Dlicensing.skip -Dlicense.skip -TC2 \
-    -PbenchmarksDeploy -pl "$modules_list" -am
+mvn --settings "$settings_file" clean install -Dcheckstyle.skip -Drevapi.skip -DskipTests -Dlicensing.skip -Dlicense.skip -TC2 \
+    -PbenchmarksDeploy -pl "$modules_list" -am -Pneo4j-enterprise
 
 # flatten POM structure
 mvn org.codehaus.mojo:flatten-maven-plugin:flatten -pl "$modules_list"
