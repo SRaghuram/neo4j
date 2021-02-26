@@ -233,7 +233,6 @@ public class ForsetiClient implements Locks.Client
                         if ( lockMap.putIfAbsent( resourceId, mySharedLock ) == null )
                         {
                             // Success, we now hold the shared lock.
-                            memoryTracker.allocateHeap( CONCURRENT_NODE_SIZE );
                             break;
                         }
                         else
@@ -248,7 +247,6 @@ public class ForsetiClient implements Locks.Client
                         if ( ((SharedLock) existingLock).acquire( this ) )
                         {
                             // Success!
-                            memoryTracker.allocateHeap( CONCURRENT_NODE_SIZE );
                             break;
                         }
                     }
@@ -273,6 +271,7 @@ public class ForsetiClient implements Locks.Client
 
                 // Make a local note about the fact that we now hold this lock
                 heldShareLocks.put( resourceId, 1 );
+                memoryTracker.allocateHeap( CONCURRENT_NODE_SIZE );
             }
         }
         finally
@@ -336,6 +335,7 @@ public class ForsetiClient implements Locks.Client
                 ForsetiLockManager.Lock existingLock;
                 int tries = 0;
                 long waitStartNano = clock.nanos();
+                boolean upgraded = false;
                 while ( (existingLock = lockMap.putIfAbsent( resourceId, myExclusiveLock )) != null )
                 {
                     assertValid( waitStartNano, resourceType, resourceId );
@@ -351,6 +351,7 @@ public class ForsetiClient implements Locks.Client
                                 sharedLock,
                                 waitStartNano ) )
                         {
+                            upgraded = true;
                             break;
                         }
                     }
@@ -363,7 +364,7 @@ public class ForsetiClient implements Locks.Client
                 }
 
                 heldLocks.put( resourceId, 1 );
-                if ( existingLock == null )
+                if ( !upgraded )
                 {
                     memoryTracker.allocateHeap( CONCURRENT_NODE_SIZE );
                 }
@@ -504,65 +505,6 @@ public class ForsetiClient implements Locks.Client
             heldShareLocks.put( resourceId, 1 );
             memoryTracker.allocateHeap( CONCURRENT_NODE_SIZE );
             return true;
-        }
-        finally
-        {
-            stateHolder.decrementActiveClients();
-        }
-    }
-
-    @Override
-    public boolean reEnterShared( ResourceType resourceType, long resourceId )
-    {
-        stateHolder.incrementActiveClients( this );
-        try
-        {
-            HeapTrackingLongIntHashMap heldShareLocks = getSharedLockCount( resourceType );
-            HeapTrackingLongIntHashMap heldExclusiveLocks = getExclusiveLockCount( resourceType );
-
-            int heldCount = heldShareLocks.getIfAbsent( resourceId, -1 );
-            if ( heldCount != -1 )
-            {
-                // We already have a lock on this, just increment our local reference counter.
-                heldShareLocks.put( resourceId, Math.incrementExact( heldCount ) );
-                return true;
-            }
-
-            if ( heldExclusiveLocks.containsKey( resourceId ) )
-            {
-                // We already have an exclusive lock, so just leave that in place. When the exclusive lock is released,
-                // it will be automatically downgraded to a shared lock, since we bumped the share lock reference count.
-                heldShareLocks.put( resourceId, 1 );
-                return true;
-            }
-
-            // We didn't hold a lock already, so we cannot re-enter.
-            return false;
-        }
-        finally
-        {
-            stateHolder.decrementActiveClients();
-        }
-    }
-
-    @Override
-    public boolean reEnterExclusive( ResourceType resourceType, long resourceId )
-    {
-        stateHolder.incrementActiveClients( this );
-        try
-        {
-            HeapTrackingLongIntHashMap heldLocks = getExclusiveLockCount( resourceType );
-
-            int heldCount = heldLocks.getIfAbsent( resourceId, -1 );
-            if ( heldCount != -1 )
-            {
-                // We already have a lock on this, just increment our local reference counter.
-                heldLocks.put( resourceId, Math.incrementExact( heldCount ) );
-                return true;
-            }
-
-            // We didn't hold a lock already, so we cannot re-enter.
-            return false;
         }
         finally
         {
@@ -845,7 +787,7 @@ public class ForsetiClient implements Locks.Client
             // Also cleaning updater reference that can hold lock in memory
             ((SharedLock) lock).cleanUpdateHolder();
             lockMap.remove( resourceId );
-        memoryTracker.releaseHeap( CONCURRENT_NODE_SIZE );
+            memoryTracker.releaseHeap( CONCURRENT_NODE_SIZE );
         }
     }
 
@@ -889,6 +831,7 @@ public class ForsetiClient implements Locks.Client
             {
                 return false;
             }
+            memoryTracker.allocateHeap( CONCURRENT_NODE_SIZE );
 
             try
             {

@@ -65,18 +65,6 @@ public class ReadReplicaLockManager implements Locks
         }
 
         @Override
-        public boolean reEnterShared( ResourceType resourceType, long resourceId )
-        {
-            return false;
-        }
-
-        @Override
-        public boolean reEnterExclusive( ResourceType resourceType, long resourceId )
-        {
-            throw new IllegalStateException( "Should never happen" );
-        }
-
-        @Override
         public void releaseShared( ResourceType resourceType, long... resourceIds )
         {
         }

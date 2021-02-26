@@ -7,7 +7,6 @@ package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
@@ -312,7 +311,6 @@ public class ForsetiMemoryTrackingTest
     }
 
     @Test
-    @Disabled
     void concurrentMemoryShouldEndUpZero() throws Throwable
     {
         Race race = new Race();

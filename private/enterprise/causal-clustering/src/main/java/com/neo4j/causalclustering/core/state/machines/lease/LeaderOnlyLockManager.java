@@ -116,19 +116,6 @@ public class LeaderOnlyLockManager implements Locks
         }
 
         @Override
-        public boolean reEnterShared( ResourceType resourceType, long resourceId )
-        {
-            return localClient.reEnterShared( resourceType, resourceId );
-        }
-
-        @Override
-        public boolean reEnterExclusive( ResourceType resourceType, long resourceId )
-        {
-            ensureExclusiveLockCanBeAcquired();
-            return localClient.reEnterExclusive( resourceType, resourceId );
-        }
-
-        @Override
         public void releaseShared( ResourceType resourceType, long... resourceIds )
         {
             localClient.releaseShared( resourceType, resourceIds );
