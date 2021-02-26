@@ -5,15 +5,16 @@
  */
 package com.neo4j.dbms.database;
 
+import com.neo4j.dbms.TopologyPublisher;
+
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseOperationCounts;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.kernel.database.Database;
@@ -32,7 +33,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 //TODO: Merge this and StubClusteredDatabasemanager into a single class heirarchy
-public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseContext>
+public class StubMultiDatabaseManager extends MultiDatabaseManager<CompositeDatabaseContext>
 {
     private Map<NamedDatabaseId, Consumer<Database>> onContextCreationActions = new HashMap<>();
     private RuntimeDatabaseDumper runtimeDatabaseDumper;
@@ -48,7 +49,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
     }
 
     @Override
-    protected DatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
+    protected CompositeDatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
         return mockDatabaseContext( namedDatabaseId );
     }
@@ -69,7 +70,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
         return globalModule;
     }
 
-    private DatabaseContext mockDatabaseContext( NamedDatabaseId namedDatabaseId )
+    private CompositeDatabaseContext mockDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
         var facade = mock( GraphDatabaseFacade.class );
         Dependencies deps = new Dependencies();
@@ -83,7 +84,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
         {
             action.accept( db );
         }
-        return spy( new StandaloneDatabaseContext( db ) );
+        return spy( new EnterpriseDatabaseContext( db, new CompositeDatabase( List.of(), db, List.of() ) ) );
     }
 
     public void addOnCreationAction( NamedDatabaseId id, Consumer<Database> action )

@@ -11,6 +11,8 @@ import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
+import java.util.List;
+
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.recovery.RecoveryFacade;
@@ -35,19 +37,15 @@ class CoreDatabase extends ClusteredDatabase
             LifecycleMessageHandler<?> raftMessageHandler, CoreDownloaderService downloadService, RecoveryFacade recoveryFacade,
             CorePanicHandlers panicHandler, RaftStarter raftStarter, Lifecycle topologyComponents )
     {
-        addComponent( panicHandler );
-
-        addComponent( onStart( () -> recoveryFacade.recovery( kernelDatabase.getDatabaseLayout() ) ) );
-
-        addComponent( topologyComponents );
-        addComponent( raftStarter );
-
-        addComponent( kernelDatabase );
-        addComponent( simpleLife( commandApplicationProcess::start, commandApplicationProcess::stop ) );
-        addComponent( onStart( raftMachine::postRecoveryActions ) );
-
-        addComponent( onStop( raftMessageHandler::stop ) );
-        addComponent( onStop( raftMachine::stopTimers ) );
-        addComponent( downloadService );
+        super( List.of( panicHandler,
+                        onStart( () -> recoveryFacade.recovery( kernelDatabase.getDatabaseLayout() ) ),
+                        topologyComponents,
+                        raftStarter ),
+               kernelDatabase,
+               List.of( simpleLife( commandApplicationProcess::start, commandApplicationProcess::stop ),
+                        onStart( raftMachine::postRecoveryActions ),
+                        onStop( raftMessageHandler::stop ),
+                        onStop( raftMachine::stopTimers ),
+                        downloadService ) );
     }
 }

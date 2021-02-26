@@ -215,7 +215,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     }
 
     @Override
-    public ClusteredDatabase clusteredDatabase()
+    public ClusteredDatabase compositeDatabase()
     {
         return clusterDatabase;
     }

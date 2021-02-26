@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.core.state.DiscoveryModule;
+import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.error_handling.DbmsPanicker;
 import com.neo4j.causalclustering.error_handling.DefaultPanicService;
@@ -26,8 +27,10 @@ import com.neo4j.configuration.FabricEnterpriseConfig;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphDbmsModel;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
+import com.neo4j.dbms.database.EnterpriseDatabaseContext;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.dbms.TopologyPublisher;
 import com.neo4j.dbms.procedures.wait.WaitProcedure;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
@@ -110,6 +113,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     private final StandaloneIdentityModule identityModule;
     private final SecurityLog securityLog;
     private DatabaseStartAborter databaseStartAborter;
+    private TopologyService topologyService;
 
     public EnterpriseEditionModule( GlobalModule globalModule )
     {
@@ -187,9 +191,9 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     }
 
     @Override
-    public DatabaseManager<StandaloneDatabaseContext> createDatabaseManager( GlobalModule globalModule )
+    public DatabaseManager<? extends StandaloneDatabaseContext> createDatabaseManager( GlobalModule globalModule )
     {
-        var databaseManager = new EnterpriseMultiDatabaseManager( globalModule, this );
+        var databaseManager = new EnterpriseMultiDatabaseManager( globalModule, this, this::getTopologyPublisher );
 
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
@@ -210,7 +214,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         return databaseManager;
     }
 
-    private void createDatabaseManagerDependentModules( MultiDatabaseManager<StandaloneDatabaseContext> databaseManager,
+    private void createDatabaseManagerDependentModules( MultiDatabaseManager<EnterpriseDatabaseContext> databaseManager,
             StandaloneDbmsReconcilerModule reconcilerModule )
     {
         initDiscoveryAndCatchupIfNeeded( databaseManager, reconcilerModule );
@@ -297,7 +301,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
     }
 
-    private void initBackupIfNeeded( GlobalModule globalModule, Config config, MultiDatabaseManager<StandaloneDatabaseContext> databaseManager )
+    private void initBackupIfNeeded( GlobalModule globalModule, Config config, MultiDatabaseManager<EnterpriseDatabaseContext> databaseManager )
     {
         FileSystemAbstraction fs = globalModule.getFileSystem();
         JobScheduler jobScheduler = globalModule.getJobScheduler();
@@ -325,7 +329,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         backupServer.ifPresent( globalModule.getGlobalLife()::add );
     }
 
-    private void initDiscoveryAndCatchupIfNeeded( MultiDatabaseManager<StandaloneDatabaseContext> databaseManager,
+    private void initDiscoveryAndCatchupIfNeeded( MultiDatabaseManager<EnterpriseDatabaseContext> databaseManager,
             StandaloneDbmsReconcilerModule reconcilerModule )
     {
         if ( globalModule.getGlobalConfig().get( EnterpriseEditionSettings.enable_clustering_in_standalone ) )
@@ -339,12 +343,12 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     {
         var discoveryModule =
                 new DiscoveryModule( new AkkaDiscoveryServiceFactory(), globalModule, sslPolicyLoader, databaseStateService, panicService.panicker() );
-        var topologyService = discoveryModule.standaloneTopologyService( identityModule );
+        topologyService = discoveryModule.standaloneTopologyService( identityModule );
 
         reconcilerModule.registerDatabaseStateChangedListener( topologyService );
     }
 
-    private void createCatchupService( MultiDatabaseManager<StandaloneDatabaseContext> databaseManager )
+    private void createCatchupService( MultiDatabaseManager<EnterpriseDatabaseContext> databaseManager )
     {
         var config = globalModule.getGlobalConfig();
         var logProvider = globalModule.getLogService().getInternalLogProvider();
@@ -374,5 +378,14 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 .build();
 
         globalModule.getGlobalLife().add( catchupServer );
+    }
+
+    private TopologyPublisher getTopologyPublisher( NamedDatabaseId namedDatabaseId )
+    {
+        if ( topologyService == null )
+        {
+            return TopologyPublisher.NOOP;
+        }
+        return TopologyPublisher.from( namedDatabaseId, topologyService::onDatabaseStart, topologyService::onDatabaseStop );
     }
 }

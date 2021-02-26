@@ -81,13 +81,7 @@ public class AkkaStandaloneTopologyService extends AkkaTopologyService
     {
         if ( newState.operatorState() == EnterpriseOperatorState.STARTED )
         {
-            super.onDatabaseStart( newState.databaseId() );
             sendLeaderInfo( defaultLeader, newState.databaseId() );
-        }
-        if ( newState.operatorState() == EnterpriseOperatorState.STOPPED )
-        {
-            sendLeaderInfo( LeaderInfo.INITIAL, newState.databaseId() );
-            super.onDatabaseStop( newState.databaseId() );
         }
         super.stateChange( previousState, newState );
     }

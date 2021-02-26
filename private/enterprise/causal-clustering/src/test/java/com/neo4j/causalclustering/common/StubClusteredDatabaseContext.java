@@ -129,7 +129,7 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     }
 
     @Override
-    public ClusteredDatabase clusteredDatabase()
+    public ClusteredDatabase compositeDatabase()
     {
         return null;
     }

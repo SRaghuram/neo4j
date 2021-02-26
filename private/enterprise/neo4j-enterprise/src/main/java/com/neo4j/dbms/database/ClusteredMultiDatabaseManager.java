@@ -55,13 +55,13 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     }
 
     @Override
-    protected final void startDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context )
+    protected void startDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context )
     {
         try
         {
             context = recreateContextIfNeeded( namedDatabaseId, context );
             log.info( "Starting '%s'.", namedDatabaseId );
-            context.clusteredDatabase().start();
+            context.compositeDatabase().start();
         }
         catch ( Throwable t )
         {
@@ -71,29 +71,15 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
 
     private ClusteredDatabaseContext recreateContextIfNeeded( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context ) throws Exception
     {
-        if ( context.clusteredDatabase().hasBeenStarted() )
+        if ( context.compositeDatabase().hasBeenStarted() )
         {
-            context.clusteredDatabase().stop();
+            context.compositeDatabase().stop();
             // Clustering components cannot be reused, so we have to create a new context on each start->stop-start cycle.
             var updatedContext = createDatabaseContext( namedDatabaseId );
             databaseMap.put( namedDatabaseId, updatedContext );
             return updatedContext;
         }
         return context;
-    }
-
-    @Override
-    protected final void stopDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context )
-    {
-        try
-        {
-            log.info( "Stopping '%s'.", namedDatabaseId );
-            context.clusteredDatabase().stop();
-        }
-        catch ( Throwable t )
-        {
-            throw new DatabaseManagementException( format( "An error occurred! Unable to stop database `%s`.", namedDatabaseId ), t );
-        }
     }
 
     @Override

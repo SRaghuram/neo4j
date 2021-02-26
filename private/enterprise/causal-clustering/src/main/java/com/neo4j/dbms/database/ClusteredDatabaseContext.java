@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
@@ -30,7 +29,7 @@ import org.neo4j.storageengine.api.StoreId;
  *
  * Collections of these instances should be managed by a {@link DatabaseManager}
  */
-public interface ClusteredDatabaseContext extends DatabaseContext
+public interface ClusteredDatabaseContext extends CompositeDatabaseContext
 {
     /**
      * Reads metadata about this database from disk and calculates a uniquely {@link StoreId}.
@@ -81,7 +80,7 @@ public interface ClusteredDatabaseContext extends DatabaseContext
      * clustered database instance, including the {@link RaftMachine} and kernel {@link Database}
      * @return lifecycle controller for this database and its supporting lifecycled components
      */
-    ClusteredDatabase clusteredDatabase();
+    ClusteredDatabase compositeDatabase();
 
     /**
      *

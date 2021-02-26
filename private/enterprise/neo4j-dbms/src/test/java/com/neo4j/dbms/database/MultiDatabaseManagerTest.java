@@ -38,7 +38,7 @@ class MultiDatabaseManagerTest
     private static final NamedDatabaseId neoId = databaseIdRepository.defaultDatabase();
     private static final NamedDatabaseId customId = databaseIdRepository.getRaw( CUSTOM_DATABASE_NAME );
 
-    private MultiDatabaseManager<DatabaseContext> databaseManager;
+    private MultiDatabaseManager<CompositeDatabaseContext> databaseManager;
     private DatabaseContext sys;
     private DatabaseContext neo;
     private DatabaseContext custom;

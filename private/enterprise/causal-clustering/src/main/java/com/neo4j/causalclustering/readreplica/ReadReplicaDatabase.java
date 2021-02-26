@@ -8,6 +8,8 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.common.ClusteredDatabase;
 import com.neo4j.causalclustering.common.DatabaseTopologyNotifier;
 
+import java.util.List;
+
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
@@ -30,16 +32,13 @@ class ReadReplicaDatabase extends ClusteredDatabase
             Lifecycle clusterComponents, ReadReplicaBootstrap bootstrap, ReadReplicaPanicHandlers panicHandler, RaftIdCheck raftIdCheck,
             DatabaseTopologyNotifier topologyNotifier )
     {
-        addComponent( panicHandler );
-        addComponent( onInit( raftIdCheck::perform ) );
-
-        addComponent( clusterComponents );
-        addComponent( topologyNotifier );
-
-        addComponent( onStart( bootstrap::perform ) );
-
-        addComponent( kernelDatabase );
-        addComponent( catchupPollingProcess );
-        addComponent( catchupJobScheduler );
+        super( List.of( panicHandler,
+                        onInit( raftIdCheck::perform ),
+                        clusterComponents,
+                        topologyNotifier,
+                        onStart( bootstrap::perform ) ),
+               kernelDatabase,
+               List.of( catchupPollingProcess,
+                        catchupJobScheduler ) );
     }
 }

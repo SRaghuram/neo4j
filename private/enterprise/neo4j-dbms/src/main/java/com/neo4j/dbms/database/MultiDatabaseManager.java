@@ -13,7 +13,6 @@ import org.neo4j.dbms.api.DatabaseLimitReachedException;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.AbstractDatabaseManager;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -24,7 +23,7 @@ import static com.neo4j.configuration.EnterpriseEditionSettings.max_number_of_da
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
-public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends AbstractDatabaseManager<DB>
+public abstract class MultiDatabaseManager<DB extends CompositeDatabaseContext> extends AbstractDatabaseManager<DB>
 {
     private final long maximumNumberOfDatabases;
     private volatile boolean databaseManagerStarted;
@@ -166,6 +165,34 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     public final void shutdown()
     {
         databaseMap.clear();
+    }
+
+    @Override
+    protected void startDatabase( NamedDatabaseId namedDatabaseId, DB context )
+    {
+        try
+        {
+            log.info( "Starting '%s'.", namedDatabaseId );
+            context.compositeDatabase().start();
+        }
+        catch ( Throwable t )
+        {
+            throw new DatabaseManagementException( format( "Unable to start database `%s`", namedDatabaseId ), t );
+        }
+    }
+
+    @Override
+    protected void stopDatabase( NamedDatabaseId namedDatabaseId, DB context )
+    {
+        try
+        {
+            log.info( "Stopping '%s'.", namedDatabaseId );
+            context.compositeDatabase().stop();
+        }
+        catch ( Throwable t )
+        {
+            throw new DatabaseManagementException( format( "An error occurred! Unable to stop database `%s`.", namedDatabaseId ), t );
+        }
     }
 
     protected RuntimeDatabaseDumper dropDumpJob()

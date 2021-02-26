@@ -8,9 +8,11 @@ package com.neo4j.dbms.database;
 import com.neo4j.causalclustering.common.ClusteredDatabase;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
@@ -35,7 +37,7 @@ class ClusteredMultiDatabaseManagerTest
         StubClusteredMultiDatabaseManager manager = new StubClusteredMultiDatabaseManager();
         ClusteredDatabaseContext ctx = manager.createDatabaseContext( dbId );
 
-        StubClusteredDatabase dbLife = (StubClusteredDatabase) ctx.clusteredDatabase();
+        StubClusteredDatabase dbLife = (StubClusteredDatabase) ctx.compositeDatabase();
 
         // when
         manager.testStartDatabase( dbId, ctx );
@@ -76,7 +78,7 @@ class ClusteredMultiDatabaseManagerTest
             when( dbCtx.databaseId() ).thenReturn( namedDatabaseId );
             StartStop startStopTracker = mock( StartStop.class );
             ClusteredDatabase dbLife = new StubClusteredDatabase( startStopTracker );
-            when( dbCtx.clusteredDatabase() ).thenReturn( dbLife );
+            when( dbCtx.compositeDatabase() ).thenReturn( dbLife );
             context = dbCtx;
             return dbCtx;
         }
@@ -110,8 +112,8 @@ class ClusteredMultiDatabaseManagerTest
 
         StubClusteredDatabase( StartStop startStopTracker )
         {
+            super( List.of( simpleLife( startStopTracker::start, startStopTracker::stop ) ), mock( Database.class ), List.of() );
             this.startStopTracker = startStopTracker;
-            addComponent( simpleLife( startStopTracker::start, startStopTracker::stop ) );
         }
     }
 
