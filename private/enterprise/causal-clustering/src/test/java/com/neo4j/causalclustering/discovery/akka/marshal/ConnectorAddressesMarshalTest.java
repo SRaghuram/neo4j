@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 
 import java.util.Collection;
 
@@ -19,7 +20,7 @@ import static java.util.Collections.singletonList;
 public class ConnectorAddressesMarshalTest extends BaseMarshalTest<ConnectorAddresses>
 {
     @Override
-    Collection<ConnectorAddresses> originals()
+    public Collection<ConnectorAddresses> originals()
     {
         return asList(
                 ConnectorAddresses.fromList( emptyList() ),
@@ -33,7 +34,7 @@ public class ConnectorAddressesMarshalTest extends BaseMarshalTest<ConnectorAddr
     }
 
     @Override
-    ChannelMarshal<ConnectorAddresses> marshal()
+    public ChannelMarshal<ConnectorAddresses> marshal()
     {
         return new ConnectorAddresses.Marshal();
     }

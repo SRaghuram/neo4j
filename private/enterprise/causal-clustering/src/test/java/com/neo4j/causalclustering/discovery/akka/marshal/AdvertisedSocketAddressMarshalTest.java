@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
+
 import java.util.Collection;
 
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -15,13 +17,13 @@ import static java.util.Collections.singletonList;
 public class AdvertisedSocketAddressMarshalTest extends BaseMarshalTest<SocketAddress>
 {
     @Override
-    Collection<SocketAddress> originals()
+    public Collection<SocketAddress> originals()
     {
         return singletonList( new SocketAddress( "host", 879 ) );
     }
 
     @Override
-    ChannelMarshal<SocketAddress> marshal()
+    public ChannelMarshal<SocketAddress> marshal()
     {
         return new AdvertisedSocketAddressMarshal();
     }

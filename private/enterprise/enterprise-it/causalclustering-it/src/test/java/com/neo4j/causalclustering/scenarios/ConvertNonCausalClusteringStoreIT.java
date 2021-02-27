@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
+import com.neo4j.causalclustering.test_helpers.ClassicNeo4jDatabase;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.restore.RestoreDatabaseCommand;

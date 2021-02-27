@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 
 import java.util.Collection;
 import java.util.Map;
@@ -20,7 +21,7 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseI
 public class ReplicatedRaftMappingMarshalTest extends BaseMarshalTest<ReplicatedRaftMapping>
 {
     @Override
-    Collection<ReplicatedRaftMapping> originals()
+    public Collection<ReplicatedRaftMapping> originals()
     {
         var mapping1 = ReplicatedRaftMapping.of( randomServerId(), Map.of(
                 randomDatabaseId(), randomRaftMemberId(), randomDatabaseId(), randomRaftMemberId() ) );
@@ -30,7 +31,7 @@ public class ReplicatedRaftMappingMarshalTest extends BaseMarshalTest<Replicated
     }
 
     @Override
-    ChannelMarshal<ReplicatedRaftMapping> marshal()
+    public ChannelMarshal<ReplicatedRaftMapping> marshal()
     {
         return ReplicatedRaftMappingMarshal.INSTANCE;
     }

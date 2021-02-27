@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState
 import com.neo4j.causalclustering.core.state.machines.tx.LastCommittedIndexFinder;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
-import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
+import com.neo4j.causalclustering.test_helpers.ClassicNeo4jDatabase;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;

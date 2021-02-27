@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
-import com.neo4j.causalclustering.helpers.Buffers;
+import com.neo4j.causalclustering.test_helpers.Buffers;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
 import org.junit.jupiter.api.Test;

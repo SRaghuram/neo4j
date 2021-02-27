@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 
 import java.util.Collection;
 import java.util.List;
@@ -19,7 +20,7 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseI
 public class ReadReplicaInfoMarshalTest extends BaseMarshalTest<ReadReplicaInfo>
 {
     @Override
-    Collection<ReadReplicaInfo> originals()
+    public Collection<ReadReplicaInfo> originals()
     {
         return List.of(
                 addressesForReadReplica( 42, Set.of() ),
@@ -29,7 +30,7 @@ public class ReadReplicaInfoMarshalTest extends BaseMarshalTest<ReadReplicaInfo>
     }
 
     @Override
-    ChannelMarshal<ReadReplicaInfo> marshal()
+    public ChannelMarshal<ReadReplicaInfo> marshal()
     {
         return new ReadReplicaInfoMarshal();
     }

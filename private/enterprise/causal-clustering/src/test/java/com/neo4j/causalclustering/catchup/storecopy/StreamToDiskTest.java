@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import com.neo4j.causalclustering.helpers.Buffers;
-import com.neo4j.causalclustering.helpers.BuffersExtension;
+import com.neo4j.causalclustering.test_helpers.Buffers;
+import com.neo4j.causalclustering.test_helpers.BuffersExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 

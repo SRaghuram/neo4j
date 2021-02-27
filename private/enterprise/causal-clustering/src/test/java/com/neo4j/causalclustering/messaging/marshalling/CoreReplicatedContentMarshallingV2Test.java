@@ -16,54 +16,43 @@ import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseReque
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import com.neo4j.causalclustering.helpers.Buffers;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
-import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
-import org.neo4j.test.extension.Inject;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-@Buffers.Extension
-class CoreReplicatedContentMarshallingV2Test
+class CoreReplicatedContentMarshallingV2Test extends BaseMarshalTest<ReplicatedContent>
 {
-    @Inject
-    private Buffers buffers;
 
-    static ReplicatedContent[] data()
+    @Override
+    public Collection<ReplicatedContent> originals()
     {
         var databaseId = new TestDatabaseIdRepository().defaultDatabase().databaseId();
         var raftMemberId = IdFactory.randomRaftMemberId();
         var globalSession = new GlobalSession( UUID.randomUUID(), raftMemberId );
-        return new ReplicatedContent[]{new DummyRequest( new byte[]{1, 2, 3} ), ReplicatedTransaction.from( new byte[16 * 1024], databaseId ),
-                new MemberIdSet( Set.of( raftMemberId ) ),
-                new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "token", new byte[]{'c', 'o', 5} ), new NewLeaderBarrier(),
-                new ReplicatedLeaseRequest( raftMemberId, 2, databaseId ), new DistributedOperation(
-                new DistributedOperation( ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6}, databaseId ),
-                        globalSession,new LocalOperationId( 1, 2 ) ),
-                globalSession, new LocalOperationId( 4, 5 ) )};
+        return List.of( new DummyRequest( new byte[]{1, 2, 3} ), ReplicatedTransaction.from( new byte[16 * 1024], databaseId ),
+                        new MemberIdSet( Set.of( raftMemberId ) ),
+                        new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "token", new byte[]{'c', 'o', 5} ), new NewLeaderBarrier(),
+                        new ReplicatedLeaseRequest( raftMemberId, 2, databaseId ),
+                        new DistributedOperation(
+                                new DistributedOperation(
+                                        ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6}, databaseId ),
+                                        globalSession,
+                                        new LocalOperationId( 1, 2 ) ),
+                                globalSession,
+                                new LocalOperationId( 4, 5 ) ) );
     }
 
-    @ParameterizedTest
-    @MethodSource( "data" )
-    public void shouldSerializeAndDeserialize( ReplicatedContent replicatedContent ) throws Exception
+    @Override
+    public ChannelMarshal<ReplicatedContent> marshal()
     {
-        var coreReplicatedContentMarshal = new CoreReplicatedContentMarshal( LogEntryWriterFactory.LATEST );
-        var buffer = buffers.buffer();
-        var channel = new BoundedNetworkWritableChannel( buffer );
-        coreReplicatedContentMarshal.marshal( replicatedContent, channel );
-
-        var readChannel = new NetworkReadableChannel( buffer );
-        var result = coreReplicatedContentMarshal.unmarshal( readChannel );
-
-        assertEquals( replicatedContent, result );
+        return new CoreReplicatedContentMarshal( LogEntryWriterFactory.LATEST );
     }
 }

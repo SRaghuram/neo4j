@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.helpers;
+package com.neo4j.causalclustering.test_helpers;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;

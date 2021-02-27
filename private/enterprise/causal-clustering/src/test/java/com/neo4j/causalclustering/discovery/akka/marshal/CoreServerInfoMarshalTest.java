@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 
 import java.util.Collection;
 import java.util.List;
@@ -19,7 +20,7 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseI
 public class CoreServerInfoMarshalTest extends BaseMarshalTest<CoreServerInfo>
 {
     @Override
-    Collection<CoreServerInfo> originals()
+    public Collection<CoreServerInfo> originals()
     {
         return List.of(
                 addressesForCore( 42, Set.of() ),
@@ -32,7 +33,7 @@ public class CoreServerInfoMarshalTest extends BaseMarshalTest<CoreServerInfo>
     }
 
     @Override
-    ChannelMarshal<CoreServerInfo> marshal()
+    public ChannelMarshal<CoreServerInfo> marshal()
     {
         return new CoreServerInfoMarshal();
     }

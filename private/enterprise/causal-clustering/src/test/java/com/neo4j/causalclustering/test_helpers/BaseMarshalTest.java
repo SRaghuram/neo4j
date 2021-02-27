@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka.marshal;
+package com.neo4j.causalclustering.test_helpers;
 
 import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
@@ -24,10 +24,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
-abstract class BaseMarshalTest<T>
+public abstract class BaseMarshalTest<T>
 {
-    abstract Collection<T> originals();
-    abstract ChannelMarshal<T> marshal();
+    public abstract Collection<T> originals();
+    public abstract ChannelMarshal<T> marshal();
+
+    public boolean unMarshalCreatesNewRefs()
+    {
+        return true;
+    }
 
     Collection<Object[]> data()
     {
@@ -50,7 +55,10 @@ abstract class BaseMarshalTest<T>
         var result = marshal.unmarshal( readableChannel );
 
         // then
-        assertNotSame( original, result );
+        if ( unMarshalCreatesNewRefs() )
+        {
+            assertNotSame( original, result );
+        }
         assertEquals( original, result );
     }
 }

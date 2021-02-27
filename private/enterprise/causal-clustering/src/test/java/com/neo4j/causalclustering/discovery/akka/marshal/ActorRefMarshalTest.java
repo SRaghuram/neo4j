@@ -12,24 +12,38 @@ import akka.actor.ExtendedActorSystem;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
 import akka.testkit.javadsl.TestKit;
-import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import scala.concurrent.duration.FiniteDuration;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.io.marshal.EndOfStreamException;
+import org.neo4j.io.marshal.ChannelMarshal;
 
-class ActorRefMarshalTest
+class ActorRefMarshalTest extends BaseMarshalTest<ActorRef>
 {
     private static ActorSystem system;
+
+    @Override
+    public Collection<ActorRef> originals()
+    {
+        return List.of( system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), Actor.name ) ) );
+    }
+
+    @Override
+    public ChannelMarshal<ActorRef> marshal()
+    {
+        return new ActorRefMarshal( (ExtendedActorSystem) system );
+    }
+
+    @Override
+    public boolean unMarshalCreatesNewRefs()
+    {
+        return false;
+    }
 
     static class Actor extends AbstractActor
     {
@@ -45,25 +59,6 @@ class ActorRefMarshalTest
         {
             return ReceiveBuilder.create().build();
         }
-    }
-
-    @Test
-    void shouldMarshalAndUnMarshal() throws IOException, EndOfStreamException
-    {
-        ActorRefMarshal marshal = new ActorRefMarshal( (ExtendedActorSystem) system );
-        ActorRef original = system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), Actor.name ) );
-        // given
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-        // when
-        OutputStreamWritableChannel writableChannel = new OutputStreamWritableChannel( outputStream );
-        marshal.marshal( original, writableChannel );
-
-        InputStreamReadableChannel readableChannel = new InputStreamReadableChannel( new ByteArrayInputStream( outputStream.toByteArray() ) );
-        ActorRef result = marshal.unmarshal( readableChannel );
-
-        // then
-        Assertions.assertEquals( original, result );
     }
 
     @BeforeAll

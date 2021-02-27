@@ -7,50 +7,26 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import akka.actor.Address;
 import akka.cluster.UniqueAddress;
-import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.stream.Stream;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
+import java.util.Collection;
+import java.util.List;
 
 import org.neo4j.io.marshal.ChannelMarshal;
-import org.neo4j.io.marshal.EndOfStreamException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-
-class UniqueAddressMarshalTest
+class UniqueAddressMarshalTest extends BaseMarshalTest<UniqueAddress>
 {
-    static Stream<UniqueAddress> params()
+    @Override
+    public Collection<UniqueAddress> originals()
     {
-        return Stream.of(
+        return List.of(
                 new UniqueAddress( new Address( "protocol", "system" ), 17L ),
                 new UniqueAddress( new Address( "protocol", "system", "host", 87 ), 17L )
         );
     }
 
-    @ParameterizedTest
-    @MethodSource( "params" )
-    void shouldMarshalAndUnMarshal( UniqueAddress uniqueAddress ) throws IOException, EndOfStreamException
+    @Override
+    public ChannelMarshal<UniqueAddress> marshal()
     {
-        // given
-        ChannelMarshal<UniqueAddress> marshal = new UniqueAddressMarshal();
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-        // when
-        OutputStreamWritableChannel writableChannel = new OutputStreamWritableChannel( outputStream );
-        marshal.marshal( uniqueAddress, writableChannel );
-
-        InputStreamReadableChannel readableChannel = new InputStreamReadableChannel( new ByteArrayInputStream( outputStream.toByteArray() ) );
-        UniqueAddress result = marshal.unmarshal( readableChannel );
-
-        // then
-        assertNotSame( uniqueAddress, result );
-        assertEquals( uniqueAddress, result );
+        return new UniqueAddressMarshal();
     }
 }

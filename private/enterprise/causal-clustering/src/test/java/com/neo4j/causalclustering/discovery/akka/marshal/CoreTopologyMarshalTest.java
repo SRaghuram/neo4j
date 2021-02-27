@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.RaftGroupId;
 
@@ -26,7 +27,7 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseI
 class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopology>
 {
     @Override
-    Collection<DatabaseCoreTopology> originals()
+    public Collection<DatabaseCoreTopology> originals()
     {
         var dbId1 = randomDatabaseId();
         var dbId2 = randomDatabaseId();
@@ -40,7 +41,7 @@ class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopology>
     }
 
     @Override
-    ChannelMarshal<DatabaseCoreTopology> marshal()
+    public ChannelMarshal<DatabaseCoreTopology> marshal()
     {
         return new CoreTopologyMarshal();
     }

@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.TestTopology;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import com.neo4j.causalclustering.identity.IdFactory;
 
 import java.util.Collection;
@@ -25,13 +26,13 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseI
 public class ReadReplicaTopologyMarshalTest extends BaseMarshalTest<DatabaseReadReplicaTopology>
 {
     @Override
-    Collection<DatabaseReadReplicaTopology> originals()
+    public Collection<DatabaseReadReplicaTopology> originals()
     {
         return singletonList( generate() );
     }
 
     @Override
-    ChannelMarshal<DatabaseReadReplicaTopology> marshal()
+    public ChannelMarshal<DatabaseReadReplicaTopology> marshal()
     {
         return new ReadReplicaTopologyMarshal();
     }

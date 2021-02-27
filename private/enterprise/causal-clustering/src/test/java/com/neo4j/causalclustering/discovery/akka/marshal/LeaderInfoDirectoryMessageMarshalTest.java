@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import com.neo4j.causalclustering.identity.IdFactory;
 
 import java.util.Collection;
@@ -22,13 +23,13 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseI
 public class LeaderInfoDirectoryMessageMarshalTest extends BaseMarshalTest<LeaderInfoDirectoryMessage>
 {
     @Override
-    Collection<LeaderInfoDirectoryMessage> originals()
+    public Collection<LeaderInfoDirectoryMessage> originals()
     {
         return singletonList( generate() );
     }
 
     @Override
-    ChannelMarshal<LeaderInfoDirectoryMessage> marshal()
+    public ChannelMarshal<LeaderInfoDirectoryMessage> marshal()
     {
         return new DatabaseLeaderInfoMessageMarshal();
     }

@@ -5,35 +5,31 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
-import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
-import org.junit.jupiter.api.Test;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
-import org.neo4j.io.marshal.EndOfStreamException;
+import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-class InefficientNamedDatabaseIdMarshalTest
+class InefficientNamedDatabaseIdMarshalTest extends BaseMarshalTest<NamedDatabaseId>
 {
 
-    @Test
-    void shouldMarshalAndUnmarshal() throws IOException, EndOfStreamException
+    @Override
+    public Collection<NamedDatabaseId> originals()
     {
-        var namedDatabaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
+        return List.of(
+                DatabaseIdFactory.from( "foo", UUID.randomUUID() ),
+                DatabaseIdFactory.from( "bar", UUID.randomUUID() ),
+                DatabaseIdFactory.from( "", UUID.randomUUID() ) );
+    }
 
-        var marshal = InefficientNamedDatabaseIdMarshal.INSTANCE;
-
-        var outputStream = new ByteArrayOutputStream();
-        var outputStreamWritableChannel = new OutputStreamWritableChannel( outputStream );
-        marshal.marshal( namedDatabaseId, outputStreamWritableChannel );
-        var unmarshal = marshal.unmarshal( new InputStreamReadableChannel( new ByteArrayInputStream( outputStream.toByteArray() ) ) );
-
-        assertEquals( unmarshal, namedDatabaseId );
+    @Override
+    public ChannelMarshal<NamedDatabaseId> marshal()
+    {
+        return InefficientNamedDatabaseIdMarshal.INSTANCE;
     }
 }

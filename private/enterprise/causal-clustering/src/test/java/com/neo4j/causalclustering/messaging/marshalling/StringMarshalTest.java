@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.messaging.marshalling;
 
-import com.neo4j.causalclustering.helpers.Buffers;
+import com.neo4j.causalclustering.test_helpers.Buffers;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
