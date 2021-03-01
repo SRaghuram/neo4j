@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.CatchupProcessFactory;
+import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.causalclustering.readreplica.ReadReplicaDatabaseManager;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
@@ -355,7 +355,7 @@ class ReadReplicaReplicationIT
         var readReplica = cluster.findAnyReadReplica();
         var readReplicaGraphDatabase = readReplica.defaultDatabase();
         var catchupProcessFactory = readReplicaGraphDatabase.getDependencyResolver()
-                                                            .resolveDependency( CatchupProcessFactory.class );
+                .resolveDependency( CatchupPollingProcess.class );
         catchupProcessFactory.stop();
 
         cluster.coreTx( ( coreGraphDatabase, transaction ) ->
@@ -385,16 +385,15 @@ class ReadReplicaReplicationIT
 
         var readReplica = cluster.findAnyReadReplica();
         var readReplicaGraphDatabase = readReplica.defaultDatabase();
-        var catchupProcessFactory = readReplicaGraphDatabase.getDependencyResolver()
-                                                            .resolveDependency( CatchupProcessFactory.class );
-        catchupProcessFactory.catchupProcessComponents()
-                             .ifPresent( c -> c.catchupProcess().pause() );
+        var catchupPollingProcess = readReplicaGraphDatabase.getDependencyResolver()
+                .resolveDependency( CatchupPollingProcess.class );
+        catchupPollingProcess.pause();
 
         var leader = cluster.coreTx( ( coreGraphDatabase, transaction ) ->
-                                                              {
-                                                                  transaction.createNode();
-                                                                  transaction.commit();
-                                                              } );
+        {
+            transaction.createNode();
+            transaction.commit();
+        } );
 
         var databaseId = defaultDatabaseId( leader );
         var transactionVisibleOnLeader = transactionIdTracker( leader ).newestTransactionId( databaseId );
@@ -404,8 +403,7 @@ class ReadReplicaReplicationIT
                       () -> transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) ) );
 
         // when the poller is resumed, it does make it to the read replica
-        catchupProcessFactory.catchupProcessComponents()
-                             .ifPresent( c -> c.catchupProcess().resume() );
+        catchupPollingProcess.resume();
         transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) );
     }
 

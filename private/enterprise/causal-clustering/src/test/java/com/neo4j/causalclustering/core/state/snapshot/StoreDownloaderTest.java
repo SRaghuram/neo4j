@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
@@ -143,7 +144,8 @@ class StoreDownloaderTest
     private StoreDownloadContext mockLocalDatabase( NamedDatabaseId namedDatabaseId, boolean isEmpty, StoreId storeId ) throws IOException
     {
         StubClusteredDatabaseContext db = databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId ).withCatchupComponentsFactory(
-                ignored -> new CatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) ) ).withStoreId( storeId ).register();
+                ignored -> new CatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ), mock( CatchupClientFactory.class ) ) )
+                .withStoreId( storeId ).register();
 
         db.setEmpty( isEmpty );
 

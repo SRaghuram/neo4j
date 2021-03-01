@@ -266,7 +266,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         var backupServerOptional = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, backupServerHandler );
 
         var catchupComponentsRepository = new CatchupComponentsRepository( databaseManager );
-        var catchupClientFactory = catchupComponentsProvider.catchupClientFactory();
 
         globalLife.add( catchupServer );
 
@@ -281,9 +280,10 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
                 Duration.ofSeconds( 5 ) );
 
         // TODO: Health should be created per-db in the factory. What about other things here?
-        readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler,
-                topologyService, identityModule.serverId(), catchupComponentsRepository, catchupClientFactory, databaseEventService, storageFactory,
-                panicService, databaseStartAborter, globalModule.getTracers().getPageCacheTracer(), asyncTxApplier );
+        readReplicaDatabaseFactory =
+                new ReadReplicaDatabaseFactory( globalConfig, jobScheduler, topologyService, identityModule.serverId(), catchupComponentsRepository,
+                        databaseEventService, storageFactory, panicService, databaseStartAborter, globalModule.getTracers().getPageCacheTracer(),
+                        asyncTxApplier );
     }
 
     @Override

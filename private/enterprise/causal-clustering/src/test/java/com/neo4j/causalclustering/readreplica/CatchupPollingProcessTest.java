@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.MockCatchupClient;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
@@ -27,8 +28,6 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDisp
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import java.util.concurrent.Future;
 
@@ -130,8 +129,8 @@ class CatchupPollingProcessTest
             ((AsyncTaskEventHandler) invocationOnMock.getArgument( 0 )).onSuccess();
             return null;
         } ).when( txApplier ).applyBatchAsync( any( AsyncTaskEventHandler.class ) );
-        txPuller = new CatchupPollingProcess( 100, 10, databaseContext, catchupClientFactory, batchingTxApplierFactory, databaseEventDispatch,
-                storeCopy, nullLogProvider(), panicker, catchupAddressProvider );
+        txPuller = new CatchupPollingProcess( 100, 10, databaseContext, batchingTxApplierFactory, databaseEventDispatch,
+                nullLogProvider(), panicker, catchupAddressProvider, new StubCatchupComponentProvider( storeCopy, catchupClientFactory ) );
     }
 
     @Test
@@ -402,5 +401,25 @@ class CatchupPollingProcessTest
 
         // puller moves to tx pulling after a successful store copy
         assertEquals( TX_PULLING, txPuller.state() );
+    }
+
+    private static class StubCatchupComponentProvider extends CatchupComponentsProvider
+    {
+
+        private final StoreCopyProcess storeCopyProcess;
+        private final CatchupClientFactory catchupClientFactory;
+
+        private StubCatchupComponentProvider( StoreCopyProcess storeCopyProcess, CatchupClientFactory catchupClientFactory )
+        {
+            super( null, null );
+            this.storeCopyProcess = storeCopyProcess;
+            this.catchupClientFactory = catchupClientFactory;
+        }
+
+        @Override
+        CatchupComponentsRepository.CatchupComponents getComponents()
+        {
+            return new CatchupComponentsRepository.CatchupComponents( null, storeCopyProcess, catchupClientFactory );
+        }
     }
 }

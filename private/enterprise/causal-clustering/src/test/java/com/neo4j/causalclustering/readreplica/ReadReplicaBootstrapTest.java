@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
@@ -311,7 +312,8 @@ class ReadReplicaBootstrapTest
         RemoteStore remoteStore = mock( RemoteStore.class );
         when( remoteStore.getStoreId( address ) ).thenReturn( remoteStoreId );
         StoreCopyProcess storeCopyProcess = mock( StoreCopyProcess.class );
-        return new CatchupComponentsRepository.CatchupComponents( remoteStore, storeCopyProcess );
+        CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
+        return new CatchupComponentsRepository.CatchupComponents( remoteStore, storeCopyProcess, catchupClientFactory );
     }
 
     private DatabaseStartAborter neverAbort()

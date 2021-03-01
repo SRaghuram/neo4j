@@ -41,11 +41,13 @@ public class CatchupComponentsRepository
     {
         final RemoteStore remoteStore;
         final StoreCopyProcess storeCopy;
+        private final CatchupClientFactory catchupClientFactory;
 
-        public CatchupComponents( RemoteStore remoteStore, StoreCopyProcess storeCopy )
+        public CatchupComponents( RemoteStore remoteStore, StoreCopyProcess storeCopy, CatchupClientFactory catchupClientFactory )
         {
             this.remoteStore = remoteStore;
             this.storeCopy = storeCopy;
+            this.catchupClientFactory = catchupClientFactory;
         }
 
         public StoreCopyProcess storeCopyProcess()
@@ -56,6 +58,11 @@ public class CatchupComponentsRepository
         public RemoteStore remoteStore()
         {
             return remoteStore;
+        }
+
+        public CatchupClientFactory catchupClientFactory()
+        {
+            return catchupClientFactory;
         }
     }
 }

@@ -26,8 +26,9 @@ import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onStart;
  */
 class ReadReplicaDatabase extends ClusteredDatabase
 {
-    ReadReplicaDatabase( CatchupProcessFactory catchupProcessFactory, Database kernelDatabase, Lifecycle clusterComponents,
-            ReadReplicaBootstrap bootstrap, ReadReplicaPanicHandlers panicHandler, RaftIdCheck raftIdCheck, DatabaseTopologyNotifier topologyNotifier )
+    ReadReplicaDatabase( CatchupPollingProcess catchupPollingProcess, CatchupJobScheduler catchupJobScheduler, Database kernelDatabase,
+            Lifecycle clusterComponents, ReadReplicaBootstrap bootstrap, ReadReplicaPanicHandlers panicHandler, RaftIdCheck raftIdCheck,
+            DatabaseTopologyNotifier topologyNotifier )
     {
         addComponent( panicHandler );
         addComponent( onInit( raftIdCheck::perform ) );
@@ -38,6 +39,7 @@ class ReadReplicaDatabase extends ClusteredDatabase
         addComponent( onStart( bootstrap::perform ) );
 
         addComponent( kernelDatabase );
-        addComponent( catchupProcessFactory );
+        addComponent( catchupPollingProcess );
+        addComponent( catchupJobScheduler );
     }
 }

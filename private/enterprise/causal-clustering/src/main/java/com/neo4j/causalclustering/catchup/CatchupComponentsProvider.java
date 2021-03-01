@@ -193,7 +193,7 @@ public final class CatchupComponentsProvider
 
         var storeCopy = new StoreCopyProcess( fileSystem, pageCache, clusteredDatabaseContext, copiedStoreRecovery, remoteStore, databaseLogProvider );
 
-        return new CatchupComponentsRepository.CatchupComponents( remoteStore, storeCopy );
+        return new CatchupComponentsRepository.CatchupComponents( remoteStore, storeCopy, catchupClientFactory );
     }
 
     public CatchupClientFactory catchupClientFactory()

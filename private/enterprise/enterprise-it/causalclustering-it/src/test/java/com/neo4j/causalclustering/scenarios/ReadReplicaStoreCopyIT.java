@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.CatchupProcessFactory;
+import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,14 +61,14 @@ class ReadReplicaStoreCopyIT
     {
         var readReplica = cluster.findAnyReadReplica();
 
-        var catchupProcessFactory = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessFactory.class );
-        catchupProcessFactory.stop();
+        var catchupPollingProcess = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupPollingProcess.class );
+        catchupPollingProcess.stop();
 
         writeSomeDataAndForceLogRotations( cluster );
         var storeCopyBlockingSemaphore = addStoreCopyBlockingMonitor( readReplica );
         try
         {
-            catchupProcessFactory.start();
+            catchupPollingProcess.start();
             waitForStoreCopyToStartAndBlock( storeCopyBlockingSemaphore );
 
             var replicaGraphDatabase = readReplica.defaultDatabase();
@@ -123,7 +123,7 @@ class ReadReplicaStoreCopyIT
         return semaphore;
     }
 
-    private static void waitForStoreCopyToStartAndBlock( Semaphore storeCopyBlockingSemaphore ) throws Exception
+    private static void waitForStoreCopyToStartAndBlock( Semaphore storeCopyBlockingSemaphore )
     {
         assertEventually( "Read replica did not copy files", storeCopyBlockingSemaphore::hasQueuedThreads, TRUE, 60, TimeUnit.SECONDS );
     }

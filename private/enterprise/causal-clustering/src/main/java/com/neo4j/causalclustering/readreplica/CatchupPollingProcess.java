@@ -7,10 +7,9 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import com.neo4j.causalclustering.catchup.CatchupClientFactory;
+import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
-import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
@@ -43,10 +42,9 @@ import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State
 import static org.neo4j.util.Preconditions.checkState;
 
 /**
- * This class is responsible for pulling transactions from a core server and queuing
- * them to be applied with the {@link BatchingTxApplier}.
+ * This class is responsible for pulling transactions from a core server and queuing them to be applied with the {@link BatchingTxApplier}.
  */
-public class CatchupPollingProcess extends LifecycleAdapter
+public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJob
 {
     protected enum State
     {
@@ -63,9 +61,8 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private final BatchinTxApplierFactory applierFactory;
     private final CatchupAddressProvider upstreamProvider;
     private final Log log;
-    private final StoreCopyProcess storeCopyProcess;
-    private final CatchupClientFactory catchUpClient;
     private final Panicker panicker;
+    private final CatchupComponentsProvider catchupComponentsProvider;
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
     private final PullRequestMonitor pullRequestMonitor;
 
@@ -74,21 +71,20 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private StoreCopyHandle storeCopyHandle;
 
-    CatchupPollingProcess( long maxQueueSize, long applyBatchSize, ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient,
-            BatchinTxApplierFactory applierFactory, ReplicatedDatabaseEventDispatch databaseEventDispatch, StoreCopyProcess storeCopyProcess,
-            LogProvider logProvider, Panicker panicker, CatchupAddressProvider upstreamProvider )
+    CatchupPollingProcess( long maxQueueSize, long applyBatchSize, ReadReplicaDatabaseContext databaseContext, BatchinTxApplierFactory applierFactory,
+            ReplicatedDatabaseEventDispatch databaseEventDispatch, LogProvider logProvider, Panicker panicker, CatchupAddressProvider upstreamProvider,
+            CatchupComponentsProvider catchupComponentsProvider )
     {
         this.maxQueueSize = maxQueueSize;
         this.applyBatchSize = applyBatchSize;
         this.databaseContext = databaseContext;
         this.applierFactory = applierFactory;
         this.upstreamProvider = upstreamProvider;
-        this.catchUpClient = catchUpClient;
         this.databaseEventDispatch = databaseEventDispatch;
         this.pullRequestMonitor = databaseContext.monitors().newMonitor( PullRequestMonitor.class );
-        this.storeCopyProcess = storeCopyProcess;
         this.log = logProvider.getLog( getClass() );
         this.panicker = panicker;
+        this.catchupComponentsProvider = catchupComponentsProvider;
     }
 
     @Override
@@ -119,16 +115,24 @@ public class CatchupPollingProcess extends LifecycleAdapter
         return state;
     }
 
+    @Override
+    public void execute()
+    {
+        tick();
+    }
+
+    @Override
+    public boolean canSchedule()
+    {
+        return state != PANIC;
+    }
+
     boolean isCopyingStore()
     {
         return state == STORE_COPYING;
     }
 
-    /**
-     * Time to catchup! //TODO: Fix error handling further down the stack to bubble up to this level rather than panicking, as that will not complete the
-     * future.
-     */
-    public void tick()
+    void tick()
     {
         try
         {
@@ -259,8 +263,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         TxStreamFinishedResponse result;
         try
         {
-            result = catchUpClient
-                    .getClient( address, log )
+            result = getCatchupClient( address )
                     .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
                     .v4( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
                     .v5( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
@@ -297,6 +300,12 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
     }
 
+    private VersionedCatchupClients getCatchupClient( SocketAddress address )
+    {
+        return catchupComponentsProvider.getComponents().catchupClientFactory()
+                .getClient( address, log );
+    }
+
     private void transitionToStoreCopy()
     {
         if ( state != TX_PULLING )
@@ -320,7 +329,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         try
         {
             ensureKernelStopped();
-            storeCopyProcess.replaceWithStoreFrom( upstreamProvider, databaseContext.storeId() );
+            replaceStore();
             if ( restartDatabaseAfterStoreCopy() )
             {
                 transitionToTxPulling();
@@ -335,6 +344,11 @@ public class CatchupPollingProcess extends LifecycleAdapter
         {
             log.warn( "Store copy aborted due to shutdown.", e );
         }
+    }
+
+    private void replaceStore() throws IOException, StoreCopyFailedException, DatabaseShutdownException
+    {
+        catchupComponentsProvider.getComponents().storeCopyProcess().replaceWithStoreFrom( upstreamProvider, databaseContext.storeId() );
     }
 
     private void ensureKernelStopped()

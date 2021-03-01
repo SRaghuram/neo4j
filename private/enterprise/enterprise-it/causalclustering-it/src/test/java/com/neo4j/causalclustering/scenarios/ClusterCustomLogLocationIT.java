@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.readreplica.CatchupProcessFactory;
+import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -69,13 +69,8 @@ class ClusterCustomLogLocationIT
         var readReplicas = cluster.readReplicas();
         for ( var readReplica : readReplicas )
         {
-            var catchupProcessFactory = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessFactory.class );
-            var uptoDateFuture = catchupProcessFactory.catchupProcessComponents()
-                                                      .map( c -> c.catchupProcess().upToDateFuture() );
-            if ( uptoDateFuture.isPresent() )
-            {
-                uptoDateFuture.get().get();
-            }
+            var catchupPollingProcess = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupPollingProcess.class );
+            catchupPollingProcess.upToDateFuture().get();
 
             var dependencyResolver = readReplica.defaultDatabase().getDependencyResolver();
             var logFiles = dependencyResolver.resolveDependency( LogFiles.class );

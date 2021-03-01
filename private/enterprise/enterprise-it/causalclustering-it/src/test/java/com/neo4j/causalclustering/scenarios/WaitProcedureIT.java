@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.readreplica.CatchupProcessFactory;
+import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import com.neo4j.security.SecurityHelpers;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -80,9 +80,8 @@ public class WaitProcedureIT
     void shouldBeIncompleteIfSystemDbUpdateIsNotObserved() throws TimeoutException
     {
         var replica = cluster.findAnyReadReplica();
-        replica.resolveDependency( "system", CatchupProcessFactory.class )
-               .catchupProcessComponents()
-               .ifPresent( c -> c.catchupProcess().pause() );
+        var catchupPollingProcess = replica.resolveDependency( "system", CatchupPollingProcess.class );
+        catchupPollingProcess.pause();
         try
         {
             SecurityHelpers.newUser( systemDbDriver, "some", "person" );
@@ -106,9 +105,7 @@ public class WaitProcedureIT
         }
         finally
         {
-            replica.resolveDependency( "system", CatchupProcessFactory.class )
-                   .catchupProcessComponents()
-                   .ifPresent( c -> c.catchupProcess().resume() );
+            catchupPollingProcess.resume();
         }
     }
 
@@ -118,9 +115,7 @@ public class WaitProcedureIT
         var replica = cluster.newReadReplica();
         replica.start();
         // New read replicas not pulling any updates
-        replica.resolveDependency( "system", CatchupProcessFactory.class )
-               .catchupProcessComponents()
-               .ifPresent( c -> c.catchupProcess().pause() );
+        replica.resolveDependency( "system", CatchupPollingProcess.class ).pause();
         SecurityHelpers.newUser( systemDbDriver, "other", "person" );
         var lastCommitTxId =
                 cluster.awaitLeader( "system" ).resolveDependency( "system", TransactionIdStore.class ).getLastCommittedTransactionId();

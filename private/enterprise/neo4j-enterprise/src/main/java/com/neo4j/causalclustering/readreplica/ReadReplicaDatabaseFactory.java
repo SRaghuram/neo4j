@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.causalclustering.catchup.CatchupClientFactory;
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.common.DatabaseTopologyNotifier;
@@ -16,11 +16,13 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
+import com.neo4j.causalclustering.readreplica.tx.BatchinTxApplierFactory;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.PreferFollower;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.DatabaseStartAborter;
@@ -31,13 +33,12 @@ import java.util.function.Supplier;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
-import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.time.SystemNanoClock;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -50,7 +51,6 @@ class ReadReplicaDatabaseFactory
     private final TopologyService topologyService;
     private final ServerId serverId;
     private final CatchupComponentsRepository catchupComponentsRepository;
-    private final CatchupClientFactory catchupClientFactory;
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterStateStorageFactory clusterStateFactory;
     private final PanicService panicService;
@@ -58,9 +58,9 @@ class ReadReplicaDatabaseFactory
     private final PageCacheTracer pageCacheTracer;
     private final AsyncTxApplier asyncTxApplier;
 
-    ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService,
-            ServerId serverId, CatchupComponentsRepository catchupComponentsRepository,
-            CatchupClientFactory catchupClientFactory, ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory clusterStateFactory,
+    ReadReplicaDatabaseFactory( Config config, JobScheduler jobScheduler, TopologyService topologyService,
+            ServerId serverId, CatchupComponentsRepository catchupComponentsRepository, ReplicatedDatabaseEventService databaseEventService,
+            ClusterStateStorageFactory clusterStateFactory,
             PanicService panicService, DatabaseStartAborter databaseStartAborter, PageCacheTracer pageCacheTracer,
             AsyncTxApplier asyncTxApplier )
     {
@@ -69,7 +69,6 @@ class ReadReplicaDatabaseFactory
         this.topologyService = topologyService;
         this.serverId = serverId;
         this.catchupComponentsRepository = catchupComponentsRepository;
-        this.catchupClientFactory = catchupClientFactory;
         this.databaseEventService = databaseEventService;
         this.panicService = panicService;
         this.clusterStateFactory = clusterStateFactory;
@@ -90,16 +89,17 @@ class ReadReplicaDatabaseFactory
         CommandIndexTracker commandIndexTracker = databaseContext.dependencies().satisfyDependency( new CommandIndexTracker() );
         initialiseStatusDescriptionEndpoint( commandIndexTracker, clusterComponents, databaseContext.dependencies() );
 
-        TimerService timerService = new TimerService( jobScheduler, internalLogProvider );
         UpstreamDatabaseSelectionStrategy defaultStrategy = createDefaultStrategy( internalLogProvider );
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector = createUpstreamDatabaseStrategySelector(
                 serverId, config, internalLogProvider, topologyService, defaultStrategy );
 
-        var panicker = panicService.panicker();
-        var databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
-        var catchupProcessFactory = new CatchupProcessFactory( panicker, catchupComponentsRepository, topologyService,
-                catchupClientFactory, upstreamDatabaseStrategySelector, commandIndexTracker, internalLogProvider, config, databaseEventDispatch,
-                pageCacheTracer,asyncTxApplier, databaseContext, timerService );
+        CatchupPollingProcess catchupPollingProcess =
+                createCatchupPollingProcess( databaseContext, namedDatabaseId, internalLogProvider, commandIndexTracker, upstreamDatabaseStrategySelector );
+
+        var timerService = new TimerService( jobScheduler, internalLogProvider );
+        var txPullInterval = config.get( CausalClusteringSettings.pull_interval );
+
+        var catchupJobScheduler = new CatchupJobScheduler( timerService, catchupPollingProcess, txPullInterval );
 
         var raftIdStorage = clusterStateFactory.createRaftGroupIdStorage( databaseContext.databaseId().name(), internalLogProvider );
 
@@ -118,7 +118,34 @@ class ReadReplicaDatabaseFactory
 
         var panicHandler = new ReadReplicaPanicHandlers( panicService, kernelDatabase, clusterInternalOperator );
 
-        return new ReadReplicaDatabase( catchupProcessFactory, kernelDatabase, clusterComponents, bootstrap, panicHandler, raftIdCheck, topologyNotifier );
+        return new ReadReplicaDatabase( catchupPollingProcess, catchupJobScheduler, kernelDatabase, clusterComponents, bootstrap, panicHandler, raftIdCheck,
+                topologyNotifier );
+    }
+
+    private CatchupPollingProcess createCatchupPollingProcess( ReadReplicaDatabaseContext databaseContext,
+            org.neo4j.kernel.database.NamedDatabaseId namedDatabaseId, org.neo4j.logging.internal.DatabaseLogProvider internalLogProvider,
+            CommandIndexTracker commandIndexTracker, UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector )
+    {
+        var panicker = panicService.panicker();
+        var databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
+
+        var catchupComponentsProvider = new CatchupComponentsProvider( catchupComponentsRepository, namedDatabaseId );
+
+        long applyBatchSize = ByteUnit.mebiBytes( config.get( CausalClusteringInternalSettings.read_replica_transaction_applier_batch_size ) );
+        long maxQueueSize = ByteUnit.mebiBytes( config.get( CausalClusteringInternalSettings.read_replica_transaction_applier_max_queue_size ) );
+
+        var batchinTxApplierFactory =
+                new BatchinTxApplierFactory( databaseContext, commandIndexTracker, internalLogProvider, databaseEventDispatch, pageCacheTracer,
+                        asyncTxApplier );
+
+        var upstreamProvider = new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, upstreamDatabaseStrategySelector );
+        var catchupPollingProcess =
+                new CatchupPollingProcess( maxQueueSize, applyBatchSize, databaseContext, batchinTxApplierFactory,
+                        databaseEventDispatch, internalLogProvider, panicker, upstreamProvider,
+                        catchupComponentsProvider );
+
+        databaseContext.dependencies().satisfyDependency( catchupPollingProcess ); //For ReadReplicaToggleProcedure
+        return catchupPollingProcess;
     }
 
     private UpstreamDatabaseSelectionStrategy createDefaultStrategy( DatabaseLogProvider internalLogProvider )

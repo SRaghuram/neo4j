@@ -6,8 +6,7 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.readreplica.CatchupProcessFactory;
-import com.neo4j.causalclustering.readreplica.CatchupProcessFactory.CatchupProcessLifecycles;
+import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -62,8 +61,8 @@ class ReadReplicaFallBehindIT
         var readReplica = cluster.getReadReplicaByIndex( 0 );
         assertDatabaseEventuallyStarted( SYSTEM_DATABASE_NAME, Set.of( readReplica ) );
 
-        var catchupProcessFactory = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, CatchupProcessFactory.class );
-        catchupProcessFactory.stop();
+        var catchupPollingProcess = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, CatchupPollingProcess.class );
+        catchupPollingProcess.stop();
 
         // we need to create a few databases (causing a few transactions) so that the log pruning actually happens
         var databaseNames = List.of( "foo", "bar", "baz" );
@@ -85,13 +84,10 @@ class ReadReplicaFallBehindIT
         }
 
         // this should make the read replica start pulling again and realise it needs a store copy of system database
-        catchupProcessFactory.start();
-        var catchupProcess = catchupProcessFactory.catchupProcessComponents()
-                                                  .map( CatchupProcessLifecycles::catchupProcess )
-                                                  .orElseThrow();
+        catchupPollingProcess.start();
 
         // this will be true after the store copy, when we are back to pulling transactions normally again
-        assertTrue( catchupProcess.upToDateFuture().get( 1, MINUTES ) );
+        assertTrue( catchupPollingProcess.upToDateFuture().get( 1, MINUTES ) );
 
         for ( var databaseName : databaseNames )
         {
