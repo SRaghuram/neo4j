@@ -19,6 +19,7 @@ import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
+import com.neo4j.causalclustering.readreplica.tx.AsyncTaskEventHandler;
 import com.neo4j.causalclustering.readreplica.tx.BatchinTxApplierFactory;
 import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplier;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
@@ -26,6 +27,8 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDisp
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.util.concurrent.Future;
 
@@ -58,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -121,6 +125,11 @@ class CatchupPollingProcessTest
         MockCatchupClient catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3_0, v3Client );
         when( catchupClientFactory.getClient( any( SocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
         when( batchingTxApplierFactory.create() ).thenReturn( txApplier );
+        doAnswer( invocationOnMock ->
+        {
+            ((AsyncTaskEventHandler) invocationOnMock.getArgument( 0 )).onSuccess();
+            return null;
+        } ).when( txApplier ).applyBatchAsync( any( AsyncTaskEventHandler.class ) );
         txPuller = new CatchupPollingProcess( 100, 10, databaseContext, catchupClientFactory, batchingTxApplierFactory, databaseEventDispatch,
                 storeCopy, nullLogProvider(), panicker, catchupAddressProvider );
     }
@@ -149,7 +158,7 @@ class CatchupPollingProcessTest
     }
 
     @Test
-    void shouldFailToPauseCatchupPollingIfCatchupPollingHasStoryCopyState() throws Exception
+    void shouldFailToPauseCatchupPollingIfCatchupPollingHasStoryCopyState()
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -167,7 +176,7 @@ class CatchupPollingProcessTest
     }
 
     @Test
-    void shouldBeCancelledWhenStopped() throws Exception
+    void shouldBeCancelledWhenStopped()
     {
         // given
         txPuller.start();

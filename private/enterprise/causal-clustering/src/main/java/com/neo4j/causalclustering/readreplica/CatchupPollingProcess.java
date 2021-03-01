@@ -251,7 +251,6 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private void pullAndApplyTransactions( SocketAddress address, StoreId localStoreId )
     {
         var lastQueuedTxId = applier.lastQueuedTxId();
-        var responseHandler = new TxPullResponseHandler( this, log );
         pullRequestMonitor.txPullRequest( lastQueuedTxId );
         log.debug( "Pull transactions from %s where tx id > %d", address, lastQueuedTxId );
 
