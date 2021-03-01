@@ -527,6 +527,32 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
           }
         })
       }
+
+      test(s"$action privilege ON HOME DATABASE should not work with CYPHER 3.5 and 4.2") {
+        Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+          withClue(version) {
+            // WHEN
+            val exception = the[SyntaxException] thrownBy {
+              executeSingle(s"$version $action ALL ON HOME DATABASE $preposition role")
+            }
+            // THEN
+            exception.getMessage should include("ing privileges on `HOME DATABASE` is not supported in this Cypher version.")
+          }
+        })
+      }
+
+      test(s"$action privilege ON HOME GRAPH should not work with CYPHER 3.5 and 4.2") {
+        Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+          withClue(version) {
+            // WHEN
+            val exception = the[SyntaxException] thrownBy {
+              executeSingle(s"$version $action ALL ON HOME GRAPH $preposition role")
+            }
+            // THEN
+            exception.getMessage should include("ing privileges on `HOME GRAPH` is not supported in this Cypher version.")
+          }
+        })
+      }
   }
 
   test("SHOW HOME DATABASE should not work with CYPHER 3.5 and 4.2") {
