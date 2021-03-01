@@ -31,16 +31,6 @@ class UnsupportedFeaturesAcceptanceTest extends ExecutionEngineFunSuite with Cyp
     failWithError(Configs.All, query, "The `CONSTRUCT` clause is not available in this implementation of Cypher due to lack of support for multiple graphs.")
   }
 
-  test("create graph") {
-    val query = "CATALOG CREATE GRAPH foo { RETURN GRAPH }"
-    failWithError(Configs.All, query, "The `CATALOG CREATE GRAPH` clause is not available in this implementation of Cypher due to lack of support for multiple graphs.")
-  }
-
-  test("delete graph") {
-    val query = "CATALOG DROP GRAPH foo"
-    failWithError(Configs.All, query, "The `CATALOG DROP GRAPH` clause is not available in this implementation of Cypher due to lack of support for multiple graphs.")
-  }
-
   test("equivalence operator") {
     val query = "RETURN 1 ~ 2"
     failWithError(Configs.All, query, "`~` (equivalence) is a Cypher 10 feature and is not available in this implementation of Cypher.")
