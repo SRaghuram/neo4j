@@ -9,6 +9,9 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.EnabledOnJre;
+import org.junit.jupiter.api.condition.JRE;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
@@ -54,6 +57,7 @@ class BetterRaftMessageLoggerTest
     }
 
     @Test
+    @EnabledOnJre( value = JRE.JAVA_11 )
     void shouldLogNothingWhenStopped() throws Exception
     {
         var outputStream = mock( OutputStream.class );
@@ -62,6 +66,26 @@ class BetterRaftMessageLoggerTest
         verifyNoMoreInteractions( outputStream );
 
         logger.stop();
+        verify( outputStream ).close();
+
+        var message = new RaftMessages.Heartbeat( memberId, 1, 1, 1 );
+        logger.logInbound( databaseId, memberId, message );
+        logger.logOutbound( databaseId, memberId, message );
+
+        verifyNoMoreInteractions( outputStream );
+    }
+
+    @Test
+    @EnabledForJreRange( min = JRE.JAVA_15 )
+    void shouldLogNothingWhenStoppedWithStreamFlush() throws Exception
+    {
+        var outputStream = mock( OutputStream.class );
+        when( fs.openAsOutputStream( logFile, true ) ).thenReturn( outputStream );
+        logger.start();
+        verifyNoMoreInteractions( outputStream );
+
+        logger.stop();
+        verify( outputStream ).flush();
         verify( outputStream ).close();
 
         var message = new RaftMessages.Heartbeat( memberId, 1, 1, 1 );
