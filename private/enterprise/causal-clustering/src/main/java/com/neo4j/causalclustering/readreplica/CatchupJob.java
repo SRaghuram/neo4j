@@ -5,9 +5,8 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
+@FunctionalInterface
 public interface CatchupJob
 {
     void execute();
-
-    boolean canSchedule();
 }

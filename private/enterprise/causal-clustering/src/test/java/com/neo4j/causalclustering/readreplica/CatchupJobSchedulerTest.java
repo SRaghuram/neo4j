@@ -17,11 +17,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class CatchupJobSchedulerTest
 {
-    private final StubCatchupJob stubCatchupJob = new StubCatchupJob();
+    private final CountingCatchupJob countingCatchupJob = new CountingCatchupJob();
     private final FakeClock fakeClock = Clocks.fakeClock();
     private final Duration pullInterval = Duration.ofSeconds( 1 );
     private final OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
-    private final CatchupJobScheduler catchupJobScheduler = new CatchupJobScheduler( timerService, stubCatchupJob, pullInterval );
+    private final CatchupJobScheduler catchupJobScheduler = new CatchupJobScheduler( timerService, countingCatchupJob, pullInterval );
 
     @Test
     void shouldExecuteEveryIntervalWhenStarted() throws Exception
@@ -33,13 +33,13 @@ class CatchupJobSchedulerTest
         forwardOneInterval();
 
         // then
-        assertThat( stubCatchupJob.executeCount ).isEqualTo( 1 );
+        assertThat( countingCatchupJob.executeCount ).isEqualTo( 1 );
 
         // when
         forwardOneInterval();
 
         // then
-        assertThat( stubCatchupJob.executeCount ).isEqualTo( 2 );
+        assertThat( countingCatchupJob.executeCount ).isEqualTo( 2 );
     }
 
     @Test
@@ -57,23 +57,7 @@ class CatchupJobSchedulerTest
         forwardOneInterval();
 
         // then
-        assertThat( stubCatchupJob.executeCount ).isEqualTo( 2 ); // still the same
-    }
-
-    @Test
-    void shouldStopExecutingWhenUnableToSchedule() throws Exception
-    {
-        // given
-        catchupJobScheduler.start();
-
-        // when
-        stubCatchupJob.canSchedule = false;
-
-        // and
-        forwardOneInterval();
-
-        // then
-        assertThat( stubCatchupJob.executeCount ).isZero();
+        assertThat( countingCatchupJob.executeCount ).isEqualTo( 2 ); // still the same
     }
 
     private void forwardOneInterval()
@@ -82,21 +66,14 @@ class CatchupJobSchedulerTest
         timerService.invoke( CatchupJobScheduler.Timers.TX_PULLER_TIMER );
     }
 
-    private static class StubCatchupJob implements CatchupJob
+    private static class CountingCatchupJob implements CatchupJob
     {
         int executeCount ;
-        boolean canSchedule = true;
 
         @Override
         public void execute()
         {
             executeCount++;
-        }
-
-        @Override
-        public boolean canSchedule()
-        {
-            return canSchedule;
         }
     }
 }

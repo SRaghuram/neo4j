@@ -121,12 +121,6 @@ public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJo
         tick();
     }
 
-    @Override
-    public boolean canSchedule()
-    {
-        return state != PANIC;
-    }
-
     void tick()
     {
         try

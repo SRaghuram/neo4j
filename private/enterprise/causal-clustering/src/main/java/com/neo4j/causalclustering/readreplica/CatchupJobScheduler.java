@@ -42,10 +42,7 @@ public class CatchupJobScheduler extends LifecycleAdapter
         timer = timerService.create( Timers.TX_PULLER_TIMER, Group.PULL_UPDATES, timeout ->
         {
             catchupJob.execute();
-            if ( catchupJob.canSchedule() )
-            {
-                timer.reset();
-            }
+            timer.reset();
         } );
         timer.set( fixedTimeout( catchupJobInterval.toMillis(), TimeUnit.MILLISECONDS ) );
     }
