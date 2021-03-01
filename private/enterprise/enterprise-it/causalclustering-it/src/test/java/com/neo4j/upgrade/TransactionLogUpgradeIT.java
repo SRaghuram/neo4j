@@ -174,6 +174,7 @@ class TransactionLogUpgradeIT
         //Then
         assertRuntimeVersion( DbmsRuntimeVersion.V4_2 );
         assertKernelVersion( KernelVersion.V4_2 );
+        doWriteTransaction(); // Just to have at least one tx from our measurement point in the old version
 
         //When
         Race race = new Race().withRandomStartDelays().withEndCondition( () -> isKernelVersion( KernelVersion.LATEST ) );
