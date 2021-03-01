@@ -5,8 +5,6 @@
  */
 package com.neo4j.lock;
 
-import com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiClient;
-import com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiLockManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +25,8 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.api.LeaseService;
 import org.neo4j.kernel.impl.locking.LockAcquisitionTimeoutException;
 import org.neo4j.kernel.impl.locking.Locks;
+import org.neo4j.kernel.impl.locking.forseti.ForsetiClient;
+import org.neo4j.kernel.impl.locking.forseti.ForsetiLockManager;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceTypes;

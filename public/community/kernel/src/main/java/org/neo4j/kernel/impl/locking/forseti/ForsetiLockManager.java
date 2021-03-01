@@ -1,11 +1,24 @@
 /*
  * Copyright (c) "Neo4j"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.neo4j.kernel.impl.enterprise.lock.forseti;
+package org.neo4j.kernel.impl.locking.forseti;
 
-import com.neo4j.configuration.EnterpriseInternalSettings;
 import org.eclipse.collections.api.set.primitive.LongSet;
 
 import java.util.Map;
@@ -26,6 +39,8 @@ import org.neo4j.lock.LockType;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.WaitStrategy;
 import org.neo4j.time.SystemNanoClock;
+
+import static org.neo4j.kernel.impl.locking.forseti.LockingInternalSettings.forseti_deadlock_resolution_strategy;
 
 /**
  * <h1>Forseti, the Nordic god of justice</h1>
@@ -252,7 +267,7 @@ public class ForsetiLockManager implements Locks
         }
     }
 
-    private int findMaxResourceId( ResourceType[] resourceTypes )
+    private static int findMaxResourceId( ResourceType[] resourceTypes )
     {
         int max = 0;
         for ( ResourceType resourceType : resourceTypes )
@@ -290,7 +305,7 @@ public class ForsetiLockManager implements Locks
             this.clock = clock;
             this.lockMaps = lockMaps;
             this.waitStrategies = waitStrategies;
-            this.deadlockResolutionStrategy = config.get( EnterpriseInternalSettings.forseti_deadlock_resolution_strategy );
+            this.deadlockResolutionStrategy = config.get( forseti_deadlock_resolution_strategy );
         }
 
         @Override

@@ -55,13 +55,13 @@ abstract class MergeLockConcurrencyTemplate
     @Test
     void shouldNotDeadlockOnMergeFollowedByPropertyAssignment() throws Exception
     {
-        withConstraint( mergeThen( this::reassignProperties ) );
+        withConstraint( mergeThen( MergeLockConcurrencyTemplate::reassignProperties ) );
     }
 
     @Test
     void shouldNotDeadlockOnMergeFollowedByLabelReAddition() throws Exception
     {
-        withConstraint( mergeThen( this::reassignLabels ) );
+        withConstraint( mergeThen( MergeLockConcurrencyTemplate::reassignLabels ) );
     }
 
     private void withConstraint( ThrowingFunction<CyclicBarrier,Node,Exception> action ) throws Exception
@@ -108,12 +108,12 @@ abstract class MergeLockConcurrencyTemplate
         };
     }
 
-    private Node mergeNode( Transaction tx )
+    private static Node mergeNode( Transaction tx )
     {
         return (Node) single( tx.execute( "MERGE (foo:Foo{bar:'baz'}) RETURN foo" ) ).get( "foo" );
     }
 
-    private void reassignProperties( Node node )
+    private static void reassignProperties( Node node )
     {
         for ( Map.Entry<String,Object> property : node.getAllProperties().entrySet() )
         {
@@ -121,7 +121,7 @@ abstract class MergeLockConcurrencyTemplate
         }
     }
 
-    private void reassignLabels( Node node )
+    private static void reassignLabels( Node node )
     {
         for ( Label label : node.getLabels() )
         {
