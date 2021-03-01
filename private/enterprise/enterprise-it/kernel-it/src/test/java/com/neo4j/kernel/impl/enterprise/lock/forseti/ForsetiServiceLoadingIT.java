@@ -21,6 +21,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.lock_manager;
 
 @TestDirectoryExtension
 class ForsetiServiceLoadingTest
@@ -34,13 +35,12 @@ class ForsetiServiceLoadingTest
         assertThat( getDBLocksInstance( Map.of() ) ).isInstanceOf( ForsetiLockManager.class );
     }
 
-    //TODO:
-//    @Test
-//    void shouldIgnoreUsingCommunityLockManager()
-//    {
-//        var cfg = getDBLocksInstance( Map.of( lock_manager, "community" ) );
-//        assertThat( cfg ).isInstanceOf( ForsetiLockManager.class );
-//    }
+    @Test
+    void shouldIgnoreUsingCommunityLockManager()
+    {
+        var cfg = getDBLocksInstance( Map.of( lock_manager, "community" ) );
+        assertThat( cfg ).isInstanceOf( ForsetiLockManager.class );
+    }
 
     private Locks getDBLocksInstance( Map<Setting<?>,Object> config )
     {

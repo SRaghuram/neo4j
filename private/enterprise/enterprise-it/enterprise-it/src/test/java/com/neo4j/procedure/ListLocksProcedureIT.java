@@ -24,6 +24,7 @@ import org.neo4j.test.extension.Inject;
 
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.lock.LockType.EXCLUSIVE;
 import static org.neo4j.lock.LockType.SHARED;
 import static org.neo4j.lock.ResourceTypes.LABEL;
@@ -31,7 +32,7 @@ import static org.neo4j.lock.ResourceTypes.NODE;
 import static org.neo4j.lock.ResourceTypes.NODE_RELATIONSHIP_GROUP_DELETE;
 
 @EnterpriseDbmsExtension
-public class CommunityListLocksProcedureIT
+public class ListLocksProcedureIT
 {
     @Inject
     private GraphDatabaseService database;
@@ -116,10 +117,10 @@ public class CommunityListLocksProcedureIT
     }
 
     @SafeVarargs
-    private void assertLocks( Result result, Map<String,Object>... locks )
+    private static void assertLocks( Result result, Map<String,Object>... locks )
     {
         Set<Map<String,Object>> expectedLocks = new HashSet<>( List.of( locks ) );
-        result.forEachRemaining( lock -> assertThat( expectedLocks.remove( lock ) ) );
+        result.forEachRemaining( lock -> assertTrue( expectedLocks.remove( lock ) ) );
         assertThat( expectedLocks ).isEmpty();
     }
 }

@@ -22,7 +22,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.impl.api.LeaseService;
+import org.neo4j.kernel.impl.api.LeaseService.NoLeaseClient;
 import org.neo4j.kernel.impl.locking.LockAcquisitionTimeoutException;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.forseti.ForsetiClient;
@@ -129,7 +129,7 @@ public class ForsetiLockAcquisitionTimeoutIT
             {
                 Locks lockManger = getLockManager();
                 Locks.Client client = lockManger.newClient();
-                client.initialize( LeaseService.NoLeaseClient.INSTANCE, 1, EmptyMemoryTracker.INSTANCE );
+                client.initialize( NoLeaseClient.INSTANCE, 1, EmptyMemoryTracker.INSTANCE );
                 client.acquireExclusive( LockTracer.NONE, ResourceTypes.LABEL, 1 );
 
                 Future<Void> propertySetFuture = secondTransactionExecutor.executeDontWait( () ->
