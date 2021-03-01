@@ -68,8 +68,8 @@ public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJo
 
     private volatile BatchingTxApplier applier;
     private volatile State state = TX_PULLING;
+    private volatile StoreCopyHandle storeCopyHandle;
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
-    private StoreCopyHandle storeCopyHandle;
 
     CatchupPollingProcess( long maxQueueSize, long applyBatchSize, ReadReplicaDatabaseContext databaseContext, BatchingTxApplierFactory applierFactory,
             ReplicatedDatabaseEventDispatch databaseEventDispatch, LogProvider logProvider, Panicker panicker, CatchupAddressProvider upstreamProvider,
