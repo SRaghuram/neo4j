@@ -21,7 +21,7 @@ import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.readreplica.tx.AsyncTaskEventHandler;
-import com.neo4j.causalclustering.readreplica.tx.BatchinTxApplierFactory;
+import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplierFactory;
 import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplier;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
@@ -79,7 +79,7 @@ class CatchupPollingProcessTest
 {
     private final CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
-    private final BatchinTxApplierFactory batchingTxApplierFactory = mock( BatchinTxApplierFactory.class );
+    private final BatchingTxApplierFactory batchingTxApplierFactory = mock( BatchingTxApplierFactory.class );
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
     private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );

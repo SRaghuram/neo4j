@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
-import com.neo4j.causalclustering.readreplica.tx.BatchinTxApplierFactory;
+import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplierFactory;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
@@ -134,13 +134,13 @@ class ReadReplicaDatabaseFactory
         long applyBatchSize = ByteUnit.mebiBytes( config.get( CausalClusteringInternalSettings.read_replica_transaction_applier_batch_size ) );
         long maxQueueSize = ByteUnit.mebiBytes( config.get( CausalClusteringInternalSettings.read_replica_transaction_applier_max_queue_size ) );
 
-        var batchinTxApplierFactory =
-                new BatchinTxApplierFactory( databaseContext, commandIndexTracker, internalLogProvider, databaseEventDispatch, pageCacheTracer,
+        var batchingTxApplierFactory =
+                new BatchingTxApplierFactory( databaseContext, commandIndexTracker, internalLogProvider, databaseEventDispatch, pageCacheTracer,
                         asyncTxApplier );
 
         var upstreamProvider = new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, upstreamDatabaseStrategySelector );
         var catchupPollingProcess =
-                new CatchupPollingProcess( maxQueueSize, applyBatchSize, databaseContext, batchinTxApplierFactory,
+                new CatchupPollingProcess( maxQueueSize, applyBatchSize, databaseContext, batchingTxApplierFactory,
                         databaseEventDispatch, internalLogProvider, panicker, upstreamProvider,
                         catchupComponentsProvider );
 

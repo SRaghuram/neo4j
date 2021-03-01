@@ -16,7 +16,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
-public class BatchinTxApplierFactory
+public class BatchingTxApplierFactory
 {
     private final ReadReplicaDatabaseContext databaseContext;
     private final CommandIndexTracker commandIndexTracker;
@@ -25,7 +25,7 @@ public class BatchinTxApplierFactory
     private final PageCacheTracer pageCacheTracer;
     private final AsyncTxApplier asyncTxApplier;
 
-    public BatchinTxApplierFactory( ReadReplicaDatabaseContext databaseContext, CommandIndexTracker commandIndexTracker,
+    public BatchingTxApplierFactory( ReadReplicaDatabaseContext databaseContext, CommandIndexTracker commandIndexTracker,
             LogProvider logProvider, ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch databaseEventDispatch,
             PageCacheTracer pageCacheTracer, AsyncTxApplier asyncTxApplier )
     {

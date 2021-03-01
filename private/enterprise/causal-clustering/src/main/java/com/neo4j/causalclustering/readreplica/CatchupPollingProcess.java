@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.readreplica.tx.AsyncTaskEventHandler;
-import com.neo4j.causalclustering.readreplica.tx.BatchinTxApplierFactory;
+import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplierFactory;
 import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplier;
 import com.neo4j.causalclustering.readreplica.tx.CancelledPullUpdatesJobException;
 import com.neo4j.causalclustering.readreplica.tx.PullUpdatesJob;
@@ -58,7 +58,7 @@ public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJo
     private final long maxQueueSize;
     private final long applyBatchSize;
     private final ReadReplicaDatabaseContext databaseContext;
-    private final BatchinTxApplierFactory applierFactory;
+    private final BatchingTxApplierFactory applierFactory;
     private final CatchupAddressProvider upstreamProvider;
     private final Log log;
     private final Panicker panicker;
@@ -71,7 +71,7 @@ public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJo
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private StoreCopyHandle storeCopyHandle;
 
-    CatchupPollingProcess( long maxQueueSize, long applyBatchSize, ReadReplicaDatabaseContext databaseContext, BatchinTxApplierFactory applierFactory,
+    CatchupPollingProcess( long maxQueueSize, long applyBatchSize, ReadReplicaDatabaseContext databaseContext, BatchingTxApplierFactory applierFactory,
             ReplicatedDatabaseEventDispatch databaseEventDispatch, LogProvider logProvider, Panicker panicker, CatchupAddressProvider upstreamProvider,
             CatchupComponentsProvider catchupComponentsProvider )
     {
@@ -125,11 +125,6 @@ public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJo
     public boolean canSchedule()
     {
         return state != PANIC;
-    }
-
-    boolean isCopyingStore()
-    {
-        return state == STORE_COPYING;
     }
 
     void tick()
