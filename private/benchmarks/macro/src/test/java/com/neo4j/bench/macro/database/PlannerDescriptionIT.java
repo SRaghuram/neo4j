@@ -14,12 +14,9 @@ import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.model.model.PlanOperator;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.common.util.TestSupport;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.ProcessBuilder.Redirect;
@@ -35,24 +32,18 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
 
-import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.connectors.HttpConnector;
-import org.neo4j.cypher.internal.plandescription.InternalPlanDescription;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.summary.Plan;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Result;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
-import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.macro.database.PlannerDescriptionTestsSupport.getJvm;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestDirectoryExtension
 class PlannerDescriptionIT
@@ -120,95 +111,6 @@ class PlannerDescriptionIT
     public void deleteTemporaryNeo4j() throws IOException
     {
         testsSupport.deleteTemporaryNeo4j();
-    }
-
-    @Test
-    public void shouldExtractPlansViaEmbedded()
-    {
-        Path neo4jConfigFile = writeEmbeddedNeo4jConfig();
-        try ( Resources resources = new Resources( temporaryFolder.directory( format( "resources-%s", randId ) ) ) )
-        {
-            for ( Workload workload : Workload.all( resources, Deployment.embedded() )
-                                              .stream()
-                                              // filter out mock workload which always fails
-                                              .filter( workload -> !"error".equals( workload.name() ) )
-                                              .collect( toList() ) )
-            {
-                LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
-                Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), randId ) );
-                try ( Store store = StoreTestUtil.createTemporaryEmptyStoreFor( workload, storePath, neo4jConfigFile );
-                      EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
-                {
-                    for ( Query query : workload.queries() )
-                    {
-                        try ( org.neo4j.graphdb.Transaction tx = database.inner().beginTx() )
-                        {
-                            Result result = tx.execute( query.copyWith( ExecutionMode.PLAN ).queryString().value() );
-                            result.accept( row -> true );
-                            ExecutionPlanDescription rootPlanDescription = result.getExecutionPlanDescription();
-                            PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootPlanDescription );
-                            assertPlansEqual( rootPlanOperator, rootPlanDescription, new EmbeddedPlanDescriptionAccessors() );
-                        }
-                        catch ( Exception e )
-                        {
-                            throw new RuntimeException( format( "Plans comparison failed!\n" +
-                                                                "Workload: %s\n" +
-                                                                "Query:    %s", workload.name(), query.name() ), e );
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    @Test
-    public void shouldExtractPlansViaDriver() throws IOException
-    {
-        Jvm jvm = getJvm();
-
-        try ( Resources resources = new Resources( temporaryFolder.directory( format( "resources-%s", randId ) ) ) )
-        {
-            // filter out error workload
-            List<Workload> workloads = Workload.all( resources, Deployment.embedded() )
-                                               .stream()
-                                               .filter( workload -> !"error".equals( workload.name() ) )
-                                               .collect( toList() );
-            for ( Workload workload : workloads )
-            {
-                LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
-                Redirect outputRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-out-%s-%s.log", workload.name(), randId ) ).toFile() );
-                Redirect errorRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-error-%s-%s.log", workload.name(), randId ) ).toFile() );
-                Path logsDir = Files.createDirectories( temporaryFolder.directory( format( "logs-%s-%s", workload.name(), randId ) ) );
-                Path neo4jConfigFile = writeServerNeo4jConfig( workload.name() );
-                Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), randId ) );
-                try ( Store store = StoreTestUtil.createEmptyStoreFor( workload, storePath, neo4jConfigFile );
-                      ServerDatabase database = Neo4jServerDatabase.startServer( jvm,
-                                                                                 neo4jDir,
-                                                                                 store,
-                                                                                 neo4jConfigFile,
-                                                                                 outputRedirect,
-                                                                                 errorRedirect,
-                                                                                 logsDir ) )
-                {
-                    for ( Query query : workload.queries() )
-                    {
-                        try ( Transaction tx = database.session().beginTransaction() )
-                        {
-                            org.neo4j.driver.Result result = tx.run( query.copyWith( ExecutionMode.PLAN ).queryString().value() );
-                            Plan rootDriverPlan = result.consume().plan();
-                            PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootDriverPlan );
-                            assertPlansEqual( rootPlanOperator, rootDriverPlan, new DriverPlanAccessors() );
-                        }
-                        catch ( Exception e )
-                        {
-                            throw new RuntimeException( format( "Plans comparison failed!\n" +
-                                                                "Workload: %s\n" +
-                                                                "Query:    %s", workload.name(), query.name() ), e );
-                        }
-                    }
-                }
-            }
-        }
     }
 
     @Test

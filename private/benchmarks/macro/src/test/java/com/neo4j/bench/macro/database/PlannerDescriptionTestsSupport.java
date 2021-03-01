@@ -15,7 +15,6 @@ import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.PlanOperator;
 import org.apache.commons.io.FileUtils;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,12 +31,13 @@ import java.util.Stack;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.cypher.internal.plandescription.InternalPlanDescription;
 import org.neo4j.driver.summary.Plan;
 import org.neo4j.graphdb.ExecutionPlanDescription;
-import org.neo4j.kernel.configuration.BoltConnector;
-import org.neo4j.kernel.configuration.HttpConnector;
-import org.neo4j.ports.allocation.PortAuthority;
+import org.neo4j.test.ports.PortAuthority;
+import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -246,10 +246,10 @@ class PlannerDescriptionTestsSupport
     private final String randId = UUID.randomUUID().toString();
     private Path neo4jDir;
 
-    void copyNeo4jDir( TemporaryFolder temporaryFolder ) throws IOException
+    void copyNeo4jDir( TestDirectory temporaryFolder ) throws IOException
     {
         Path originalDir = Paths.get( System.getenv( "NEO4J_DIR" ) );
-        this.neo4jDir = temporaryFolder.newFolder( format( "neo4jDir-%s", randId ) ).toPath();
+        this.neo4jDir = temporaryFolder.directory( format( "neo4jDir-%s", randId ) ).toPath();
         FileUtils.copyDirectory( originalDir.toFile(), neo4jDir.toFile() );
     }
 
@@ -280,9 +280,9 @@ class PlannerDescriptionTestsSupport
     {
         Path neo4jConfigFile = neo4jDir().resolve( "conf" ).resolve( format( "neo4j-%s-%s.conf", name, randId() ) );
         Neo4jConfigBuilder.withDefaults()
-                          .withSetting( new BoltConnector( "bolt" ).listen_address, ":" + boltPort() )
-                          .withSetting( new HttpConnector( "http" ).enabled, "true" )
-                          .withSetting( new HttpConnector( "http" ).listen_address, ":" + httpPort() )
+                          .withSetting( BoltConnector.listen_address, ":" + boltPort() )
+                          .withSetting( HttpConnector.enabled, "true" )
+                          .withSetting( HttpConnector.listen_address, ":" + httpPort() )
                           .writeToFile( neo4jConfigFile );
         return neo4jConfigFile;
     }

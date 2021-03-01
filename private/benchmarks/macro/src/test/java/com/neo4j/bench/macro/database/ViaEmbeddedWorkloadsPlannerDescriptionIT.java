@@ -16,67 +16,60 @@ import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.PlanOperator;
 import com.neo4j.bench.model.options.Edition;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Result;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.macro.database.PlannerDescriptionTestsSupport.assertPlansEqual;
 import static java.lang.String.format;
 
-@RunWith( Parameterized.class )
+@TestDirectoryExtension
 public class ViaEmbeddedWorkloadsPlannerDescriptionIT
 {
     private static final Logger LOG = LoggerFactory.getLogger( ViaEmbeddedWorkloadsPlannerDescriptionIT.class );
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @Inject
+    public TestDirectory temporaryFolder;
     private final PlannerDescriptionTestsSupport testsSupport = new PlannerDescriptionTestsSupport();
 
-    private final Workload workload;
-
-    @Parameters
-    public static Collection<Object[]> workloads() throws IOException
+    public static Stream<Arguments> workloads() throws IOException
     {
-        return PlannerDescriptionTestsSupport.allWorkloads( Deployment.embedded() );
+        return PlannerDescriptionTestsSupport.allWorkloads( Deployment.embedded() ).stream().map( Arguments::of );
     }
 
-    public ViaEmbeddedWorkloadsPlannerDescriptionIT( Workload workload )
-    {
-        this.workload = workload;
-    }
-
-    @Before
+    @BeforeEach
     public void copyNeo4j() throws Exception
     {
         testsSupport.copyNeo4jDir( temporaryFolder );
     }
 
-    @After
+    @AfterEach
     public void deleteTemporaryNeo4j() throws IOException
     {
         testsSupport.deleteTemporaryNeo4j();
     }
 
-    @Test
-    public void shouldExtractPlansViaEmbedded() throws IOException
+    @ParameterizedTest
+    @MethodSource( {"workloads"} )
+    public void shouldExtractPlansViaEmbedded( Workload workload )
     {
         Path neo4jConfigFile = testsSupport.writeEmbeddedNeo4jConfig();
         LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
-        Path storePath = temporaryFolder.newFolder( format( "store-%s-%s", workload.name(), testsSupport.randId() ) ).toPath();
+        Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), testsSupport.randId() ) ).toPath();
         try ( Store store = StoreTestUtil.createTemporaryEmptyStoreFor( workload, storePath, neo4jConfigFile );
               EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
         {
@@ -84,11 +77,14 @@ public class ViaEmbeddedWorkloadsPlannerDescriptionIT
             {
                 try
                 {
-                    Result result = database.inner().execute( query.copyWith( ExecutionMode.PLAN ).queryString().value() );
-                    result.accept( row -> true );
-                    ExecutionPlanDescription rootPlanDescription = result.getExecutionPlanDescription();
-                    PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootPlanDescription );
-                    assertPlansEqual( rootPlanOperator, rootPlanDescription, new EmbeddedPlanDescriptionAccessors() );
+                    try ( var tx = database.inner().beginTx() )
+                    {
+                        Result result = tx.execute( query.copyWith( ExecutionMode.PLAN ).queryString().value() );
+                        result.accept( row -> true );
+                        ExecutionPlanDescription rootPlanDescription = result.getExecutionPlanDescription();
+                        PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootPlanDescription );
+                        assertPlansEqual( rootPlanOperator, rootPlanDescription, new EmbeddedPlanDescriptionAccessors() );
+                    }
                 }
                 catch ( Exception e )
                 {
