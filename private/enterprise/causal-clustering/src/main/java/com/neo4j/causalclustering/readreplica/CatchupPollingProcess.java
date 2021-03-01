@@ -15,8 +15,8 @@ import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.readreplica.tx.AsyncTaskEventHandler;
-import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplierFactory;
 import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplier;
+import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplierFactory;
 import com.neo4j.causalclustering.readreplica.tx.CancelledPullUpdatesJobException;
 import com.neo4j.causalclustering.readreplica.tx.PullUpdatesJob;
 import com.neo4j.dbms.ClusterInternalDbmsOperator.StoreCopyHandle;
@@ -136,7 +136,7 @@ public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJo
             case CANCELLED:
             case PANIC:
             case PAUSED:
-                    break;
+                break;
             default:
                 throw new IllegalStateException( "Tried to execute catchup but was in state " + state );
             }
@@ -291,7 +291,7 @@ public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJo
 
     private VersionedCatchupClients getCatchupClient( SocketAddress address )
     {
-        return catchupComponentsProvider.getComponents().catchupClientFactory()
+        return catchupComponentsProvider.catchupComponents().catchupClientFactory()
                 .getClient( address, log );
     }
 
@@ -337,7 +337,7 @@ public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJo
 
     private void replaceStore() throws IOException, StoreCopyFailedException, DatabaseShutdownException
     {
-        catchupComponentsProvider.getComponents().storeCopyProcess().replaceWithStoreFrom( upstreamProvider, databaseContext.storeId() );
+        catchupComponentsProvider.catchupComponents().storeCopyProcess().replaceWithStoreFrom( upstreamProvider, databaseContext.storeId() );
     }
 
     private void ensureKernelStopped()

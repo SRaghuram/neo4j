@@ -6,9 +6,15 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
+/**
+ * Useful for getting catchup components for a database at a later stage. Can only be used after the {@link ClusteredDatabaseContext} for the database
+ * has been created.
+ */
 public class CatchupComponentsProvider
 {
     private final CatchupComponentsRepository catchupComponentsRepository;
@@ -20,9 +26,13 @@ public class CatchupComponentsProvider
         this.databaseId = databaseId;
     }
 
-    CatchupComponentsRepository.CatchupComponents getComponents()
+    /**
+     * @return CatchupComponents from the {@link ClusteredDatabaseContext} for this database
+     * @throws IllegalStateException if the {@link ClusteredDatabaseContext} has not been created yet.
+     */
+    CatchupComponentsRepository.CatchupComponents catchupComponents()
     {
         return catchupComponentsRepository.componentsFor( databaseId ).orElseThrow(
-                () -> new IllegalArgumentException( String.format( "No CatchupComponents instance exists for database %s.", databaseId ) ) );
+                () -> new IllegalStateException( String.format( "No CatchupComponents instance exists for database %s.", databaseId ) ) );
     }
 }

@@ -417,7 +417,7 @@ class CatchupPollingProcessTest
         }
 
         @Override
-        CatchupComponentsRepository.CatchupComponents getComponents()
+        CatchupComponentsRepository.CatchupComponents catchupComponents()
         {
             return new CatchupComponentsRepository.CatchupComponents( null, storeCopyProcess, catchupClientFactory );
         }
