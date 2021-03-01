@@ -1,24 +1,12 @@
 /*
  * Copyright (c) "Neo4j"
  * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
- *
- * Neo4j is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.locking;
+package com.neo4j.lock;
 
+import com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiClient;
+import com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiLockManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,11 +24,9 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.impl.api.LeaseService.NoLeaseClient;
+import org.neo4j.kernel.impl.api.LeaseService;
 import org.neo4j.kernel.impl.locking.LockAcquisitionTimeoutException;
 import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.impl.locking.community.CommunityLockClient;
-import org.neo4j.kernel.impl.locking.community.CommunityLockManger;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceTypes;
@@ -58,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @TestDirectoryExtension
-public class CommunityLockAcquisitionTimeoutIT
+public class ForsetiLockAcquisitionTimeoutIT
 {
     private final OtherThreadExecutor secondTransactionExecutor = new OtherThreadExecutor( "transactionExecutor" );
     private final OtherThreadExecutor clockExecutor = new OtherThreadExecutor( "clockExecutor" );
@@ -143,7 +129,7 @@ public class CommunityLockAcquisitionTimeoutIT
             {
                 Locks lockManger = getLockManager();
                 Locks.Client client = lockManger.newClient();
-                client.initialize( NoLeaseClient.INSTANCE, 1, EmptyMemoryTracker.INSTANCE );
+                client.initialize( LeaseService.NoLeaseClient.INSTANCE, 1, EmptyMemoryTracker.INSTANCE );
                 client.acquireExclusive( LockTracer.NONE, ResourceTypes.LABEL, 1 );
 
                 Future<Void> propertySetFuture = secondTransactionExecutor.executeDontWait( () ->
@@ -173,26 +159,10 @@ public class CommunityLockAcquisitionTimeoutIT
                         "Unable to acquire lock for resource: LABEL with id: 1 within 2000 millis." );
     }
 
-    protected Locks getLockManager()
-    {
-        return getDependencyResolver().resolveDependency( CommunityLockManger.class );
-    }
-
     protected DependencyResolver getDependencyResolver()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver();
     }
-
-    protected Predicate<OtherThreadExecutor.WaitDetails> exclusiveLockWaitingPredicate()
-    {
-        return waitDetails -> waitDetails.isAt( CommunityLockClient.class, "acquireExclusive" );
-    }
-
-    protected Predicate<OtherThreadExecutor.WaitDetails> sharedLockWaitingPredicate()
-    {
-        return waitDetails -> waitDetails.isAt( CommunityLockClient.class, "acquireShared" );
-    }
-
     private void createTestNode( Label marker )
     {
         try ( Transaction transaction = database.beginTx() )
@@ -200,5 +170,20 @@ public class CommunityLockAcquisitionTimeoutIT
             transaction.createNode( marker );
             transaction.commit();
         }
+    }
+
+    protected static Predicate<OtherThreadExecutor.WaitDetails> exclusiveLockWaitingPredicate()
+    {
+        return waitDetails -> waitDetails.isAt( ForsetiClient.class, "acquireExclusive" );
+    }
+
+    protected static Predicate<OtherThreadExecutor.WaitDetails> sharedLockWaitingPredicate()
+    {
+        return waitDetails -> waitDetails.isAt( ForsetiClient.class, "acquireShared" );
+    }
+
+    protected Locks getLockManager()
+    {
+        return getDependencyResolver().resolveDependency( ForsetiLockManager.class );
     }
 }

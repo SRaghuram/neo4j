@@ -14,15 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
-import org.neo4j.test.TestDatabaseManagementServiceBuilder;
-import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 
 import static java.lang.String.format;
@@ -33,17 +30,11 @@ import static org.neo4j.lock.ResourceTypes.LABEL;
 import static org.neo4j.lock.ResourceTypes.NODE;
 import static org.neo4j.lock.ResourceTypes.NODE_RELATIONSHIP_GROUP_DELETE;
 
-@EnterpriseDbmsExtension( configurationCallback = "configure" )
+@EnterpriseDbmsExtension
 public class CommunityListLocksProcedureIT
 {
     @Inject
     private GraphDatabaseService database;
-
-    @ExtensionCallback
-    void configure( TestDatabaseManagementServiceBuilder builder )
-    {
-        builder.setConfig( GraphDatabaseInternalSettings.lock_manager, "community" );
-    }
 
     @ParameterizedTest
     @ValueSource( strings = {"INTERPRETED", "SLOTTED", "PIPELINED"} )

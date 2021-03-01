@@ -23,7 +23,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.kernel.impl.api.LeaseService.NoLeaseClient;
 import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.impl.locking.community.CommunityLockManger;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.LockWaitStrategies;
 import org.neo4j.lock.ResourceType;
@@ -376,14 +375,6 @@ class ForsetiFalseDeadlockTest
 
     public enum LockManager
     {
-        COMMUNITY
-                {
-                    @Override
-                    public Locks create( ResourceType resourceType )
-                    {
-                        return new CommunityLockManger( Config.defaults(), Clocks.nanoClock() );
-                    }
-                },
         FORSETI
                 {
                     @Override
