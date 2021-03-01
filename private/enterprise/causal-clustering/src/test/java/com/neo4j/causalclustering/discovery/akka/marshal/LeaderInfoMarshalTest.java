@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 
 import java.util.Collection;
 
@@ -15,7 +15,7 @@ import org.neo4j.io.marshal.ChannelMarshal;
 
 import static java.util.Collections.singletonList;
 
-public class LeaderInfoMarshalTest extends BaseMarshalTest<LeaderInfo>
+public class LeaderInfoMarshalTest implements BaseMarshalTest<LeaderInfo>
 {
     @Override
     public Collection<LeaderInfo> originals()

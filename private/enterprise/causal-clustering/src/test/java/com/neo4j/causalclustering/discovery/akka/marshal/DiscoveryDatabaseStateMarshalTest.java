@@ -17,7 +17,7 @@ import org.neo4j.io.marshal.ChannelMarshal;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-public class DiscoveryDatabaseStateMarshalTest extends BaseMarshalTest<DiscoveryDatabaseState>
+public class DiscoveryDatabaseStateMarshalTest implements BaseMarshalTest<DiscoveryDatabaseState>
 {
     @Override
     public Collection<DiscoveryDatabaseState> originals()

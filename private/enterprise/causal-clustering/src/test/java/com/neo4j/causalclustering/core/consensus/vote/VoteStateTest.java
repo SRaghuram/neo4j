@@ -7,11 +7,41 @@ package com.neo4j.causalclustering.core.consensus.vote;
 
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.RaftMemberId;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-class VoteStateTest
+import java.util.Collection;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.neo4j.io.marshal.ChannelMarshal;
+
+class VoteStateTest implements BaseMarshalTest<VoteState>
 {
+
+    @Override
+    public Collection<VoteState> originals()
+    {
+        return Stream.generate( this::randomVoteState )
+                     .limit( 5 )
+                     .collect( Collectors.toList() );
+    }
+
+    private VoteState randomVoteState()
+    {
+        var voteState = new VoteState();
+        voteState.update( IdFactory.randomRaftMemberId(), ThreadLocalRandom.current().nextLong() );
+        return voteState;
+    }
+
+    @Override
+    public ChannelMarshal<VoteState> marshal()
+    {
+        return new VoteState.Marshal();
+    }
+
     @Test
     void shouldStoreVote()
     {

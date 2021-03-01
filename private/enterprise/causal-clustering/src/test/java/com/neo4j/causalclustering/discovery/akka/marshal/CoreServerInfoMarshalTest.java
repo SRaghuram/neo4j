@@ -17,7 +17,7 @@ import org.neo4j.io.marshal.ChannelMarshal;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-public class CoreServerInfoMarshalTest extends BaseMarshalTest<CoreServerInfo>
+public class CoreServerInfoMarshalTest implements BaseMarshalTest<CoreServerInfo>
 {
     @Override
     public Collection<CoreServerInfo> originals()

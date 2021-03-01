@@ -16,8 +16,8 @@ import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseReque
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 
 import java.util.Collection;
 import java.util.List;
@@ -28,7 +28,7 @@ import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
-class CoreReplicatedContentMarshallingV2Test extends BaseMarshalTest<ReplicatedContent>
+class CoreReplicatedContentMarshallingV2Test implements BaseMarshalTest<ReplicatedContent>
 {
 
     @Override

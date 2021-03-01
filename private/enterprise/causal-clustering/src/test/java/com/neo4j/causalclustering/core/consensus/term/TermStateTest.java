@@ -5,11 +5,39 @@
  */
 package com.neo4j.causalclustering.core.consensus.term;
 
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-class TermStateTest
+import java.util.Collection;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.neo4j.io.marshal.ChannelMarshal;
+
+class TermStateTest implements BaseMarshalTest<TermState>
 {
+    @Override
+    public Collection<TermState> originals()
+    {
+        return Stream.generate( () -> ThreadLocalRandom.current().nextLong() )
+                     .map( term ->
+                     {
+                         var ts = new TermState();
+                         ts.update( term );
+                         return ts;
+                     } )
+                     .limit( 5 )
+                     .collect( Collectors.toList() );
+    }
+
+    @Override
+    public ChannelMarshal<TermState> marshal()
+    {
+        return new TermState.Marshal();
+    }
+
     @Test
     void shouldStoreCurrentTerm()
     {

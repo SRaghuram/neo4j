@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import com.neo4j.dbms.EnterpriseOperatorState;
 
 import java.util.Collection;
@@ -23,7 +23,7 @@ import org.neo4j.kernel.database.DatabaseId;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-public class ReplicatedDatabaseStateMarshalTest extends BaseMarshalTest<ReplicatedDatabaseState>
+public class ReplicatedDatabaseStateMarshalTest implements BaseMarshalTest<ReplicatedDatabaseState>
 {
     @Override
     public Collection<ReplicatedDatabaseState> originals()

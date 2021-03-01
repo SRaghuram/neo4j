@@ -6,12 +6,21 @@
 package com.neo4j.causalclustering.messaging.marshalling;
 
 import com.neo4j.causalclustering.test_helpers.Buffers;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
+import io.netty.buffer.ByteBuf;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.ChannelMarshal;
+import org.neo4j.io.marshal.EndOfStreamException;
+import org.neo4j.io.marshal.SafeChannelMarshal;
 import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,112 +28,76 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 @Buffers.Extension
-class StringMarshalTest
+class StringMarshalTest implements BaseMarshalTest<String>
 {
     @Inject
     private Buffers buffers;
 
-    @Test
-    void shouldSerializeAndDeserializeString()
+    @Override
+    public Collection<String> originals()
+    {
+        return List.of( "ABC123_?", "", "08934208", "abczsd" );
+    }
+
+    @Override
+    public ChannelMarshal<String> marshal()
+    {
+        return new SafeChannelMarshal<>()
+        {
+            @Override
+            protected String unmarshal0( ReadableChannel channel ) throws IOException
+            {
+                return StringMarshal.unmarshal( channel );
+            }
+
+            @Override
+            public void marshal( String s, WritableChannel channel ) throws IOException
+            {
+                StringMarshal.marshal( channel, s );
+            }
+        };
+    }
+
+    private String marshalAndUnmarshalUsingBuffers( final String original, ByteBuf buffer )
+    {
+        StringMarshal.marshal( buffer, original );
+        return StringMarshal.unmarshal( buffer );
+    }
+
+    @ParameterizedTest
+    @MethodSource( "originals" )
+    void shouldMarshalAndUnmarshalUsingBuffers( String original )
     {
         // given
-        final var TEST_STRING = "ABC123_?";
-        final var buffer = buffers.buffer();
+        var buffer = buffers.buffer();
 
         // when
-        StringMarshal.marshal( buffer, TEST_STRING );
-        var reconstructed = StringMarshal.unmarshal( buffer );
+        var result = marshalAndUnmarshalUsingBuffers( original, buffer );
 
         // then
-        assertNotSame( TEST_STRING, reconstructed );
-        assertEquals( TEST_STRING, reconstructed );
+        assertEquals( original, result );
+        assertNotSame( original, result );
     }
 
     @Test
-    void shouldSerializeAndDeserializeEmptyString()
+    void shouldMarshalAndUnmarshalNullUsingBuffer()
     {
         // given
-        final var TEST_STRING = "";
-        final var buffer = buffers.buffer();
+        var buffer = buffers.buffer();
 
         // when
-        StringMarshal.marshal( buffer, TEST_STRING );
-        var reconstructed = StringMarshal.unmarshal( buffer );
+        var result = marshalAndUnmarshalUsingBuffers( null, buffer );
 
         // then
-        assertNotSame( TEST_STRING, reconstructed );
-        assertEquals( TEST_STRING, reconstructed );
+        assertNull( result );
     }
 
     @Test
-    void shouldSerializeAndDeserializeNull()
+    void shouldMarshalAndUnmarshalNullUsingChannel() throws IOException, EndOfStreamException
     {
-        // given
-        final var buffer = buffers.buffer();
-
-        // when
-        StringMarshal.marshal( buffer, null );
-        var reconstructed = StringMarshal.unmarshal( buffer );
-
+        // given/when
+        var result = marshalAndUnmarshal( null, marshal() );
         // then
-        assertNull( reconstructed );
-    }
-
-    @Test
-    void shouldSerializeAndDeserializeStringUsingChannel() throws IOException
-    {
-        // given
-        final var TEST_STRING = "ABC123_?";
-        var outputStream = new ByteArrayOutputStream();
-        var writableChannel = new OutputStreamWritableChannel( outputStream );
-
-        // when
-        StringMarshal.marshal( writableChannel, TEST_STRING );
-
-        var inputStream = new ByteArrayInputStream( outputStream.toByteArray() );
-        var readableChannel = new InputStreamReadableChannel( inputStream );
-        var reconstructed = StringMarshal.unmarshal( readableChannel );
-
-        // then
-        assertNotSame( TEST_STRING, reconstructed );
-        assertEquals( TEST_STRING, reconstructed );
-    }
-
-    @Test
-    void shouldSerializeAndDeserializeEmptyStringUsingChannel() throws IOException
-    {
-        // given
-        final var TEST_STRING = "";
-        var outputStream = new ByteArrayOutputStream();
-        var writableChannel = new OutputStreamWritableChannel( outputStream );
-
-        // when
-        StringMarshal.marshal( writableChannel, TEST_STRING );
-
-        var inputStream = new ByteArrayInputStream( outputStream.toByteArray() );
-        var readableChannel = new InputStreamReadableChannel( inputStream );
-        var reconstructed = StringMarshal.unmarshal( readableChannel );
-
-        // then
-        assertNotSame( TEST_STRING, reconstructed );
-        assertEquals( TEST_STRING, reconstructed );
-    }
-
-    @Test
-    void shouldSerializeAndDeserializeNullUsingChannel() throws IOException
-    {
-        // given
-        var outputStream = new ByteArrayOutputStream();
-        var writableChannel = new OutputStreamWritableChannel( outputStream );
-
-        // when
-        StringMarshal.marshal( writableChannel, null );
-
-        var inputStream = new ByteArrayInputStream( outputStream.toByteArray() );
-        var readableChannel = new InputStreamReadableChannel( inputStream );
-        var reconstructed = StringMarshal.unmarshal( readableChannel );
-
-        // then
-        assertNull( reconstructed );
+        assertNull( null );
     }
 }

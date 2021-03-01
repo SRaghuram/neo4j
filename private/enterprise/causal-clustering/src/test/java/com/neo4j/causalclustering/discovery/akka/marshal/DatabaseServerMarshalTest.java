@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseServer;
-import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 
 import java.util.Collection;
 import java.util.stream.Collectors;
@@ -17,7 +17,7 @@ import org.neo4j.io.marshal.ChannelMarshal;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-public class DatabaseServerMarshalTest extends BaseMarshalTest<DatabaseServer>
+public class DatabaseServerMarshalTest implements BaseMarshalTest<DatabaseServer>
 {
     @Override
     public Collection<DatabaseServer> originals()

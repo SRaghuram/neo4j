@@ -15,7 +15,7 @@ import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-class InefficientNamedDatabaseIdMarshalTest extends BaseMarshalTest<NamedDatabaseId>
+class InefficientNamedDatabaseIdMarshalTest implements BaseMarshalTest<NamedDatabaseId>
 {
 
     @Override

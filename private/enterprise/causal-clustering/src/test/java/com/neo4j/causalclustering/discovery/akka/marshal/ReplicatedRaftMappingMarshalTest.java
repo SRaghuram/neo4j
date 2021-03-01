@@ -18,7 +18,7 @@ import static com.neo4j.causalclustering.identity.IdFactory.randomRaftMemberId;
 import static com.neo4j.causalclustering.identity.IdFactory.randomServerId;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-public class ReplicatedRaftMappingMarshalTest extends BaseMarshalTest<ReplicatedRaftMapping>
+public class ReplicatedRaftMappingMarshalTest implements BaseMarshalTest<ReplicatedRaftMapping>
 {
     @Override
     public Collection<ReplicatedRaftMapping> originals()

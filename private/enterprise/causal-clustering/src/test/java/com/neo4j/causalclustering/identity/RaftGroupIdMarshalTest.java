@@ -5,54 +5,42 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import java.util.Collection;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.io.marshal.ChannelMarshal;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
-class RaftGroupIdMarshalTest
+class RaftGroupIdMarshalTest implements BaseMarshalTest<RaftGroupId>
 {
-    private ChannelMarshal<RaftGroupId> marshal = RaftGroupId.Marshal.INSTANCE;
 
-    @Test
-    void shouldMarshalRaftId() throws Throwable
+    @Override
+    public ChannelMarshal<RaftGroupId> marshal()
     {
-        // given
-        RaftGroupId original = IdFactory.randomRaftId();
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        return RaftGroupId.Marshal.INSTANCE;
+    }
 
-        // when
-        OutputStreamWritableChannel writableChannel = new OutputStreamWritableChannel( outputStream );
-        marshal.marshal( original, writableChannel );
+    @Override
+    public Collection<RaftGroupId> originals()
+    {
+        var others =  Stream.generate( IdFactory::randomRaftId ).limit( 5 );
+        var system = Stream.of( RaftGroupId.from( NAMED_SYSTEM_DATABASE_ID.databaseId() ) );
 
-        InputStreamReadableChannel readableChannel = new InputStreamReadableChannel( new ByteArrayInputStream( outputStream.toByteArray() ) );
-        RaftGroupId result = marshal.unmarshal( readableChannel );
-
-        // then
-        assertNotSame( original, result );
-        assertEquals( original, result );
+        return Stream.concat( others, system )
+                     .collect( Collectors.toList() );
     }
 
     @Test
     void shouldMarshalNullRaftId() throws Throwable
     {
-        // given
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-        // when
-        OutputStreamWritableChannel writableChannel = new OutputStreamWritableChannel( outputStream );
-        marshal.marshal( null, writableChannel );
-
-        InputStreamReadableChannel readableChannel = new InputStreamReadableChannel( new ByteArrayInputStream( outputStream.toByteArray() ) );
-        RaftGroupId result = marshal.unmarshal( readableChannel );
+        // given/when
+        var result = marshalAndUnmarshal( null, marshal() );
 
         // then
         assertNull( result );

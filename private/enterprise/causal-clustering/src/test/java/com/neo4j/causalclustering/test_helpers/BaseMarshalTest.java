@@ -24,25 +24,39 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
-public abstract class BaseMarshalTest<T>
+public interface BaseMarshalTest<T>
 {
-    public abstract Collection<T> originals();
-    public abstract ChannelMarshal<T> marshal();
+    Collection<T> originals();
 
-    public boolean unMarshalCreatesNewRefs()
+    ChannelMarshal<T> marshal();
+
+    default boolean unMarshalCreatesNewRefs()
     {
         return true;
     }
 
-    Collection<Object[]> data()
+    default Collection<Object[]> arguments()
     {
         var marshal = marshal();
         return originals().stream().map( e -> new Object[]{e, marshal} ).collect( Collectors.toList() );
     }
 
     @ParameterizedTest
-    @MethodSource( "data" )
-    void shouldMarshalAndUnMarshal( T original, ChannelMarshal<T> marshal ) throws IOException, EndOfStreamException
+    @MethodSource( "arguments" )
+    default void shouldMarshalAndUnMarshalUsingChannels( T original, ChannelMarshal<T> marshal ) throws IOException, EndOfStreamException
+    {
+        // given/when
+        var result = marshalAndUnmarshal( original, marshal );
+
+        // then
+        if ( unMarshalCreatesNewRefs() )
+        {
+            assertNotSame( original, result );
+        }
+        assertEquals( original, result );
+    }
+
+    default T marshalAndUnmarshal( T original, ChannelMarshal<T> marshal ) throws IOException, EndOfStreamException
     {
         // given
         var outputStream = new ByteArrayOutputStream();
@@ -52,13 +66,6 @@ public abstract class BaseMarshalTest<T>
         marshal.marshal( original, writableChannel );
 
         var readableChannel = new InputStreamReadableChannel( new ByteArrayInputStream( outputStream.toByteArray() ) );
-        var result = marshal.unmarshal( readableChannel );
-
-        // then
-        if ( unMarshalCreatesNewRefs() )
-        {
-            assertNotSame( original, result );
-        }
-        assertEquals( original, result );
+        return marshal.unmarshal( readableChannel );
     }
 }

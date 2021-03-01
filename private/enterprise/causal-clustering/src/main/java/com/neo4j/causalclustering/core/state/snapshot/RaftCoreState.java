@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
@@ -26,6 +27,27 @@ public class RaftCoreState
     public MembershipEntry committed()
     {
         return committed;
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        RaftCoreState that = (RaftCoreState) o;
+        return Objects.equals( committed, that.committed );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( committed );
     }
 
     public static class Marshal extends SafeStateMarshal<RaftCoreState>

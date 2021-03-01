@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.io.marshal.ChannelMarshal;
 
-class ActorRefMarshalTest extends BaseMarshalTest<ActorRef>
+class ActorRefMarshalTest implements BaseMarshalTest<ActorRef>
 {
     private static ActorSystem system;
 

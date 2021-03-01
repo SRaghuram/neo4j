@@ -8,12 +8,13 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import akka.actor.Address;
 import akka.cluster.UniqueAddress;
 import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
+
 import java.util.Collection;
 import java.util.List;
 
 import org.neo4j.io.marshal.ChannelMarshal;
 
-class UniqueAddressMarshalTest extends BaseMarshalTest<UniqueAddress>
+class UniqueAddressMarshalTest implements BaseMarshalTest<UniqueAddress>
 {
     @Override
     public Collection<UniqueAddress> originals()

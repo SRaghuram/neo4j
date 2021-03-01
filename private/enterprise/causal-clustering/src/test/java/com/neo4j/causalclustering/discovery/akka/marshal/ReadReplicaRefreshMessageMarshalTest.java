@@ -11,12 +11,13 @@ import akka.testkit.javadsl.TestKit;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
-import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import org.neo4j.io.marshal.ChannelMarshal;
@@ -25,16 +26,15 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
-import static java.util.Collections.singletonList;
 
-public class ReadReplicaRefreshMessageMarshalTest extends BaseMarshalTest<ReadReplicaRefreshMessage>
+public class ReadReplicaRefreshMessageMarshalTest implements BaseMarshalTest<ReadReplicaRefreshMessage>
 {
     private static ActorSystem system;
 
     @Override
     public Collection<ReadReplicaRefreshMessage> originals()
     {
-        return singletonList( new ReadReplicaRefreshMessage(
+        return List.of( new ReadReplicaRefreshMessage(
                 TestTopology.addressesForReadReplica( 432 ),
                 IdFactory.randomServerId(),
                 system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name + "1" ) ),

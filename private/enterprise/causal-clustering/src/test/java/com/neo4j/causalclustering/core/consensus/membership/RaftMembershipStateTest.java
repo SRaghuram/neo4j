@@ -8,24 +8,41 @@ package com.neo4j.causalclustering.core.consensus.membership;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
+
+import org.neo4j.io.marshal.ChannelMarshal;
 
 import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
-class RaftMembershipStateTest
+class RaftMembershipStateTest implements BaseMarshalTest<RaftMembershipState>
 {
     private RaftMembershipState state = new RaftMembershipState();
 
     private Set<RaftMemberId> membersA = asSet( raftMember( 0 ), raftMember( 1 ), raftMember( 2 ) );
     private Set<RaftMemberId> membersB = asSet( raftMember( 0 ), raftMember( 1 ), raftMember( 2 ), raftMember( 3 ) );
+
+    @Override
+    public Collection<RaftMembershipState> originals()
+    {
+        return List.of( new RaftMembershipState( 5, new MembershipEntry( 7, membersA ), new MembershipEntry( 8, membersB ) ) );
+    }
+
+    @Override
+    public ChannelMarshal<RaftMembershipState> marshal()
+    {
+        return new RaftMembershipState.Marshal();
+    }
 
     @Test
     void shouldHaveCorrectInitialState()
@@ -112,22 +129,6 @@ class RaftMembershipStateTest
         // then
         Assertions.assertEquals( state.getLatest(), membersB );
         Assertions.assertEquals( 1, state.getOrdinal() );
-    }
-
-    @Test
-    void shouldMarshalCorrectly() throws Exception
-    {
-        // given
-        RaftMembershipState.Marshal marshal = new RaftMembershipState.Marshal();
-        state = new RaftMembershipState( 5, new MembershipEntry( 7, membersA ), new MembershipEntry( 8, membersB ) );
-
-        // when
-        ByteBuf buffer = Unpooled.buffer( 1_000 );
-        marshal.marshal( state, new BoundedNetworkWritableChannel( buffer ) );
-        final RaftMembershipState recovered = marshal.unmarshal( new NetworkReadableChannel( buffer ) );
-
-        // then
-        Assertions.assertEquals( state, recovered );
     }
 
     @Test

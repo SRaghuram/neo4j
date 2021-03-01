@@ -14,19 +14,18 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.util.Collection;
+import java.util.List;
 
 import org.neo4j.io.marshal.ChannelMarshal;
 
-import static java.util.Collections.singletonList;
-
-public class ReadReplicaRemovalMarshalTest extends BaseMarshalTest<ReadReplicaRemovalMessage>
+public class ReadReplicaRemovalMarshalTest implements BaseMarshalTest<ReadReplicaRemovalMessage>
 {
     private static ActorSystem system;
 
     @Override
     public Collection<ReadReplicaRemovalMessage> originals()
     {
-        return singletonList( new ReadReplicaRemovalMessage(
+        return List.of( new ReadReplicaRemovalMessage(
                 system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name ) ) ) );
     }
 

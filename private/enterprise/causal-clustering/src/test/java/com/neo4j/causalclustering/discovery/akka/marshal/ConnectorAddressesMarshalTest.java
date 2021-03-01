@@ -9,24 +9,21 @@ import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 
 import java.util.Collection;
+import java.util.List;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.marshal.ChannelMarshal;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
-
-public class ConnectorAddressesMarshalTest extends BaseMarshalTest<ConnectorAddresses>
+public class ConnectorAddressesMarshalTest implements BaseMarshalTest<ConnectorAddresses>
 {
     @Override
     public Collection<ConnectorAddresses> originals()
     {
-        return asList(
-                ConnectorAddresses.fromList( emptyList() ),
-                ConnectorAddresses.fromList( singletonList(
+        return List.of(
+                ConnectorAddresses.fromList( List.of() ),
+                ConnectorAddresses.fromList( List.of(
                         new ConnectorAddresses.ConnectorUri( ConnectorAddresses.Scheme.bolt, new SocketAddress( "host", 27 ) ) ) ),
-                ConnectorAddresses.fromList( asList(
+                ConnectorAddresses.fromList( List.of(
                         new ConnectorAddresses.ConnectorUri( ConnectorAddresses.Scheme.bolt, new SocketAddress( "host1", 27 ) ),
                         new ConnectorAddresses.ConnectorUri( ConnectorAddresses.Scheme.https, new SocketAddress( "host3", 798 ) ),
                         new ConnectorAddresses.ConnectorUri( ConnectorAddresses.Scheme.http, new SocketAddress( "host2", 37 ) ) ) )

@@ -9,55 +9,49 @@ import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
-import io.netty.buffer.ByteBuf;
+import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import io.netty.buffer.Unpooled;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.io.marshal.EndOfStreamException;
 
-class RaftMemberIdMarshalTest
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class RaftMemberIdMarshalTest implements BaseMarshalTest<RaftMemberId>
 {
-    @Test
-    void shouldSerializeAndDeserialize() throws Exception
+    @Override
+    public ChannelMarshal<RaftMemberId> marshal()
     {
-        // given
-        RaftMemberId.Marshal marshal = RaftMemberId.Marshal.INSTANCE;
+        return RaftMemberId.Marshal.INSTANCE;
+    }
 
-        final RaftMemberId member = IdFactory.randomRaftMemberId();
-
-        // when
-        ByteBuf buffer = Unpooled.buffer( 1_000 );
-        marshal.marshal( member, new BoundedNetworkWritableChannel( buffer ) );
-        final RaftMemberId recovered = marshal.unmarshal( new NetworkReadableChannel( buffer ) );
-
-        // then
-        Assertions.assertEquals( member, recovered );
+    @Override
+    public Collection<RaftMemberId> originals()
+    {
+        return Stream.generate( IdFactory::randomRaftMemberId )
+                     .limit( 5 )
+                     .collect( Collectors.toList() );
     }
 
     @Test
     void shouldThrowExceptionForHalfWrittenInstance() throws Exception
     {
         // given
-        // a CoreMember and a ByteBuffer to write it to
-        RaftMemberId.Marshal marshal = RaftMemberId.Marshal.INSTANCE;
-        final RaftMemberId aRealMember = IdFactory.randomRaftMemberId();
+        // a RaftMemberId and a ByteBuffer to write it to
+        var aRealMember = IdFactory.randomRaftMemberId();
+        var buffer = Unpooled.buffer( 1000 );
+        var marshal = marshal();
 
-        ByteBuf buffer = Unpooled.buffer( 1000 );
-
-        // and the CoreMember is serialized but for 5 bytes at the end
+        // and the RaftMemberId is serialized but for 5 bytes at the end
         marshal.marshal( aRealMember, new BoundedNetworkWritableChannel( buffer ) );
-        ByteBuf bufferWithMissingBytes = buffer.copy( 0, buffer.writerIndex() - 5 );
+        var bufferWithMissingBytes = buffer.copy( 0, buffer.writerIndex() - 5 );
 
         // when
-        try
-        {
-            marshal.unmarshal( new NetworkReadableChannel( bufferWithMissingBytes ) );
-            Assertions.fail( "Should have thrown exception" );
-        }
-        catch ( EndOfStreamException e )
-        {
-            // expected
-        }
+        assertThrows( EndOfStreamException.class, () -> marshal.unmarshal( new NetworkReadableChannel( bufferWithMissingBytes ) ) );
     }
 }

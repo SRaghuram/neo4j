@@ -17,7 +17,7 @@ import org.neo4j.io.marshal.ChannelMarshal;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-public class ReadReplicaInfoMarshalTest extends BaseMarshalTest<ReadReplicaInfo>
+public class ReadReplicaInfoMarshalTest implements BaseMarshalTest<ReadReplicaInfo>
 {
     @Override
     public Collection<ReadReplicaInfo> originals()
