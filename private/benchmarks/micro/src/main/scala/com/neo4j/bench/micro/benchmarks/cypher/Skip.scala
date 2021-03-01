@@ -14,7 +14,7 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.astLiteralFor
 import com.neo4j.bench.micro.data.Plans.astVariable
-import com.neo4j.bench.data.TypeParamValues.LNG
+import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext

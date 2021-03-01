@@ -7,8 +7,8 @@ package com.neo4j.bench.micro.benchmarks.security;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.data.DataGeneratorConfig;
+import com.neo4j.bench.data.DataGeneratorConfigBuilder;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 

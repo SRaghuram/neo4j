@@ -5,28 +5,26 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
-import java.util.SplittableRandom
-
 import com.neo4j.bench.common.Neo4jConfigBuilder
+import com.neo4j.bench.data.ConstantGenerator
+import com.neo4j.bench.data.DataGeneratorConfig
+import com.neo4j.bench.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.data.NumberGenerator
+import com.neo4j.bench.data.PropertyDefinition
+import com.neo4j.bench.data.ValueGeneratorFactory
+import com.neo4j.bench.data.ValueGeneratorFun
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.TxBatchWithSecurity
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.data.ConstantGenerator
-import com.neo4j.bench.micro.data.DataGeneratorConfig
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
-import com.neo4j.bench.micro.data.NumberGenerator
 import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.astLiteralFor
 import com.neo4j.bench.micro.data.Plans.astMap
 import com.neo4j.bench.micro.data.Plans.astParameter
 import com.neo4j.bench.micro.data.Plans.astVariable
-import com.neo4j.bench.micro.data.PropertyDefinition
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
-import com.neo4j.bench.micro.data.ValueGeneratorFactory
-import com.neo4j.bench.micro.data.ValueGeneratorFun
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
@@ -48,6 +46,7 @@ import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
+import java.util.SplittableRandom
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.mutable
 

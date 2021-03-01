@@ -92,7 +92,19 @@
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-params</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-engine</artifactId>
                 <version>${junit.version}</version>
                 <scope>test</scope>
             </dependency>
@@ -107,6 +119,16 @@
                 <artifactId>assertj-core</artifactId>
                 <version>3.19.0</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -129,17 +151,7 @@
                 </exclusion>
             </exclusions>
         </dependency>
-    <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-api</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-simple</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-        </dependencies>
+    </dependencies>
 
     <modules>
         <module>benchmark-common</module>
@@ -160,13 +172,13 @@
     </modules>
 
     <profiles>
-		<profile>
+        <profile>
             <id>benchmarksDeploy</id>
             <properties>
-				<benchmarks.deploy.skip>false</benchmarks.deploy.skip>
+                <benchmarks.deploy.skip>false</benchmarks.deploy.skip>
                 <!-- this is needed, because with attach sources it tries to checkstyle JMH generated classes -->
                 <checkstyle.skip>true</checkstyle.skip>
-			</properties>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -183,7 +195,7 @@
                     </plugin>
                 </plugins>
             </build>
-		</profile>
+        </profile>
         <!-- needed for packaging builds -->
         <profile>
             <properties>
@@ -303,30 +315,30 @@
                     <fail>true</fail>
                 </configuration>
             </plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-deploy-plugin</artifactId>
-				<configuration>
-					<skip>${benchmarks.deploy.skip}</skip>
-				</configuration>
-			</plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <configuration>
+                    <skip>${benchmarks.deploy.skip}</skip>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
     <repositories>
-      <repository>
-        <id>benchmarking-thirdparty</id>
-        <name>Benchmarking thirdparty libs</name>
-        <url>https://neo.jfrog.io/neo/benchmarking-thirdparty/</url>
-        <snapshots>
-          <enabled>true</enabled>
-        </snapshots>
-      </repository>
-      <repository>
-        <id>ldbc</id>
-        <name>LDBC SNB</name>
-        <url>https://dl.bintray.com/ldbc/snb/</url>
-      </repository>
+        <repository>
+            <id>benchmarking-thirdparty</id>
+            <name>Benchmarking thirdparty libs</name>
+            <url>https://neo.jfrog.io/neo/benchmarking-thirdparty/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>ldbc</id>
+            <name>LDBC SNB</name>
+            <url>https://dl.bintray.com/ldbc/snb/</url>
+        </repository>
     </repositories>
 
 </project>

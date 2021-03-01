@@ -15,9 +15,9 @@ import com.neo4j.bench.data.ArrayGenerator.intArray
 import com.neo4j.bench.data.DataGeneratorConfig
 import com.neo4j.bench.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.data.NumberGenerator.randInt
-import com.neo4j.bench.data.Plans.IdGen
-import com.neo4j.bench.data.Plans.astParameter
-import com.neo4j.bench.data.Plans.astVariable
+import com.neo4j.bench.micro.data.Plans.IdGen
+import com.neo4j.bench.micro.data.Plans.astParameter
+import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.data.RelationshipDefinition
 import com.neo4j.bench.data.ValueGeneratorFun
 import org.neo4j.configuration.GraphDatabaseSettings

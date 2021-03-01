@@ -6,7 +6,7 @@
 package com.neo4j.bench.micro.benchmarks.procs;
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.data.DataGeneratorConfig;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 

@@ -5,10 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
-import java.io.IOException
-import java.util
-import java.util.function.LongSupplier
-
+import com.neo4j.bench.data.DataGeneratorConfig
+import com.neo4j.bench.data.PropertyDefinition
+import com.neo4j.bench.data.RelationshipDefinition
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.Plans
@@ -84,6 +83,9 @@ import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues
 import org.openjdk.jmh.infra.Blackhole
 
+import java.io.IOException
+import java.util
+import java.util.function.LongSupplier
 import scala.collection.mutable
 
 case class TestSetup(

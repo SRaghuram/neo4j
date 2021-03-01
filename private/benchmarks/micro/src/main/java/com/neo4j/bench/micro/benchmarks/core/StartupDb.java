@@ -11,7 +11,7 @@ import com.neo4j.bench.data.DataGeneratorConfig;
 import com.neo4j.bench.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.data.IndexType;
 import com.neo4j.bench.data.LabelKeyDefinition;
-import com.neo4j.bench.micro.data.ManagedStore;
+import com.neo4j.bench.data.ManagedStore;
 import com.neo4j.bench.data.PropertyDefinition;
 import com.neo4j.bench.data.RelationshipDefinition;
 import com.neo4j.bench.data.ValueGeneratorUtil;

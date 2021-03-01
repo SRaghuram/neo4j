@@ -7,8 +7,8 @@ package com.neo4j.bench.micro.benchmarks.txlogs;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.data.DataGeneratorConfig;
+import com.neo4j.bench.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import static com.neo4j.bench.micro.Main.run;
-import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.TRANSACTIONAL;
+import static com.neo4j.bench.data.DataGenerator.GraphWriter.TRANSACTIONAL;
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 
 public class TransactionLogsRotationBenchmark extends AbstractTransactionLogsBenchmark

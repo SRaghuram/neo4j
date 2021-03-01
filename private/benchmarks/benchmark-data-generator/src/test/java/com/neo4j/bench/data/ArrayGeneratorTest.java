@@ -5,12 +5,10 @@
  */
 package com.neo4j.bench.data;
 
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
@@ -54,7 +52,7 @@ public class ArrayGeneratorTest
     private static final long MAX_TOLERATED_ASCENDING_GENERATION_DURATION = TimeUnit.SECONDS.toMillis( 20 );
 
     @Test
-    public void ascendingGeneratorsShouldDoNothingUnexpected() throws IOException
+    public void ascendingGeneratorsShouldDoNothingUnexpected()
     {
         assertAscendingArrayGeneratorWorksAsAdvertised( intArray( ascInt( 0 ), LENGTH ), ITERATIONS );
         assertAscendingArrayGeneratorWorksAsAdvertised( longArray( ascLong( 0 ), LENGTH ), ITERATIONS );
@@ -65,7 +63,7 @@ public class ArrayGeneratorTest
     }
 
     @Test
-    public void randomGeneratorsShouldDoNothingUnexpected() throws IOException
+    public void randomGeneratorsShouldDoNothingUnexpected()
     {
         assertRandomArrayGeneratorWorksAsAdvertised( shortArray( randShort( (short) 0, Short.MAX_VALUE ), LENGTH ), ITERATIONS );
         assertRandomArrayGeneratorWorksAsAdvertised( intArray( randInt( 0, Integer.MAX_VALUE ), LENGTH ), ITERATIONS );
@@ -77,7 +75,7 @@ public class ArrayGeneratorTest
     }
 
     @Test
-    public void ascendingArrayGeneratorsShouldBeDeterministic() throws IOException
+    public void ascendingArrayGeneratorsShouldBeDeterministic()
     {
         assertGeneratorsAreDeterministic( byteArray( ascByte( (byte) 0 ), LENGTH ), ITERATIONS );
         assertGeneratorsAreDeterministic( shortArray( ascShort( (short) 0 ), LENGTH ), ITERATIONS );
@@ -90,7 +88,7 @@ public class ArrayGeneratorTest
     }
 
     @Test
-    public void randomArrayGeneratorsShouldBeDeterministic() throws IOException
+    public void randomArrayGeneratorsShouldBeDeterministic()
     {
         assertGeneratorsAreDeterministic( byteArray( randByte( (byte) 0, Byte.MAX_VALUE ), LENGTH ), ITERATIONS );
         assertGeneratorsAreDeterministic( shortArray( randShort( (short) 0, Short.MAX_VALUE ), LENGTH ), ITERATIONS );

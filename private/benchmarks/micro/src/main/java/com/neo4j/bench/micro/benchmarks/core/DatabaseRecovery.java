@@ -10,7 +10,7 @@ import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.data.DataGeneratorConfig;
 import com.neo4j.bench.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.data.SplittableRandomProvider;
-import com.neo4j.bench.micro.data.ManagedStore;
+import com.neo4j.bench.data.ManagedStore;
 import com.neo4j.bench.data.StringGenerator;
 import com.neo4j.bench.data.ValueGeneratorFun;
 import com.neo4j.bench.model.model.Neo4jConfig;

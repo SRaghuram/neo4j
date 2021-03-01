@@ -14,8 +14,6 @@
     <properties>
         <moduleName>com.neo4j.bench.micro</moduleName>
         <uberjar.name>micro-benchmarks</uberjar.name>
-        <scala.version>2.11.8</scala.version>
-        <scalatest.version>2.2.5</scalatest.version>
         <mockito.version>1.10.19</mockito.version>
         <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
         <jmh.generator>default</jmh.generator>

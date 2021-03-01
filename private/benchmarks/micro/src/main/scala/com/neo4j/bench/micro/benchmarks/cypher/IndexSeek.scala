@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.common.Neo4jConfigBuilder
 import com.neo4j.bench.data.DataGeneratorConfig
 import com.neo4j.bench.data.DataGeneratorConfigBuilder
 
