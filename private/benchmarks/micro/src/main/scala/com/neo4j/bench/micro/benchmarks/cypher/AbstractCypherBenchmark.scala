@@ -10,9 +10,6 @@ import com.neo4j.bench.data.PropertyDefinition
 import com.neo4j.bench.data.RelationshipDefinition
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
 import com.neo4j.bench.micro.data.Plans
-import com.neo4j.bench.data.PropertyDefinition
-import com.neo4j.bench.data.RelationshipDefinition
-import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.internal.CypherRuntimeConfiguration
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.EnterpriseRuntimeFactory

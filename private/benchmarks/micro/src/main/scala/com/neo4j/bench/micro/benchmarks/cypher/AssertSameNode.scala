@@ -22,7 +22,7 @@ import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
 import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.data.PropertyDefinition
 import com.neo4j.bench.micro.data.TypeParamValues.INT
-import com.neo4j.bench.micro.data.ValueGeneratorFactory
+import com.neo4j.bench.data.ValueGeneratorFactory
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.GetValue
