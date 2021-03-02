@@ -252,7 +252,7 @@ public class StoreCopy
                 else
                 {
                     // Prior to 4.0, try to read with 3.5 parser
-                    schemaStatements = getSchemaStatements35( log, neoStores.getRecordFormats(), fromPageCache, fs, tokenHolders, cursorTracer );
+                    schemaStatements = getSchemaStatements35( log, neoStores.getRecordFormats(), fromPageCache, fs, tokenHolders, cursorTracer, scheduler );
                 }
 
                 int schemaCount = schemaStatements.size();
@@ -402,7 +402,7 @@ public class StoreCopy
     }
 
     private Collection<String> getSchemaStatements35( Log log, RecordFormats recordFormats, PageCache fromPageCache, FileSystemAbstraction fs,
-            TokenHolders tokenHolders, PageCursorTracer cursorTracer )
+            TokenHolders tokenHolders, PageCursorTracer cursorTracer, JobScheduler jobScheduler )
     {
         Map<String,IndexDescriptor> indexes = new HashMap<>();
         List<ConstraintDescriptor> constraints = new ArrayList<>();
@@ -419,7 +419,7 @@ public class StoreCopy
             Dependencies deps = new Dependencies();
             Monitors monitors = new Monitors();
             deps.satisfyDependencies( fs, config, fromPageCache, NullLogService.getInstance(), monitors, RecoveryCleanupWorkCollector.immediate(),
-                                      pageCacheTracer, from );
+                                      pageCacheTracer, from, jobScheduler, tokenHolders );
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( from, DbmsInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
             DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );

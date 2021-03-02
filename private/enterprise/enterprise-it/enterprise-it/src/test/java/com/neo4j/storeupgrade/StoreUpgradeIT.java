@@ -145,9 +145,15 @@ public class StoreUpgradeIT
             )},
             new Store[]{new Store( "0.A.9-data.zip",
                     174 /* node count */,
-                    30 /* last txId */,
-                    selectivities( 1.0, 1.0, 1.0 ),
-                    indexCounts( counts( 0, 38, 38, 38 ), counts( 0, 1, 1, 1 ), counts( 0, 133, 133, 133 ) )
+                    31 /* last txId */,
+                    selectivities( 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ),
+                    indexCounts(
+                            counts( 0, 38, 38, 38 ),
+                            counts( 0, 1, 1, 1 ),
+                            counts( 0, 0, 0, 0),
+                            counts( 0, 0, 0, 0),
+                            counts( 0, 0, 0, 0),
+                            counts( 0, 133, 133, 133 ) )
             )} );
     private static final List<Store[]> HIGH_LIMIT_STORES34 = Arrays.asList(
             new Store[]{new Store( "E.H.4-empty.zip",
@@ -159,9 +165,15 @@ public class StoreUpgradeIT
                     )},
             new Store[]{new Store( "E.H.4-data.zip",
                     174 /* node count */,
-                    30 /* last txId */,
-                    selectivities( 1.0, 1.0, 1.0 ),
-                    indexCounts( counts( 0, 38, 38, 38 ), counts( 0, 1, 1, 1 ), counts( 0, 133, 133, 133 ) ),
+                    31 /* last txId */,
+                    selectivities( 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ),
+                    indexCounts(
+                            counts( 0, 38, 38, 38 ),
+                            counts( 0, 1, 1, 1 ),
+                            counts( 0, 0, 0, 0),
+                            counts( 0, 0, 0, 0),
+                            counts( 0, 0, 0, 0),
+                            counts( 0, 133, 133, 133 ) ),
                     HighLimit.NAME
                     )} );
     private static final List<Store[]> HIGH_LIMIT_STORES300 = Arrays.asList(
@@ -625,11 +637,12 @@ public class StoreUpgradeIT
             // Remove all log files.
             TransactionLogFilesHelper helper = new TransactionLogFilesHelper( fileSystem, databaseDir );
             Path[] logs = helper.getMatchedFiles();
-            assertNotNull( "Expected some log files to exist.", logs );
+            assertTrue( "Expected some log files to exist.", logs.length > 0 );
             for ( Path logFile : logs )
             {
                 fileSystem.deleteFile( logFile );
             }
+            assertEquals( "Expected all log files to be removed.", 0, helper.getMatchedFiles().length );
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
             builder.setConfig( allow_upgrade, true );

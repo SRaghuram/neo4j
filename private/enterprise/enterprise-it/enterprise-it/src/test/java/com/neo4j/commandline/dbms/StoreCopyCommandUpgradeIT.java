@@ -59,9 +59,9 @@ class StoreCopyCommandUpgradeIT extends AbstractCommandIT
     {
         return Stream.of(
                 Arguments.of( "standardEmpty34", "0.A.9-empty.zip", 0, Standard.LATEST_RECORD_FORMATS, 0 ),
-                Arguments.of( "standardData34", "0.A.9-data.zip", 174, Standard.LATEST_RECORD_FORMATS, 3 ),
+                Arguments.of( "standardData34", "0.A.9-data.zip", 174, Standard.LATEST_RECORD_FORMATS, 6 ),
                 Arguments.of( "highLimitEmpty34", "E.H.4-empty.zip", 0, HighLimit.RECORD_FORMATS, 0 ),
-                Arguments.of( "highLimitData34", "E.H.4-data.zip", 174, HighLimit.RECORD_FORMATS, 3 ),
+                Arguments.of( "highLimitData34", "E.H.4-data.zip", 174, HighLimit.RECORD_FORMATS, 6 ),
                 Arguments.of( "highLimitEmpty30", "E.H.0-empty.zip", 0, HighLimit.RECORD_FORMATS, 0 ),
                 Arguments.of( "highLimitData30", "E.H.0-data.zip", 174, HighLimit.RECORD_FORMATS, 3 ),
                 Arguments.of( "standardEmpty40", "0.0.4FS-empty.zip", 0, Standard.LATEST_RECORD_FORMATS, 0 ),
