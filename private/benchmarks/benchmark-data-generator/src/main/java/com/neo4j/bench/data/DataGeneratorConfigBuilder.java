@@ -38,7 +38,8 @@ public class DataGeneratorConfigBuilder
     private Label[] labels = {};
     private Order labelOrder = Order.SHUFFLED;
     private LabelLocality labelLocality = LabelLocality.SCATTERED_BY_NODE;
-    private LabelKeyDefinition[] schemaIndexes = {};
+    private LabelKeyDefinition[] nodeSchemaIndexes = {};
+    private RelationshipKeyDefinition[] relationshipSchemaIndexes = {};
     private LabelKeyDefinition[] uniqueConstraints = {};
     private LabelKeyDefinition[] mandatoryNodeConstraints = {};
     private RelationshipKeyDefinition[] mandatoryRelationshipConstraints = {};
@@ -70,7 +71,8 @@ public class DataGeneratorConfigBuilder
         builder.labels = config.labels();
         builder.labelOrder = config.labelOrder();
         builder.labelLocality = config.labelLocality();
-        builder.schemaIndexes = config.schemaIndexes();
+        builder.nodeSchemaIndexes = config.nodeSchemaIndexes();
+        builder.relationshipSchemaIndexes = config.relationshipSchemaIndexes();
         builder.uniqueConstraints = config.uniqueConstraints();
         builder.mandatoryNodeConstraints = config.mandatoryNodeConstraints();
         builder.mandatoryRelationshipConstraints = config.mandatoryRelationshipConstraints();
@@ -332,7 +334,19 @@ public class DataGeneratorConfigBuilder
      */
     public DataGeneratorConfigBuilder withSchemaIndexes( LabelKeyDefinition... schemaIndexes )
     {
-        this.schemaIndexes = schemaIndexes;
+        this.nodeSchemaIndexes = schemaIndexes;
+        return this;
+    }
+
+    /**
+     * Type:property pairs to create schema indexes for.
+     *
+     * @param schemaIndexes
+     * @return mutated version of the same builder instance
+     */
+    public DataGeneratorConfigBuilder withSchemaIndexes( RelationshipKeyDefinition... schemaIndexes )
+    {
+        this.relationshipSchemaIndexes = schemaIndexes;
         return this;
     }
 
@@ -466,7 +480,8 @@ public class DataGeneratorConfigBuilder
                 labels,
                 labelOrder,
                 labelLocality,
-                schemaIndexes,
+                nodeSchemaIndexes,
+                relationshipSchemaIndexes,
                 uniqueConstraints,
                 mandatoryNodeConstraints,
                 mandatoryRelationshipConstraints,

@@ -41,7 +41,8 @@ public class DataGeneratorConfig
     private String[] labelNames;
     private Order labelOrder;
     private LabelLocality labelLocality;
-    private LabelKeyDefinition[] schemaIndexes;
+    private LabelKeyDefinition[] nodeSchemaIndexes;
+    private RelationshipKeyDefinition[] relationshipSchemaIndexes;
     private LabelKeyDefinition[] uniqueConstraints;
     private LabelKeyDefinition[] mandatoryNodeConstraints;
     private RelationshipKeyDefinition[] mandatoryRelationshipConstraints;
@@ -70,7 +71,8 @@ public class DataGeneratorConfig
             Label[] labels,
             Order labelOrder,
             LabelLocality labelLocality,
-            LabelKeyDefinition[] schemaIndexes,
+            LabelKeyDefinition[] nodeSchemaIndexes,
+            RelationshipKeyDefinition[] relationshipSchemaIndexes,
             LabelKeyDefinition[] uniqueConstraints,
             LabelKeyDefinition[] mandatoryNodeConstraints,
             RelationshipKeyDefinition[] mandatoryRelationshipConstraints,
@@ -99,7 +101,8 @@ public class DataGeneratorConfig
         this.labelNames = Stream.of( labels ).map( Label::name ).toArray( String[]::new );
         this.labelOrder = labelOrder;
         this.labelLocality = labelLocality;
-        this.schemaIndexes = schemaIndexes;
+        this.nodeSchemaIndexes = nodeSchemaIndexes;
+        this.relationshipSchemaIndexes = relationshipSchemaIndexes;
         this.uniqueConstraints = uniqueConstraints;
         this.mandatoryNodeConstraints = mandatoryNodeConstraints;
         this.mandatoryRelationshipConstraints = mandatoryRelationshipConstraints;
@@ -200,9 +203,14 @@ public class DataGeneratorConfig
         return labelLocality;
     }
 
-    public LabelKeyDefinition[] schemaIndexes()
+    public LabelKeyDefinition[] nodeSchemaIndexes()
     {
-        return schemaIndexes;
+        return nodeSchemaIndexes;
+    }
+
+    public RelationshipKeyDefinition[] relationshipSchemaIndexes()
+    {
+        return relationshipSchemaIndexes;
     }
 
     public LabelKeyDefinition[] uniqueConstraints()
@@ -293,7 +301,8 @@ public class DataGeneratorConfig
                 Arrays.equals( labelNames, that.labelNames ) &&
                 labelOrder == that.labelOrder &&
                 labelLocality == that.labelLocality &&
-                Arrays.equals( schemaIndexes, that.schemaIndexes ) &&
+                Arrays.equals( nodeSchemaIndexes, that.nodeSchemaIndexes ) &&
+                Arrays.equals( relationshipSchemaIndexes, that.relationshipSchemaIndexes ) &&
                 Arrays.equals( uniqueConstraints, that.uniqueConstraints ) &&
                 Arrays.equals( mandatoryNodeConstraints, that.mandatoryNodeConstraints ) &&
                 Arrays.equals( mandatoryRelationshipConstraints, that.mandatoryRelationshipConstraints ) &&
@@ -306,15 +315,28 @@ public class DataGeneratorConfig
     public int hashCode()
     {
         return Objects
-                .hash( nodeCount, Arrays.hashCode( relationshipTypeNames ), Arrays.hashCode( relationshipTypeCounts ), relationshipOrder,
+                .hash( nodeCount,
+                       Arrays.hashCode( relationshipTypeNames ),
+                       Arrays.hashCode( relationshipTypeCounts ),
+                       relationshipOrder,
                        relationshipLocality,
-                       graphWriter, Arrays.hashCode( nodeProperties ), Arrays.hashCode( relationshipProperties ), propertyLocality, propertyOrder,
+                       graphWriter,
+                       Arrays.hashCode( nodeProperties ),
+                       Arrays.hashCode( relationshipProperties ),
+                       propertyLocality, propertyOrder,
                        Arrays.hashCode( labelNames ),
-                       labelOrder, labelLocality, Arrays.hashCode( schemaIndexes ), Arrays.hashCode( uniqueConstraints ),
+                       labelOrder,
+                       labelLocality,
+                       Arrays.hashCode( nodeSchemaIndexes ),
+                       Arrays.hashCode( relationshipSchemaIndexes ),
+                       Arrays.hashCode( uniqueConstraints ),
                        Arrays.hashCode( mandatoryNodeConstraints ),
                        Arrays.hashCode( mandatoryRelationshipConstraints ),
-                       Arrays.hashCode( fulltextNodeSchemaIndexes ), Arrays.hashCode( fulltextRelationshipSchemaIndexes ),
-                       isReusable, augmentedBy, rngSeed );
+                       Arrays.hashCode( fulltextNodeSchemaIndexes ),
+                       Arrays.hashCode( fulltextRelationshipSchemaIndexes ),
+                       isReusable,
+                       augmentedBy,
+                       rngSeed );
     }
 
     @Override
@@ -331,8 +353,10 @@ public class DataGeneratorConfig
                "  Node Property Count:                 " + FORMAT.format( nodePropertyCount() ) + "\n" +
                "  Relationship Property Count:         " + FORMAT.format( relationshipPropertyCount() ) + "\n" +
                "  Label Count:                         " + FORMAT.format( labelCount() ) + "\n" +
-               "  Index Count:                         " + FORMAT.format( schemaIndexes.length ) + "\n" +
-               "  Indexes:                             " + Arrays.toString( schemaIndexes ) + "\n" +
+               "  Node Index Count:                    " + FORMAT.format( nodeSchemaIndexes.length ) + "\n" +
+               "  Relationship Index Count:            " + FORMAT.format( relationshipSchemaIndexes.length ) + "\n" +
+               "  Node Indexes:                        " + Arrays.toString( nodeSchemaIndexes ) + "\n" +
+               "  Relationship Indexes:                " + Arrays.toString( relationshipSchemaIndexes ) + "\n" +
                "  Uniqueness Constraint Count:         " + FORMAT.format( uniqueConstraints.length ) + "\n" +
                "  Uniqueness Constraints:              " + Arrays.toString( uniqueConstraints ) + "\n" +
                "  Mandatory Node Constraints:          " + Arrays.toString( mandatoryNodeConstraints ) + "\n" +

@@ -37,6 +37,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.io.fs.FileUtils;
@@ -168,7 +169,8 @@ public class DataGenerator
     private final Label[] labels;
     private final Order labelOrder;
     private final LabelLocality labelLocality;
-    private final LabelKeyDefinition[] schemaIndexes;
+    private final LabelKeyDefinition[] nodeSchemaIndexes;
+    private final RelationshipKeyDefinition[] relationshipSchemaIndexes;
     private final LabelKeyDefinition[] uniqueConstraints;
     private final LabelKeyDefinition[] mandatoryNodeConstraints;
     private final RelationshipKeyDefinition[] mandatoryRelationshipConstraints;
@@ -203,7 +205,8 @@ public class DataGenerator
         this.labels = config.labels();
         this.labelOrder = config.labelOrder();
         this.labelLocality = config.labelLocality();
-        this.schemaIndexes = config.schemaIndexes();
+        this.nodeSchemaIndexes = config.nodeSchemaIndexes();
+        this.relationshipSchemaIndexes = config.relationshipSchemaIndexes();
         this.uniqueConstraints = config.uniqueConstraints();
         this.mandatoryNodeConstraints = config.mandatoryNodeConstraints();
         this.mandatoryRelationshipConstraints = config.mandatoryRelationshipConstraints();
@@ -1227,8 +1230,10 @@ public class DataGenerator
 
     private void createSchemaIndexes( GraphDatabaseService db )
     {
-        Stream.of( schemaIndexes )
+        Stream.of( nodeSchemaIndexes )
               .forEach( def -> createSchemaIndex( db, def.label(), def.keys() ) );
+        Stream.of( relationshipSchemaIndexes )
+              .forEach( def -> createSchemaIndex( db, def.type(), def.key() ) );
         Stream.of( fulltextNodeSchemaIndexes )
               .forEach( def -> createFulltextNodeIndex( db, def.label(), def.keys() ) );
         Stream.of( fulltextRelationshipSchemaIndexes )
@@ -1287,6 +1292,26 @@ public class DataGenerator
         {
             throw new RuntimeException( format( "Error creating composite schema index on (%s,%s)",
                                                 label, Arrays.toString( keys ) ), e );
+        }
+    }
+
+    public static void createSchemaIndex( GraphDatabaseService db, RelationshipType type, String... keys )
+    {
+        //TODO we use CYPHER elsewhere but not supported yet
+        try ( Transaction tx = db.beginTx() )
+        {
+            IndexCreator indexCreator = tx.schema().indexFor( type );
+            for ( String key : keys )
+            {
+                indexCreator = indexCreator.on( key );
+            }
+            indexCreator.create();
+            tx.commit();
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( format( "Error creating composite schema index on (%s,%s)",
+                                                type, Arrays.toString( keys ) ), e );
         }
     }
 

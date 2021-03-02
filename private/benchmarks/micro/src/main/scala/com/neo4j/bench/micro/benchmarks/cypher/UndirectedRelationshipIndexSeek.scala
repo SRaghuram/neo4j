@@ -1,0 +1,143 @@
+/*
+ * Copyright (c) "Neo4j"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is part of Neo4j internal tooling.
+ */
+package com.neo4j.bench.micro.benchmarks.cypher
+
+import com.neo4j.bench.common.Neo4jConfigBuilder
+import com.neo4j.bench.data.DataGeneratorConfig
+import com.neo4j.bench.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.data.DiscreteGenerator.Bucket
+import com.neo4j.bench.data.DiscreteGenerator.discrete
+import com.neo4j.bench.data.PropertyDefinition
+import com.neo4j.bench.data.RelationshipDefinition
+import com.neo4j.bench.data.RelationshipKeyDefinition
+import com.neo4j.bench.data.ValueGeneratorUtil.discreteBucketsFor
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
+import com.neo4j.bench.jmh.api.config.ParamValues
+import com.neo4j.bench.micro.Main
+import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
+import com.neo4j.bench.micro.benchmarks.cypher.plan.builder.BenchmarkSetupPlanBuilder
+import com.neo4j.bench.micro.data.TypeParamValues.DATE_TIME
+import com.neo4j.bench.micro.data.TypeParamValues.DBL
+import com.neo4j.bench.micro.data.TypeParamValues.LNG
+import com.neo4j.bench.micro.data.TypeParamValues.POINT
+import com.neo4j.bench.micro.data.TypeParamValues.STR_BIG
+import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
+import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.internal.planner.spi.PlanContext
+import org.neo4j.cypher.internal.runtime.ast.DefaultValueLiteral
+import org.neo4j.graphdb.RelationshipType
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
+import org.neo4j.kernel.impl.util.ValueUtils
+import org.openjdk.jmh.annotations.Benchmark
+import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.Param
+import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.Setup
+import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
+import org.openjdk.jmh.infra.Blackhole
+
+@BenchmarkEnabled(true)
+class UndirectedRelationshipIndexSeek extends AbstractCypherBenchmark {
+  @ParamValues(
+    allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
+    base = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME))
+  @Param(Array[String]())
+  var runtime: String = _
+
+  @ParamValues(
+    allowed = Array("0.001", "0.01", "0.1"),
+    base = Array("0.001", "0.1"))
+  @Param(Array[String]())
+  var selectivity: Double = _
+
+  @ParamValues(
+    allowed = Array(LNG, DBL, STR_SML, STR_BIG, DATE_TIME, POINT),
+    base = Array(LNG, STR_SML, DATE_TIME, POINT))
+  @Param(Array[String]())
+  var propertyType: String = _
+
+  @ParamValues(
+    allowed = Array("true", "false"),
+    base = Array("true")
+  )
+  @Param(Array[String]())
+  var auth: Boolean = _
+
+  @ParamValues(
+    allowed = Array("full", "white", "black"),
+    base = Array("full", "white", "black")
+  )
+  @Param(Array[String]())
+  var user: String = _
+
+  override def description = "Relationship Index Seek"
+
+  private val REL_COUNT = 1000000
+  private val TYPE = RelationshipType.withName("R")
+  private val KEY = "key"
+  private val RELATIONSHIPS_PER_NODE = new RelationshipDefinition(TYPE, 1)
+
+  private val TOLERATED_ROW_COUNT_ERROR = 0.05
+  private lazy val expectedRowCount: Double = REL_COUNT * selectivity
+  private lazy val minExpectedRowCount: Int = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
+  private lazy val maxExpectedRowCount: Int = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
+
+  private lazy val buckets: Array[Bucket] = discreteBucketsFor(propertyType, selectivity, 1 - selectivity)
+
+  override protected def getConfig: DataGeneratorConfig =
+    new DataGeneratorConfigBuilder()
+      .withNodeCount(REL_COUNT)
+      .withOutRelationships(RELATIONSHIPS_PER_NODE)
+      .withRelationshipProperties(new PropertyDefinition(KEY, discrete(buckets: _*)))
+      .withSchemaIndexes(new RelationshipKeyDefinition(TYPE, KEY))
+      .isReusableStore(true)
+      .withNeo4jConfig(Neo4jConfigBuilder.empty()
+        .withSetting(GraphDatabaseSettings.auth_enabled, auth.toString).build())
+      .build()
+
+  override def setup(planContext: PlanContext): TestSetup = {
+    new BenchmarkSetupPlanBuilder()
+      .produceResults("r")
+      .relationshipIndexOperator("(a)-[r:R(key = ???)]-(b)", paramExpr = Some(DefaultValueLiteral(ValueUtils.of(buckets(0).value()))))
+      .build()
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SampleTime))
+  def executePlan(threadState: UndirectedRelationshipIndexSeekThreadState, bh: Blackhole): Long = {
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
+    result.consumeAll()
+    assertExpectedRowCount(2 * minExpectedRowCount, 2 * maxExpectedRowCount, subscriber)
+  }
+}
+
+object UndirectedRelationshipIndexSeek {
+  def main(args: Array[String]): Unit = {
+    Main.run(classOf[UndirectedRelationshipIndexSeek], args:_*)
+  }
+}
+
+@State(Scope.Thread)
+class UndirectedRelationshipIndexSeekThreadState {
+  var tx: InternalTransaction = _
+  var executablePlan: ExecutablePlan = _
+
+  @Setup
+  def setUp(benchmarkState: UndirectedRelationshipIndexSeek): Unit = {
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
+    tx = benchmarkState.beginInternalTransaction(benchmarkState.users(benchmarkState.user))
+  }
+
+  @TearDown
+  def tearDown(): Unit = {
+    tx.close()
+  }
+}
+
+
