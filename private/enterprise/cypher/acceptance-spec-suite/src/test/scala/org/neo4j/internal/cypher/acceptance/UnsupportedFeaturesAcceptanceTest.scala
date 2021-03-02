@@ -25,9 +25,4 @@ class UnsupportedFeaturesAcceptanceTest extends ExecutionEngineFunSuite with Cyp
     val query = "WITH $param AS foo MATCH ()--() RETURN GRAPH"
     failWithError(Configs.All, query, "The `RETURN GRAPH` clause is not available in this implementation of Cypher due to lack of support for multiple graphs.")
   }
-
-  test("equivalence operator") {
-    val query = "RETURN 1 ~ 2"
-    failWithError(Configs.All, query, "`~` (equivalence) is a Cypher 10 feature and is not available in this implementation of Cypher.")
-  }
 }
