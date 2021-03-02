@@ -14,8 +14,14 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.SafeChannelMarshal;
 
-public class AdvertisedSocketAddressMarshal extends SafeChannelMarshal<SocketAddress>
+public final class AdvertisedSocketAddressMarshal extends SafeChannelMarshal<SocketAddress>
 {
+    public static final AdvertisedSocketAddressMarshal INSTANCE = new AdvertisedSocketAddressMarshal();
+
+    private AdvertisedSocketAddressMarshal()
+    {
+    }
+
     @Override
     protected SocketAddress unmarshal0( ReadableChannel channel ) throws IOException
     {

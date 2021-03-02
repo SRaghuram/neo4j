@@ -10,22 +10,21 @@ import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 
 import java.util.Collection;
+import java.util.List;
 
 import org.neo4j.io.marshal.ChannelMarshal;
-
-import static java.util.Collections.singletonList;
 
 public class LeaderInfoMarshalTest implements BaseMarshalTest<LeaderInfo>
 {
     @Override
     public Collection<LeaderInfo> originals()
     {
-        return singletonList( new LeaderInfo( IdFactory.randomRaftMemberId(), 12L ) );
+        return List.of( new LeaderInfo( IdFactory.randomRaftMemberId(), 12L ) );
     }
 
     @Override
     public ChannelMarshal<LeaderInfo> marshal()
     {
-        return new LeaderInfoMarshal();
+        return LeaderInfoMarshal.INSTANCE;
     }
 }

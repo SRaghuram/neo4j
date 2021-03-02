@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.term;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
@@ -60,6 +61,12 @@ public class TermState
 
     public static class Marshal extends SafeStateMarshal<TermState>
     {
+        public static final Marshal INSTANCE = new Marshal();
+
+        private Marshal()
+        {
+        }
+
         @Override
         public void marshal( TermState termState, WritableChannel channel ) throws IOException
         {
@@ -83,6 +90,27 @@ public class TermState
         {
             return state.currentTerm();
         }
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        TermState termState = (TermState) o;
+        return term == termState.term;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( term );
     }
 
     @Override

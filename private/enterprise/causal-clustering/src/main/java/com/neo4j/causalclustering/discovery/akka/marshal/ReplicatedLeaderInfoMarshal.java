@@ -16,8 +16,13 @@ import org.neo4j.io.marshal.SafeChannelMarshal;
 
 public class ReplicatedLeaderInfoMarshal extends SafeChannelMarshal<ReplicatedLeaderInfo>
 {
+    public static final ReplicatedLeaderInfoMarshal INSTANCE = new ReplicatedLeaderInfoMarshal();
 
-    private final LeaderInfoMarshal leaderInfoMarshal = new LeaderInfoMarshal();
+    private final LeaderInfoMarshal leaderInfoMarshal = LeaderInfoMarshal.INSTANCE;
+
+    private ReplicatedLeaderInfoMarshal()
+    {
+    }
 
     @Override
     protected ReplicatedLeaderInfo unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException

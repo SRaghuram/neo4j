@@ -13,6 +13,6 @@ public class CoreServerInfoForServerIdSerializer extends BaseAkkaSerializer<Core
 
     public CoreServerInfoForServerIdSerializer()
     {
-        super( new CoreServerInfoForServerIdMarshal(), CORE_SERVER_INFO_FOR_MEMBER_ID, SIZE_HINT );
+        super( CoreServerInfoForServerIdMarshal.INSTANCE, CORE_SERVER_INFO_FOR_MEMBER_ID, SIZE_HINT );
     }
 }

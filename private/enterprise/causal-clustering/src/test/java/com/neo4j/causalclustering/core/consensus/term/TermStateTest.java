@@ -21,7 +21,7 @@ class TermStateTest implements BaseMarshalTest<TermState>
     @Override
     public Collection<TermState> originals()
     {
-        return Stream.generate( () -> ThreadLocalRandom.current().nextLong() )
+        return Stream.generate( () -> ThreadLocalRandom.current().nextLong( Long.MAX_VALUE ) )
                      .map( term ->
                      {
                          var ts = new TermState();
@@ -35,7 +35,7 @@ class TermStateTest implements BaseMarshalTest<TermState>
     @Override
     public ChannelMarshal<TermState> marshal()
     {
-        return new TermState.Marshal();
+        return TermState.Marshal.INSTANCE;
     }
 
     @Test

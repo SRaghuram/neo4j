@@ -23,7 +23,7 @@ class ClusterStateVersionMarshalTest implements BaseMarshalTest<ClusterStateVers
     @Override
     public ChannelMarshal<ClusterStateVersion> marshal()
     {
-        return new ClusterStateVersionMarshal();
+        return ClusterStateVersionMarshal.INSTANCE;
     }
 
     @Override
@@ -37,7 +37,7 @@ class ClusterStateVersionMarshalTest implements BaseMarshalTest<ClusterStateVers
     @Test
     void shouldHaveNullStartState()
     {
-        var marshal = new ClusterStateVersionMarshal();
+        var marshal = ClusterStateVersionMarshal.INSTANCE;
 
         assertNull( marshal.startState() );
     }
@@ -45,7 +45,7 @@ class ClusterStateVersionMarshalTest implements BaseMarshalTest<ClusterStateVers
     @Test
     void shouldNotSupportOrdinal()
     {
-        var marshal = new ClusterStateVersionMarshal();
+        var marshal = ClusterStateVersionMarshal.INSTANCE;
 
         assertThrows( UnsupportedOperationException.class, () -> marshal.ordinal( new ClusterStateVersion( 1, 0 ) ) );
     }

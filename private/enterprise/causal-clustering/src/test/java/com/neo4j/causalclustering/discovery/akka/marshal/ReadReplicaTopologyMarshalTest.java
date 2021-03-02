@@ -34,7 +34,7 @@ public class ReadReplicaTopologyMarshalTest implements BaseMarshalTest<DatabaseR
     @Override
     public ChannelMarshal<DatabaseReadReplicaTopology> marshal()
     {
-        return new ReadReplicaTopologyMarshal();
+        return ReadReplicaTopologyMarshal.INSTANCE;
     }
 
     static DatabaseReadReplicaTopology generate()

@@ -55,4 +55,10 @@ class CoreReplicatedContentMarshallingV2Test implements BaseMarshalTest<Replicat
     {
         return new CoreReplicatedContentMarshal( LogEntryWriterFactory.LATEST );
     }
+
+    @Override
+    public boolean singletonMarshal()
+    {
+        return false;
+    }
 }

@@ -13,7 +13,7 @@ import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.io.marshal.SafeChannelMarshal;
 
-public class UUIDMarshal extends SafeChannelMarshal<UUID>
+public final class UUIDMarshal extends SafeChannelMarshal<UUID>
 {
     public static final UUIDMarshal INSTANCE = new UUIDMarshal();
 

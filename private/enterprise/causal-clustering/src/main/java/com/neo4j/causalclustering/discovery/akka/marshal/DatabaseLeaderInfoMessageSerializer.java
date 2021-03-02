@@ -11,6 +11,6 @@ public class DatabaseLeaderInfoMessageSerializer extends BaseAkkaSerializer<Lead
 {
     protected DatabaseLeaderInfoMessageSerializer()
     {
-        super( new DatabaseLeaderInfoMessageMarshal(), DB_LEADER_INFO, 384 );
+        super( DatabaseLeaderInfoMessageMarshal.INSTANCE, DB_LEADER_INFO, 384 );
     }
 }

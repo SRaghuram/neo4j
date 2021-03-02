@@ -19,8 +19,14 @@ import org.neo4j.io.marshal.SafeChannelMarshal;
 
 public class CoreServerInfoForServerIdMarshal extends SafeChannelMarshal<CoreServerInfoForServerId>
 {
+    public static final CoreServerInfoForServerIdMarshal INSTANCE = new CoreServerInfoForServerIdMarshal();
+
     private final ChannelMarshal<ServerId> serverIdMarshal = ServerId.Marshal.INSTANCE;
-    private final ChannelMarshal<CoreServerInfo> coreServerInfoMarshal = new CoreServerInfoMarshal();
+    private final ChannelMarshal<CoreServerInfo> coreServerInfoMarshal = CoreServerInfoMarshal.INSTANCE;
+
+    private CoreServerInfoForServerIdMarshal()
+    {
+    }
 
     @Override
     protected CoreServerInfoForServerId unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException

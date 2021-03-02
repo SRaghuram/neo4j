@@ -28,6 +28,6 @@ class UniqueAddressMarshalTest implements BaseMarshalTest<UniqueAddress>
     @Override
     public ChannelMarshal<UniqueAddress> marshal()
     {
-        return new UniqueAddressMarshal();
+        return UniqueAddressMarshal.INSTANCE;
     }
 }

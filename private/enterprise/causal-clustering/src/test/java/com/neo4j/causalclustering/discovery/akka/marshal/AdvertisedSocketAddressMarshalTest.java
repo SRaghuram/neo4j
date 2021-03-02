@@ -24,6 +24,6 @@ public class AdvertisedSocketAddressMarshalTest implements BaseMarshalTest<Socke
     @Override
     public ChannelMarshal<SocketAddress> marshal()
     {
-        return new AdvertisedSocketAddressMarshal();
+        return AdvertisedSocketAddressMarshal.INSTANCE;
     }
 }

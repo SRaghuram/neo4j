@@ -13,6 +13,6 @@ public class LeaderInfoSerializer extends BaseAkkaSerializer<LeaderInfo>
 
     public LeaderInfoSerializer()
     {
-        super( new LeaderInfoMarshal(), LEADER_INFO, SIZE_HINT );
+        super( LeaderInfoMarshal.INSTANCE, LEADER_INFO, SIZE_HINT );
     }
 }

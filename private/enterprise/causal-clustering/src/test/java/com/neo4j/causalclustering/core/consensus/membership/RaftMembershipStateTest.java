@@ -27,8 +27,6 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 class RaftMembershipStateTest implements BaseMarshalTest<RaftMembershipState>
 {
-    private RaftMembershipState state = new RaftMembershipState();
-
     private Set<RaftMemberId> membersA = asSet( raftMember( 0 ), raftMember( 1 ), raftMember( 2 ) );
     private Set<RaftMemberId> membersB = asSet( raftMember( 0 ), raftMember( 1 ), raftMember( 2 ), raftMember( 3 ) );
 
@@ -41,12 +39,13 @@ class RaftMembershipStateTest implements BaseMarshalTest<RaftMembershipState>
     @Override
     public ChannelMarshal<RaftMembershipState> marshal()
     {
-        return new RaftMembershipState.Marshal();
+        return RaftMembershipState.Marshal.INSTANCE;
     }
 
     @Test
     void shouldHaveCorrectInitialState()
     {
+        var state = new RaftMembershipState();
         assertThat( state.getLatest(), hasSize( 0 ) );
         Assertions.assertFalse( state.uncommittedMemberChangeInLog() );
     }
@@ -54,6 +53,9 @@ class RaftMembershipStateTest implements BaseMarshalTest<RaftMembershipState>
     @Test
     void shouldUpdateLatestOnAppend()
     {
+        // given
+        var state = new RaftMembershipState();
+
         // when
         state.append( 0, membersA );
 
@@ -72,6 +74,7 @@ class RaftMembershipStateTest implements BaseMarshalTest<RaftMembershipState>
     void shouldKeepLatestOnCommit()
     {
         // given
+        var state = new RaftMembershipState();
         state.append( 0, membersA );
         state.append( 1, membersB );
 
@@ -88,6 +91,7 @@ class RaftMembershipStateTest implements BaseMarshalTest<RaftMembershipState>
     void shouldLowerUncommittedFlagOnCommit()
     {
         // given
+        var state = new RaftMembershipState();
         state.append( 0, membersA );
         Assertions.assertTrue( state.uncommittedMemberChangeInLog() );
 
@@ -102,6 +106,7 @@ class RaftMembershipStateTest implements BaseMarshalTest<RaftMembershipState>
     void shouldRevertToCommittedStateOnTruncation()
     {
         // given
+        var state = new RaftMembershipState();
         state.append( 0, membersA );
         state.commit( 0 );
         state.append( 1, membersB );
@@ -119,6 +124,7 @@ class RaftMembershipStateTest implements BaseMarshalTest<RaftMembershipState>
     void shouldNotTruncateEarlierThanIndicated()
     {
         // given
+        var state = new RaftMembershipState();
         state.append( 0, membersA );
         state.append( 1, membersB );
         Assertions.assertEquals( state.getLatest(), membersB );
@@ -135,6 +141,7 @@ class RaftMembershipStateTest implements BaseMarshalTest<RaftMembershipState>
     void shouldRefuseToAppendToTheSameIndexTwice()
     {
         // given
+        var state = new RaftMembershipState();
         state.append( 0, membersA );
         state.append( 1, membersB );
 

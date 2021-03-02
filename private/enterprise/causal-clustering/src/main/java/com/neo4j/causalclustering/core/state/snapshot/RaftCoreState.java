@@ -52,7 +52,13 @@ public class RaftCoreState
 
     public static class Marshal extends SafeStateMarshal<RaftCoreState>
     {
-        private static final MembershipEntry.Marshal MEMBERSHIP_MARSHAL = new MembershipEntry.Marshal();
+        public static final Marshal INSTANCE = new Marshal();
+
+        private static final MembershipEntry.Marshal MEMBERSHIP_MARSHAL = MembershipEntry.Marshal.INSTANCE;
+
+        private Marshal()
+        {
+        }
 
         @Override
         public RaftCoreState startState()

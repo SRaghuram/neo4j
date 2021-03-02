@@ -21,8 +21,14 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaInfoMarshal extends DiscoveryServerInfoMarshal<ReadReplicaInfo>
 {
-    private final ChannelMarshal<ConnectorAddresses> clientConnectorAddressesMarshal = new ConnectorAddresses.Marshal();
-    private final ChannelMarshal<SocketAddress> advertisedSocketAddressMarshal = new AdvertisedSocketAddressMarshal();
+    public static final ReadReplicaInfoMarshal INSTANCE = new ReadReplicaInfoMarshal();
+
+    private final ChannelMarshal<ConnectorAddresses> clientConnectorAddressesMarshal = ConnectorAddresses.Marshal.INSTANCE;
+    private final ChannelMarshal<SocketAddress> advertisedSocketAddressMarshal = AdvertisedSocketAddressMarshal.INSTANCE;
+
+    private ReadReplicaInfoMarshal()
+    {
+    }
 
     @Override
     protected ReadReplicaInfo unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException

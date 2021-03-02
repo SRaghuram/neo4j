@@ -188,7 +188,13 @@ public class RaftMembershipState extends LifecycleAdapter
 
     public static class Marshal extends SafeStateMarshal<RaftMembershipState>
     {
-        MembershipEntry.Marshal entryMarshal = new MembershipEntry.Marshal();
+        public static final Marshal INSTANCE = new Marshal();
+
+        MembershipEntry.Marshal entryMarshal = MembershipEntry.Marshal.INSTANCE;
+
+        private Marshal()
+        {
+        }
 
         @Override
         public RaftMembershipState startState()

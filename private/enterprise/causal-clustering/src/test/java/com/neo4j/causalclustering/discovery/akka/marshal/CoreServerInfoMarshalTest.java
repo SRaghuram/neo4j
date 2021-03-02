@@ -35,6 +35,6 @@ public class CoreServerInfoMarshalTest implements BaseMarshalTest<CoreServerInfo
     @Override
     public ChannelMarshal<CoreServerInfo> marshal()
     {
-        return new CoreServerInfoMarshal();
+        return CoreServerInfoMarshal.INSTANCE;
     }
 }

@@ -32,7 +32,7 @@ public class ReadReplicaInfoMarshalTest implements BaseMarshalTest<ReadReplicaIn
     @Override
     public ChannelMarshal<ReadReplicaInfo> marshal()
     {
-        return new ReadReplicaInfoMarshal();
+        return ReadReplicaInfoMarshal.INSTANCE;
     }
 }
 

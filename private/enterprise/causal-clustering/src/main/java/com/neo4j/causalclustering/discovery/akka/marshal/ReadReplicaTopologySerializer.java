@@ -11,6 +11,6 @@ public class ReadReplicaTopologySerializer extends BaseAkkaSerializer<DatabaseRe
 {
     protected ReadReplicaTopologySerializer()
     {
-        super( new ReadReplicaTopologyMarshal(), READ_REPLICA_TOPOLOGY, 1024 );
+        super( ReadReplicaTopologyMarshal.INSTANCE, READ_REPLICA_TOPOLOGY, 1024 );
     }
 }

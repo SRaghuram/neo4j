@@ -33,6 +33,6 @@ public class ConnectorAddressesMarshalTest implements BaseMarshalTest<ConnectorA
     @Override
     public ChannelMarshal<ConnectorAddresses> marshal()
     {
-        return new ConnectorAddresses.Marshal();
+        return ConnectorAddresses.Marshal.INSTANCE;
     }
 }

@@ -32,7 +32,7 @@ public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadRep
     public ReadReplicaRefreshMessageMarshal( ExtendedActorSystem system )
     {
         this.actorRefMarshal = new ActorRefMarshal( system );
-        readReplicaInfoMarshal = new ReadReplicaInfoMarshal();
+        readReplicaInfoMarshal = ReadReplicaInfoMarshal.INSTANCE;
     }
 
     @Override

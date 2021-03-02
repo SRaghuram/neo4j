@@ -43,7 +43,7 @@ class CoreTopologyMarshalTest implements BaseMarshalTest<DatabaseCoreTopology>
     @Override
     public ChannelMarshal<DatabaseCoreTopology> marshal()
     {
-        return new CoreTopologyMarshal();
+        return CoreTopologyMarshal.INSTANCE;
     }
 
     static Map<ServerId,CoreServerInfo> coreServerInfos( int count )

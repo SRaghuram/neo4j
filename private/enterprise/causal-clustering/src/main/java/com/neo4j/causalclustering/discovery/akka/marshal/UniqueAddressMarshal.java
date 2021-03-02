@@ -20,8 +20,14 @@ import org.neo4j.io.marshal.SafeChannelMarshal;
  * One might expect Akka to be able to serialize without Java serialization, but no.
  * This is not to be confused with {@link akka.remote.UniqueAddress} which does have an Akka serializer.
  */
-public class UniqueAddressMarshal extends SafeChannelMarshal<UniqueAddress>
+public final class UniqueAddressMarshal extends SafeChannelMarshal<UniqueAddress>
 {
+    public static UniqueAddressMarshal INSTANCE = new UniqueAddressMarshal();
+
+    private UniqueAddressMarshal()
+    {
+    }
+
     @Override
     protected UniqueAddress unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {

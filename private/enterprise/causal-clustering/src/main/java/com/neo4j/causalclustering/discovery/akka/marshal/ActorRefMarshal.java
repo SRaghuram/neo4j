@@ -16,7 +16,7 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.SafeChannelMarshal;
 
-public class ActorRefMarshal extends SafeChannelMarshal<ActorRef>
+public final class ActorRefMarshal extends SafeChannelMarshal<ActorRef>
 {
     private final ExtendedActorSystem actorSystem;
 

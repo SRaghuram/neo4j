@@ -35,6 +35,12 @@ public class ReadReplicaRemovalMarshalTest implements BaseMarshalTest<ReadReplic
         return new ReadReplicaRemovalMessageMarshal( (ExtendedActorSystem) system );
     }
 
+    @Override
+    public boolean singletonMarshal()
+    {
+        return false;
+    }
+
     @BeforeAll
     void setup()
     {

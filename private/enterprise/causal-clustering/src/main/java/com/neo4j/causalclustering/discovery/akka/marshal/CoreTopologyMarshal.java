@@ -23,9 +23,15 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class CoreTopologyMarshal extends SafeChannelMarshal<DatabaseCoreTopology>
 {
+    public static final CoreTopologyMarshal INSTANCE = new CoreTopologyMarshal();
+
     private final ChannelMarshal<ServerId> serverIdMarshal = ServerId.Marshal.INSTANCE;
-    private final ChannelMarshal<CoreServerInfo> coreServerInfoChannelMarshal = new CoreServerInfoMarshal();
+    private final ChannelMarshal<CoreServerInfo> coreServerInfoChannelMarshal = CoreServerInfoMarshal.INSTANCE;
     private final ChannelMarshal<RaftGroupId> raftGroupIdMarshal = RaftGroupId.Marshal.INSTANCE;
+
+    private CoreTopologyMarshal()
+    {
+    }
 
     @Override
     protected DatabaseCoreTopology unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException

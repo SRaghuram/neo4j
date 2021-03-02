@@ -28,7 +28,7 @@ import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.io.marshal.SafeChannelMarshal;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 
-public class CoreReplicatedContentMarshal extends SafeChannelMarshal<ReplicatedContent>
+public final class CoreReplicatedContentMarshal extends SafeChannelMarshal<ReplicatedContent>
 {
     private final LogEntryWriterFactory logEntryWriterFactory;
 

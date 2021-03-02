@@ -29,6 +29,6 @@ public class RaftCoreStateMarshalTest implements BaseMarshalTest<RaftCoreState>
     @Override
     public ChannelMarshal<RaftCoreState> marshal()
     {
-        return new RaftCoreState.Marshal();
+        return RaftCoreState.Marshal.INSTANCE;
     }
 }

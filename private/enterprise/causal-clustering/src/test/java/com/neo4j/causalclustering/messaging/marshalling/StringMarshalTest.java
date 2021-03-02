@@ -58,6 +58,12 @@ class StringMarshalTest implements BaseMarshalTest<String>
         };
     }
 
+    @Override
+    public boolean singletonMarshal()
+    {
+        return false;
+    }
+
     private String marshalAndUnmarshalUsingBuffers( final String original, ByteBuf buffer )
     {
         StringMarshal.marshal( buffer, original );

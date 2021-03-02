@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.test_helpers;
 
 import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -14,6 +15,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
@@ -22,6 +24,8 @@ import org.neo4j.io.marshal.EndOfStreamException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 public interface BaseMarshalTest<T>
@@ -31,6 +35,11 @@ public interface BaseMarshalTest<T>
     ChannelMarshal<T> marshal();
 
     default boolean unMarshalCreatesNewRefs()
+    {
+        return true;
+    }
+
+    default boolean singletonMarshal()
     {
         return true;
     }
@@ -54,6 +63,32 @@ public interface BaseMarshalTest<T>
             assertNotSame( original, result );
         }
         assertEquals( original, result );
+    }
+
+    @Test
+    default void marshalShouldBeSingleton()
+    {
+        if ( singletonMarshal() )
+        {
+            assertSame( marshal(), marshal() );
+        }
+    }
+
+    @Test
+    default void marshalShouldBeUnconstructable()
+    {
+        if ( singletonMarshal() )
+        {
+            var clazz = marshal().getClass();
+            var constructors = clazz.getDeclaredConstructors();
+
+            for ( var constructor : constructors )
+            {
+                constructor.setAccessible( true );
+                assertTrue( Modifier.isPrivate( constructor.getModifiers() ),
+                            () -> String.format( "All constructors of %s must be private!", clazz.getCanonicalName() ) );
+            }
+        }
     }
 
     default T marshalAndUnmarshal( T original, ChannelMarshal<T> marshal ) throws IOException, EndOfStreamException

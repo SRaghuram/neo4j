@@ -31,13 +31,13 @@ public class MembershipEntryMarshalTest implements BaseMarshalTest<MembershipEnt
         var members = Stream.generate( IdFactory::randomRaftMemberId )
                             .limit( numMembers )
                             .collect( Collectors.toSet() );
-        var logIndex = ThreadLocalRandom.current().nextLong();
+        var logIndex = ThreadLocalRandom.current().nextLong( Long.MAX_VALUE );
         return new MembershipEntry( logIndex, members );
     }
 
     @Override
     public ChannelMarshal<MembershipEntry> marshal()
     {
-        return new MembershipEntry.Marshal();
+        return MembershipEntry.Marshal.INSTANCE;
     }
 }

@@ -32,14 +32,14 @@ class VoteStateTest implements BaseMarshalTest<VoteState>
     private VoteState randomVoteState()
     {
         var voteState = new VoteState();
-        voteState.update( IdFactory.randomRaftMemberId(), ThreadLocalRandom.current().nextLong() );
+        voteState.update( IdFactory.randomRaftMemberId(), ThreadLocalRandom.current().nextLong( Long.MAX_VALUE ) );
         return voteState;
     }
 
     @Override
     public ChannelMarshal<VoteState> marshal()
     {
-        return new VoteState.Marshal();
+        return VoteState.Marshal.INSTANCE;
     }
 
     @Test

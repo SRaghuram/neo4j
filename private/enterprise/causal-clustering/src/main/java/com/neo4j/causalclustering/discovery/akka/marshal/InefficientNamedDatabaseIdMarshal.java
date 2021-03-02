@@ -24,6 +24,10 @@ public class InefficientNamedDatabaseIdMarshal extends SafeChannelMarshal<NamedD
 {
     public static final InefficientNamedDatabaseIdMarshal INSTANCE = new InefficientNamedDatabaseIdMarshal();
 
+    private InefficientNamedDatabaseIdMarshal()
+    {
+    }
+
     @Override
     protected NamedDatabaseId unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {

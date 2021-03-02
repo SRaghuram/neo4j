@@ -27,6 +27,6 @@ public class ReplicatedLeaderInfoMarshalTest implements BaseMarshalTest<Replicat
     @Override
     public ChannelMarshal<ReplicatedLeaderInfo> marshal()
     {
-        return new ReplicatedLeaderInfoMarshal();
+        return ReplicatedLeaderInfoMarshal.INSTANCE;
     }
 }

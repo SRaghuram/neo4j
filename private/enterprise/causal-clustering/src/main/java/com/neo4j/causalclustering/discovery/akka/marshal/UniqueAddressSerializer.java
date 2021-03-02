@@ -13,6 +13,6 @@ public class UniqueAddressSerializer extends BaseAkkaSerializer<UniqueAddress>
 
     public UniqueAddressSerializer()
     {
-        super( new UniqueAddressMarshal(), UNIQUE_ADDRESS, SIZE_HINT );
+        super( UniqueAddressMarshal.INSTANCE, UNIQUE_ADDRESS, SIZE_HINT );
     }
 }

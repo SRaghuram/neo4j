@@ -13,6 +13,6 @@ public class CoreTopologySerializer extends BaseAkkaSerializer<DatabaseCoreTopol
 
     public CoreTopologySerializer()
     {
-        super( new CoreTopologyMarshal(), CORE_TOPOLOGY, SIZE_HINT );
+        super( CoreTopologyMarshal.INSTANCE, CORE_TOPOLOGY, SIZE_HINT );
     }
 }

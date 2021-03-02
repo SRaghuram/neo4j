@@ -45,6 +45,12 @@ class ActorRefMarshalTest implements BaseMarshalTest<ActorRef>
         return false;
     }
 
+    @Override
+    public boolean singletonMarshal()
+    {
+        return false;
+    }
+
     static class Actor extends AbstractActor
     {
         static final String name = "foo";

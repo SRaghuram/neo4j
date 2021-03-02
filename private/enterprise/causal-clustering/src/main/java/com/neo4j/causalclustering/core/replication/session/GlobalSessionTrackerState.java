@@ -125,9 +125,11 @@ public class GlobalSessionTrackerState
 
     public static class Marshal extends SafeStateMarshal<GlobalSessionTrackerState>
     {
+        public static final Marshal INSTANCE = new Marshal();
+
         private final ChannelMarshal<RaftMemberId> memberMarshal;
 
-        public Marshal()
+        private Marshal()
         {
             this.memberMarshal = RaftMemberId.Marshal.INSTANCE;
         }
@@ -265,6 +267,28 @@ public class GlobalSessionTrackerState
         {
             return String.format( "LocalSessionTracker{globalSessionId=%s, lastSequenceNumberPerSession=%s}",
                     globalSessionId, lastSequenceNumberPerSession );
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            LocalSessionTracker that = (LocalSessionTracker) o;
+            return Objects.equals( globalSessionId, that.globalSessionId ) &&
+                   Objects.equals( lastSequenceNumberPerSession, that.lastSequenceNumberPerSession );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( globalSessionId, lastSequenceNumberPerSession );
         }
     }
 }

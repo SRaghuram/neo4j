@@ -12,8 +12,14 @@ import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.io.marshal.SafeStateMarshal;
 
-public class ClusterStateVersionMarshal extends SafeStateMarshal<ClusterStateVersion>
+public final class ClusterStateVersionMarshal extends SafeStateMarshal<ClusterStateVersion>
 {
+    public static final ClusterStateVersionMarshal INSTANCE = new ClusterStateVersionMarshal();
+
+    private ClusterStateVersionMarshal()
+    {
+    }
+
     @Override
     public void marshal( ClusterStateVersion version, WritableChannel channel ) throws IOException
     {

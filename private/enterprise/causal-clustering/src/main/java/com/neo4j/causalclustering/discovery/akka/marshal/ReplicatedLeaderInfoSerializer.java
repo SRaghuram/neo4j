@@ -13,6 +13,6 @@ public class ReplicatedLeaderInfoSerializer extends BaseAkkaSerializer<Replicate
 
     public ReplicatedLeaderInfoSerializer()
     {
-        super( new ReplicatedLeaderInfoMarshal(), REPLICATED_LEADER_INFO, SIZE_HINT );
+        super( ReplicatedLeaderInfoMarshal.INSTANCE, REPLICATED_LEADER_INFO, SIZE_HINT );
     }
 }

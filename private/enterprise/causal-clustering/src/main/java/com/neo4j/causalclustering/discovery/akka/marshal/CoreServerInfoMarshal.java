@@ -22,8 +22,14 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class CoreServerInfoMarshal extends DiscoveryServerInfoMarshal<CoreServerInfo>
 {
-    private final ChannelMarshal<ConnectorAddresses> clientConnectorAddressesMarshal = new ConnectorAddresses.Marshal();
-    private final ChannelMarshal<SocketAddress> advertisedSocketAddressMarshal = new AdvertisedSocketAddressMarshal();
+    public static final CoreServerInfoMarshal INSTANCE = new CoreServerInfoMarshal();
+
+    private final ChannelMarshal<ConnectorAddresses> clientConnectorAddressesMarshal = ConnectorAddresses.Marshal.INSTANCE;
+    private final ChannelMarshal<SocketAddress> advertisedSocketAddressMarshal = AdvertisedSocketAddressMarshal.INSTANCE;
+
+    private CoreServerInfoMarshal()
+    {
+    }
 
     @Override
     protected CoreServerInfo unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException

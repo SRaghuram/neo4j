@@ -43,6 +43,6 @@ class GlobalSessionTrackerStateMarshalTest implements BaseMarshalTest<GlobalSess
     @Override
     public ChannelMarshal<GlobalSessionTrackerState> marshal()
     {
-        return new GlobalSessionTrackerState.Marshal();
+        return GlobalSessionTrackerState.Marshal.INSTANCE;
     }
 }

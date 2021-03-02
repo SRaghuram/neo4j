@@ -31,7 +31,7 @@ public class LeaderInfoDirectoryMessageMarshalTest implements BaseMarshalTest<Le
     @Override
     public ChannelMarshal<LeaderInfoDirectoryMessage> marshal()
     {
-        return new DatabaseLeaderInfoMessageMarshal();
+        return DatabaseLeaderInfoMessageMarshal.INSTANCE;
     }
 
     static LeaderInfoDirectoryMessage generate()

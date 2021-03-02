@@ -22,12 +22,14 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<DatabaseReadReplicaTopology>
 {
+    public static final ReadReplicaTopologyMarshal INSTANCE = new ReadReplicaTopologyMarshal();
+
     private final ChannelMarshal<ReadReplicaInfo> readReplicaInfoMarshal;
     private final ChannelMarshal<ServerId> serverIdMarshal = ServerId.Marshal.INSTANCE;
 
-    public ReadReplicaTopologyMarshal()
+    private ReadReplicaTopologyMarshal()
     {
-        this.readReplicaInfoMarshal = new ReadReplicaInfoMarshal();
+        this.readReplicaInfoMarshal = ReadReplicaInfoMarshal.INSTANCE;
     }
 
     @Override

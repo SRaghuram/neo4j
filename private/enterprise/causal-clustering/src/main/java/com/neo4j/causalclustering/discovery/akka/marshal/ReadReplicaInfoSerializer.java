@@ -11,6 +11,6 @@ public class ReadReplicaInfoSerializer extends BaseAkkaSerializer<ReadReplicaInf
 {
     protected ReadReplicaInfoSerializer()
     {
-        super( new ReadReplicaInfoMarshal(), READ_REPLICA_INFO, 256 );
+        super( ReadReplicaInfoMarshal.INSTANCE, READ_REPLICA_INFO, 256 );
     }
 }

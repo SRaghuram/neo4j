@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus.vote;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
@@ -71,11 +72,35 @@ public class VoteState
         return term;
     }
 
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        VoteState voteState = (VoteState) o;
+        return term == voteState.term &&
+               Objects.equals( votedFor, voteState.votedFor );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( votedFor, term );
+    }
+
     public static class Marshal extends SafeStateMarshal<VoteState>
     {
+        public static final Marshal INSTANCE = new Marshal();
+
         private final ChannelMarshal<RaftMemberId> memberMarshal;
 
-        public Marshal()
+        private Marshal()
         {
             this.memberMarshal = RaftMemberId.Marshal.INSTANCE;
         }

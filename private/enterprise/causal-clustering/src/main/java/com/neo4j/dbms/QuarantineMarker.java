@@ -55,6 +55,10 @@ public class QuarantineMarker
     {
         public static final QuarantineMarker.Marshal INSTANCE = new QuarantineMarker.Marshal();
 
+        private Marshal()
+        {
+        }
+
         @Override
         public void marshal( QuarantineMarker marker, WritableChannel channel ) throws IOException
         {

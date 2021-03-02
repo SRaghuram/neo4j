@@ -21,7 +21,13 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class DatabaseLeaderInfoMessageMarshal extends SafeChannelMarshal<LeaderInfoDirectoryMessage>
 {
-    private final ChannelMarshal<LeaderInfo> leaderInfoMarshal = new LeaderInfoMarshal();
+    public static final DatabaseLeaderInfoMessageMarshal INSTANCE = new DatabaseLeaderInfoMessageMarshal();
+
+    private final ChannelMarshal<LeaderInfo> leaderInfoMarshal = LeaderInfoMarshal.INSTANCE;
+
+    private DatabaseLeaderInfoMessageMarshal()
+    {
+    }
 
     @Override
     protected LeaderInfoDirectoryMessage unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException

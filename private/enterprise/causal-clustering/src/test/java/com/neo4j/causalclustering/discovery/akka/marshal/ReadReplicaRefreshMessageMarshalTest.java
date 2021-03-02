@@ -48,6 +48,12 @@ public class ReadReplicaRefreshMessageMarshalTest implements BaseMarshalTest<Rea
         return new ReadReplicaRefreshMessageMarshal( (ExtendedActorSystem) system );
     }
 
+    @Override
+    public boolean singletonMarshal()
+    {
+        return false;
+    }
+
     @BeforeAll
     void setup()
     {

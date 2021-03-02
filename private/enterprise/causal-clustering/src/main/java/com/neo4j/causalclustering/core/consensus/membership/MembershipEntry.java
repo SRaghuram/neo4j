@@ -73,7 +73,13 @@ public class MembershipEntry
 
     public static class Marshal extends SafeStateMarshal<MembershipEntry>
     {
+        public static final Marshal INSTANCE = new Marshal();
+
         RaftMemberId.Marshal memberMarshal = RaftMemberId.Marshal.INSTANCE;
+
+        private Marshal()
+        {
+        }
 
         @Override
         public MembershipEntry startState()

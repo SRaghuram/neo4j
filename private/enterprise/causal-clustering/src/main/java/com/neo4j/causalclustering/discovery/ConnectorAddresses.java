@@ -235,6 +235,12 @@ public class ConnectorAddresses
 
     public static class Marshal extends SafeChannelMarshal<ConnectorAddresses>
     {
+        public static final Marshal INSTANCE = new Marshal();
+
+        private Marshal()
+        {
+        }
+
         @Override
         protected ConnectorAddresses unmarshal0( ReadableChannel channel ) throws IOException
         {
