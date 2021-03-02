@@ -52,7 +52,7 @@ public class ProgressTrackerImpl implements ProgressTracker
     @Override
     public void trackResult( DistributedOperation operation, StateMachineResult result )
     {
-        requireNonNull( result, "Illegal result for operation: " + operation );
+        requireNonNull( result, "DistributedOperation cannot be null" );
 
         if ( !operation.globalSession().equals( myGlobalSession ) )
         {
