@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.data.ValueGeneratorUtil.LNG
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
@@ -14,7 +15,6 @@ import com.neo4j.bench.micro.data.Plans.astParameter
 import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.Plans.cypherTypeFor
 import com.neo4j.bench.micro.data.TypeParamValues.listOf
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG
 import org.neo4j.configuration.Config
 import org.neo4j.cypher.internal.CypherRuntimeConfiguration
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable

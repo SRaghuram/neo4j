@@ -14,8 +14,6 @@
     <properties>
         <moduleName>com.neo4j.bench.micro</moduleName>
         <uberjar.name>micro-benchmarks</uberjar.name>
-        <mockito.version>1.10.19</mockito.version>
-        <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
         <test.runner.jvm.settings.additional>-Xmx6g -Djmh.ignoreLock=true</test.runner.jvm.settings.additional>
@@ -62,11 +60,6 @@
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
-            <version>${neo4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.neo4j.app</groupId>
-            <artifactId>neo4j-server</artifactId>
             <version>${neo4j.version}</version>
         </dependency>
         <dependency>
@@ -217,11 +210,6 @@
             <artifactId>neo4j-kernel</artifactId>
             <version>${neo4j.version}</version>
             <type>test-jar</type>
-        </dependency>
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
