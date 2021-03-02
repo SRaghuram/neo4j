@@ -26,11 +26,6 @@ class UnsupportedFeaturesAcceptanceTest extends ExecutionEngineFunSuite with Cyp
     failWithError(Configs.All, query, "The `RETURN GRAPH` clause is not available in this implementation of Cypher due to lack of support for multiple graphs.")
   }
 
-  test("construct graph") {
-    val query = "MATCH (a) CONSTRUCT ON foo.bar CLONE a CREATE (a)-[:T {prop: a.prop}]->(:X) RETURN 1 AS a"
-    failWithError(Configs.All, query, "The `CONSTRUCT` clause is not available in this implementation of Cypher due to lack of support for multiple graphs.")
-  }
-
   test("equivalence operator") {
     val query = "RETURN 1 ~ 2"
     failWithError(Configs.All, query, "`~` (equivalence) is a Cypher 10 feature and is not available in this implementation of Cypher.")
