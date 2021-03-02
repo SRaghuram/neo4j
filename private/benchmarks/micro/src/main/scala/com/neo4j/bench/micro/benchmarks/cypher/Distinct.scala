@@ -14,7 +14,7 @@ import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.astProperty
 import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
-import com.neo4j.bench.data.TypeParamValues.STR_SML
+import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
 import com.neo4j.bench.data.ValueGeneratorUtil.randPropertyFor
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans

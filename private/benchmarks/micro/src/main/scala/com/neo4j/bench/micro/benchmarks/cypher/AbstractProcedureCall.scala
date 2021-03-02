@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
-import com.neo4j.bench.micro.data.DataGeneratorConfig
+import com.neo4j.bench.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.Plans.Pos
 import com.neo4j.bench.micro.data.Plans.astVariable
 import org.neo4j.cypher.internal.ast.ASTAnnotationMap

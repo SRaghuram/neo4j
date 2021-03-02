@@ -109,6 +109,12 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-params</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>io.findify</groupId>
                 <artifactId>s3mock_${scala.binary.version}</artifactId>
                 <version>${s3mock.version}</version>

@@ -5,16 +5,12 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.common.Neo4jConfigBuilder
 import com.neo4j.bench.data.DataGeneratorConfig
 import com.neo4j.bench.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
-import com.neo4j.bench.common.Neo4jConfigBuilder
-import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
-import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.data.DataGeneratorConfig
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.astVariable
 import org.neo4j.configuration.GraphDatabaseSettings

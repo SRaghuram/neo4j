@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.data
 
-import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
+import com.neo4j.bench.data.DiscreteGenerator.Bucket
 import com.neo4j.bench.micro.data.TypeParamValues.DATE
 import com.neo4j.bench.micro.data.TypeParamValues.DATE_TIME
 import com.neo4j.bench.micro.data.TypeParamValues.DBL

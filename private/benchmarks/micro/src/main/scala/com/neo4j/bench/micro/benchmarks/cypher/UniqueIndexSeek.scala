@@ -10,21 +10,17 @@ import com.neo4j.bench.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.data.LabelKeyDefinition
 import com.neo4j.bench.data.PropertyDefinition
 import com.neo4j.bench.data.ValueGeneratorFun
-
-import java.util
+import com.neo4j.bench.data.ValueGeneratorUtil.ascGeneratorFor
+import com.neo4j.bench.data.ValueGeneratorUtil.randGeneratorFor
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.data.DataGeneratorConfig
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
-import com.neo4j.bench.micro.data.LabelKeyDefinition
 import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.astLabelToken
 import com.neo4j.bench.micro.data.Plans.astParameter
 import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
 import com.neo4j.bench.micro.data.Plans.astVariable
-import com.neo4j.bench.micro.data.PropertyDefinition
 import com.neo4j.bench.micro.data.TypeParamValues.DATE
 import com.neo4j.bench.micro.data.TypeParamValues.DATE_TIME
 import com.neo4j.bench.micro.data.TypeParamValues.DBL
@@ -35,9 +31,6 @@ import com.neo4j.bench.micro.data.TypeParamValues.LOCAL_TIME
 import com.neo4j.bench.micro.data.TypeParamValues.STR_BIG
 import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
 import com.neo4j.bench.micro.data.TypeParamValues.TIME
-import com.neo4j.bench.micro.data.ValueGeneratorFun
-import com.neo4j.bench.data.ValueGeneratorUtil.ascGeneratorFor
-import com.neo4j.bench.data.ValueGeneratorUtil.randGeneratorFor
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.DoNotGetValue
@@ -59,6 +52,8 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
+
+import java.util
 
 @BenchmarkEnabled(true)
 class UniqueIndexSeek extends AbstractCypherBenchmark {

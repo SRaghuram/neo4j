@@ -5,26 +5,26 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.data.DataGeneratorConfig
+import com.neo4j.bench.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.data.DiscreteGenerator.Bucket
+import com.neo4j.bench.data.DiscreteGenerator.discrete
+import com.neo4j.bench.data.LabelKeyDefinition
+import com.neo4j.bench.data.PropertyDefinition
+import com.neo4j.bench.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.data.DataGeneratorConfig
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
-import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
-import com.neo4j.bench.micro.data.DiscreteGenerator.discrete
-import com.neo4j.bench.micro.data.LabelKeyDefinition
 import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.astLabelToken
 import com.neo4j.bench.micro.data.Plans.astLiteralFor
 import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
 import com.neo4j.bench.micro.data.Plans.astVariable
-import com.neo4j.bench.micro.data.PropertyDefinition
 import com.neo4j.bench.micro.data.TypeParamValues.DBL
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.TypeParamValues.STR_BIG
 import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.DoNotGetValue

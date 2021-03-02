@@ -6,15 +6,20 @@
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.common.Neo4jConfigBuilder
+import com.neo4j.bench.data.CRS
+import com.neo4j.bench.data.DataGeneratorConfig
+import com.neo4j.bench.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.data.LabelKeyDefinition
+import com.neo4j.bench.data.PointGenerator.ClusterGridDefinition
+import com.neo4j.bench.data.PointGenerator.circleGrid
+import com.neo4j.bench.data.PropertyDefinition
+import com.neo4j.bench.data.ValueGeneratorFun
+import com.neo4j.bench.data.ValueGeneratorUtil.DBL
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.benchmarks.Kaboom
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.data.CRS
-import com.neo4j.bench.micro.data.DataGeneratorConfig
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
-import com.neo4j.bench.micro.data.LabelKeyDefinition
 import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.Pos
 import com.neo4j.bench.micro.data.Plans.astLabelToken
@@ -25,11 +30,6 @@ import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
 import com.neo4j.bench.micro.data.Plans.astRangeBetweenPointsQueryExpression
 import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.Plans.distanceFunction
-import com.neo4j.bench.data.PointGenerator.ClusterGridDefinition
-import com.neo4j.bench.micro.data.PointGenerator.circleGrid
-import com.neo4j.bench.data.PropertyDefinition
-import com.neo4j.bench.micro.data.ValueGeneratorFun
-import com.neo4j.bench.data.ValueGeneratorUtil.DBL
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.LessThanOrEqual
 import org.neo4j.cypher.internal.logical.plans

@@ -9,10 +9,10 @@ import com.neo4j.bench.data.DataGeneratorConfig
 import com.neo4j.bench.data.PropertyDefinition
 import com.neo4j.bench.data.RelationshipDefinition
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
-import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.Plans
-import com.neo4j.bench.micro.data.PropertyDefinition
-import com.neo4j.bench.micro.data.RelationshipDefinition
+import com.neo4j.bench.data.PropertyDefinition
+import com.neo4j.bench.data.RelationshipDefinition
+import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.internal.CypherRuntimeConfiguration
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.EnterpriseRuntimeFactory
@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.ExecutionPlan
 import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.frontend.PlannerName
+import org.neo4j.cypher.internal.frontend.phases.devNullLogger
 import org.neo4j.cypher.internal.ir.ordering.ProvidedOrder
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan

@@ -5,7 +5,7 @@
     <parent>
         <artifactId>benchmarks</artifactId>
         <groupId>com.neo4j.bench</groupId>
-        <version>4.0.12-SNAPSHOT</version>
+        <version>4.1.7-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -46,12 +46,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-enterprise-kernel</artifactId>
-            <version>${neo4j.enterprise.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.neo4j.app</groupId>
-            <artifactId>neo4j-server-enterprise</artifactId>
+            <artifactId>neo4j-enterprise</artifactId>
             <version>${neo4j.enterprise.version}</version>
         </dependency>
 

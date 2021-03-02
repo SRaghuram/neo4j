@@ -5,23 +5,23 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.data.ConstantGenerator.constant
+import com.neo4j.bench.data.DataGeneratorConfig
+import com.neo4j.bench.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.data.DiscreteGenerator.Bucket
+import com.neo4j.bench.data.DiscreteGenerator.discrete
+import com.neo4j.bench.data.LabelKeyDefinition
+import com.neo4j.bench.data.PropertyDefinition
+import com.neo4j.bench.data.ValueGeneratorUtil.INT
+import com.neo4j.bench.data.ValueGeneratorUtil.LNG
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.ConstantGenerator.constant
-import com.neo4j.bench.micro.DataGeneratorConfig
-import com.neo4j.bench.micro.DataGeneratorConfigBuilder
-import com.neo4j.bench.micro.DiscreteGenerator.Bucket
-import com.neo4j.bench.micro.DiscreteGenerator.discrete
-import com.neo4j.bench.micro.LabelKeyDefinition
 import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.Pos
 import com.neo4j.bench.micro.data.Plans.astLabelToken
 import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
 import com.neo4j.bench.micro.data.Plans.astVariable
-import com.neo4j.bench.micro.PropertyDefinition
-import com.neo4j.bench.micro.ValueGeneratorUtil.INT
-import com.neo4j.bench.micro.ValueGeneratorUtil.LNG
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.logical.plans
