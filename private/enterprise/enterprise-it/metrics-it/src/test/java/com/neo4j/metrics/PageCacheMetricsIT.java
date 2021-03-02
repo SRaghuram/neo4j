@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 
 import org.neo4j.configuration.helpers.GlobbingPattern;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -39,6 +40,8 @@ class PageCacheMetricsIT
     @Inject
     private TestDirectory testDirectory;
 
+    @Inject
+    private DatabaseManagementService managementService;
     @Inject
     private GraphDatabaseService database;
 
@@ -73,6 +76,8 @@ class PageCacheMetricsIT
             assertEquals( 1, nodes.stream().count() );
         }
 
+        managementService.shutdown();
+
         var greaterThanZero = new Condition<Long>( value -> value > 0, "Greater than zero" );
         var greaterThanEqualZero = new Condition<Long>( value -> value >= 0, "Greater than or equal to zero" );
         assertMetrics( "Metrics report should include page cache pins", "neo4j.page_cache.pins", greaterThanZero );
@@ -82,6 +87,7 @@ class PageCacheMetricsIT
         assertMetrics( "Metrics report should include page cache hits", "neo4j.page_cache.hits", greaterThanZero );
         assertMetrics( "Metrics report should include page cache flushes", "neo4j.page_cache.flushes", greaterThanEqualZero );
         assertMetrics( "Metrics report should include page cache merges", "neo4j.page_cache.merges", greaterThanEqualZero );
+        assertMetrics( "Metrics report should include page cache merges", "neo4j.page_cache.iops", greaterThanEqualZero );
         assertMetrics( "Metrics report should include page cache exceptions", "neo4j.page_cache.eviction_exceptions", equalityCondition( 0L ) );
 
         assertEventually(

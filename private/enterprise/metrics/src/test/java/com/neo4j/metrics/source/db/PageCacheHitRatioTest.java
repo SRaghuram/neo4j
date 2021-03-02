@@ -180,5 +180,23 @@ class PageCacheHitRatioTest
         {
             return 0;
         }
+
+        @Override
+        public long iopqPerformed()
+        {
+            return 0;
+        }
+
+        @Override
+        public long ioLimitedTimes()
+        {
+            return 0;
+        }
+
+        @Override
+        public long ioLimitedMillis()
+        {
+            return 0;
+        }
     }
 }

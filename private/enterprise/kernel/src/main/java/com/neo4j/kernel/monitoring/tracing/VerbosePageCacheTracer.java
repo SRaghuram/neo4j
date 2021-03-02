@@ -247,6 +247,18 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
         {
             return new VerboseChunkEvent( fileName, clock.startStopWatch() );
         }
+
+        @Override
+        public void throttle( long millis )
+        {
+            // do not do anything here since it can be too verbose to log
+        }
+
+        @Override
+        public void reportIO( int completedIOs )
+        {
+            // do not do anything here since it can be too verbose to log
+        }
     }
 
     private class VerboseChunkEvent extends FlushEventOpportunity.ChunkEvent

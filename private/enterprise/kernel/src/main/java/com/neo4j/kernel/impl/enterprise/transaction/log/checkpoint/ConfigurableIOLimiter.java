@@ -14,6 +14,9 @@ import java.util.function.ObjLongConsumer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.io.pagecache.tracing.FlushEventOpportunity;
+import org.neo4j.time.Clocks;
+import org.neo4j.time.SystemNanoClock;
 import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.Math.min;
@@ -30,6 +33,7 @@ public class ConfigurableIOLimiter implements IOLimiter
     private static final int QUANTUMS_PER_SECOND = (int) (TimeUnit.SECONDS.toMillis( 1 ) / QUANTUM_MILLIS);
 
     private final ObjLongConsumer<Object> pauseNanos;
+    private final SystemNanoClock clock;
 
     /**
      * Upper 32 bits is the "disabled counter", lower 32 bits is the "IOs per quantum" field.
@@ -41,13 +45,14 @@ public class ConfigurableIOLimiter implements IOLimiter
 
     public ConfigurableIOLimiter( Config config )
     {
-        this( config, LockSupport::parkNanos );
+        this( config, LockSupport::parkNanos, Clocks.nanoClock() );
     }
 
     @VisibleForTesting
-    ConfigurableIOLimiter( Config config, ObjLongConsumer<Object> pauseNanos )
+    ConfigurableIOLimiter( Config config, ObjLongConsumer<Object> pauseNanos, SystemNanoClock clock )
     {
         this.pauseNanos = pauseNanos;
+        this.clock = clock;
         Integer iops = config.get( GraphDatabaseSettings.check_point_iops_limit );
         updateConfiguration( iops );
         config.addListener( GraphDatabaseSettings.check_point_iops_limit,
@@ -116,15 +121,16 @@ public class ConfigurableIOLimiter implements IOLimiter
     // their IOPS limit setting a bit more.
 
     @Override
-    public long maybeLimitIO( long previousStamp, int recentlyCompletedIOs, Flushable flushable )
+    public long maybeLimitIO( long previousStamp, int recentlyCompletedIOs, Flushable flushable, FlushEventOpportunity flushEvent )
     {
+        flushEvent.reportIO(recentlyCompletedIOs);
         long state = stateUpdater.get( this );
         if ( getDisabledCounter( state ) > 0 )
         {
             return INITIAL_STAMP;
         }
 
-        long now = currentTimeMillis() & TIME_MASK;
+        long now = clock.millis() & TIME_MASK;
         long then = previousStamp & TIME_MASK;
 
         if ( now - then > QUANTUM_MILLIS )
@@ -137,6 +143,7 @@ public class ConfigurableIOLimiter implements IOLimiter
         {
             long millisLeftInQuantum = min( QUANTUM_MILLIS, QUANTUM_MILLIS - (now - then) );
             pauseNanos.accept( this, TimeUnit.MILLISECONDS.toNanos( millisLeftInQuantum ) );
+            flushEvent.throttle( millisLeftInQuantum );
             return currentTimeMillis() & TIME_MASK;
         }
 

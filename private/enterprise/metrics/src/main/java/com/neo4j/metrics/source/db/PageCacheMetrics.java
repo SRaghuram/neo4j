@@ -47,6 +47,12 @@ public class PageCacheMetrics extends Metrics
     private static final String PC_BYTES_READ_TEMPLATE = name( PAGE_CACHE_PREFIX, "bytes_read" );
     @Documented( "The total number of bytes written by the page cache. (counter)" )
     private static final String PC_BYTES_WRITTEN_TEMPLATE = name( PAGE_CACHE_PREFIX, "bytes_written" );
+    @Documented( "The total number of IO operations performed by page cache." )
+    private static final String PC_IOPQ_TEMPLATE = name( PAGE_CACHE_PREFIX, "iops" );
+    @Documented( "The total number of times page cache flush IO limiter was throttled during ongoing IO operations." )
+    private static final String PC_IOPQ_LIMITER_TIMES_TEMPLATE = name( PAGE_CACHE_PREFIX, "throttled.times" );
+    @Documented( "The total number of millis page cache flush IO limiter was throttled during ongoing IO operations." )
+    private static final String PC_IOPQ_LIMITER_MILLIS_TEMPLATE = name( PAGE_CACHE_PREFIX, "throttled.millis" );
 
     private final String pcEvictionExceptions;
     private final String pcFlushes;
@@ -60,6 +66,9 @@ public class PageCacheMetrics extends Metrics
     private final String pcUsageRatio;
     private final String pcBytesRead;
     private final String pcBytesWritten;
+    private final String pcIOPQPerformed;
+    private final String pcIOLimiterTimes;
+    private final String pcIOLimiterMillis;
 
     private final MetricsRegister registry;
     private final PageCacheCounters pageCacheCounters;
@@ -90,6 +99,9 @@ public class PageCacheMetrics extends Metrics
         this.pcUsageRatio = name( metricsPrefix, PC_USAGE_RATIO_TEMPLATE );
         this.pcBytesRead = name( metricsPrefix, PC_BYTES_READ_TEMPLATE );
         this.pcBytesWritten = name( metricsPrefix, PC_BYTES_WRITTEN_TEMPLATE );
+        this.pcIOPQPerformed = name( metricsPrefix, PC_IOPQ_TEMPLATE );
+        this.pcIOLimiterTimes = name( metricsPrefix, PC_IOPQ_LIMITER_TIMES_TEMPLATE );
+        this.pcIOLimiterMillis = name( metricsPrefix, PC_IOPQ_LIMITER_MILLIS_TEMPLATE );
     }
 
     @Override
@@ -107,6 +119,9 @@ public class PageCacheMetrics extends Metrics
         registry.register( pcUsageRatio, () -> (Gauge<Double>) pageCacheCounters::usageRatio );
         registry.register( pcBytesRead, () -> new MetricsCounter( pageCacheCounters::bytesRead ) );
         registry.register( pcBytesWritten, () -> new MetricsCounter( pageCacheCounters::bytesWritten ) );
+        registry.register( pcIOPQPerformed, () -> new MetricsCounter( pageCacheCounters::iopqPerformed ) );
+        registry.register( pcIOLimiterTimes, () -> new MetricsCounter( pageCacheCounters::ioLimitedTimes ) );
+        registry.register( pcIOLimiterMillis, () -> new MetricsCounter( pageCacheCounters::ioLimitedMillis ) );
     }
 
     @Override
@@ -124,5 +139,8 @@ public class PageCacheMetrics extends Metrics
         registry.remove( pcUsageRatio );
         registry.remove( pcBytesRead );
         registry.remove( pcBytesWritten );
+        registry.remove( pcIOPQPerformed );
+        registry.remove( pcIOLimiterTimes );
+        registry.remove( pcIOLimiterMillis );
     }
 }
