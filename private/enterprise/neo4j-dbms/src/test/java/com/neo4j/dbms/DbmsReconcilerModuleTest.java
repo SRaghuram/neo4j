@@ -12,11 +12,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
+import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.internal.helpers.Exceptions;
@@ -24,6 +29,7 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
@@ -34,6 +40,7 @@ import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static java.util.Collections.singletonMap;
+import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -44,6 +51,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 @ExtendWith( LifeExtension.class )
@@ -82,6 +90,47 @@ class DbmsReconcilerModuleTest
         assertTrue( neo4j.isPresent(), "Default db should have been created" );
         verify( system.get().database() ).start();
         verify( neo4j.get().database() ).start();
+    }
+
+    @Test
+    void shouldNotReturnFromStartUntilReconciliationIsDone() throws InterruptedException
+    {
+        // given
+        var starting = new CountDownLatch( 1 );
+        var started = new CountDownLatch( 1 );
+
+        when( dbmsModel.getDatabaseStates() )
+                .thenReturn( singletonMap( idRepository.defaultDatabase().name(), new EnterpriseDatabaseState( idRepository.defaultDatabase(), STARTED ) ) );
+
+        var reconcileResultHandle = new CompletableFuture<Void>();
+        var reconciler = new StubReconciler( reconcileResultHandle );
+
+        var reconcilerModule = new StandaloneDbmsReconcilerModule( databaseManager.globalModule(), databaseManager, mock( ReconciledTransactionTracker.class ),
+                                                                   reconciler, dbmsModel );
+
+        // when
+        CompletableFuture.runAsync( () -> {
+            try
+            {
+                starting.countDown();
+                reconcilerModule.start();
+            }
+            catch ( Exception e )
+            {
+                throw new AssertionError( e );
+            }
+            finally
+            {
+                started.countDown();
+            }
+        } );
+
+        // then
+        starting.await();
+        assertThat( started.await(500, TimeUnit.MILLISECONDS ) ).isFalse();
+        reconcileResultHandle.complete( null );
+        started.await();
+        assertThat( reconciler.ongoingReconciliationJobs() ).isZero();
     }
 
     @Test
@@ -267,5 +316,63 @@ class DbmsReconcilerModuleTest
         var dropOperator = new LocalDbmsOperator( idRepository );
         dropOperator.dropDatabase( fooId.name() );
         reconcilerModule.reconciler.reconcile( List.of( dropOperator ), ReconcilerRequest.priorityTarget( fooId ).build() ).awaitAll();
+    }
+
+    private class StubReconciler extends DbmsReconciler
+    {
+        private final CompletableFuture<Void> handle;
+        private final AtomicInteger ongoingReconciliationJobs;
+
+        StubReconciler( CompletableFuture<Void> handle )
+        {
+            super( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler,
+                   StandaloneDbmsReconcilerModule.createTransitionsTable( new ReconcilerTransitions( databaseManager ) ) );
+            this.handle = handle;
+            this.ongoingReconciliationJobs = new AtomicInteger( 0 );
+        }
+
+        int ongoingReconciliationJobs()
+        {
+            return ongoingReconciliationJobs.get();
+        }
+
+        @Override
+        ReconcilerResult reconcile( List<DbmsOperator> operators, ReconcilerRequest request )
+        {
+            // The fake result still needs to contain the correct database names
+            var namesOfDbsToReconcile = operators.stream()
+                                                 .flatMap( op -> op.desired().keySet().stream() )
+                                                 .collect( Collectors.toSet() );
+
+            // A database will appear reconciled after reconcileResultHandle is completed AND the
+            // actual ReconcilerResult was completed
+            var realResult = super.reconcile( operators, request );
+            var reconciliationFutures = namesOfDbsToReconcile
+                    .stream()
+                    .collect( Collectors.toMap( identity(), dbName -> createStepResultFuture( dbName, realResult ) ) );
+
+            return new ReconcilerResult( reconciliationFutures );
+        }
+
+        private CompletableFuture<ReconcilerStepResult> createStepResultFuture( String dbName, ReconcilerResult realResult )
+        {
+            ongoingReconciliationJobs.incrementAndGet();
+            if ( dbName.equals( SYSTEM_DATABASE_NAME ) )
+            {
+                return CompletableFuture.supplyAsync( () -> {
+                    realResult.await( NAMED_SYSTEM_DATABASE_ID );
+                    ongoingReconciliationJobs.decrementAndGet();
+                    return new ReconcilerStepResult( null, null, null );
+                } );
+            }
+            else
+            {
+                return handle.thenApplyAsync( ignored -> {
+                    realResult.awaitAll();
+                    ongoingReconciliationJobs.decrementAndGet();
+                    return new ReconcilerStepResult( null, null, null );
+                } );
+            }
+        }
     }
 }
