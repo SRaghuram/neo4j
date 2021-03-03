@@ -18,16 +18,16 @@ import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
+import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
-import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
+import com.neo4j.causalclustering.upstream.strategies.PreferFollower;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
-import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
@@ -40,7 +40,6 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
-import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 
@@ -96,8 +95,7 @@ class ReadReplicaDatabaseFactory
         initialiseStatusDescriptionEndpoint( commandIndexTracker, clusterComponents, databaseContext.dependencies() );
 
         TimerService timerService = new TimerService( jobScheduler, internalLogProvider );
-        ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
-        defaultStrategy.inject( topologyService, config, internalLogProvider, serverId );
+        UpstreamDatabaseSelectionStrategy defaultStrategy = createDefaultStrategy( internalLogProvider );
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector = createUpstreamDatabaseStrategySelector(
                 serverId, config, internalLogProvider, topologyService, defaultStrategy );
 
@@ -130,8 +128,15 @@ class ReadReplicaDatabaseFactory
         return new ReadReplicaDatabase( catchupProcess, kernelDatabase, clusterComponents, bootstrap, panicHandler, raftIdCheck, topologyNotifier );
     }
 
+    private UpstreamDatabaseSelectionStrategy createDefaultStrategy( DatabaseLogProvider internalLogProvider )
+    {
+        final var defaultStrategy = new PreferFollower();
+        defaultStrategy.inject( topologyService, config, internalLogProvider, serverId );
+        return defaultStrategy;
+    }
+
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( ServerId myself, Config config, LogProvider logProvider,
-            TopologyService topologyService, ConnectToRandomCoreServerStrategy defaultStrategy )
+            TopologyService topologyService, UpstreamDatabaseSelectionStrategy defaultStrategy )
     {
         UpstreamDatabaseStrategiesLoader loader;
         if ( config.get( CausalClusteringSettings.multi_dc_license ) )
