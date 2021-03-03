@@ -81,6 +81,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteType
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipIndexScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipIndexSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipTypeScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator
@@ -146,6 +147,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicBuildOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicFilterOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipIndexScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipIndexSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipTypeScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperator
@@ -328,6 +330,26 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           argumentSize,
           valueExpr.map(converters.toCommandExpression(id, _)),
           indexSeekMode)
+
+      case plans.DirectedRelationshipIndexScan(column, start, end, typeToken, properties, _, indexOrder) =>
+        new DirectedRelationshipIndexScanOperator(WorkIdentity.fromPlan(plan),
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(start),
+          slots.getLongOffsetFor(end),
+          properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+          indexRegistrator.registerQueryIndex(typeToken, properties),
+          asKernelIndexOrder(indexOrder),
+          physicalPlan.argumentSizes(id))
+
+      case plans.UndirectedRelationshipIndexScan(column, start, end, typeToken, properties, _, indexOrder) =>
+        new UndirectedRelationshipIndexScanOperator(WorkIdentity.fromPlan(plan),
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(start),
+          slots.getLongOffsetFor(end),
+          properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+          indexRegistrator.registerQueryIndex(typeToken, properties),
+          asKernelIndexOrder(indexOrder),
+          physicalPlan.argumentSizes(id))
 
       case plans.DirectedRelationshipByIdSeek(column, relIds, startNode, endNode, _) =>
         new DirectedRelationshipByIdSeekOperator(WorkIdentity.fromPlan(plan),
