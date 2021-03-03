@@ -46,7 +46,7 @@ class RingBuffer(bitSize: Int = RingBuffer.defaultBitSize,
       } else {
         retries += 1
         if (retries < maxRetries) {
-          Thread.sleep(0, 1000)
+          Thread.sleep(1)
         } else {
           // full buffer can prevent query execution from making progress
           throw new RuntimeException("Exceeded max retries")
