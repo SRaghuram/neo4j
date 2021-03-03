@@ -130,8 +130,8 @@ class UndirectedRelationshipIndexSeekTask(inputMorsel: Morsel,
 }
 
 
-trait UndirectedSeek {
-  self: BaseRelationshipIndexSeekTaskTemplate =>
+trait UndirectedRelationshipIndexTask {
+  self: BaseRelationshipIndexTaskTemplate =>
 
   protected val forwardDirection: Field = field[Boolean](codeGen.namer.nextVariableName(), constant(true))
   override protected def genInnerLoop: IntermediateRepresentation = {
@@ -215,7 +215,7 @@ class SingleExactUndirectedSeekQueryRelationshipIndexSeekTaskTemplate(inner: Ope
                                                                         property,
                                                                         generateSeekValue,
                                                                         queryIndexId,
-                                                                        argumentSize)(codeGen) with UndirectedSeek {
+                                                                        argumentSize)(codeGen) with UndirectedRelationshipIndexTask {
 
   override def genMoreFields: Seq[Field] = super.genMoreFields :+ forwardDirection
 
@@ -242,7 +242,7 @@ class SingleUndirectedRangeSeekQueryRelationshipIndexSeekTaskTemplate(inner: Ope
     seekExpression,
     queryIndexId,
     order,
-    argumentSize)(codeGen) with UndirectedSeek {
+    argumentSize)(codeGen) with UndirectedRelationshipIndexTask {
 
   override def genMoreFields: Seq[Field] = super.genMoreFields :+ forwardDirection
 }
@@ -266,7 +266,7 @@ class ManyQueriesUndirectedRelationshipIndexSeekTaskTemplate(inner: OperatorTask
                                                    argumentSize: SlotConfiguration.Size)
                                                   (codeGen: OperatorExpressionCompiler)
   extends ManyQueriesDirectedRelationshipIndexSeekTaskTemplate(inner,
-    id, innermost, relOffset, startOffset, endOffset, property, seekExpression, queryIndexId, order, argumentSize)(codeGen) with UndirectedSeek {
+    id, innermost, relOffset, startOffset, endOffset, property, seekExpression, queryIndexId, order, argumentSize)(codeGen) with UndirectedRelationshipIndexTask {
 
   override def genMoreFields: Seq[Field] = super.genMoreFields :+ forwardDirection
 }
@@ -283,7 +283,7 @@ class CompositeUndirectedRelationshipIndexSeekTaskTemplate(inner: OperatorTaskTe
                                                  order: IndexOrder,
                                                  argumentSize: SlotConfiguration.Size)
                                                 (codeGen: OperatorExpressionCompiler)
-  extends CompositeDirectedRelationshipIndexSeekTaskTemplate(inner, id, innermost, relOffset, startOffset, endOffset, properties, seekExpressions, queryIndexId, order, argumentSize)(codeGen) with UndirectedSeek {
+  extends CompositeDirectedRelationshipIndexSeekTaskTemplate(inner, id, innermost, relOffset, startOffset, endOffset, properties, seekExpressions, queryIndexId, order, argumentSize)(codeGen) with UndirectedRelationshipIndexTask {
   override def genMoreFields: Seq[Field] = super.genMoreFields :+ forwardDirection
 }
 

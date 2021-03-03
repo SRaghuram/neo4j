@@ -5,9 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
+import org.neo4j.codegen.api.Field
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
@@ -15,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.schema.IndexOrder
 
@@ -79,6 +82,21 @@ class UndirectedRelationshipIndexScanTask(inputMorsel: Morsel,
     scanCursor = resources.cursorPools.relationshipScanCursorPool.allocateAndTrace()
     true
   }
+}
+
+class UndirectedRelationshipIndexScanTaskTemplate(inner: OperatorTaskTemplate,
+                                                id: Id,
+                                                innermost: DelegateOperatorTaskTemplate,
+                                                relOffset: Int,
+                                                startOffset: Int,
+                                                endOffset: Int,
+                                                properties: Array[SlottedIndexedProperty],
+                                                queryIndexId: Int,
+                                                indexOrder: IndexOrder,
+                                                argumentSize: SlotConfiguration.Size,
+                                                codeGen: OperatorExpressionCompiler)
+  extends DirectedRelationshipIndexScanTaskTemplate(inner, id, innermost, relOffset, startOffset, endOffset, properties, queryIndexId, indexOrder, argumentSize, codeGen) with UndirectedRelationshipIndexTask {
+  override def genMoreFields: Seq[Field] = super.genMoreFields :+ forwardDirection
 }
 
 

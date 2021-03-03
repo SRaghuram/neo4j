@@ -468,6 +468,17 @@ object OperatorCodeGenHelperTemplates {
         constant(needsValues)),
       arrayOf[PropertyIndexQuery](query))
 
+  def relationshipIndexScan(indexReadSession: IntermediateRepresentation,
+                            cursor: IntermediateRepresentation,
+                            order: IndexOrder,
+                            needsValues: Boolean): IntermediateRepresentation =
+    invokeSideEffect(loadField(DATA_READ),
+      method[Read, Unit, IndexReadSession, RelationshipValueIndexCursor, IndexQueryConstraints]("relationshipIndexScan"),
+      indexReadSession, cursor, invokeStatic(
+        method[IndexQueryConstraints, IndexQueryConstraints, IndexOrder, Boolean]("constrained"),
+        indexOrder(order),
+        constant(needsValues)))
+
   def indexOrder(indexOrder: IndexOrder): IntermediateRepresentation = indexOrder match {
     case IndexOrder.ASCENDING => getStatic[IndexOrder, IndexOrder]("ASCENDING")
     case IndexOrder.DESCENDING => getStatic[IndexOrder, IndexOrder]("DESCENDING")

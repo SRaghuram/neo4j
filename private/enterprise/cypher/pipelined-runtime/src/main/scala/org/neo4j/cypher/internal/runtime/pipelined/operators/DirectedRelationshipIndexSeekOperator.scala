@@ -284,14 +284,14 @@ class DirectedRelationshipIndexSeekTask(inputMorsel: Morsel,
   }
 }
 
-abstract class BaseRelationshipIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
-                                                     id: Id,
-                                                     val innermost: DelegateOperatorTaskTemplate,
-                                                     val relOffset: Int,
-                                                     val startOffset: Int,
-                                                     val endOffset: Int,
-                                                     val argumentSize: SlotConfiguration.Size,
-                                                     codeGen: OperatorExpressionCompiler)
+abstract class BaseRelationshipIndexTaskTemplate(inner: OperatorTaskTemplate,
+                                                 id: Id,
+                                                 val innermost: DelegateOperatorTaskTemplate,
+                                                 val relOffset: Int,
+                                                 val startOffset: Int,
+                                                 val endOffset: Int,
+                                                 val argumentSize: SlotConfiguration.Size,
+                                                 codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
   protected val relIndexCursorField: InstanceField = field[RelationshipValueIndexCursor](codeGen.namer.nextVariableName("valueCursor"))
   protected val relScanCursorField: InstanceField = field[RelationshipScanCursor](codeGen.namer.nextVariableName("scanCursor"))
@@ -356,7 +356,7 @@ abstract class SingleQueryRelationshipIndexSeekTaskTemplate(inner: OperatorTaskT
                                                             queryIndexId: Int,
                                                             argumentSize: SlotConfiguration.Size,
                                                             codeGen: OperatorExpressionCompiler)
-  extends BaseRelationshipIndexSeekTaskTemplate(inner, id, innermost, relOffset, startOffset, endOffset, argumentSize, codeGen) {
+  extends BaseRelationshipIndexTaskTemplate(inner, id, innermost, relOffset, startOffset, endOffset, argumentSize, codeGen) {
 
   /**
    * Extension point called at the start of inner-loop initializaton
@@ -548,7 +548,7 @@ abstract class BaseManyQueriesRelationshipIndexSeekTaskTemplate(override val inn
                                                                 order: IndexOrder,
                                                                 argumentSize: SlotConfiguration.Size,
                                                                 codeGen: OperatorExpressionCompiler)
-  extends BaseRelationshipIndexSeekTaskTemplate(inner, id, innermost, relOffset, startOffset, endOffset, argumentSize, codeGen) {
+  extends BaseRelationshipIndexTaskTemplate(inner, id, innermost, relOffset, startOffset, endOffset, argumentSize, codeGen) {
   private val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2).toArray
   private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot).toArray
   protected val needsValues: Boolean = indexPropertyIndices.nonEmpty

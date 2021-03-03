@@ -71,6 +71,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateRelationshipF
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteType
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipIndexScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.EmptyResultOperatorTemplate
@@ -142,6 +143,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedAllNo
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedLabelScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleUndirectedRangeSeekQueryRelationshipIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedProjectEndpointsTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipIndexScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperatorTaskTemplate
@@ -309,6 +311,34 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
 
         case plan@plans.UndirectedRelationshipIndexSeek(rel, start, end, typeToken, properties, valueExpr, _, order) =>
           relationshipIndexSeek(rel, start, end, typeToken, properties, valueExpr, asKernelIndexOrder(order), plan, directed = false)
+
+        case plan@plans.DirectedRelationshipIndexScan(rel, start, end, typeToken, properties, _, order) =>
+          ctx: TemplateContext =>
+            new DirectedRelationshipIndexScanTaskTemplate(ctx.inner,
+              plan.id,
+              ctx.innermost,
+              ctx.slots.getLongOffsetFor(rel),
+              ctx.slots.getLongOffsetFor(start),
+              ctx.slots.getLongOffsetFor(end),
+              properties.map(SlottedIndexedProperty(rel, _, ctx.slots)).toArray,
+              ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+              asKernelIndexOrder(order),
+              ctx.argumentSizes(plan.id),
+              ctx.expressionCompiler)
+
+        case plan@plans.UndirectedRelationshipIndexScan(rel, start, end, typeToken, properties, _, order) =>
+          ctx: TemplateContext =>
+            new UndirectedRelationshipIndexScanTaskTemplate(ctx.inner,
+              plan.id,
+              ctx.innermost,
+              ctx.slots.getLongOffsetFor(rel),
+              ctx.slots.getLongOffsetFor(start),
+              ctx.slots.getLongOffsetFor(end),
+              properties.map(SlottedIndexedProperty(rel, _, ctx.slots)).toArray,
+              ctx.indexRegistrator.registerQueryIndex(typeToken, properties),
+              asKernelIndexOrder(order),
+              ctx.argumentSizes(plan.id),
+              ctx.expressionCompiler)
 
         case plan@plans.NodeByIdSeek(node, nodeIds, _) =>
           ctx: TemplateContext =>
