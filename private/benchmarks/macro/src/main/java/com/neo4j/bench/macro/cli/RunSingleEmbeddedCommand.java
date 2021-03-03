@@ -25,6 +25,7 @@ import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.process.InternalProfilerAssist;
+import com.neo4j.bench.macro.execution.process.MeasurementOptions;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.Neo4jConfig;
@@ -32,7 +33,6 @@ import com.neo4j.bench.model.options.Edition;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -160,35 +160,36 @@ public class RunSingleEmbeddedCommand implements Runnable
     public void run()
     {
         ForkDirectory forkDir = ForkDirectory.openAt( outputDir.toPath() );
+        Workload workload;
         try ( Resources resources = new Resources( workDir.toPath() ) )
         {
-            Workload workload = Workload.fromName( workloadName, resources, Deployment.embedded() );
+            workload = Workload.fromName( workloadName, resources, Deployment.embedded() );
+        }
 
-            // At this point if it was necessary to copy store (due to mutating query) it should have been done already, trust that store is safe to use
-            try ( Store store = Neo4jStore.createFrom( storeDir.toPath(), workload.getDatabaseName() ) )
+        // At this point if it was necessary to copy store (due to mutating query) it should have been done already, trust that store is safe to use
+        try ( Store store = Neo4jStore.createFrom( storeDir.toPath(), workload.getDatabaseName() ) )
+        {
+            if ( neo4jConfigFile != null )
             {
-                if ( neo4jConfigFile != null )
-                {
-                    BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
-                }
-                Neo4jConfig neo4jConfig = getNeo4jConfig();
-                QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
-                                                                      forkDirectory -> createDatabase( store, edition, neo4jConfig, forkDirectory ) );
-
-                QueryRunner.runSingleCommand( queryRunner,
-                                              Jvm.bestEffortOrFail( jvmFile ),
-                                              forkDir,
-                                              workload,
-                                              queryName,
-                                              planner,
-                                              runtime,
-                                              executionMode,
-                                              InternalProfilerAssist.forEmbedded( ProfilerType.deserializeProfilers( profilerNames ) ),
-                                              warmupCount,
-                                              minMeasurementSeconds,
-                                              maxMeasurementSeconds,
-                                              measurementCount );
+                BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
             }
+            Neo4jConfig neo4jConfig = getNeo4jConfig();
+            QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
+                                                                  forkDirectory -> createDatabase( store, edition, neo4jConfig, forkDirectory ) );
+
+            QueryRunner.runSingleCommand( queryRunner,
+                                          Jvm.bestEffortOrFail( jvmFile ),
+                                          forkDir,
+                                          workload,
+                                          queryName,
+                                          planner,
+                                          runtime,
+                                          executionMode,
+                                          InternalProfilerAssist.forEmbedded( ProfilerType.deserializeProfilers( profilerNames ) ),
+                                          warmupCount,
+                                          minMeasurementSeconds,
+                                          maxMeasurementSeconds,
+                                          measurementCount );
         }
         catch ( Exception e )
         {
@@ -224,10 +225,7 @@ public class RunSingleEmbeddedCommand implements Runnable
             Path neo4jConfig,
             ForkDirectory forkDirectory,
             List<ProfilerType> internalProfilers,
-            int warmupCount,
-            int measurementCount,
-            Duration minMeasurementDuration,
-            Duration maxMeasurementDuration,
+            MeasurementOptions measurementOptions,
             Jvm jvm,
             Path workDir )
     {
@@ -250,13 +248,13 @@ public class RunSingleEmbeddedCommand implements Runnable
                 CMD_OUTPUT,
                 forkDirectory.toAbsolutePath(),
                 CMD_WARMUP_COUNT,
-                Integer.toString( warmupCount ),
+                Integer.toString( measurementOptions.warmupCount() ),
                 CMD_MEASUREMENT_COUNT,
-                Integer.toString( measurementCount ),
+                Integer.toString( measurementOptions.measurementCount() ),
                 CMD_MIN_MEASUREMENT_SECONDS,
-                Long.toString( minMeasurementDuration.getSeconds() ),
+                Long.toString( measurementOptions.minMeasurementDuration().getSeconds() ),
                 CMD_MAX_MEASUREMENT_SECONDS,
-                Long.toString( maxMeasurementDuration.getSeconds() ),
+                Long.toString( measurementOptions.maxMeasurementDuration().getSeconds() ),
                 CMD_JVM_PATH,
                 jvm.launchJava(),
                 CMD_WORK_DIR,

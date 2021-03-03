@@ -11,6 +11,7 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
+import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.BenchmarkingRun;
 import com.neo4j.bench.infra.BenchmarkingTool;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
@@ -21,7 +22,6 @@ import com.neo4j.bench.infra.ResultStoreCredentials;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.model.util.JsonUtil;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.net.URI;
@@ -71,22 +71,11 @@ public class RunWorkerCommand implements Runnable
     @Override
     public void run()
     {
-        try
+        try ( ArtifactStorage artifactStorage = createS3ArtifactStorage() )
         {
-            AWSS3ArtifactStorage artifactStorage;
-            if ( StringUtils.isNotEmpty( awsEndpointUrl ) )
-            {
-                artifactStorage = AWSS3ArtifactStorage.create( new AwsClientBuilder.EndpointConfiguration( awsEndpointUrl, awsRegion ) );
-            }
-            else
-            {
-                artifactStorage = AWSS3ArtifactStorage.create( awsRegion );
-            }
-
             // download artifacts
-
             Path workspacePath = workspaceDir.toPath();
-            Path parameterFilePath = artifactStorage.downloadParameterFile( jobParameters, workspacePath, artifactBaseUri );
+            Path parameterFilePath = artifactStorage.downloadSingleFile( jobParameters, workspacePath, artifactBaseUri );
             JobParams jobParams = JsonUtil.deserializeJson( parameterFilePath, JobParams.class );
             InfraParams infraParams = jobParams.infraParams();
 
@@ -113,6 +102,18 @@ public class RunWorkerCommand implements Runnable
         catch ( Exception e )
         {
             throw new RuntimeException( "fatal error in worker", e );
+        }
+    }
+
+    private ArtifactStorage createS3ArtifactStorage()
+    {
+        if ( isNotEmpty( awsEndpointUrl ) )
+        {
+            return AWSS3ArtifactStorage.create( new AwsClientBuilder.EndpointConfiguration( awsEndpointUrl, awsRegion ) );
+        }
+        else
+        {
+            return AWSS3ArtifactStorage.create( awsRegion );
         }
     }
 }

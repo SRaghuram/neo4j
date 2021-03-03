@@ -15,7 +15,7 @@ import java.nio.file.Path;
  * <li>data sets</li>
  * </ul>
  */
-public interface ArtifactStorage
+public interface ArtifactStorage extends AutoCloseable
 {
 
     /**
@@ -39,16 +39,16 @@ public interface ArtifactStorage
     Workspace downloadBuildArtifacts( Path baseDir, URI artifactBaseURI, Workspace goalWorkspace ) throws ArtifactStoreException;
 
     /**
-     * Downloads Workspace Structure.
+     * Downloads single artifact from artifact storage.
+     * For example: job parameters json file, product package
      *
-     *
-     * @param jobParameters file name of the job parameters json file
+     * @param fileName file name of the artifact
      * @param baseDir base directory, where artifacts will be downloaded
      * @param artifactBaseURI the bucket to download the files from, should exist
      * @throws ArtifactStoreException
      * @return workspace with downloaded artifacts
      */
-    Path downloadParameterFile( String jobParameters, Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException;
+    Path downloadSingleFile( String fileName, Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException;
 
     /**
      * Downloads data set for specific Neo4j version
@@ -58,4 +58,7 @@ public interface ArtifactStorage
      * @return downloaded data set
      */
     Dataset downloadDataset( URI dataSetBaseUri,String neo4jVersion, String dataset );
+
+    @Override
+    void close();
 }

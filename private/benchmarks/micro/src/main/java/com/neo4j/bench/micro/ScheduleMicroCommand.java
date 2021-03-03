@@ -13,6 +13,7 @@ import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams;
 import com.neo4j.bench.infra.AWSCredentials;
+import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkingRun;
 import com.neo4j.bench.infra.BenchmarkingTool;
@@ -20,6 +21,7 @@ import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.URIHelper;
 import com.neo4j.bench.infra.Workspace;
+import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.infra.micro.MicroToolRunner;
 import com.neo4j.bench.infra.scheduler.BenchmarkJobScheduler;
 
@@ -108,7 +110,8 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
     @Override
     protected final void doRun( RunMicroWorkloadParams runMicroWorkloadParams )
     {
-        try
+        AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
+        try ( ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( awsCredentials ) )
         {
             Path workspacePath = workspaceDir.toPath().toAbsolutePath();
             File jobParameterJson = workspacePath.resolve( Workspace.JOB_PARAMETERS_JSON ).toFile();
@@ -116,7 +119,6 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
             Workspace workspace = Workspace.defaultMicroWorkspace( workspacePath );
             workspace.assertArtifactsExist();
 
-            AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
             UUID uuid = UUID.randomUUID();
             URI artifactBaseWorkloadURI = artifactBaseUri.resolve( URIHelper.toURIPart( runMicroWorkloadParams.triggeredBy() ) )
                                                          .resolve( URIHelper.toURIPart( Long.toString( runMicroWorkloadParams.build() ) ) )
@@ -139,7 +141,7 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
                                          runMicroWorkloadParams.neo4jVersion().toString(),
                                          runMicroWorkloadParams.triggeredBy() );
 
-            BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( jobQueue, jobDefinition, batchStack, awsCredentials );
+            BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( jobQueue, jobDefinition, batchStack, awsCredentials, artifactStorage );
 
             benchmarkJobScheduler.scheduleBenchmarkJob( jobName, jobParams, workspace, artifactWorkerUri );
 

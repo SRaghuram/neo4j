@@ -6,17 +6,15 @@
 package com.neo4j.bench.macro.execution;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
-import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.workload.Query;
+import com.neo4j.bench.model.options.Edition;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -24,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 public class OptionsBuilder
 {
-    private Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( Deployment.embedded() );
+    private Neo4jDeployment neo4jDeployment;
     private Query query;
     private List<ParameterizedProfiler> profilers = new ArrayList<>();
     private List<String> jvmArgs = new ArrayList<>();
@@ -35,11 +33,7 @@ public class OptionsBuilder
     private Path storeDir;
     private Path neo4jConfigFile;
     private int forks = 1;
-    private int warmupCount = 1;
-    private int measurementCount = 1;
-    private Duration minMeasurementDuration = Duration.ofSeconds( 0 );
-    private Duration maxMeasurementDuration = Duration.ofMinutes( 10 );
-    private Path jvmFile;
+    private Jvm jvm;
     private TimeUnit unit = TimeUnit.MILLISECONDS;
 
     public Options build()
@@ -54,10 +48,8 @@ public class OptionsBuilder
         Objects.requireNonNull( outputDir );
         Objects.requireNonNull( storeDir );
         // neo4j config is allowed to be null
-        // jvm is allowed to be null
+        Objects.requireNonNull( jvm );
         Objects.requireNonNull( unit );
-        Objects.requireNonNull( minMeasurementDuration );
-        Objects.requireNonNull( maxMeasurementDuration );
 
         return new Options(
                 neo4jDeployment,
@@ -71,11 +63,7 @@ public class OptionsBuilder
                 storeDir,
                 Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build(),
                 forks,
-                warmupCount,
-                measurementCount,
-                minMeasurementDuration,
-                maxMeasurementDuration,
-                Jvm.bestEffort( jvmFile ),
+                jvm,
                 unit );
     }
 
@@ -139,39 +127,15 @@ public class OptionsBuilder
         return this;
     }
 
-    public OptionsBuilder withWarmupCount( int warmupCount )
+    public OptionsBuilder withJvm( Jvm jvm )
     {
-        this.warmupCount = warmupCount;
-        return this;
-    }
-
-    public OptionsBuilder withMeasurementCount( int measurementCount )
-    {
-        this.measurementCount = measurementCount;
-        return this;
-    }
-
-    public OptionsBuilder withJvm( Path jvmFile )
-    {
-        this.jvmFile = jvmFile;
+        this.jvm = jvm;
         return this;
     }
 
     public OptionsBuilder withUnit( TimeUnit unit )
     {
         this.unit = unit;
-        return this;
-    }
-
-    public OptionsBuilder withMinDuration( Duration minMeasurementDuration )
-    {
-        this.minMeasurementDuration = minMeasurementDuration;
-        return this;
-    }
-
-    public OptionsBuilder withMaxDuration( Duration maxMeasurementDuration )
-    {
-        this.maxMeasurementDuration = maxMeasurementDuration;
         return this;
     }
 }

@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.macro.execution.process;
 
-import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.process.JpsPid;
 import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
@@ -28,7 +27,6 @@ import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
 
 import java.lang.ProcessBuilder.Redirect;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -42,8 +40,6 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                      Query query,
                      ForkDirectory forkDirectory,
                      List<ParameterizedProfiler> profilers,
-                     Store originalStore,
-                     Path neo4jConfigFile,
                      Jvm jvm,
                      JvmArgs jvmArgs,
                      Resources resources )
@@ -52,8 +48,6 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                query,
                forkDirectory,
                profilers,
-               originalStore,
-               neo4jConfigFile,
                jvm,
                jvmArgs,
                resources );
@@ -66,7 +60,6 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                ForkDirectory forkDirectory,
                                List<ParameterizedProfiler> profilers,
                                Jvm jvm,
-                               Path neo4jConfigFile,
                                JvmArgs jvmArgs,
                                Parameters clientParameters,
                                Resources resources )
@@ -75,10 +68,8 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
         boolean isClientForked = true;
         List<String> commandArgs = launcher.toolArgs( query,
                                                       connection,
-                                                      forkDirectory,
                                                       ParameterizedProfiler.profilerTypes( profilers ),
                                                       isClientForked,
-                                                      neo4jConfigFile,
                                                       resources );
         // retrieves same external profiler _instances_ that were already used -- because external profilers are allowed to be stateful
         List<ExternalProfiler> externalProfilers = externalProfilers();

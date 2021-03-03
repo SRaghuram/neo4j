@@ -353,8 +353,6 @@ class EndToEndIT extends BaseEndToEndIT
                                                                  dbPath, // store
                                                                  neo4jConfig );
 
-        Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( deployment );
-
         return asList( "./" + SCRIPT_NAME,
                        // workload
                        workloadName,
@@ -404,7 +402,7 @@ class EndToEndIT extends BaseEndToEndIT
                        // error_policy
                        ErrorPolicy.SKIP.name(),
                        // embedded OR server:<path>
-                       neo4jDeployment.toString(),
+                       deployment.toString(),
                        "",
                        //Batch Job id
                        "123",

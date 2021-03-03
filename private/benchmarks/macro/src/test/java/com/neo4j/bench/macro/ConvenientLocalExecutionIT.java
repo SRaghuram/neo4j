@@ -7,6 +7,7 @@ package com.neo4j.bench.macro;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Neo4jStore;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
@@ -23,6 +24,7 @@ import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunMacroWorkloadCommand;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
+import com.neo4j.bench.macro.execution.process.MeasurementOptions;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.Neo4jConfig;
@@ -119,10 +121,9 @@ class ConvenientLocalExecutionIT
         );
 
         RunMacroWorkloadCommand.runReport( workloadParams,
-                                           RESULT_DIR.toFile(),
-                                           STORE_DIR.toFile(),
-
-                                           neo4jConfigFile().toFile(),
+                                           RESULT_DIR,
+                                           STORE_DIR,
+                                           neo4jConfigFile(),
                                            ErrorReporter.ErrorPolicy.SKIP,
                                            null );
     }
@@ -146,16 +147,22 @@ class ConvenientLocalExecutionIT
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( RESULT_DIR, workload.benchmarkGroup() );
             BenchmarkGroupBenchmarkMetricsPrinter printer = new BenchmarkGroupBenchmarkMetricsPrinter( true );
             Jvm jvm = Jvm.bestEffort( JDK_DIR );
-            Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( DEPLOYMENT );
-            ForkRunner.runForksFor( neo4jDeployment.launcherFor( Edition.ENTERPRISE,
-                                                                 WARMUP_COUNT,
-                                                                 MEASUREMENT_COUNT,
-                                                                 Duration.ofSeconds( 30 ),
-                                                                 Duration.ofMinutes( 10 ),
-                                                                 jvm ),
+            Path dataset = STORE_DIR;
+            Store originalStore = Neo4jStore.createFrom( dataset );
+            Edition edition = Edition.ENTERPRISE;
+            MeasurementOptions measurementOptions = new MeasurementOptions( WARMUP_COUNT,
+                                                                            MEASUREMENT_COUNT,
+                                                                            Duration.ofSeconds( 30 ),
+                                                                            Duration.ofMinutes( 10 ) );
+            Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( DEPLOYMENT,
+                                                                    edition,
+                                                                    measurementOptions,
+                                                                    jvm,
+                                                                    dataset );
+            ForkRunner.runForksFor( neo4jDeployment,
                                     groupDir,
                                     query.copyWith( PLANNER ).copyWith( RUNTIME ),
-                                    Neo4jStore.createFrom( STORE_DIR, workload.getDatabaseName() ),
+                                    originalStore,
                                     EDITION,
                                     neo4jConfig(),
                                     PROFILERS,

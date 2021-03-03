@@ -25,7 +25,6 @@ import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSBatchJobScheduler;
-import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.infra.resources.Infrastructure;
 import com.neo4j.bench.infra.resources.InfrastructureMatcher;
 import com.neo4j.bench.model.util.JsonUtil;
@@ -59,31 +58,40 @@ public class BenchmarkJobScheduler
     /**
      * Create job scheduler, created from job queue reference (output in CloudFormation)
      *
-     * @param jobQueueRef    job queue reference from CloudFormation output
-     * @param jobDefinition  job definition
-     * @param batchStack     batch CloudFormation stack name
-     * @param awsCredentials AWS credentials
+     * @param jobQueueRef     job queue reference from CloudFormation output
+     * @param jobDefinition   job definition
+     * @param batchStack      batch CloudFormation stack name
+     * @param awsCredentials  AWS credentials
+     * @param artifactStorage S3 artifact storage
      */
-    public static BenchmarkJobScheduler create( String jobQueueRef, String jobDefinition, String batchStack, AWSCredentials awsCredentials )
+    public static BenchmarkJobScheduler create( String jobQueueRef,
+                                                String jobDefinition,
+                                                String batchStack,
+                                                AWSCredentials awsCredentials,
+                                                ArtifactStorage artifactStorage )
     {
         String jobQueue = resolveJobQueueName( jobQueueRef, awsCredentials.awsCredentialsProvider(), awsCredentials.awsRegion(), batchStack );
-        return new BenchmarkJobScheduler( AWSBatchJobScheduler.getJobScheduler( awsCredentials, new Infrastructure( jobQueue, jobDefinition ), batchStack ),
-                                          AWSS3ArtifactStorage.create( awsCredentials ),
-                                          awsCredentials,
-                                          DEFAULT_JOB_STATUS_CHECK_DELAY );
+        return create( new Infrastructure( jobQueue, jobDefinition ),
+                       batchStack,
+                       awsCredentials,
+                       artifactStorage );
     }
 
     /**
      * Create job scheduler, created from {@link InfrastructureMatcher}
      *
-     * @param infrastructure AWS batch infrastructure
-     * @param batchStack     batch CloudFormation stack name
-     * @param awsCredentials AWS credentials
+     * @param infrastructure  AWS batch infrastructure
+     * @param batchStack      batch CloudFormation stack name
+     * @param awsCredentials  AWS credentials
+     * @param artifactStorage S3 artifact storage
      */
-    public static BenchmarkJobScheduler create( Infrastructure infrastructure, String batchStack, AWSCredentials awsCredentials )
+    public static BenchmarkJobScheduler create( Infrastructure infrastructure,
+                                                String batchStack,
+                                                AWSCredentials awsCredentials,
+                                                ArtifactStorage artifactStorage )
     {
         return new BenchmarkJobScheduler( AWSBatchJobScheduler.getJobScheduler( awsCredentials, infrastructure, batchStack ),
-                                          AWSS3ArtifactStorage.create( awsCredentials ),
+                                          artifactStorage,
                                           awsCredentials,
                                           DEFAULT_JOB_STATUS_CHECK_DELAY );
     }

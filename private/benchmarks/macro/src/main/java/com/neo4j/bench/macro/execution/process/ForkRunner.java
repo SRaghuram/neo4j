@@ -21,6 +21,7 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.Main;
 import com.neo4j.bench.macro.cli.ExportPlanCommand;
+import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.model.model.Benchmark;
@@ -46,7 +47,7 @@ public class ForkRunner
 
     private static final Neo4jConfig NO_NEO4J_CONFIG = Neo4jConfig.empty();
 
-    public static BenchmarkDirectory runForksFor( DatabaseLauncher<?> launcher,
+    public static BenchmarkDirectory runForksFor( Neo4jDeployment neo4jDeployment,
                                                   BenchmarkGroupDirectory groupDir,
                                                   Query query,
                                                   Store store,
@@ -71,10 +72,9 @@ public class ForkRunner
                 ForkDirectory forkDirectory = benchmarkDir.create( forkName );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
                 Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
+                DatabaseLauncher launcher = neo4jDeployment.launcherFor( query.shouldCopyStore(), neo4jConfigFile, forkDirectory );
                 RunnableFork profilerFork = fork( launcher,
                                                   query,
-                                                  store,
-                                                  neo4jConfigFile,
                                                   forkDirectory,
                                                   singletonList( profiler ),
                                                   jvm,
@@ -92,11 +92,10 @@ public class ForkRunner
                 ForkDirectory forkDirectory = benchmarkDir.create( forkName );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
                 Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
+                DatabaseLauncher launcher = neo4jDeployment.launcherFor( query.shouldCopyStore(), neo4jConfigFile, forkDirectory );
 
                 RunnableFork measurementFork = fork( launcher,
                                                      query,
-                                                     store,
-                                                     neo4jConfigFile,
                                                      forkDirectory,
                                                      ParameterizedProfiler.defaultProfilers( ProfilerType.OOM ),
                                                      jvm,
@@ -144,8 +143,6 @@ public class ForkRunner
 
     private static RunnableFork fork( DatabaseLauncher<?> launcher,
                                       Query query,
-                                      Store store,
-                                      Path neo4jConfigFile,
                                       ForkDirectory forkDirectory,
                                       List<ParameterizedProfiler> profilers,
                                       Jvm jvm,
@@ -158,8 +155,6 @@ public class ForkRunner
                                         query,
                                         forkDirectory,
                                         profilers,
-                                        store,
-                                        neo4jConfigFile,
                                         jvm,
                                         jvmArgs,
                                         resources )
@@ -167,8 +162,6 @@ public class ForkRunner
                                            query,
                                            forkDirectory,
                                            profilers,
-                                           store,
-                                           neo4jConfigFile,
                                            jvm,
                                            jvmArgs,
                                            resources );

@@ -19,6 +19,7 @@ import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.infra.AWSCredentials;
+import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkingRun;
 import com.neo4j.bench.infra.BenchmarkingTool;
@@ -28,6 +29,7 @@ import com.neo4j.bench.infra.PasswordManager;
 import com.neo4j.bench.infra.ResultStoreCredentials;
 import com.neo4j.bench.infra.URIHelper;
 import com.neo4j.bench.infra.Workspace;
+import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.infra.macro.MacroToolRunner;
 import com.neo4j.bench.infra.resources.Infrastructure;
 import com.neo4j.bench.infra.resources.InfrastructureCapabilities;
@@ -52,7 +54,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
 import javax.inject.Inject;
 
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
@@ -167,10 +168,9 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
     @Override
     protected final void doRun( RunMacroWorkloadParams runMacroWorkloadParams )
     {
-        try
+        AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
+        try ( ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( awsCredentials ) )
         {
-            AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
-
             Infrastructure infrastructure = matchInfrastructure( awsCredentials );
 
             // first start preparing the workspace
@@ -190,7 +190,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                 workspace = Workspace.defaultMacroEmbeddedWorkspace( workspacePath );
             }
 
-            BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( infrastructure, batchStack, awsCredentials );
+            BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( infrastructure, batchStack, awsCredentials, artifactStorage );
             URI artifactBaseWorkloadURI = artifactBaseUri.resolve( URIHelper.toURIPart( runMacroWorkloadParams.triggeredBy() ) )
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.teamcityBuild().toString() ) )
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.workloadName() ) );

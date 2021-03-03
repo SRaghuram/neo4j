@@ -214,6 +214,12 @@ public class Query
         return isMutating;
     }
 
+    public boolean shouldCopyStore()
+    {
+        boolean isPlanningMode = queryString().executionMode().equals( ExecutionMode.PLAN );
+        return isMutating() && !isPlanningMode;
+    }
+
     public Optional<QueryString> warmupQueryString()
     {
         return warmupQueryString;

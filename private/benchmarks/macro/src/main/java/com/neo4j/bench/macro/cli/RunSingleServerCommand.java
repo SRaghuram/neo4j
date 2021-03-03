@@ -12,7 +12,6 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
-import com.neo4j.bench.common.process.HasPid;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -22,15 +21,15 @@ import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.QueryRunner;
-import com.neo4j.bench.macro.execution.database.ServerDatabase;
+import com.neo4j.bench.macro.execution.database.Neo4jServerDatabase;
 import com.neo4j.bench.macro.execution.process.InternalProfilerAssist;
+import com.neo4j.bench.macro.execution.process.MeasurementOptions;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 
 import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -155,32 +154,33 @@ public class RunSingleServerCommand implements Runnable
     @Override
     public void run()
     {
+        Workload workload;
         try ( Resources resources = new Resources( workDir.toPath() ) )
         {
             DeploymentMode deploymentMode = Deployment.server();
-            Workload workload = Workload.fromName( workloadName, resources, deploymentMode );
-
-            QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
-                                                                  forkDirectory -> ServerDatabase.connectClient( boltUri,
-                                                                                                                 workload.getDatabaseName(),
-                                                                                                                 new Pid( neo4jPid ) ) );
-
-            QueryRunner.runSingleCommand( queryRunner,
-                                          Jvm.bestEffortOrFail( jvmFile ),
-                                          ForkDirectory.openAt( outputDir.toPath() ),
-                                          workload,
-                                          queryName,
-                                          planner,
-                                          runtime,
-                                          executionMode,
-                                          InternalProfilerAssist.forLocalServer( neo4jPid,
-                                                  ProfilerType.deserializeProfilers( clientProfilerNames ),
-                                                  ProfilerType.deserializeProfilers( serverProfilerNames ) ),
-                                          warmupCount,
-                                          minMeasurementSeconds,
-                                          maxMeasurementSeconds,
-                                          measurementCount );
+            workload = Workload.fromName( workloadName, resources, deploymentMode );
         }
+
+        QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
+                                                              forkDirectory -> Neo4jServerDatabase.connectClient( boltUri,
+                                                                                                                  workload.getDatabaseName(),
+                                                                                                                  new Pid( neo4jPid ) ) );
+
+        QueryRunner.runSingleCommand( queryRunner,
+                                      Jvm.bestEffortOrFail( jvmFile ),
+                                      ForkDirectory.openAt( outputDir.toPath() ),
+                                      workload,
+                                      queryName,
+                                      planner,
+                                      runtime,
+                                      executionMode,
+                                      InternalProfilerAssist.forLocalServer( neo4jPid,
+                                                                             ProfilerType.deserializeProfilers( clientProfilerNames ),
+                                                                             ProfilerType.deserializeProfilers( serverProfilerNames ) ),
+                                      warmupCount,
+                                      minMeasurementSeconds,
+                                      maxMeasurementSeconds,
+                                      measurementCount );
     }
 
     public static List<String> argsFor(
@@ -190,10 +190,7 @@ public class RunSingleServerCommand implements Runnable
             ForkDirectory forkDirectory,
             List<ProfilerType> clientProfilers,
             List<ProfilerType> serverProfilers,
-            int warmupCount,
-            int measurementCount,
-            Duration minMeasurementDuration,
-            Duration maxMeasurementDuration,
+            MeasurementOptions measurementOptions,
             Jvm jvm,
             Path workDir )
     {
@@ -216,13 +213,13 @@ public class RunSingleServerCommand implements Runnable
                 CMD_OUTPUT,
                 forkDirectory.toAbsolutePath(),
                 CMD_WARMUP_COUNT,
-                Integer.toString( warmupCount ),
+                Integer.toString( measurementOptions.warmupCount() ),
                 CMD_MEASUREMENT_COUNT,
-                Integer.toString( measurementCount ),
+                Integer.toString( measurementOptions.measurementCount() ),
                 CMD_MIN_MEASUREMENT_SECONDS,
-                Long.toString( minMeasurementDuration.getSeconds() ),
+                Long.toString( measurementOptions.minMeasurementDuration().getSeconds() ),
                 CMD_MAX_MEASUREMENT_SECONDS,
-                Long.toString( maxMeasurementDuration.getSeconds() ),
+                Long.toString( measurementOptions.maxMeasurementDuration().getSeconds() ),
                 CMD_JVM_PATH,
                 jvm.launchJava(),
                 CMD_WORK_DIR,

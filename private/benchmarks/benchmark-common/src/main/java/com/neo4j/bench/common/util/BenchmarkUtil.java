@@ -270,6 +270,38 @@ public class BenchmarkUtil
         }
     }
 
+    public static void assertDirectoryIsEmpty( Path dir )
+    {
+        assertDirectoryExists( dir );
+        try
+        {
+            if ( Files.list( dir ).count() != 0 )
+            {
+                throw new RuntimeException( "Directory is not empty: " + dir.toAbsolutePath() );
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( "Cannot open directory: " + dir.toAbsolutePath(), e );
+        }
+    }
+
+    public static void assertDirectoryIsNotEmpty( Path dir )
+    {
+        assertDirectoryExists( dir );
+        try
+        {
+            if ( Files.list( dir ).count() == 0 )
+            {
+                throw new RuntimeException( "Directory is not empty: " + dir.toAbsolutePath() );
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( "Cannot open directory: " + dir.toAbsolutePath(), e );
+        }
+    }
+
     public static String durationToString( Duration duration )
     {
         long durationAsNano = duration.toNanos();

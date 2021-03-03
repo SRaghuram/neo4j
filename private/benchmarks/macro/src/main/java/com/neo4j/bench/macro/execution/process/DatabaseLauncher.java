@@ -13,6 +13,8 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunSingleEmbeddedCommand;
 import com.neo4j.bench.macro.cli.RunSingleServerCommand;
+import com.neo4j.bench.macro.execution.database.DelegatingServerDatabase;
+import com.neo4j.bench.macro.execution.database.Neo4jServerDatabase;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.model.options.Edition;
@@ -20,13 +22,10 @@ import com.neo4j.bench.model.process.JvmArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 import static java.lang.ProcessBuilder.Redirect;
 
@@ -68,23 +67,26 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
         }
     }
 
-    final int warmupCount;
-    final int measurementCount;
-    final Duration minMeasurementDuration;
-    final Duration maxMeasurementDuration;
-    final Jvm jvm;
+    protected final MeasurementOptions measurementOptions;
+    protected final Jvm jvm;
+    private final Store originalStore;
+    private final boolean copyStore;
+    protected final Path neo4jConfigFile;
+    protected final ForkDirectory forkDirectory;
 
-    private DatabaseLauncher( int warmupCount,
-                              int measurementCount,
-                              Duration minMeasurementDuration,
-                              Duration maxMeasurementDuration,
-                              Jvm jvm )
+    private DatabaseLauncher( MeasurementOptions measurementOptions,
+                              Jvm jvm,
+                              Store originalStore,
+                              boolean copyStore,
+                              Path neo4jConfigFile,
+                              ForkDirectory forkDirectory )
     {
-        this.warmupCount = warmupCount;
-        this.measurementCount = measurementCount;
-        this.minMeasurementDuration = minMeasurementDuration;
-        this.maxMeasurementDuration = maxMeasurementDuration;
+        this.measurementOptions = measurementOptions;
         this.jvm = jvm;
+        this.originalStore = originalStore;
+        this.copyStore = copyStore;
+        this.neo4jConfigFile = neo4jConfigFile;
+        this.forkDirectory = forkDirectory;
     }
 
     /**
@@ -93,16 +95,11 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
     public abstract boolean isDatabaseInDifferentProcess();
 
     /**
-     * Performs any database initialization that needs to be done before launching benchmark execution fork.
-     * E.g., starting a Neo4j server.
+     * Performs any database initialization that needs to be done before launching benchmark execution fork. E.g., starting a Neo4j server.
      *
      * @return initialized database connection
      */
-    public abstract CONNECTION initDatabaseServer( Jvm jvm,
-                                                   Store store,
-                                                   Path neo4jConfigFile,
-                                                   ForkDirectory forkDirectory,
-                                                   List<String> additionalJvmArgs ) throws IOException, TimeoutException;
+    public abstract CONNECTION initDatabaseServer( List<String> additionalJvmArgs );
 
     /**
      * Benchmark tool command, to launch benchmark execution fork.
@@ -111,10 +108,8 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
      */
     public abstract List<String> toolArgs( Query query,
                                            CONNECTION connection,
-                                           ForkDirectory forkDirectory,
                                            List<ProfilerType> profilerTypes,
                                            boolean isClientForked,
-                                           Path neo4jConfigFile,
                                            Resources resources );
 
     /**
@@ -124,18 +119,24 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
      */
     public abstract JvmArgs toolJvmArgs( JvmArgs clientJvmArgs );
 
+    protected Store storeCopy()
+    {
+        return copyStore ? originalStore.makeTemporaryCopy() : originalStore;
+    }
+
     public static class EmbeddedLauncher extends DatabaseLauncher<EmbeddedLauncher.Connection>
     {
         private final Edition edition;
 
         public EmbeddedLauncher( Edition edition,
-                                 int warmupCount,
-                                 int measurementCount,
-                                 Duration minMeasurementDuration,
-                                 Duration maxMeasurementDuration,
-                                 Jvm jvm )
+                                 MeasurementOptions measurementOptions,
+                                 Jvm jvm,
+                                 Store originalStore,
+                                 boolean copyStore,
+                                 Path neo4jConfigFile,
+                                 ForkDirectory forkDirectory )
         {
-            super( warmupCount, measurementCount, minMeasurementDuration, maxMeasurementDuration, jvm );
+            super( measurementOptions, jvm, originalStore, copyStore, neo4jConfigFile, forkDirectory );
             this.edition = edition;
         }
 
@@ -146,22 +147,16 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
         }
 
         @Override
-        public Connection initDatabaseServer( Jvm jvm,
-                                              Store store,
-                                              Path neo4jConfigFile,
-                                              ForkDirectory forkDirectory,
-                                              List<String> additionalJvmArgs )
+        public Connection initDatabaseServer( List<String> additionalJvmArgs )
         {
-            return new Connection( store );
+            return new Connection( storeCopy() );
         }
 
         @Override
         public List<String> toolArgs( Query query,
                                       Connection connection,
-                                      ForkDirectory forkDirectory,
                                       List<ProfilerType> profilerTypes,
                                       boolean isClientForked,
-                                      Path neo4jConfigFile,
                                       Resources resources )
         {
             return RunSingleEmbeddedCommand.argsFor( query,
@@ -170,10 +165,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                                                      neo4jConfigFile,
                                                      forkDirectory,
                                                      internalProfilers( profilerTypes, isClientForked ),
-                                                     warmupCount,
-                                                     measurementCount,
-                                                     minMeasurementDuration,
-                                                     maxMeasurementDuration,
+                                                     measurementOptions,
                                                      jvm,
                                                      resources.workDir() );
         }
@@ -196,7 +188,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
             @Override
             public void close()
             {
-                // do nothing
+                store.close();
             }
         }
     }
@@ -206,13 +198,14 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
         private final Path neo4jDir;
 
         public ServerLauncher( Path neo4jDir,
-                               int warmupCount,
-                               int measurementCount,
-                               Duration minMeasurementDuration,
-                               Duration maxMeasurementDuration,
-                               Jvm jvm )
+                               MeasurementOptions measurementOptions,
+                               Jvm jvm,
+                               Store originalStore,
+                               boolean copyStore,
+                               Path neo4jConfigFile,
+                               ForkDirectory forkDirectory )
         {
-            super( warmupCount, measurementCount, minMeasurementDuration, maxMeasurementDuration, jvm );
+            super( measurementOptions, jvm, originalStore, copyStore, neo4jConfigFile, forkDirectory );
             this.neo4jDir = neo4jDir;
         }
 
@@ -223,11 +216,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
         }
 
         @Override
-        public ServerDatabase initDatabaseServer( Jvm jvm,
-                                                  Store store,
-                                                  Path neo4jConfigFile,
-                                                  ForkDirectory forkDirectory,
-                                                  List<String> additionalJvmArgs )
+        public ServerDatabase initDatabaseServer( List<String> additionalJvmArgs )
         {
             Redirect outputRedirect = Redirect.to( forkDirectory.pathFor( "neo4j-out.log" ).toFile() );
             Redirect errorRedirect = Redirect.to( forkDirectory.pathFor( "neo4j-error.log" ).toFile() );
@@ -235,16 +224,22 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                               .addJvmArgs( additionalJvmArgs )
                               .writeToFile( neo4jConfigFile );
             Path copyLogsToOnClose = Paths.get( forkDirectory.toAbsolutePath() );
-            return ServerDatabase.startServer( jvm, neo4jDir, store, neo4jConfigFile, outputRedirect, errorRedirect, copyLogsToOnClose );
+            Store store = storeCopy();
+            ServerDatabase serverDatabase = Neo4jServerDatabase.startServer( jvm,
+                                                                             neo4jDir,
+                                                                             store,
+                                                                             neo4jConfigFile,
+                                                                             outputRedirect,
+                                                                             errorRedirect,
+                                                                             copyLogsToOnClose );
+            return new DelegatingServerDatabase( serverDatabase, store::close );
         }
 
         @Override
         public List<String> toolArgs( Query query,
                                       ServerDatabase db,
-                                      ForkDirectory forkDirectory,
                                       List<ProfilerType> profilerTypes,
                                       boolean isClientForked,
-                                      Path neo4jConfigFile,
                                       Resources resources )
         {
             return RunSingleServerCommand.argsFor( query,
@@ -253,10 +248,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                                                    forkDirectory,
                                                    internalProfilers( profilerTypes, isClientForked ), // client profilers
                                                    profilerTypes, // server profilers
-                                                   warmupCount,
-                                                   measurementCount,
-                                                   minMeasurementDuration,
-                                                   maxMeasurementDuration,
+                                                   measurementOptions,
                                                    jvm,
                                                    resources.workDir() );
         }

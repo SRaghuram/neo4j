@@ -15,6 +15,7 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.StoreTestUtil;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
+import com.neo4j.bench.macro.execution.database.Neo4jServerDatabase;
 import com.neo4j.bench.macro.execution.database.PlannerDescription;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.workload.Query;
@@ -42,7 +43,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
@@ -183,7 +183,7 @@ class PlannerDescriptionIT
     }
 
     @Test
-    public void shouldExtractPlansViaDriver() throws IOException, TimeoutException
+    public void shouldExtractPlansViaDriver() throws IOException
     {
         Jvm jvm = getJvm();
 
@@ -203,13 +203,13 @@ class PlannerDescriptionIT
                 Path neo4jConfigFile = writeServerNeo4jConfig( workload.name() );
                 Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), randId ) );
                 try ( Store store = StoreTestUtil.createEmptyStoreFor( workload, storePath, neo4jConfigFile );
-                      ServerDatabase database = ServerDatabase.startServer( jvm,
-                                                                            neo4jDir,
-                                                                            store,
-                                                                            neo4jConfigFile,
-                                                                            outputRedirect,
-                                                                            errorRedirect,
-                                                                            logsDir ) )
+                      ServerDatabase database = Neo4jServerDatabase.startServer( jvm,
+                                                                                 neo4jDir,
+                                                                                 store,
+                                                                                 neo4jConfigFile,
+                                                                                 outputRedirect,
+                                                                                 errorRedirect,
+                                                                                 logsDir ) )
                 {
                     for ( Query query : workload.queries() )
                     {
@@ -260,13 +260,13 @@ class PlannerDescriptionIT
         Path logsDir = Files.createDirectories( temporaryFolder.directory( format( "logs-%s", randId ) ) );
 
         try ( Store store = TestSupport.createTemporaryEmptyStore( temporaryFolder.directory( format( "store-%s", randId ) ), neo4jConfigFile );
-              ServerDatabase database = ServerDatabase.startServer( jvm,
-                                                                    neo4jDir,
-                                                                    store,
-                                                                    neo4jConfigFile,
-                                                                    outputRedirect,
-                                                                    errorRedirect,
-                                                                    logsDir );
+              ServerDatabase database = Neo4jServerDatabase.startServer( jvm,
+                                                                         neo4jDir,
+                                                                         store,
+                                                                         neo4jConfigFile,
+                                                                         outputRedirect,
+                                                                         errorRedirect,
+                                                                         logsDir );
               Transaction tx = database.session().beginTransaction() )
         {
             org.neo4j.driver.Result result = tx.run( QUERY );

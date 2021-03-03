@@ -69,6 +69,7 @@ public class AWSS3ArtifactStorageTest
     public void tearDown()
     {
         api.shutdown();
+        amazonS3.shutdown();
     }
 
     @Test
@@ -85,71 +86,69 @@ public class AWSS3ArtifactStorageTest
                                        .withArtifact( Workspace.BENCHMARKING_JAR, "artifact1/artifact1.jar" )
                                        .build();
 
-        AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration );
-        //when
         URI artifactURI = URI.create( "s3://benchmarking.neo4j.com/artifacts/buildID" );
-        artifactStorage.uploadBuildArtifacts( artifactURI, workspace );
-        // then
-        assertEquals(
-                URI.create( "s3://benchmarking.neo4j.com/artifacts/buildID" ),
-                artifactURI );
-
-        assertTrue( Files.isRegularFile(
-                s3Dir.resolve( "benchmarking.neo4j.com/artifacts/buildID" ).resolve( "artifact0.jar" ) ) );
-        assertTrue( Files.isRegularFile(
-                s3Dir.resolve( "benchmarking.neo4j.com/artifacts/buildID" ).resolve( "artifact1/artifact1.jar" ) ) );
-
-        // when
         Path downloadDir = Files.createTempDirectory( tempDir, "download" );
-        Workspace artifactsWorkspace =
-                artifactStorage.downloadBuildArtifacts( downloadDir, artifactURI, workspace );
+        Workspace artifactsWorkspace;
+        try ( ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration ) )
+        {
+            //when
+            artifactStorage.uploadBuildArtifacts( artifactURI, workspace );
+            // then
+            assertEquals( URI.create( "s3://benchmarking.neo4j.com/artifacts/buildID" ), artifactURI );
+
+            assertTrue( Files.isRegularFile( s3Dir.resolve( "benchmarking.neo4j.com/artifacts/buildID" ).resolve( "artifact0.jar" ) ) );
+            assertTrue( Files.isRegularFile( s3Dir.resolve( "benchmarking.neo4j.com/artifacts/buildID" ).resolve( "artifact1/artifact1.jar" ) ) );
+
+            // when
+            artifactsWorkspace = artifactStorage.downloadBuildArtifacts( downloadDir, artifactURI, workspace );
+        }
         // then
         assertTrue( isValid( workspace, downloadDir ) );
         assertEquals( artifactsWorkspace.baseDir(), downloadDir );
         Path resolve = downloadDir.resolve( "artifact0.jar" );
         Path resolve1 = downloadDir.resolve( "artifact1/artifact1.jar" );
-        assertThat( artifactsWorkspace.allArtifacts(),
-                    containsInAnyOrder( resolve,
-                                        resolve1 ) );
+        assertThat( artifactsWorkspace.allArtifacts(), containsInAnyOrder( resolve, resolve1 ) );
     }
 
     @Test
     public void downloadDataset( @TempDir Path tempDir ) throws Exception
     {
         // given
-        Path tempArchiveFile = createDatasetArchive(tempDir);
+        Path tempArchiveFile = createDatasetArchive( tempDir );
         amazonS3.putObject( "benchmarking.neo4j.com", "datasets/macro/3.3.0-enterprise-datasets/dataset.tgz", tempArchiveFile.toFile() );
-        ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration );
-
-        // when
         String neo4jVersion = "3.3.0";
         String datasetName = "dataset";
-        Dataset dataset = artifactStorage.downloadDataset( URI.create( "s3://benchmarking.neo4j.com/datasets/macro" ), neo4jVersion, datasetName );
-        Path tempFile = Files.createTempFile( tempDir, "dataset", ".tar.gz" );
-        dataset.copyInto( Files.newOutputStream( tempFile ) );
+        try ( ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration ) )
+        {
+            // when
+            Dataset dataset = artifactStorage.downloadDataset( URI.create( "s3://benchmarking.neo4j.com/datasets/macro" ), neo4jVersion, datasetName );
+            Path tempFile = Files.createTempFile( tempDir, "dataset", ".tar.gz" );
+            dataset.copyInto( Files.newOutputStream( tempFile ) );
 
-        // then
-        assertEquals( CompressorStreamFactory.GZIP,
-                      CompressorStreamFactory.detect( new BufferedInputStream( Files.newInputStream( tempFile ) ) ) );
+            // then
+            assertEquals( CompressorStreamFactory.GZIP,
+                          CompressorStreamFactory.detect( new BufferedInputStream( Files.newInputStream( tempFile ) ) ) );
+        }
     }
 
     @Test
     public void extractDataset( @TempDir Path tempDir ) throws Exception
     {
         // given
-        Path tempArchiveFile = createDatasetArchive(tempDir);
+        Path tempArchiveFile = createDatasetArchive( tempDir );
         amazonS3.putObject( "benchmarking.neo4j.com", "datasets/macro/3.3.0-enterprise-datasets/dataset.tgz", tempArchiveFile.toFile() );
-        ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration );
-
-        // when
         String neo4jVersion = "3.3.0";
         String datasetName = "dataset";
-        Dataset dataset = artifactStorage.downloadDataset( URI.create( "s3://benchmarking.neo4j.com/datasets/macro" ), neo4jVersion, datasetName );
-        Path dir = Files.createTempDirectory( tempDir, "dataset" );
-        dataset.extractInto( dir );
+        try ( ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration ) )
+        {
+            // when
+            Dataset dataset = artifactStorage.downloadDataset( URI.create( "s3://benchmarking.neo4j.com/datasets/macro" ), neo4jVersion, datasetName );
+            Path dir = Files.createTempDirectory( tempDir, "dataset" );
+            dataset.extractInto( dir );
 
-        // then
-        assertTrue( Files.isRegularFile( dir.resolve( "data.txt" ) ) );
+            // then
+            assertTrue( Files.isRegularFile( dir.resolve( "data.txt" ) ) );
+        }
     }
 
     // lots of ceremony, but I want to be sure we are downloading the right thing

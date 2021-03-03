@@ -5,14 +5,12 @@
  */
 package com.neo4j.bench.macro.execution.process;
 
-import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.OOMProfiler;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
-import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
@@ -21,7 +19,6 @@ import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
 
-import java.nio.file.Path;
 import java.util.List;
 
 import static com.neo4j.bench.common.profiling.ParameterizedProfiler.defaultProfiler;
@@ -35,8 +32,6 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
     private final ForkDirectory forkDirectory;
     private final List<ParameterizedProfiler> profilers;
     private final List<ExternalProfiler> externalProfilers;
-    private final Store originalStore;
-    private final Path neo4jConfigFile;
     private final Jvm jvm;
     private final JvmArgs jvmArgs;
     private final LAUNCHER launcher;
@@ -46,8 +41,6 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                   Query query,
                   ForkDirectory forkDirectory,
                   List<ParameterizedProfiler> profilers,
-                  Store originalStore,
-                  Path neo4jConfigFile,
                   Jvm jvm,
                   JvmArgs jvmArgs,
                   Resources resources )
@@ -56,8 +49,6 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
         this.forkDirectory = forkDirectory;
         this.profilers = profilers;
         this.externalProfilers = ProfilerType.createExternalProfilers( profilers.stream().map( ParameterizedProfiler::profilerType ).collect( toList() ) );
-        this.originalStore = originalStore;
-        this.neo4jConfigFile = neo4jConfigFile;
         this.jvm = jvm;
         this.jvmArgs = JvmArgs.standardArgs()
                               .merge( jvmArgs )
@@ -82,10 +73,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
 
     public final Results run()
     {
-        boolean isPlanningMode = query.queryString().executionMode().equals( ExecutionMode.PLAN );
-        try ( Store store = (query.isMutating() && !isPlanningMode)
-                            ? originalStore.makeTemporaryCopy()
-                            : originalStore )
+        try
         {
             // only provide additional parameters if multiple processes are involved in the benchmark
             Parameters serverParameters = Parameters.SERVER;
@@ -128,7 +116,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                                                                                        serverParameters ) ) );
             }
 
-            try ( CONNECTION connection = launcher.initDatabaseServer( jvm, store, neo4jConfigFile, forkDirectory, serverJvmArgs ) )
+            try ( CONNECTION connection = launcher.initDatabaseServer( serverJvmArgs ) )
             {
                 return runFork( launcher,
                                 connection,
@@ -136,7 +124,6 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                                 forkDirectory,
                                 ParameterizedProfiler.internalProfilers( profilers ),
                                 jvm,
-                                neo4jConfigFile,
                                 jvmArgs,
                                 clientParameters,
                                 resources );
@@ -172,7 +159,6 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                                         ForkDirectory forkDirectory,
                                         List<ParameterizedProfiler> profilers,
                                         Jvm jvm,
-                                        Path neo4jConfigFile,
                                         JvmArgs jvmArgs,
                                         Parameters clientParameters,
                                         Resources resources );

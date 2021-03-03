@@ -19,12 +19,13 @@ import com.neo4j.bench.macro.cli.RunSingleEmbeddedCommand;
 import com.neo4j.bench.macro.cli.RunSingleServerCommand;
 import com.neo4j.bench.macro.cli.ScheduleMacroCommand;
 import com.neo4j.bench.macro.cli.UpgradeStoreCommand;
+import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.execution.process.ForkFailureException;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
+import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.process.JvmArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,32 +68,28 @@ public class Main
         try ( Resources resources = new Resources( workDir ) )
         {
             BenchmarkGroupBenchmarkMetricsPrinter verboseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( true );
-            BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.createAt( options.outputDir(), options.query().benchmarkGroup() );
+            Query query = options.query();
+            BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.createAt( options.outputDir(), query.benchmarkGroup() );
 
-            BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor(
-                    options.neo4jDeployment().launcherFor( Edition.ENTERPRISE,
-                                                           options.warmupCount(),
-                                                           options.measurementCount(),
-                                                           options.minDuration(),
-                                                           options.maxDuration(),
-                                                           options.jvm() ),
-                    benchmarkGroupDir,
-                    options.query(),
-                    Neo4jStore.createFrom( options.storeDir() ),
-                    options.edition(),
-                    options.neo4jConfig(),
-                    options.profilers(),
-                    options.jvm(),
-                    options.forks(),
-                    options.unit(),
-                    verboseMetricsPrinter,
-                    JvmArgs.from( options.jvmArgs() ),
-                    resources );
+            Neo4jDeployment neo4jDeployment = options.neo4jDeployment();
+            BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor( neo4jDeployment,
+                                                                      benchmarkGroupDir,
+                                                                      query,
+                                                                      Neo4jStore.createFrom( options.storeDir() ),
+                                                                      options.edition(),
+                                                                      options.neo4jConfig(),
+                                                                      options.profilers(),
+                                                                      options.jvm(),
+                                                                      options.forks(),
+                                                                      options.unit(),
+                                                                      verboseMetricsPrinter,
+                                                                      JvmArgs.from( options.jvmArgs() ),
+                                                                      resources );
 
             BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();
             Results results = Results.loadFrom( benchmarkDir );
-            queryResults.add( options.query().benchmarkGroup(),
-                              options.query().benchmark(),
+            queryResults.add( query.benchmarkGroup(),
+                              query.benchmark(),
                               results.metrics(),
                               results.rowMetrics(),
                               options.neo4jConfig() );

@@ -49,7 +49,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
 
     private static final Logger LOG = LoggerFactory.getLogger( AWSS3ArtifactStorage.class );
 
-    public static AWSS3ArtifactStorage create( AWSCredentials awsCredentials )
+    public static ArtifactStorage create( AWSCredentials awsCredentials )
     {
         if ( awsCredentials.hasAwsCredentials() )
         {
@@ -63,26 +63,16 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         }
     }
 
-    public static AWSS3ArtifactStorage create( EndpointConfiguration endpointConfiguration )
+    public static ArtifactStorage create( EndpointConfiguration endpointConfiguration )
     {
         AWSCredentialsProvider credentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
         return new AWSS3ArtifactStorage( s3ClientBuilder( credentialsProvider ).withEndpointConfiguration( endpointConfiguration ).build() );
     }
 
-    public static AWSS3ArtifactStorage create( String awsRegion )
+    public static ArtifactStorage create( String awsRegion )
     {
         AWSCredentialsProvider credentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
         return new AWSS3ArtifactStorage( s3ClientBuilder( credentialsProvider ).withRegion( awsRegion ).build() );
-    }
-
-    public static AWSS3ArtifactStorage getAWSS3ArtifactStorage( InfraParams infraParams )
-    {
-        return create( infraParams.awsCredentials() );
-    }
-
-    private static boolean hasAwsCredentials( String awsKey, String awsSecret )
-    {
-        return awsSecret != null && awsKey != null;
     }
 
     private static AmazonS3ClientBuilder s3ClientBuilder( AWSCredentialsProvider credentialsProvider )
@@ -159,7 +149,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     }
 
     @Override
-    public Path downloadParameterFile( String jobParameters, Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException
+    public Path downloadSingleFile( String jobParameters, Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException
     {
         return downloadFile( baseDir, artifactBaseURI, jobParameters );
     }
@@ -203,5 +193,11 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     {
         String path = StringUtils.removeEnd( dataSetBaseUri.getPath(), "/" );
         return StringUtils.removeStart( format( "%s/%s-enterprise-datasets/%s.tgz", path, neo4jVersion, dataset ), "/" );
+    }
+
+    @Override
+    public void close()
+    {
+        amazonS3.shutdown();
     }
 }

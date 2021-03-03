@@ -12,8 +12,8 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.command.ResultsStoreArgs;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
@@ -27,9 +27,11 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
+import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.execution.process.ForkFailureException;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
+import com.neo4j.bench.macro.execution.process.MeasurementOptions;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.BenchmarkConfig;
@@ -45,6 +47,7 @@ import com.neo4j.bench.model.model.Plan;
 import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,10 +61,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-
-import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import javax.inject.Inject;
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 
 import static com.google.common.collect.Sets.newHashSet;
@@ -141,10 +143,9 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
     protected void doRun( RunMacroWorkloadParams params )
     {
         TestRunReport testRunReport = runReport( params,
-                                                 workDir,
-                                                 storeDir,
-
-                                                 neo4jConfigFile,
+                                                 workDir.toPath(),
+                                                 storeDir.toPath(),
+                                                 neo4jConfigFile.toPath(),
                                                  errorPolicy,
                                                  testRunId );
         ResultsReporter resultsReporter = new ResultsReporter( resultsStoreArgs.resultsStoreUsername(),
@@ -155,9 +156,9 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
     }
 
     public static TestRunReport runReport( RunMacroWorkloadParams params,
-                                           File workDir,
-                                           File storeDir,
-                                           File neo4jConfigFile,
+                                           Path workDir,
+                                           Path storeDir,
+                                           Path neo4jConfigFile,
                                            ErrorReporter.ErrorPolicy errorPolicy,
                                            String testRunId )
     {
@@ -167,46 +168,30 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             profiler.profilerType().assertEnvironmentVariablesPresent( errorOnMissingFlameGraphDependencies );
         }
 
-        Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( params.deployment() );
-        params.deployment().assertExists();
+        Store originalStore = Neo4jStore.createFrom( storeDir.toAbsolutePath() );
+        MeasurementOptions measurementOptions = new MeasurementOptions( params.warmupCount(),
+                                                                        params.measurementCount(),
+                                                                        params.minMeasurementDuration(),
+                                                                        params.maxMeasurementDuration() );
         Jvm jvm = Jvm.bestEffortOrFail( params.jvm() );
+        Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( params.deployment(),
+                                                                params.neo4jEdition(),
+                                                                measurementOptions,
+                                                                jvm,
+                                                                storeDir.toAbsolutePath() );
+        params.deployment().assertExists();
 
-        try ( Resources resources = new Resources( workDir.toPath() ) )
+        try ( Resources resources = new Resources( workDir ) )
         {
             Workload workload = Workload.fromName( params.workloadName(), resources, neo4jDeployment.deployment() );
-            BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( workDir.toPath(), workload.benchmarkGroup() );
+            BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( workDir, workload.benchmarkGroup() );
 
             LOG.debug( params.toString() );
 
             assertQueryNames( params, workload );
 
-            BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
-            Neo4jConfigBuilder neo4jConfigBuilder = Neo4jConfigBuilder.withDefaults()
-                                                                      .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile.toPath() ).build() )
-                                                                      .withSetting( GraphDatabaseSettings.cypher_hints_error, TRUE )
-                                                                      .removeSetting( load_csv_file_url_root );
-            if ( params.executionMode().equals( ExecutionMode.PLAN ) )
-            {
-                neo4jConfigBuilder = neo4jConfigBuilder
-                        .withSetting( GraphDatabaseSettings.query_cache_size, "0" )
-                        .withSetting( GraphDatabaseInternalSettings.data_collector_max_recent_query_count, "0" );
-            }
-            Neo4jConfig neo4jConfig = neo4jConfigBuilder.build();
-
-            LOG.debug( "Running with Neo4j configuration:\n" + neo4jConfig.toString() );
-
-            LOG.debug( "Verifying store..." );
-            try ( Store store = Neo4jStore.createFrom( storeDir.toPath(), workload.getDatabaseName() ) )
-            {
-                EmbeddedDatabase.verifySchema( store, params.neo4jEdition(), neo4jConfig, workload.expectedSchema() );
-                if ( params.isRecreateSchema() )
-                {
-                    LOG.debug( "Preparing to recreate schema..." );
-                    EmbeddedDatabase.recreateSchema( store, params.neo4jEdition(), neo4jConfig, workload.expectedSchema() );
-                }
-                LOG.debug( "Store verified" );
-                EmbeddedDatabase.verifyStoreFormat( store );
-            }
+            Neo4jConfig neo4jConfig = prepareConfig( params.executionMode(), neo4jConfigFile );
+            verifySchema( storeDir, params.neo4jEdition(), neo4jConfigFile, workload.expectedSchema(), params.isRecreateSchema() );
 
             ErrorReporter errorReporter = new ErrorReporter( errorPolicy );
             BenchmarkGroupBenchmarkMetrics allResults = new BenchmarkGroupBenchmarkMetrics();
@@ -225,15 +210,10 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             {
                 try
                 {
-                    BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor( neo4jDeployment.launcherFor( params.neo4jEdition(),
-                                                                                                           params.warmupCount(),
-                                                                                                           params.measurementCount(),
-                                                                                                           params.minMeasurementDuration(),
-                                                                                                           params.maxMeasurementDuration(),
-                                                                                                           jvm ),
+                    BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor( neo4jDeployment,
                                                                               groupDir,
                                                                               query,
-                                                                              Neo4jStore.createFrom( storeDir.toPath().toAbsolutePath() ),
+                                                                              originalStore,
                                                                               params.neo4jEdition(),
                                                                               neo4jConfig,
                                                                               params.profilers(),
@@ -346,6 +326,42 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
         if ( !matchedQueries.isEmpty() )
         {
             throw new IllegalArgumentException( format( "%s queries not found in workload %s", matchedQueries, workload.name() ) );
+        }
+    }
+
+    public static Neo4jConfig prepareConfig( ExecutionMode executionMode, Path neo4jConfigFile )
+    {
+        BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile );
+        Neo4jConfigBuilder neo4jConfigBuilder = Neo4jConfigBuilder.withDefaults()
+                                                                  .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
+                                                                  .withSetting( GraphDatabaseSettings.cypher_hints_error, TRUE )
+                                                                  .removeSetting( load_csv_file_url_root );
+        if ( executionMode.equals( ExecutionMode.PLAN ) )
+        {
+            neo4jConfigBuilder = neo4jConfigBuilder
+                    .withSetting( GraphDatabaseSettings.query_cache_size, "0" )
+                    .withSetting( GraphDatabaseInternalSettings.data_collector_max_recent_query_count, "0" );
+        }
+        Neo4jConfig neo4jConfig = neo4jConfigBuilder.build();
+
+        LOG.debug( "Running with Neo4j configuration:\n" + neo4jConfig.toString() );
+
+        return neo4jConfig;
+    }
+
+    public static void verifySchema( Path dataset, Edition edition, Path neo4jConfigFile, Schema expectedSchema, boolean recreateSchema )
+    {
+        LOG.debug( "Verifying store..." );
+        try ( Store store = Neo4jStore.createFrom( dataset ) )
+        {
+            EmbeddedDatabase.verifySchema( store, edition, neo4jConfigFile, expectedSchema );
+            if ( recreateSchema )
+            {
+                LOG.debug( "Preparing to recreate schema..." );
+                EmbeddedDatabase.recreateSchema( store, edition, neo4jConfigFile, expectedSchema );
+            }
+            LOG.debug( "Store verified" );
+            EmbeddedDatabase.verifyStoreFormat( store );
         }
     }
 }

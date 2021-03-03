@@ -31,10 +31,6 @@ public class Options
     private final Path storeDir;
     private final Neo4jConfig neo4jConfig;
     private final int forks;
-    private final int warmupCount;
-    private final int measurementCount;
-    private final Duration minMeasurementDuration;
-    private final Duration maxMeasurementDuration;
     private final Jvm jvm;
     private final TimeUnit unit;
 
@@ -49,10 +45,6 @@ public class Options
              Path storeDir,
              Neo4jConfig neo4jConfig,
              int forks,
-             int warmupCount,
-             int measurementCount,
-             Duration minMeasurementDuration,
-             Duration maxMeasurementDuration,
              Jvm jvm,
              TimeUnit unit )
     {
@@ -67,10 +59,6 @@ public class Options
         this.storeDir = storeDir;
         this.neo4jConfig = neo4jConfig;
         this.forks = forks;
-        this.warmupCount = warmupCount;
-        this.measurementCount = measurementCount;
-        this.minMeasurementDuration = minMeasurementDuration;
-        this.maxMeasurementDuration = maxMeasurementDuration;
         this.jvm = jvm;
         this.unit = unit;
     }
@@ -128,26 +116,6 @@ public class Options
     public int forks()
     {
         return forks;
-    }
-
-    public int warmupCount()
-    {
-        return warmupCount;
-    }
-
-    public int measurementCount()
-    {
-        return measurementCount;
-    }
-
-    public Duration minDuration()
-    {
-        return minMeasurementDuration;
-    }
-
-    public Duration maxDuration()
-    {
-        return maxMeasurementDuration;
     }
 
     public Jvm jvm()
