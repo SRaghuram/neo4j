@@ -83,5 +83,5 @@ job_queue=$(aws cloudformation describe-stacks --stack-name "benchmarking-batch-
 aws batch submit-job \
   --job-name "$job_name" \
   --job-queue "$job_queue" \
-  --job-definition "upgrade-r5_2xlarge-oracle-11-benchmarking-batch-infrastructure-$env" \
+  --job-definition "upgrade-r5d_2xlarge-openjdk-11-benchmarking-batch-infrastructure-$env" \
   --parameters "$json_parameters"
