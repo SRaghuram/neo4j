@@ -8,7 +8,8 @@ package com.neo4j.kernel.impl.api.integrationtest;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.dbms.api.DatabaseManagementService;
+import java.nio.file.Path;
+
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.internal.kernel.api.Write;
@@ -17,6 +18,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.api.integrationtest.KernelIntegrationTest;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
@@ -46,10 +48,9 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
     abstract int entityCount() throws TransactionFailureException;
 
     @Override
-    protected DatabaseManagementService createDatabaseService()
+    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory( Path databaseRootDir )
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDir.homePath() ).setFileSystem( testDir.getFileSystem() )
-                                                                                       .build();
+        return new TestEnterpriseDatabaseManagementServiceBuilder( databaseRootDir );
     }
 
     @Test

@@ -76,16 +76,24 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
         while ( allNodes.next() )
         {
             allNodes.node( nodeCursor );
-            while ( nodeCursor.next() )
+            validateNodePropertyExistenceConstraint( nodeCursor, propertyCursor, descriptor, tokenNameLookup );
+        }
+    }
+
+    @Override
+    public void validateNodePropertyExistenceConstraint( NodeCursor nodeCursor, PropertyCursor propertyCursor, LabelSchemaDescriptor descriptor,
+            TokenNameLookup tokenNameLookup )
+            throws CreateConstraintFailureException
+    {
+        while ( nodeCursor.next() )
+        {
+            for ( int propertyKey : descriptor.getPropertyIds() )
             {
-                for ( int propertyKey : descriptor.getPropertyIds() )
+                nodeCursor.properties( propertyCursor );
+                if ( noSuchProperty( propertyCursor, propertyKey ) )
                 {
-                    nodeCursor.properties( propertyCursor );
-                    if ( noSuchProperty( propertyCursor, propertyKey ) )
-                    {
-                        throw createConstraintFailure(
-                                new NodePropertyExistenceException( descriptor, VERIFICATION, nodeCursor.nodeReference(), tokenNameLookup ) );
-                    }
+                    throw createConstraintFailure(
+                            new NodePropertyExistenceException( descriptor, VERIFICATION, nodeCursor.nodeReference(), tokenNameLookup ) );
                 }
             }
         }
@@ -98,9 +106,16 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
         validateNodePropertyExistenceConstraint( allNodes, nodeCursor, propertyCursor, descriptor, tokenNameLookup );
     }
 
+    @Override
+    public void validateNodeKeyConstraint( NodeCursor nodeCursor, PropertyCursor propertyCursor,
+            LabelSchemaDescriptor descriptor, TokenNameLookup tokenNameLookup ) throws CreateConstraintFailureException
+    {
+        validateNodePropertyExistenceConstraint( nodeCursor, propertyCursor, descriptor, tokenNameLookup );
+    }
+
     private boolean noSuchProperty( PropertyCursor propertyCursor, int property )
     {
-       return !propertyCursor.seekProperty( property );
+        return !propertyCursor.seekProperty( property );
     }
 
     @Override
