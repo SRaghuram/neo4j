@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.state.machines.lease;
 
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.api.LeaseException;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -34,7 +35,7 @@ class LeaderOnlyLockManagerTest
 
         // when
         Locks.Client leaderLockClient = lockManager.newClient();
-        leaderLockClient.initialize( leaseClient, 7, EmptyMemoryTracker.INSTANCE );
+        leaderLockClient.initialize( leaseClient, 7, EmptyMemoryTracker.INSTANCE, Config.defaults() );
         leaderLockClient.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0L );
     }
 
@@ -52,7 +53,7 @@ class LeaderOnlyLockManagerTest
 
         // when
         Locks.Client lockClient = lockManager.newClient();
-        lockClient.initialize( leaseClient, 8, EmptyMemoryTracker.INSTANCE );
+        lockClient.initialize( leaseClient, 8, EmptyMemoryTracker.INSTANCE, Config.defaults() );
         assertThrows( LeaseException.class, () -> lockClient.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0L ) );
     }
 }

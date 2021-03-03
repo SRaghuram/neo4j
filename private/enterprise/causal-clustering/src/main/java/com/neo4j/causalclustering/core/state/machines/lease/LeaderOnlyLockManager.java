@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionSt
 
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
@@ -83,9 +84,9 @@ public class LeaderOnlyLockManager implements Locks
         }
 
         @Override
-        public void initialize( LeaseClient leaseClient, long transactionId, MemoryTracker memoryTracker )
+        public void initialize( LeaseClient leaseClient, long transactionId, MemoryTracker memoryTracker, Config config )
         {
-            this.localClient.initialize( leaseClient, transactionId, memoryTracker );
+            this.localClient.initialize( leaseClient, transactionId, memoryTracker, config );
             this.leaseClient = leaseClient;
         }
 

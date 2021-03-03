@@ -15,9 +15,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
@@ -39,9 +38,11 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
+import static java.time.Duration.ofMillis;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.lock_acquisition_timeout;
 
 @TestDirectoryExtension
 public class ForsetiLockAcquisitionTimeoutIT
@@ -56,7 +57,7 @@ public class ForsetiLockAcquisitionTimeoutIT
     @Inject
     private TestDirectory testDirectory;
 
-    private GraphDatabaseService database;
+    private GraphDatabaseAPI database;
     private DatabaseManagementService managementService;
 
     @BeforeEach
@@ -64,9 +65,9 @@ public class ForsetiLockAcquisitionTimeoutIT
     {
         managementService = getDbmsb( testDirectory )
                 .setClock( fakeClock )
-                .setConfig( GraphDatabaseSettings.lock_acquisition_timeout, Duration.ofSeconds( 2 ) )
+                .setConfig( lock_acquisition_timeout, Duration.ofSeconds( 2 ) )
                 .build();
-        database = managementService.database( DEFAULT_DATABASE_NAME );
+        database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
 
         createTestNode( marker );
     }
@@ -82,6 +83,18 @@ public class ForsetiLockAcquisitionTimeoutIT
         managementService.shutdown();
         secondTransactionExecutor.close();
         clockExecutor.close();
+    }
+
+    @Test
+    void dynamicAcquiringTimeout()
+    {
+        var e = assertThrows( Exception.class, () -> tryAcquireLockWithTimeout( Duration.ofSeconds( 3 ) ) );
+        assertThat( e ).hasRootCauseInstanceOf( LockAcquisitionTimeoutException.class ).hasMessageContaining( "2000 millis." );
+
+        database.getDependencyResolver().resolveDependency( Config.class ).set( lock_acquisition_timeout, ofMillis( 100 ) );
+
+        var updatedTimeoutException = assertThrows( Exception.class, () -> tryAcquireLockWithTimeout( ofMillis( 300 ) ) );
+        assertThat( updatedTimeoutException ).hasRootCauseInstanceOf( LockAcquisitionTimeoutException.class ).hasMessageContaining( "100 millis." );
     }
 
     @Test
@@ -129,7 +142,7 @@ public class ForsetiLockAcquisitionTimeoutIT
             {
                 Locks lockManger = getLockManager();
                 Locks.Client client = lockManger.newClient();
-                client.initialize( NoLeaseClient.INSTANCE, 1, EmptyMemoryTracker.INSTANCE );
+                client.initialize( NoLeaseClient.INSTANCE, 1, EmptyMemoryTracker.INSTANCE, Config.defaults() );
                 client.acquireExclusive( LockTracer.NONE, ResourceTypes.LABEL, 1 );
 
                 Future<Void> propertySetFuture = secondTransactionExecutor.executeDontWait( () ->
@@ -163,6 +176,35 @@ public class ForsetiLockAcquisitionTimeoutIT
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver();
     }
+
+    private void tryAcquireLockWithTimeout( Duration clockStep ) throws Exception
+    {
+        try ( Transaction tx = database.beginTx() )
+        {
+            ResourceIterator<Node> nodes = tx.findNodes( marker );
+            Node node = nodes.next();
+            node.setProperty( TEST_PROPERTY_NAME, "b" );
+
+            Future<Void> propertySetFuture = secondTransactionExecutor.executeDontWait( () ->
+            {
+                try ( Transaction transaction1 = database.beginTx() )
+                {
+                    transaction1.getNodeById( node.getId() ).setProperty( TEST_PROPERTY_NAME, "b" );
+                    transaction1.commit();
+                }
+                return null;
+            } );
+
+            secondTransactionExecutor.waitUntilWaiting( exclusiveLockWaitingPredicate() );
+            clockExecutor.execute( () ->
+            {
+                fakeClock.forward( clockStep );
+                return null;
+            } );
+            propertySetFuture.get();
+        }
+    }
+
     private void createTestNode( Label marker )
     {
         try ( Transaction transaction = database.beginTx() )
