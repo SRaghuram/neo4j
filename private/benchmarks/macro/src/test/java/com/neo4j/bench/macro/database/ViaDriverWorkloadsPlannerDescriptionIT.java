@@ -10,6 +10,7 @@ import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.StoreTestUtil;
+import com.neo4j.bench.macro.execution.database.Neo4jServerDatabase;
 import com.neo4j.bench.macro.execution.database.PlannerDescription;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.workload.Query;
@@ -83,13 +84,13 @@ public class ViaDriverWorkloadsPlannerDescriptionIT
         Path neo4jConfigFile = testsSupport.writeServerNeo4jConfig( workload.name() );
         Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), testsSupport.randId() ) ).toPath();
         try ( Store store = StoreTestUtil.createEmptyStoreFor( workload, storePath, neo4jConfigFile );
-              ServerDatabase database = ServerDatabase.startServer( jvm,
-                                                                    testsSupport.neo4jDir(),
-                                                                    store,
-                                                                    neo4jConfigFile,
-                                                                    outputRedirect,
-                                                                    errorRedirect,
-                                                                    logsDir ) )
+              ServerDatabase database = Neo4jServerDatabase.startServer( jvm,
+                                                                         testsSupport.neo4jDir(),
+                                                                         store,
+                                                                         neo4jConfigFile,
+                                                                         outputRedirect,
+                                                                         errorRedirect,
+                                                                         logsDir ) )
         {
             for ( Query query : workload.queries() )
             {
