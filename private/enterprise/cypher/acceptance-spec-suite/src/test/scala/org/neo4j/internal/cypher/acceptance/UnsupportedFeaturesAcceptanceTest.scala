@@ -11,18 +11,8 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSu
 
 class UnsupportedFeaturesAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  test("from graph") {
-    val query = "FROM GRAPH foo.bar MATCH (a)-->() RETURN a"
-    failWithError(Configs.All, query, "The `FROM GRAPH` clause is not available in this implementation of Cypher due to lack of support for FROM graph selector.")
-  }
-
   test("use graph") {
     val query = "USE GRAPH foo.bar MATCH (a)-->() RETURN a"
     failWithError(Configs.All, query, "The USE clause is not available in embedded or http sessions. Try running the query using a Neo4j driver.")
-  }
-
-  test("return graph") {
-    val query = "WITH $param AS foo MATCH ()--() RETURN GRAPH"
-    failWithError(Configs.All, query, "The `RETURN GRAPH` clause is not available in this implementation of Cypher due to lack of support for multiple graphs.")
   }
 }
