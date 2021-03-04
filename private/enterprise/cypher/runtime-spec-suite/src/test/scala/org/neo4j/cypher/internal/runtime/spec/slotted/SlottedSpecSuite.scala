@@ -105,6 +105,8 @@ import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBa
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexContainsScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexEndsWithScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipTypeScanTestBase
@@ -250,6 +252,8 @@ class SlottedAssertSameNodeTest extends AssertSameNodeTestBase(ENTERPRISE.DEFAUL
 class SlottedRelationshipTypeScanTest extends RelationshipTypeScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedRelationshipIndexSeekTest extends RelationshipIndexSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedRelationshipIndexScanTest extends RelationshipIndexScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedRelationshipIndexEndsWithScanTest extends RelationshipIndexEndsWithScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedRelationshipIndexContainsScanTest extends RelationshipIndexContainsScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
 class SlottedCreateTest extends CreateTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
