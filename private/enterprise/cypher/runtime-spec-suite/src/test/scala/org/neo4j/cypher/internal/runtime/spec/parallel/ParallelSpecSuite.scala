@@ -90,6 +90,11 @@ import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBa
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexContainsScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexEndsWithScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipTypeScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
@@ -151,6 +156,10 @@ class ParallelRuntimeNodeByIdSeekNoFusingStressTest extends NodeByIdSeekStressTe
 class ParallelRuntimeDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSeekTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeDirectedRelationshipByIdSeekNoFusingTest extends DirectedRelationshipByIdSeekTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
+//TYPE SCAN
+class ParallelRuntimeRelationshipTypeScanTest extends RelationshipTypeScanTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeRelationshipTypeScanNoFusingTest extends RelationshipTypeScanTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
 // UNDIRECTED RELATIONSHIP BY ID SEEK
 class ParallelRuntimeUndirectedRelationshipByIdSeekTest extends UndirectedRelationshipByIdSeekTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeUndirectedRelationshipByIdSeekNoFusingTest extends UndirectedRelationshipByIdSeekTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
@@ -183,6 +192,8 @@ class ParallelRuntimeIndexSeekExactStressTest extends IndexSeekExactStressTest(F
 class ParallelRuntimeIndexSeekExactNoFusingStressTest extends IndexSeekExactStressTest(NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeNodeIndexStartsWithSeekTest extends NodeIndexStartsWithSeekTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeNodeIndexStartsWithSeekNoFusingTest extends NodeIndexStartsWithSeekTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeRelationshipIndexSeekTest extends RelationshipIndexSeekTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeRelationshipIndexSeekNoFusingTest extends RelationshipIndexSeekTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // INDEX SCAN
 class ParallelRuntimeNodeIndexScanTest extends NodeIndexScanTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
@@ -190,15 +201,23 @@ class ParallelRuntimeNodeIndexScanNoFusingTest extends NodeIndexScanTestBase(NO_
 class ParallelRuntimeIndexScanNoFusingStressTest extends IndexScanStressTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeIndexScanStressTest extends IndexScanStressTestBase(NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 
+// RELATIONSHIP INDEX SCAN
+class ParallelRuntimeRelationshipIndexScanTest extends RelationshipIndexScanTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeRelationshipIndexScanNoFusingTest extends RelationshipIndexScanTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
 // INDEX CONTAINS SCAN
 class ParallelRuntimeNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeNodeIndexContainsScanNoFusingTest extends NodeIndexContainsScanTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeRelationshipIndexContainsScanTest extends RelationshipIndexContainsScanTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeRelationshipIndexContainsScanNoFusingTest extends RelationshipIndexContainsScanTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeIndexContainsScanStressTest extends IndexContainsScanStressTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeIndexContainsScanNoFusingStressTest extends IndexContainsScanStressTestBase(NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 
 // INDEX ENDS WITH SCAN
 class ParallelRuntimeNodeIndexEndsWithScanTest extends NodeIndexEndsWithScanTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeNodeIndexEndsWithScanNoFusingTest extends NodeIndexEndsWithScanTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeRelationshipIndexEndsWithScanTest extends RelationshipIndexEndsWithScanTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeRelationshipIndexEndsWithScanNoFusingTest extends RelationshipIndexEndsWithScanTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeIndexEndsWithScanStressTest extends IndexEndsWithScanStressTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeIndexEndsWithScanNoFusingStressTest extends IndexEndsWithScanStressTestBase(NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 
