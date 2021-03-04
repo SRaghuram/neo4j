@@ -123,7 +123,7 @@ public class ConfigurableIOLimiter implements IOLimiter
     @Override
     public long maybeLimitIO( long previousStamp, int recentlyCompletedIOs, Flushable flushable, FlushEventOpportunity flushEvent )
     {
-        flushEvent.reportIO(recentlyCompletedIOs);
+        flushEvent.reportIO( recentlyCompletedIOs );
         long state = stateUpdater.get( this );
         if ( getDisabledCounter( state ) > 0 )
         {
