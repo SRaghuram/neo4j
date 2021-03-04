@@ -617,4 +617,61 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
       }
     })
   }
+
+  test("SHOW EXIST CONSTRAINTS should not support new syntax with Cypher 4.2") {
+    Seq(
+      "PROPERTY EXISTENCE",
+      "PROPERTY EXIST",
+      "EXISTENCE",
+    ).foreach(keyword => {
+      withClue(keyword) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 4.2 SHOW $keyword CONSTRAINTS")
+        }
+
+        // THEN
+        exception.getMessage should include("Using `PROPERTY` or `EXISTENCE` when listing property existence constraints is not supported in this Cypher version.")
+      }
+    })
+  }
+
+  test("SHOW NODE EXIST CONSTRAINTS should not support new syntax with Cypher 4.2") {
+    Seq(
+      "PROPERTY EXISTENCE",
+      "PROPERTY EXIST",
+      "EXISTENCE",
+    ).foreach(keyword => {
+      withClue(keyword) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 4.2 SHOW NODE $keyword CONSTRAINTS")
+        }
+
+        // THEN
+        exception.getMessage should include("Using `PROPERTY` or `EXISTENCE` when listing node property existence constraints is not supported in this Cypher version.")
+      }
+    })
+  }
+
+  test("SHOW RELATIONSHIP EXIST CONSTRAINTS should not support new syntax with Cypher 4.2") {
+    Seq(
+      "RELATIONSHIP PROPERTY EXISTENCE",
+      "RELATIONSHIP PROPERTY EXIST",
+      "RELATIONSHIP EXISTENCE",
+      "REL PROPERTY EXISTENCE",
+      "REL PROPERTY EXIST",
+      "REL EXISTENCE",
+    ).foreach(keyword => {
+      withClue(keyword) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 4.2 SHOW $keyword CONSTRAINTS")
+        }
+
+        // THEN
+        exception.getMessage should include("Using `REL`, `PROPERTY` or `EXISTENCE` when listing relationship property existence constraints is not supported in this Cypher version.")
+      }
+    })
+  }
 }

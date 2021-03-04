@@ -724,29 +724,40 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     result.toList should be(List(defaultNodeKeyBriefConstraintOutput(4L)))
   }
 
-  test("show node exists constraints should filter constraints") {
+  test("show node existence constraints should filter constraints") {
     // GIVEN
     createDefaultConstraints()
 
     // WHEN
-    val result = executeSingle("SHOW NODE EXISTS CONSTRAINTS")
+    val result = executeSingle("SHOW NODE EXIST CONSTRAINTS")
 
     // THEN
     result.toList should be(List(defaultNodeExistsBriefConstraintOutput(5L)))
   }
 
-  test("show relationship exists constraints should filter constraints") {
+  test("show relationship existence constraints should filter constraints") {
     // GIVEN
     createDefaultConstraints()
 
     // WHEN
-    val result = executeSingle("SHOW RELATIONSHIP EXISTS CONSTRAINTS")
+    val result = executeSingle("SHOW RELATIONSHIP EXISTENCE CONSTRAINTS")
 
     // THEN
     result.toList should be(List(defaultRelExistsBriefConstraintOutput(6L)))
   }
 
-  test("show exists constraints should filter constraints") {
+  test("show existence constraints should filter constraints") {
+    // GIVEN
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW PROPERTY EXISTENCE CONSTRAINTS")
+
+    // THEN
+    result.toList should be(List(defaultNodeExistsBriefConstraintOutput(5L), defaultRelExistsBriefConstraintOutput(6L)))
+  }
+
+  test("show exists constraints should filter constraints (deprecated syntax)") {
     // GIVEN
     createDefaultConstraints()
 
@@ -788,7 +799,7 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     createDefaultNodeExistsConstraint()
 
     // WHEN
-    val result = executeSingle("SHOW NODE EXISTS CONSTRAINTS VERBOSE OUTPUT")
+    val result = executeSingle("SHOW NODE EXISTENCE CONSTRAINTS VERBOSE OUTPUT")
 
     val options: List[Object] = result.columnAs("options").toList
     options should be(List(null))
@@ -800,7 +811,7 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     createDefaultRelExistsConstraint()
 
     // WHEN
-    val result = executeSingle("SHOW RELATIONSHIP EXISTS CONSTRAINTS VERBOSE OUTPUT")
+    val result = executeSingle("SHOW RELATIONSHIP PROPERTY EXIST CONSTRAINTS VERBOSE OUTPUT")
 
     val options: List[Object] = result.columnAs("options").toList
     options should be(List(null))
@@ -878,19 +889,19 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
   }
 
   test("show constraints should show valid create statements for node exists constraints") {
-    createConstraint(NodeExistsConstraints, "node prop exists", label2, prop2)
-    createConstraint(NodeExistsConstraints, "node prop exists whitespace", labelWhitespace, propWhitespace2)
-    createConstraint(NodeExistsConstraints, "node prop exists backticks", labelBackticks2, propBackticks)
-    createConstraint(NodeExistsConstraints, "horrible`name3``", label2, prop3)
+    createConstraint(NodeExistsConstraints(), "node prop exists", label2, prop2)
+    createConstraint(NodeExistsConstraints(), "node prop exists whitespace", labelWhitespace, propWhitespace2)
+    createConstraint(NodeExistsConstraints(), "node prop exists backticks", labelBackticks2, propBackticks)
+    createConstraint(NodeExistsConstraints(), "horrible`name3``", label2, prop3)
 
     verifyCanDropAndRecreateConstraintsUsingCreateStatement()
   }
 
   test("show constraints should show valid create statements for rel exists constraints") {
-    createConstraint(RelExistsConstraints, "rel prop exists", relType, prop)
-    createConstraint(RelExistsConstraints, "rel prop exists whitespace", relTypeWhitespace, propWhitespace)
-    createConstraint(RelExistsConstraints, "rel prop exists backticks", relTypeBackticks, propBackticks)
-    createConstraint(RelExistsConstraints, "horrible name`4````", relType, prop2)
+    createConstraint(RelExistsConstraints(), "rel prop exists", relType, prop)
+    createConstraint(RelExistsConstraints(), "rel prop exists whitespace", relTypeWhitespace, propWhitespace)
+    createConstraint(RelExistsConstraints(), "rel prop exists backticks", relTypeBackticks, propBackticks)
+    createConstraint(RelExistsConstraints(), "horrible name`4````", relType, prop2)
 
     verifyCanDropAndRecreateConstraintsUsingCreateStatement()
   }
@@ -898,8 +909,8 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
   test("show constraints should show valid create statements for mixed constraints") {
     createConstraint(UniqueConstraints, "unique", label2, prop)
     createConstraint(NodeKeyConstraints, "node key", label, prop2)
-    createConstraint(NodeExistsConstraints, "node exists", label, prop3)
-    createConstraint(RelExistsConstraints, "rel exists", relType, prop3)
+    createConstraint(NodeExistsConstraints(), "node exists", label, prop3)
+    createConstraint(RelExistsConstraints(), "rel exists", relType, prop3)
 
     graph.awaitIndexesOnline()
     verifyCanDropAndRecreateConstraintsUsingCreateStatement()
@@ -1028,9 +1039,9 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
         val randomOptions = randomBtreeOptions()
         randomOptionsMap = Some(randomOptions._2)
         s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS NODE KEY OPTIONS ${randomOptions._1}"
-      case NodeExistsConstraints =>
+      case _: NodeExistsConstraints =>
         s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS NOT NULL"
-      case RelExistsConstraints =>
+      case _: RelExistsConstraints =>
         s"CREATE CONSTRAINT $escapedName ON ()-[r:$escapedLabel]-() ASSERT (r.$escapedProperty) IS NOT NULL"
       case unexpectedType =>
         throw new IllegalArgumentException(s"Unexpected constraint type for constraint create command: ${unexpectedType.prettyPrint}")
