@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.codegen.api.Field
-import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLength
@@ -70,13 +69,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.RelValueIndexCursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.asStorableValue
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexOrder
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexReadSession
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipIndexSeek
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.singleRelationship
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
@@ -91,7 +88,6 @@ import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor
 import org.neo4j.internal.schema.IndexOrder
-import org.neo4j.util.Preconditions
 import org.neo4j.values.storable.Value
 
 import scala.collection.mutable.ArrayBuffer
@@ -284,65 +280,7 @@ class DirectedRelationshipIndexSeekTask(inputMorsel: Morsel,
   }
 }
 
-abstract class BaseRelationshipIndexTaskTemplate(inner: OperatorTaskTemplate,
-                                                 id: Id,
-                                                 val innermost: DelegateOperatorTaskTemplate,
-                                                 val relOffset: Int,
-                                                 val startOffset: Int,
-                                                 val endOffset: Int,
-                                                 val argumentSize: SlotConfiguration.Size,
-                                                 codeGen: OperatorExpressionCompiler)
-  extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
-  protected val relIndexCursorField: InstanceField = field[RelationshipValueIndexCursor](codeGen.namer.nextVariableName("valueCursor"))
-  protected val relScanCursorField: InstanceField = field[RelationshipScanCursor](codeGen.namer.nextVariableName("scanCursor"))
 
-  protected def cacheProperties: IntermediateRepresentation
-
-  override protected def genInnerLoop: IntermediateRepresentation = {
-    val localRelVar = codeGen.namer.nextVariableName("rel")
-    /**
-     * {{{
-     *   while (hasDemand && this.canContinue) {
-     *     ...
-     *     setLongAt(relOffset, relIndexCursor.relationshipReference())
-     *     [set scan cursor to point at relationshipReference]
-     *     setLongAt(startOffset, relScanCursor.sourceNodeReference())
-     *     setLongAt(endOffset, relScanCursor.targetNodeReference())
-     *     setCachedPropertyAt(relOffset, [getPropertyValue])
-     *     << inner.genOperate >>
-     *     this.canContinue = this.relIndexCursor.next()
-     *   }
-     * }}}
-     */
-    loop(and(innermost.predicate, loadField(canContinue)))(
-      block(
-        codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-        declareAndAssign(localRelVar, invoke(loadField(relIndexCursorField), method[RelationshipValueIndexCursor, Long]("relationshipReference"))),
-        codeGen.setLongAt(relOffset, load[Long](localRelVar)),
-        singleRelationship(load[Long](localRelVar), loadField(relScanCursorField)),
-        invokeStatic(method[Preconditions, Unit, Boolean, String]("checkState"),
-          cursorNext[RelationshipScanCursor](loadField(relScanCursorField)), constant("Missing relationship")),
-        codeGen.setLongAt(startOffset, invoke(loadField(relScanCursorField), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
-        codeGen.setLongAt(endOffset, invoke(loadField(relScanCursorField), method[RelationshipScanCursor, Long]("targetNodeReference"))),
-        cacheProperties,
-        inner.genOperateWithExpressions,
-        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile, codeGen.namer))),
-        endInnerLoop
-      )
-    )
-  }
-
-  override def genMoreFields: Seq[Field] = Seq(relIndexCursorField, relScanCursorField)
-
-  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
-    block(
-      condition(isNotNull(loadField(relIndexCursorField)))(block(
-        invokeSideEffect(loadField(relIndexCursorField), method[RelationshipValueIndexCursor, Unit, KernelReadTracer]("setTracer"), event),
-        invokeSideEffect(loadField(relScanCursorField), method[RelationshipScanCursor, Unit, KernelReadTracer]("setTracer"), event))
-      ),
-      inner.genSetExecutionEvent(event)
-    )
-}
 
 abstract class SingleQueryRelationshipIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                             id: Id,
