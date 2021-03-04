@@ -22,15 +22,6 @@ import java.io.IOException;
 import java.lang.ProcessBuilder.Redirect;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
-import java.util.UUID;
 
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.summary.Plan;
@@ -117,7 +108,8 @@ class PlannerDescriptionIT
     public void shouldRenderAsciiPlanFromEmbedded()
     {
         Path neo4jConfigFile = testsSupport.writeEmbeddedNeo4jConfig();
-        try ( Store store = TestSupport.createTemporaryEmptyStore( temporaryFolder.directory( format( "store-%s", testsSupport.randId() ) ), neo4jConfigFile );
+        try ( Store store = TestSupport
+                .createTemporaryEmptyStore( temporaryFolder.directory( format( "store-%s", testsSupport.randId() ) ), neo4jConfigFile );
               EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile );
               org.neo4j.graphdb.Transaction tx = database.inner().beginTx() )
         {
@@ -140,7 +132,8 @@ class PlannerDescriptionIT
         Redirect errorRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-error-%s.log", testsSupport.randId() ) ).toFile() );
         Path logsDir = Files.createDirectories( temporaryFolder.directory( format( "logs-%s", testsSupport.randId() ) ) );
 
-        try ( Store store = TestSupport.createTemporaryEmptyStore( temporaryFolder.directory( format( "store-%s", testsSupport.randId() ) ), neo4jConfigFile );
+        try ( Store store = TestSupport
+                .createTemporaryEmptyStore( temporaryFolder.directory( format( "store-%s", testsSupport.randId() ) ), neo4jConfigFile );
               ServerDatabase database = Neo4jServerDatabase.startServer( jvm,
                                                                          testsSupport.neo4jDir(),
                                                                          store,
@@ -157,5 +150,4 @@ class PlannerDescriptionIT
             assertThat( asciiPlan, equalTo( EXPECTED_ASCII_PLAN_SERVER ) );
         }
     }
-
 }
