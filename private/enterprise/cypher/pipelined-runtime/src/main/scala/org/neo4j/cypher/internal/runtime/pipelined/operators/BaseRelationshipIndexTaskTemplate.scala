@@ -9,6 +9,7 @@ import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
@@ -23,19 +24,34 @@ import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.not
+import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_REL_INDEX_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_REL_SCAN_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexReadSession
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipIndexSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.singleRelationship
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor
+import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.util.Preconditions
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.TextValue
 
 abstract class BaseRelationshipIndexTaskTemplate(inner: OperatorTaskTemplate,
                                                  id: Id,
@@ -158,4 +174,51 @@ trait UndirectedRelationshipIndexTask {
       )
     )
   }
+}
+
+abstract class BaseRelationshipIndexStringSearchTaskTemplate(inner: OperatorTaskTemplate,
+                                                             id: Id,
+                                                             innermost: DelegateOperatorTaskTemplate,
+                                                             relOffset: Int,
+                                                             startOffset: Int,
+                                                             endOffset: Int,
+                                                             property: SlottedIndexedProperty,
+                                                             queryIndexId: Int,
+                                                             indexOrder: IndexOrder,
+                                                             argumentSize: SlotConfiguration.Size,
+                                                             searchExpressionGen: () => IntermediateExpression,
+                                                             codeGen: OperatorExpressionCompiler)
+  extends BaseRelationshipIndexScanTaskTemplate(inner, id, innermost, relOffset, startOffset, endOffset, Array(property), argumentSize, codeGen) {
+
+  private var searchExpression: IntermediateExpression = _
+
+  protected def predicate(searchExpression: IntermediateRepresentation): IntermediateRepresentation
+
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+    searchExpression = searchExpressionGen()
+    val searchVar = codeGen.namer.nextVariableName("toSearchFor")
+    val result = codeGen.namer.nextVariableName("result")
+    block(
+      declareAndAssign(result, constant(false)),
+      setField(canContinue, constant(false)),
+      declareAndAssign(typeRefOf[AnyValue], searchVar, nullCheckIfRequired(searchExpression)),
+      condition(notEqual(load[AnyValue](searchVar), noValue)) {
+        block(
+          allocateAndTraceCursor(relIndexCursorField, executionEventField, ALLOCATE_REL_INDEX_CURSOR, doProfile),
+          allocateAndTraceCursor(relScanCursorField, executionEventField, ALLOCATE_REL_SCAN_CURSOR, doProfile),
+          relationshipIndexSeek(
+            indexReadSession(queryIndexId),
+            loadField(relIndexCursorField),
+            predicate(invokeStatic(method[CypherFunctions, TextValue, AnyValue]("asTextValue"), load[AnyValue](searchVar))),
+            indexOrder,
+            needsValues),
+          setField(canContinue, profilingCursorNext[RelationshipValueIndexCursor](loadField(relIndexCursorField), id, doProfile, codeGen.namer)),
+          assign(result, constant(true))
+        )
+      },
+      load[Boolean](result)
+    )
+  }
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(searchExpression)
 }

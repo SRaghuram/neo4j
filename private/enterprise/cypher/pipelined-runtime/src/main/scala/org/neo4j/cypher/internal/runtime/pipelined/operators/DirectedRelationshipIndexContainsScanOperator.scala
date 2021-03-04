@@ -5,9 +5,15 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
@@ -15,7 +21,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.PropertyIndexQuery
+import org.neo4j.internal.kernel.api.PropertyIndexQuery.StringContainsPredicate
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.values.storable.TextValue
 
@@ -74,6 +82,22 @@ class DirectedRelationshipIndexContainsScanTask(inputMorsel: Morsel,
   override protected def predicate(value: TextValue): PropertyIndexQuery.StringPredicate = PropertyIndexQuery.stringContains(propertyId, value)
 }
 
+class DirectedRelationshipIndexContainsScanTaskTemplate(inner: OperatorTaskTemplate,
+                                                        id: Id,
+                                                        innermost: DelegateOperatorTaskTemplate,
+                                                        relOffset: Int,
+                                                        startOffset: Int,
+                                                        endOffset: Int,
+                                                        property: SlottedIndexedProperty,
+                                                        queryIndexId: Int,
+                                                        indexOrder: IndexOrder,
+                                                        argumentSize: SlotConfiguration.Size,
+                                                        searchExpressionGen: () => IntermediateExpression,
+                                                        codeGen: OperatorExpressionCompiler)
+  extends BaseRelationshipIndexStringSearchTaskTemplate(inner, id, innermost, relOffset, startOffset, endOffset, property, queryIndexId, indexOrder, argumentSize, searchExpressionGen, codeGen) {
+  override protected def predicate(searchExpression: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(method[PropertyIndexQuery, StringContainsPredicate, Int, TextValue]("stringContains"), constant(property.propertyKeyId), searchExpression)
+}
 
 
 
