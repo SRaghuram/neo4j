@@ -116,6 +116,8 @@ import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBa
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexContainsScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexEndsWithScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipTypeScanTestBase
@@ -263,10 +265,14 @@ class PipelinedRelationshipIndexScanNoFusingTest extends RelationshipIndexScanTe
 // INDEX CONTAINS SCAN
 class PipelinedNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedNodeIndexContainsScanNoFusingTest extends NodeIndexContainsScanTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedRelationshipIndexContainsScanTest extends RelationshipIndexContainsScanTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedRelationshipIndexContainsScanNoFusingTest extends RelationshipIndexContainsScanTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // INDEX ENDS WITH SCAN
 class PipelinedNodeIndexEndsWithScanTest extends NodeIndexEndsWithScanTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedNodeIndexEndsWithScanNoFusingTest extends NodeIndexEndsWithScanTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedRelationshipIndexEndsWithScanTest extends RelationshipIndexEndsWithScanTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedRelationshipIndexEndsWithScanNoFusingTest extends RelationshipIndexEndsWithScanTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // ARGUMENT
 class PipelinedArgumentTest extends ArgumentTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

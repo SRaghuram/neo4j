@@ -7,12 +7,22 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.IsNoValue
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipIndexStringSearchTask.maybeTextValue
+import org.neo4j.exceptions.CypherTypeException
+import org.neo4j.internal.kernel.api.IndexQueryConstraints
+import org.neo4j.internal.kernel.api.PropertyIndexQuery.StringPredicate
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor
+import org.neo4j.internal.schema.IndexOrder
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.TextValue
 
 /**
  * For index operators that get nodes together with actual property values.
@@ -115,6 +125,79 @@ abstract class UndirectedRelationshipIndexScanWithValues(relOffset: Int,
       }
       cacheProperties(outputRow)
       outputRow.next()
+    }
+  }
+}
+
+abstract class DirectedRelationshipIndexStringSearchTask(relOffset: Int,
+                                                         startOffset: Int,
+                                                         endOffset: Int,
+                                                         indexPropertyIndices: Array[Int],
+                                                         indexPropertySlotOffsets: Array[Int],
+                                                         queryIndexId: Int,
+                                                         indexOrder: IndexOrder,
+                                                         argumentSize: SlotConfiguration.Size,
+                                                         valueExpr: Expression,
+                                                         inputMorsel: Morsel)
+  extends DirectedRelationshipIndexScanWithValues(relOffset, startOffset, endOffset, indexPropertyIndices, indexPropertySlotOffsets, argumentSize, inputMorsel) {
+
+  private def needsValues: Boolean = indexPropertyIndices.nonEmpty
+
+  protected def predicate(value: TextValue): StringPredicate
+
+  override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    val queryState = state.queryStateForExpressionEvaluation(resources)
+    initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
+    maybeTextValue(valueExpr(initExecutionContext, queryState)) match {
+      case Some(value)=>
+        val index = state.queryIndexes(queryIndexId)
+        relCursor = resources.cursorPools.relationshipValueIndexCursorPool.allocateAndTrace()
+        val read = state.queryContext.transactionalContext.dataRead
+        read.relationshipIndexSeek(index, relCursor, IndexQueryConstraints.constrained(indexOrder, needsValues), predicate(value))
+        scanCursor = resources.cursorPools.relationshipScanCursorPool.allocateAndTrace()
+        true
+      case None => false
+    }
+  }
+}
+
+object DirectedRelationshipIndexStringSearchTask {
+
+  def maybeTextValue(valueToScan: AnyValue): Option[TextValue] = valueToScan match {
+      case IsNoValue() => None
+      case value: TextValue => Some(value)
+      case x => throw new CypherTypeException(s"Expected a string value, but got $x")
+    }
+}
+
+abstract class UndirectedRelationshipIndexStringSearchTask(relOffset: Int,
+                                                           startOffset: Int,
+                                                           endOffset: Int,
+                                                           indexPropertyIndices: Array[Int],
+                                                           indexPropertySlotOffsets: Array[Int],
+                                                           queryIndexId: Int,
+                                                           indexOrder: IndexOrder,
+                                                           argumentSize: SlotConfiguration.Size,
+                                                           valueExpr: Expression,
+                                                           inputMorsel: Morsel)
+  extends UndirectedRelationshipIndexScanWithValues(relOffset, startOffset, endOffset, indexPropertyIndices, indexPropertySlotOffsets, argumentSize, inputMorsel) {
+
+  private def needsValues: Boolean = indexPropertyIndices.nonEmpty
+
+  protected def predicate(value: TextValue): StringPredicate
+
+  override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    val queryState = state.queryStateForExpressionEvaluation(resources)
+    initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
+    maybeTextValue(valueExpr(initExecutionContext, queryState)) match {
+      case Some(value)=>
+        val index = state.queryIndexes(queryIndexId)
+        relCursor = resources.cursorPools.relationshipValueIndexCursorPool.allocateAndTrace()
+        val read = state.queryContext.transactionalContext.dataRead
+        read.relationshipIndexSeek(index, relCursor, IndexQueryConstraints.constrained(indexOrder, needsValues), predicate(value))
+        scanCursor = resources.cursorPools.relationshipScanCursorPool.allocateAndTrace()
+        true
+      case None => false
     }
   }
 }

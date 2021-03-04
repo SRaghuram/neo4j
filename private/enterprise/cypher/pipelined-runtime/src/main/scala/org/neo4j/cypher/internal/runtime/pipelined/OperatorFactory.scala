@@ -81,6 +81,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DeleteType
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipIndexContainsScanOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipIndexEndsWithScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipIndexScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipIndexSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipTypeScanOperator
@@ -147,6 +149,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicBuildOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicFilterOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipIndexContainsScanOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipIndexEndsWithScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipIndexScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipIndexSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipTypeScanOperator
@@ -349,6 +353,50 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
           indexRegistrator.registerQueryIndex(typeToken, properties),
           asKernelIndexOrder(indexOrder),
+          physicalPlan.argumentSizes(id))
+
+      case plans.DirectedRelationshipIndexContainsScan(column, startNode, endNode, typeToken, property, valueExpr, _, indexOrder) =>
+        new DirectedRelationshipIndexContainsScanOperator(WorkIdentity.fromPlan(plan),
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(startNode),
+          slots.getLongOffsetFor(endNode),
+          SlottedIndexedProperty(column, property, slots),
+          indexRegistrator.registerQueryIndex(typeToken, property),
+          asKernelIndexOrder(indexOrder),
+          converters.toCommandExpression(id, valueExpr),
+          physicalPlan.argumentSizes(id))
+
+      case plans.UndirectedRelationshipIndexContainsScan(column, startNode, endNode, typeToken, property, valueExpr, _, indexOrder) =>
+        new UndirectedRelationshipIndexContainsScanOperator(WorkIdentity.fromPlan(plan),
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(startNode),
+          slots.getLongOffsetFor(endNode),
+          SlottedIndexedProperty(column, property, slots),
+          indexRegistrator.registerQueryIndex(typeToken, property),
+          asKernelIndexOrder(indexOrder),
+          converters.toCommandExpression(id, valueExpr),
+          physicalPlan.argumentSizes(id))
+
+      case plans.DirectedRelationshipIndexEndsWithScan(column, startNode, endNode, typeToken, property, valueExpr, _, indexOrder) =>
+        new DirectedRelationshipIndexEndsWithScanOperator(WorkIdentity.fromPlan(plan),
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(startNode),
+          slots.getLongOffsetFor(endNode),
+          SlottedIndexedProperty(column, property, slots),
+          indexRegistrator.registerQueryIndex(typeToken, property),
+          asKernelIndexOrder(indexOrder),
+          converters.toCommandExpression(id, valueExpr),
+          physicalPlan.argumentSizes(id))
+
+      case plans.UndirectedRelationshipIndexEndsWithScan(column, startNode, endNode, typeToken, property, valueExpr, _, indexOrder) =>
+        new UndirectedRelationshipIndexEndsWithScanOperator(WorkIdentity.fromPlan(plan),
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(startNode),
+          slots.getLongOffsetFor(endNode),
+          SlottedIndexedProperty(column, property, slots),
+          indexRegistrator.registerQueryIndex(typeToken, property),
+          asKernelIndexOrder(indexOrder),
+          converters.toCommandExpression(id, valueExpr),
           physicalPlan.argumentSizes(id))
 
       case plans.DirectedRelationshipByIdSeek(column, relIds, startNode, endNode, _) =>
