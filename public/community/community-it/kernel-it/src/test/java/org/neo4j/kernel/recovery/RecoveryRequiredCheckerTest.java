@@ -31,11 +31,15 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.format.RecordStorageCapability;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
@@ -171,9 +175,9 @@ class RecoveryRequiredCheckerTest
     @Test
     void recoveryRequiredWhenAnyStoreFileIsMissing() throws Exception
     {
-        startStopAndCreateDefaultData();
+        RecordFormats format = startStopAndCreateDefaultData();
 
-        assertStoreFilesExist();
+        assertStoreFilesExist( format );
 
         PageCache pageCache = pageCacheExtension.getPageCache( fileSystem );
         RecoveryRequiredChecker checker = getRecoveryCheckerWithDefaultConfig( fileSystem, pageCache, storageEngineFactory );
@@ -187,9 +191,9 @@ class RecoveryRequiredCheckerTest
     @Test
     void recoveryRequiredWhenSeveralStoreFileAreMissing() throws Exception
     {
-        startStopAndCreateDefaultData();
+        RecordFormats format = startStopAndCreateDefaultData();
 
-        assertStoreFilesExist();
+        assertStoreFilesExist( format );
 
         PageCache pageCache = pageCacheExtension.getPageCache( fileSystem );
         RecoveryRequiredChecker checker = getRecoveryCheckerWithDefaultConfig( fileSystem, pageCache, storageEngineFactory );
@@ -205,9 +209,9 @@ class RecoveryRequiredCheckerTest
     @Test
     void recoveryNotRequiredWhenCountStoreIsMissing() throws Exception
     {
-        startStopAndCreateDefaultData();
+        RecordFormats format = startStopAndCreateDefaultData();
 
-        assertStoreFilesExist();
+        assertStoreFilesExist( format );
 
         PageCache pageCache = pageCacheExtension.getPageCache( fileSystem );
         RecoveryRequiredChecker checker = getRecoveryCheckerWithDefaultConfig( fileSystem, pageCache, storageEngineFactory );
@@ -221,9 +225,9 @@ class RecoveryRequiredCheckerTest
     @Test
     void recoveryNotRequiredWhenIndexStatisticStoreIsMissing() throws Exception
     {
-        startStopAndCreateDefaultData();
+        RecordFormats format = startStopAndCreateDefaultData();
 
-        assertStoreFilesExist();
+        assertStoreFilesExist( format );
 
         PageCache pageCache = pageCacheExtension.getPageCache( fileSystem );
         RecoveryRequiredChecker checker = getRecoveryCheckerWithDefaultConfig( fileSystem, pageCache, storageEngineFactory );
@@ -267,7 +271,7 @@ class RecoveryRequiredCheckerTest
         }
     }
 
-    private void assertStoreFilesExist()
+    private void assertStoreFilesExist( RecordFormats format )
     {
         for ( Path file : databaseLayout.storeFiles() )
         {
@@ -275,6 +279,11 @@ class RecoveryRequiredCheckerTest
                  !Config.defaults().get( enable_relationship_type_scan_store ) )
             {
                 // Skip
+                continue;
+            }
+            if ( file.getFileName().toString().equals( DatabaseFile.RELATIONSHIP_GROUP_DEGREES_STORE.getName() ) &&
+                !format.hasCapability( RecordStorageCapability.GROUP_DEGREES_STORE ) )
+            {
                 continue;
             }
             assertTrue( fileSystem.fileExists( file ), "Store file " + file + " does not exist" );
@@ -328,7 +337,7 @@ class RecoveryRequiredCheckerTest
         managementService.shutdown();
     }
 
-    private void startStopAndCreateDefaultData()
+    private RecordFormats startStopAndCreateDefaultData()
     {
         DatabaseManagementService managementService = startDatabase( fileSystem, storeDir );
         try
@@ -339,6 +348,8 @@ class RecoveryRequiredCheckerTest
                 transaction.createNode();
                 transaction.commit();
             }
+            return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency(
+                    RecordStorageEngine.class ).testAccessNeoStores().getRecordFormats();
         }
         finally
         {

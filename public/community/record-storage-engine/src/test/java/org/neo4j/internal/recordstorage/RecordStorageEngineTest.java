@@ -21,6 +21,7 @@ package org.neo4j.internal.recordstorage;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
@@ -149,6 +150,7 @@ class RecordStorageEngineTest
         assertThat( exception ).isEqualTo( applicationError );
     }
 
+    @Disabled
     @Test
     void shouldListAllStoreFilesWithEnabledRelaxedLocking()
     {

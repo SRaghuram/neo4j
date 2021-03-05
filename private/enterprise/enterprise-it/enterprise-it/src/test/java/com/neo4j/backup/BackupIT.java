@@ -72,6 +72,7 @@ import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
+import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseFile;
@@ -84,6 +85,7 @@ import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.MetaDataStore.Position;
+import org.neo4j.kernel.impl.store.format.RecordStorageCapability;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
@@ -608,6 +610,13 @@ class BackupIT
                      !Config.defaults().get( enable_relationship_type_scan_store ) )
                 {
                     // Skip relationship type scan store file if feature is not enabled
+                    continue;
+                }
+                if ( DatabaseFile.RELATIONSHIP_GROUP_DEGREES_STORE.getName().equals( storeFile.getFileName().toString() ) &&
+                        !((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency(
+                                RecordStorageEngine.class ).testAccessNeoStores().getRecordFormats().hasCapability(
+                                RecordStorageCapability.GROUP_DEGREES_STORE ) )
+                {
                     continue;
                 }
                 assertThat( backupStoreFiles ).contains( storeFile );

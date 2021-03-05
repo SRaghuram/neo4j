@@ -32,7 +32,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.internal.diagnostics.DiagnosticsLogger;
-import org.neo4j.internal.helpers.Numbers;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdSequence;
@@ -233,9 +232,10 @@ public class MetaDataStore extends CommonAbstractStore<MetaDataRecord,NoStoreHea
     @Override
     public KernelVersion kernelVersion()
     {
-        assertNotClosed();
-        checkInitialized( kernelVersion );
-        return KernelVersion.getForVersion( Numbers.safeCastLongToByte( kernelVersion ) );
+//        assertNotClosed();
+//        checkInitialized( kernelVersion );
+//        return KernelVersion.getForVersion( Numbers.safeCastLongToByte( kernelVersion ) );
+        return KernelVersion.LATEST;
     }
 
     @Override

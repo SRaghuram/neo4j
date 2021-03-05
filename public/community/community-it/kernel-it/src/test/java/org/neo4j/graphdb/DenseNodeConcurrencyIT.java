@@ -67,6 +67,7 @@ import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.MapUtil;
+import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -77,6 +78,7 @@ import org.neo4j.kernel.impl.core.NodeEntity;
 import org.neo4j.kernel.impl.core.RelationshipEntity;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.coreapi.TransactionImpl;
+import org.neo4j.kernel.impl.store.format.RecordStorageCapability;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.Barrier;
@@ -93,6 +95,7 @@ import static java.lang.String.format;
 import static java.util.concurrent.ConcurrentHashMap.newKeySet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.neo4j.graphdb.RelationshipType.withName;
@@ -500,9 +503,17 @@ class DenseNodeConcurrencyIT
         return work;
     }
 
+    private void assumeDenseNodeUnlockingFeatureEnabled()
+    {
+        assumeTrue( database.getDependencyResolver().resolveDependency( RecordStorageEngine.class ).testAccessNeoStores().getRecordFormats().hasCapability(
+                RecordStorageCapability.GROUP_DEGREES_STORE ) );
+    }
+
     @Test
     void shouldNotBlockOnCreateOnLongChain() throws ExecutionException, InterruptedException
     {
+        assumeDenseNodeUnlockingFeatureEnabled();
+
         // given
         Set<Relationship> relationships = newKeySet();
         long denseNodeId = createDenseNode( relationships );
@@ -551,6 +562,8 @@ class DenseNodeConcurrencyIT
     @Test
     void shouldNotBlockOnDeleteOnSameLongChain() throws Throwable
     {
+        assumeDenseNodeUnlockingFeatureEnabled();
+
         // given
         Set<Relationship> relationships = new HashSet<>();
         long denseNodeId = createDenseNode( relationships );

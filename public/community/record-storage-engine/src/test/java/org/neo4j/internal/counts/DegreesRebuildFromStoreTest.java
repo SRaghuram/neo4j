@@ -21,6 +21,7 @@ package org.neo4j.internal.counts;
 
 import org.eclipse.collections.api.map.primitive.MutableLongLongMap;
 import org.eclipse.collections.impl.factory.primitive.LongLongMaps;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -68,6 +69,7 @@ class DegreesRebuildFromStoreTest
     @Inject
     private RandomRule random;
 
+    @Disabled
     @Test
     void shouldRebuildDegreesStore() throws Exception
     {

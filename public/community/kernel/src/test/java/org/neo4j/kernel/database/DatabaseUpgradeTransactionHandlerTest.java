@@ -20,6 +20,7 @@
 package org.neo4j.kernel.database;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.commons.util.ExceptionUtils;
 
@@ -57,6 +58,7 @@ import static org.mockito.Mockito.mock;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
+@Disabled
 class DatabaseUpgradeTransactionHandlerTest
 {
     private volatile KernelVersion currentKernelVersion;

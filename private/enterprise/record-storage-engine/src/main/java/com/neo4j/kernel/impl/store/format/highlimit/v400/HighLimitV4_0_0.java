@@ -44,7 +44,7 @@ public class HighLimitV4_0_0 extends BaseRecordFormats
     public static final String STORE_VERSION = StoreVersion.HIGH_LIMIT_V4_0_0.versionString();
 
     public static final RecordFormats RECORD_FORMATS = new HighLimitV4_0_0();
-    public static final String NAME = "high_limitV4_0_0";
+    public static final String NAME = "high_limit";
 
     protected HighLimitV4_0_0()
     {

@@ -355,7 +355,6 @@ class RecordFormatSelectorTest
         assertEquals( HighLimitV3_2_0.RECORD_FORMATS, findSuccessor( HighLimitV3_1_0.RECORD_FORMATS ).get() );
         assertEquals( HighLimitV3_4_0.RECORD_FORMATS, findSuccessor( HighLimitV3_2_0.RECORD_FORMATS ).get() );
         assertEquals( HighLimitV4_0_0.RECORD_FORMATS, findSuccessor( HighLimitV3_4_0.RECORD_FORMATS ).get() );
-        assertEquals( HighLimit.RECORD_FORMATS, findSuccessor( HighLimitV4_0_0.RECORD_FORMATS ).get() );
     }
 
     private void verifySelectForStore( PageCache pageCache, RecordFormats format ) throws IOException

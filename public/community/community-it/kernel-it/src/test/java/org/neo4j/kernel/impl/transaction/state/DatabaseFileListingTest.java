@@ -40,6 +40,7 @@ import org.neo4j.graphdb.Resource;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
@@ -48,6 +49,7 @@ import org.neo4j.kernel.impl.index.schema.LabelScanStore;
 import org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStore;
 import org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStoreSettings;
 import org.neo4j.kernel.impl.index.schema.TokenScanStore;
+import org.neo4j.kernel.impl.store.format.RecordStorageCapability;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -224,6 +226,11 @@ class DatabaseFileListingTest
         if ( !Config.defaults().get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store ) )
         {
             expectedFiles.removeIf( f -> DatabaseFile.RELATIONSHIP_TYPE_SCAN_STORE.getName().equals( f.getFileName().toString() ) );
+        }
+        if ( !db.getDependencyResolver().resolveDependency( RecordStorageEngine.class ).testAccessNeoStores().getRecordFormats().hasCapability(
+                RecordStorageCapability.GROUP_DEGREES_STORE ) )
+        {
+            expectedFiles.remove( layout.relationshipGroupDegreesStore() );
         }
         // there was no rotation
         ResourceIterator<StoreFileMetadata> storeFiles = database.listStoreFiles( false );

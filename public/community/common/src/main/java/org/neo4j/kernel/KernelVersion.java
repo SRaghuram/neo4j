@@ -42,7 +42,7 @@ public enum KernelVersion
     // has no command version of their own it relies on a bump of the parser set version to distinguish between versions unfortunately.
     V4_3_D4( (byte) 3 );
 
-    public static final KernelVersion LATEST = V4_3_D4;
+    public static final KernelVersion LATEST = V4_2;
     private static final ImmutableByteObjectMap<KernelVersion> versionMap =
             ByteObjectMaps.immutable.from( List.of( values() ), KernelVersion::version, v -> v );
 

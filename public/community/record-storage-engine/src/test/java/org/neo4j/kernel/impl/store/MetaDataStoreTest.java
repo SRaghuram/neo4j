@@ -72,6 +72,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.writable;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
@@ -901,6 +902,8 @@ class MetaDataStoreTest
     @Test
     void shouldBeAbleToReadAndWriteKernelVersion()
     {
+        assumeTrue( KernelVersion.LATEST.isGreaterThan( KernelVersion.V4_2 ) );
+
         try ( MetaDataStore metaDataStore = newMetaDataStore() )
         {
             assertThat( metaDataStore.kernelVersion() ).isEqualTo( KernelVersion.LATEST ); //new store should have latest
@@ -911,7 +914,6 @@ class MetaDataStoreTest
         try ( MetaDataStore metaDataStore = newMetaDataStore() )
         {
             assertThat( metaDataStore.kernelVersion() ).isEqualTo( KernelVersion.V4_0 ); //and can read it after a restart
-
         }
     }
 

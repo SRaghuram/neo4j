@@ -22,6 +22,7 @@ package org.neo4j.kernel.database;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -81,6 +82,7 @@ import static org.neo4j.kernel.KernelVersion.LATEST;
 import static org.neo4j.kernel.KernelVersion.V4_2;
 import static org.neo4j.test.Race.throwing;
 
+@Disabled
 @EphemeralTestDirectoryExtension
 class DatabaseUpgradeTransactionIT
 {
@@ -117,7 +119,7 @@ class DatabaseUpgradeTransactionIT
         //Then
         assertThat( getKernelVersion() ).isEqualTo( V4_2 );
         createWriteTransaction(); // Just to have at least one tx from our measurement point in the old version
-        setDbmsRuntime( DbmsRuntimeVersion.V4_3_D4 );
+        setDbmsRuntime( DbmsRuntimeVersion.LATEST_DBMS_RUNTIME_COMPONENT_VERSION );
 
         //When
         createReadTransaction();

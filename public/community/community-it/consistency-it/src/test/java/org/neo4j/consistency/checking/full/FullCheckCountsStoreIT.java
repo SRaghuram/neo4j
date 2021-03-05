@@ -33,6 +33,8 @@ import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.RecordType;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.function.ThrowingFunction;
+import org.neo4j.internal.counts.RelationshipGroupDegreesStore;
+import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.memory.ByteBuffers;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -43,6 +45,7 @@ import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.consistency.checking.full.ConsistencyFlags.DEFAULT;
 import static org.neo4j.internal.helpers.progress.ProgressMonitorFactory.NONE;
@@ -77,6 +80,8 @@ public class FullCheckCountsStoreIT
     @Test
     void shouldReportMissingGroupDegreesStore() throws Exception
     {
+        assumeTrue( db.getDependencyResolver().resolveDependency( RecordStorageEngine.class ).relationshipGroupDegreesStore() !=
+                RelationshipGroupDegreesStore.DISABLED );
         shouldReportBadCountsStore( path ->
         {
             Files.delete( path );
@@ -87,6 +92,8 @@ public class FullCheckCountsStoreIT
     @Test
     void shouldReportBrokenGroupDegreesStore() throws Exception
     {
+        assumeTrue( db.getDependencyResolver().resolveDependency( RecordStorageEngine.class ).relationshipGroupDegreesStore() !=
+                RelationshipGroupDegreesStore.DISABLED );
         shouldReportBadCountsStore( this::corruptFileIfExists, DatabaseLayout::relationshipGroupDegreesStore, RecordType.RELATIONSHIP_GROUP );
     }
 

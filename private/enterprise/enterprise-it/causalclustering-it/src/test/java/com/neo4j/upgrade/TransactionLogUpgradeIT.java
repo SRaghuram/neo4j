@@ -69,6 +69,7 @@ import static java.lang.Integer.max;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -135,6 +136,8 @@ class TransactionLogUpgradeIT
     @Test
     void shouldUpgradeKernelVersionInTransactionOnRuntimeUpgrade() throws Exception
     {
+        assumeTrue( KernelVersion.LATEST.isGreaterThan( KernelVersion.V4_2 ) );
+
         //Given
         setRuntimeVersion( DbmsRuntimeVersion.V4_2 );
         setKernelVersion( KernelVersion.V4_2 );
@@ -165,6 +168,8 @@ class TransactionLogUpgradeIT
     @Test
     void shouldUpgradeKernelVersionInTransactionOnRuntimeUpgradeStressTest() throws Throwable
     {
+        assumeTrue( KernelVersion.LATEST.isGreaterThan( KernelVersion.V4_2 ) );
+
         //Given
         setRuntimeVersion( DbmsRuntimeVersion.V4_2 );
         setKernelVersion( KernelVersion.V4_2 );
@@ -197,6 +202,8 @@ class TransactionLogUpgradeIT
     @Test
     void shouldUpgradeKernelVersionInTransactionOnDenseNodeOnRuntimeUpgradeStressTest() throws Throwable
     {
+        assumeTrue( KernelVersion.LATEST.isGreaterThan( KernelVersion.V4_2 ) );
+
         //Given
         setRuntimeVersion( DbmsRuntimeVersion.V4_2 );
         setKernelVersion( KernelVersion.V4_2 );

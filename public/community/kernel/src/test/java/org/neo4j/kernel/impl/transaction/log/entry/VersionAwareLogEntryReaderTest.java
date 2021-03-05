@@ -62,7 +62,7 @@ class VersionAwareLogEntryReaderTest
     void shouldReadACommitLogEntry() throws IOException
     {
         // given
-        final LogEntryCommit commit = new LogEntryCommit( 42, 21, 1734331568 );
+        final LogEntryCommit commit = new LogEntryCommit( 42, 21, 1748422299 );
         final InMemoryClosableChannel channel = new InMemoryClosableChannel( true );
 
         writeCommitEntry( channel, commit );

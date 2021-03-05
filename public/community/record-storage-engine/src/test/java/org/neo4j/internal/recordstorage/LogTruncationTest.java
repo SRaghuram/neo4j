@@ -94,14 +94,16 @@ class LogTruncationTest
         permutations.put( Command.LabelTokenCommand.class,
                 new Command[] { new Command.LabelTokenCommand( serialization, new LabelTokenRecord( 1 ),
                         createLabelTokenRecord( 1 ) ) } );
-        permutations.put( Command.MetaDataCommand.class,
-                new Command[] { new Command.MetaDataCommand( serialization, new MetaDataRecord( 2 ), new MetaDataRecord( 2 ).initialize( true, 123 ) ) } );
+        permutations.put( Command.MetaDataCommand.class, new Command[]{
+                new Command.MetaDataCommand( LogCommandSerializationV4_3_D3.INSTANCE, new MetaDataRecord( 2 ),
+                        new MetaDataRecord( 2 ).initialize( true, 123 ) )} );
 
         // Counts commands
         permutations.put( NodeCountsCommand.class, new Command[]{new NodeCountsCommand( serialization, 42, 11 )} );
         permutations.put( RelationshipCountsCommand.class,
                 new Command[]{new RelationshipCountsCommand( serialization, 17, 2, 13, -2 )} );
-        permutations.put( Command.GroupDegreeCommand.class, new Command[]{new Command.GroupDegreeCommand( 42, RelationshipDirection.OUTGOING, 1 )} );
+        permutations.put( Command.GroupDegreeCommand.class,
+                new Command[]{new Command.GroupDegreeCommand( LogCommandSerializationV4_3_D3.INSTANCE, 42, RelationshipDirection.OUTGOING, 1 )} );
     }
 
     @Test
@@ -148,7 +150,7 @@ class LogTruncationTest
         int bytesSuccessfullyWritten = inMemoryChannel.writerPosition();
         try
         {
-            StorageCommand command = serialization.read( inMemoryChannel );
+            StorageCommand command = cmd.serialization.read( inMemoryChannel );
             assertEquals( cmd, command );
         }
         catch ( Exception e )
@@ -164,7 +166,7 @@ class LogTruncationTest
             Command command = null;
             try
             {
-                command = serialization.read( inMemoryChannel );
+                command = cmd.serialization.read( inMemoryChannel );
             }
             catch ( ReadPastEndException e )
             {

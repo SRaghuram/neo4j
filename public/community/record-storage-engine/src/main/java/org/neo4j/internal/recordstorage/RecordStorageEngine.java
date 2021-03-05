@@ -71,6 +71,9 @@ import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
+import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
+import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.format.RecordStorageCapability;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.MetaDataRecord;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -199,7 +202,11 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
             countsStore = openCountsStore( pageCache, fs, databaseLayout, logProvider, recoveryCleanupWorkCollector, readOnlyChecker, cacheTracer );
 
-            groupDegreesStore = openDegreesStore( pageCache, fs, databaseLayout, recoveryCleanupWorkCollector, readOnlyChecker, cacheTracer );
+            RecordFormats format =
+                    RecordFormatSelector.selectForVersion( MetaDataStore.versionLongToString( neoStores.getMetaDataStore().getStoreVersion() ) );
+            groupDegreesStore = format.hasCapability( RecordStorageCapability.GROUP_DEGREES_STORE )
+                                ? openDegreesStore( pageCache, fs, databaseLayout, recoveryCleanupWorkCollector, readOnlyChecker, cacheTracer )
+                                : RelationshipGroupDegreesStore.DISABLED;
 
             consistencyCheckApply = config.get( GraphDatabaseInternalSettings.consistency_check_on_apply );
         }

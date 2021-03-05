@@ -139,6 +139,11 @@ public class StoreFactory
                 cacheTracer, readOnlyChecker, storeTypes, openOptions );
     }
 
+    public RecordFormats getSelectedRecordFormats()
+    {
+        return recordFormats;
+    }
+
     private static ImmutableSet<OpenOption> buildOpenOptions( Config config, RecordFormats recordFormats, ImmutableSet<OpenOption> openOptions )
     {
         // we need to modify options only for aligned format and avoid passing direct io option in all other cases

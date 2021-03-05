@@ -526,7 +526,7 @@ public class Database extends LifecycleAdapter
             databaseDependencies.resolveDependency( DbmsDiagnosticsManager.class ).dumpDatabaseDiagnostics( this );
             life.start();
 
-            registerUpgradeListener();
+//            registerUpgradeListener();
             eventListeners.databaseStart( namedDatabaseId );
 
             /*

@@ -35,14 +35,14 @@ import org.neo4j.storageengine.api.IndexCapabilities;
  */
 public class HighLimit extends BaseRecordFormats
 {
-    public static final String STORE_VERSION = StoreVersion.HIGH_LIMIT_V4_3_0.versionString();
+    public static final String STORE_VERSION = StoreVersion.HIGH_LIMIT_V4_0_0.versionString();
 
-    public static final RecordFormats RECORD_FORMATS = new HighLimit();
-    public static final String NAME = "high_limit";
+    public static final RecordFormats RECORD_FORMATS = HighLimitV4_0_0.RECORD_FORMATS;
+    public static final String NAME = HighLimitV4_0_0.NAME;
 
     protected HighLimit()
     {
-        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V4_3_0.introductionVersion(), 7,
+        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V4_0_0.introductionVersion(), 7,
                 RecordStorageCapability.DENSE_NODES,
                 RecordStorageCapability.RELATIONSHIP_TYPE_3BYTES,
                 RecordStorageCapability.SCHEMA,

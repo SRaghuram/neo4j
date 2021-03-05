@@ -33,14 +33,14 @@ public enum DbmsRuntimeVersion implements ComponentVersion
     /**
      * Switch to use the Version node
      */
-    V4_3( 3, DBMS_RUNTIME_COMPONENT, Neo4jVersions.VERSION_43D2, KernelVersion.V4_2 ),
+    V4_3( 3, DBMS_RUNTIME_COMPONENT, Neo4jVersions.VERSION_43D2, KernelVersion.V4_2 );
 
     /**
      * Dense node locking changes
      */
-    V4_3_D4( 4, DBMS_RUNTIME_COMPONENT, Neo4jVersions.VERSION_43D4, KernelVersion.V4_3_D4 );
+//    V4_3_D4( 4, DBMS_RUNTIME_COMPONENT, Neo4jVersions.VERSION_43D4, KernelVersion.V4_3_D4 );
 
-    public static final DbmsRuntimeVersion LATEST_DBMS_RUNTIME_COMPONENT_VERSION = V4_3_D4;
+    public static final DbmsRuntimeVersion LATEST_DBMS_RUNTIME_COMPONENT_VERSION = V4_3;
 
     DbmsRuntimeVersion( int version, String componentName, String description, KernelVersion kernelVersion )
     {

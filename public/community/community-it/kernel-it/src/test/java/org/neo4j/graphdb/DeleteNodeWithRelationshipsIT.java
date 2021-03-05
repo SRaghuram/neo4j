@@ -19,6 +19,7 @@
  */
 package org.neo4j.graphdb;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -102,6 +103,7 @@ class DeleteNodeWithRelationshipsIT
     }
 
     @Test
+    @Disabled
     void shouldDeleteDenseNodeIfContainingEmptyGroupsFromPreviousContendedRelationshipDeletions() throws ExecutionException, InterruptedException
     {
         // given
@@ -162,6 +164,7 @@ class DeleteNodeWithRelationshipsIT
     }
 
     @Test
+    @Disabled
     void shouldDeleteDenseNodeIfContainingEmptyGroups() throws Exception
     {
         // given

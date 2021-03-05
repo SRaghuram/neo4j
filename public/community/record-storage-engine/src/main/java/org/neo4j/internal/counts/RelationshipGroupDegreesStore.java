@@ -19,8 +19,10 @@
  */
 package org.neo4j.internal.counts;
 
+import org.neo4j.annotations.documented.ReporterFactory;
 import org.neo4j.counts.CountsStorage;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.RelationshipDirection;
 
 /**
@@ -75,4 +77,59 @@ public interface RelationshipGroupDegreesStore extends CountsStorage
          */
         void degree( long groupId, RelationshipDirection direction, long degree );
     }
+
+    Updater DISABLED_UPDATER = new Updater()
+    {
+        @Override
+        public void close()
+        {
+        }
+
+        @Override
+        public void increment( long groupId, RelationshipDirection direction, long delta )
+        {
+            throw new UnsupportedOperationException();
+        }
+    };
+
+    RelationshipGroupDegreesStore DISABLED = new RelationshipGroupDegreesStore()
+    {
+        @Override
+        public void close()
+        {
+        }
+
+        @Override
+        public void start( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+        {
+        }
+
+        @Override
+        public void checkpoint( PageCursorTracer cursorTracer )
+        {
+        }
+
+        @Override
+        public Updater apply( long txId, PageCursorTracer cursorTracer )
+        {
+            return DISABLED_UPDATER;
+        }
+
+        @Override
+        public long degree( long groupId, RelationshipDirection direction, PageCursorTracer cursorTracer )
+        {
+            return 0;
+        }
+
+        @Override
+        public void accept( GroupDegreeVisitor visitor, PageCursorTracer cursorTracer )
+        {
+        }
+
+        @Override
+        public boolean consistencyCheck( ReporterFactory reporterFactory, PageCursorTracer cursorTracer )
+        {
+            return true;
+        }
+    };
 }

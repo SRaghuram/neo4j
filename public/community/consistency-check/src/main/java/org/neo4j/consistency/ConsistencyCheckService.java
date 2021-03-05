@@ -61,6 +61,8 @@ import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.StoreFactory;
+import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.format.RecordStorageCapability;
 import org.neo4j.kernel.impl.transaction.state.DefaultIndexProviderMap;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -213,8 +215,9 @@ public class ConsistencyCheckService
         // Don't start the counts stores here as part of life, instead only shut down. This is because it's better to let FullCheck
         // start it and add its missing/broken detection where it can report to user.
         CountsStoreManager countsStoreManager = life.add( new CountsStoreManager( pageCache, fileSystem, databaseLayout, pageCacheTracer, memoryTracker ) );
-        RelationshipGroupDegreesStoreManager groupDegreesStoreManager =
-                life.add( new RelationshipGroupDegreesStoreManager( pageCache, fileSystem, databaseLayout, pageCacheTracer, memoryTracker ) );
+        RelationshipGroupDegreesStoreManager groupDegreesStoreManager = life.add(
+                new RelationshipGroupDegreesStoreManager( pageCache, fileSystem, databaseLayout, pageCacheTracer, memoryTracker,
+                        factory.getSelectedRecordFormats() ) );
 
         ConsistencySummaryStatistics summary;
         final Path reportFile = chooseReportPath( reportDir );
@@ -450,15 +453,23 @@ public class ConsistencyCheckService
 
     private static class RelationshipGroupDegreesStoreManager extends CountsStorageManager<RelationshipGroupDegreesStore>
     {
+        private final RecordFormats recordFormats;
+
         RelationshipGroupDegreesStoreManager( PageCache pageCache, FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout,
-                PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
+                PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker, RecordFormats recordFormats )
         {
             super( pageCache, fileSystem, databaseLayout, pageCacheTracer, memoryTracker );
+            this.recordFormats = recordFormats;
         }
 
         @Override
         protected RelationshipGroupDegreesStore open() throws IOException
         {
+            if ( !recordFormats.hasCapability( RecordStorageCapability.GROUP_DEGREES_STORE ) )
+            {
+                return RelationshipGroupDegreesStore.DISABLED;
+            }
+
             return new GBPTreeRelationshipGroupDegreesStore( pageCache, databaseLayout.relationshipGroupDegreesStore(), fileSystem,
                     RecoveryCleanupWorkCollector.ignore(), new RebuildPreventingDegreesInitializer(), readOnly(), pageCacheTracer,
                     GBPTreeCountsStore.NO_MONITOR, databaseLayout.getDatabaseName() );
