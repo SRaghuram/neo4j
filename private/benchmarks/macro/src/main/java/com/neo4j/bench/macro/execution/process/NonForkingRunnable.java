@@ -12,7 +12,6 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
 
 import java.util.List;
@@ -44,7 +43,6 @@ public class NonForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, C
                                List<ParameterizedProfiler> profilers,
                                Jvm jvm,
                                JvmArgs jvmArgs,
-                               Parameters clientParameters,
                                Resources resources )
     {
         ParameterizedProfiler.assertInternal( profilers );

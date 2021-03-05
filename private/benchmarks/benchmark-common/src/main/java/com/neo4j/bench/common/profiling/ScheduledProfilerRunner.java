@@ -9,22 +9,12 @@ import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class ScheduledProfilerRunner
 {
-    public static List<ScheduledProfiler> toScheduleProfilers( List<ExternalProfiler> externalProfilers )
-    {
-        return externalProfilers.stream()
-                                .filter( k -> k instanceof ScheduledProfiler )
-                                .map( ScheduledProfiler.class::cast )
-                                .collect( Collectors.toList() );
-    }
-
     private final ScheduledExecutorService scheduledThreadPool;
 
     public ScheduledProfilerRunner()

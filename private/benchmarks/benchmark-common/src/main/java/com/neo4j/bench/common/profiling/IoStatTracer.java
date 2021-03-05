@@ -9,7 +9,6 @@ import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.process.ProcessWrapper;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.lang.ProcessBuilder.Redirect;
@@ -31,8 +30,7 @@ public class IoStatTracer implements ExternalProfiler
     @Override
     public JvmArgs jvmArgs( JvmVersion jvmVersion,
                             ForkDirectory forkDirectory,
-                            ProfilerRecordingDescriptor profilerRecordingDescriptor,
-                            Resources resources )
+                            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return JvmArgs.empty();
     }

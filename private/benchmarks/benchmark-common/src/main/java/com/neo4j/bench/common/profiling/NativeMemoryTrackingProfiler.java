@@ -13,7 +13,6 @@ import com.neo4j.bench.common.profiling.nmt.NativeMemoryTrackingSummaryReport;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.io.File;
@@ -42,8 +41,7 @@ public class NativeMemoryTrackingProfiler implements ScheduledProfiler
     public JvmArgs jvmArgs(
             JvmVersion jvmVersion,
             ForkDirectory forkDirectory,
-            ProfilerRecordingDescriptor profilerRecordingDescriptor,
-            Resources resources )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return JvmArgs.from( "-XX:NativeMemoryTracking=summary" );
     }

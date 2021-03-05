@@ -8,11 +8,9 @@ package com.neo4j.bench.common.profiling;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.PathUtil;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.model.profiling.RecordingType;
@@ -70,8 +68,7 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
     @Override
     public JvmArgs jvmArgs( JvmVersion jvmVersion,
                             ForkDirectory forkDirectory,
-                            ProfilerRecordingDescriptor profilerRecordingDescriptor,
-                            Resources resources )
+                            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         JvmArgs jvmArgs = JvmArgs.empty();
         if ( jvmVersion.hasCommercialFeatures() )

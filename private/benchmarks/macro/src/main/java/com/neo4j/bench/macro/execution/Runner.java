@@ -7,14 +7,11 @@ package com.neo4j.bench.macro.execution;
 
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
-import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
-import com.neo4j.bench.macro.execution.process.InternalProfilerAssist;
+import com.neo4j.bench.common.profiling.assist.InternalProfilerAssist;
 import com.neo4j.bench.macro.workload.ParametersReader;
 import com.neo4j.bench.macro.workload.QueryString;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,13 +21,10 @@ public class Runner
 {
     private static final Logger LOG = LoggerFactory.getLogger( Runner.class );
 
-    public void run( Jvm jvm,
-                     Database database,
+    public void run( Database database,
                      InternalProfilerAssist profilerAssist,
                      QueryString warmupQueryString,
                      QueryString queryString,
-                     BenchmarkGroup benchmarkGroup,
-                     Benchmark benchmark,
                      ParametersReader parametersReader,
                      ForkDirectory forkDirectory,
                      MeasurementControl warmupControl,
@@ -45,7 +39,7 @@ public class Runner
             /*
              * Notify profilers that warmup is about to begin
              */
-            profilerAssist.onWarmupBegin( jvm, forkDirectory, benchmarkGroup, benchmark );
+            profilerAssist.onWarmupBegin();
 
             /*
              * Perform warmup
@@ -64,7 +58,7 @@ public class Runner
             /*
              * Notify profilers that warmup has completed
              */
-            profilerAssist.onWarmupFinished( jvm, forkDirectory, benchmarkGroup, benchmark );
+            profilerAssist.onWarmupFinished();
         }
         else
         {
@@ -74,7 +68,7 @@ public class Runner
         /*
          * Notify profilers that measurement is about to begin
          */
-        profilerAssist.onMeasurementBegin( jvm, forkDirectory, benchmarkGroup, benchmark );
+        profilerAssist.onMeasurementBegin();
 
         /*
          * Perform measurement
@@ -91,6 +85,6 @@ public class Runner
         /*
          * Notify profilers that measurement has completed
          */
-        profilerAssist.onMeasurementFinished( jvm, forkDirectory, benchmarkGroup, benchmark );
+        profilerAssist.onMeasurementFinished();
     }
 }

@@ -12,7 +12,6 @@ import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.Benchmark.Mode;
 import com.neo4j.bench.model.model.BenchmarkGroup;
@@ -82,20 +81,15 @@ public class OOMProfilerTest
         OOMProfiler oomProfiler = new OOMProfiler();
 
         // when
-        JvmArgs jvmArgs;
-        try ( Resources resources = new Resources( forkDirectoryPath ) )
-        {
-            jvmArgs = oomProfiler.jvmArgs( jvmVersion,
-                                           forkDirectory,
-                                           getProfilerRecordingDescriptor(),
-                                           resources );
-        }
+        JvmArgs jvmArgs = oomProfiler.jvmArgs( jvmVersion,
+                                               forkDirectory,
+                                               getProfilerRecordingDescriptor() );
 
         // then
+        Path outMemoryScript = forkDirectoryPath.resolve( "on-out-of-memory.sh" );
+        assertTrue( outMemoryScript.toFile().exists(), "Out memory scripts doesn't exist at " + outMemoryScript );
         assertThat( jvmArgs.toArgs(), contains(
-                format( "-XX:OnOutOfMemoryError=%s --jvm-pid %%p --output-dir %s/out-of-memory",
-                        forkDirectoryPath.resolve( "resources_copy/bench/profiling/on-out-of-memory.sh" ),
-                        forkDirectory.toAbsolutePath() ),
+                format( "-XX:OnOutOfMemoryError=%s --jvm-pid %%p --output-dir %s/out-of-memory", outMemoryScript, forkDirectory.toAbsolutePath() ),
                 "-XX:+HeapDumpOnOutOfMemoryError",
                 format( "-XX:HeapDumpPath=%s/out-of-memory", forkDirectory.toAbsolutePath() ) ) );
     }
@@ -108,16 +102,12 @@ public class OOMProfilerTest
         ProfilerRecordingDescriptor profilerRecordingDescriptor = getProfilerRecordingDescriptor();
 
         // when
-        try ( Resources resources = new Resources( forkDirectoryPath ) )
-        {
-            oomProfiler.jvmArgs( jvmVersion,
-                                 forkDirectory,
-                                 profilerRecordingDescriptor,
-                                 resources );
-            // create mock heap dump
-            Files.createFile( OOMProfiler.getOOMDirectory( forkDirectory ).resolve( "12345.hprof" ) );
-            oomProfiler.processFailed( forkDirectory, profilerRecordingDescriptor );
-        }
+        oomProfiler.jvmArgs( jvmVersion,
+                             forkDirectory,
+                             profilerRecordingDescriptor );
+        // create mock heap dump
+        Files.createFile( OOMProfiler.getOOMDirectory( forkDirectory ).resolve( "12345.hprof" ) );
+        oomProfiler.processFailed( forkDirectory, profilerRecordingDescriptor );
 
         // then
         Path recordingPath = forkDirectory.findRegisteredPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.HEAP_DUMP ) );
@@ -133,14 +123,10 @@ public class OOMProfilerTest
         ProfilerRecordingDescriptor profilerRecordingDescriptor = getProfilerRecordingDescriptor();
 
         // when
-        try ( Resources resources = new Resources( forkDirectoryPath ) )
-        {
-            oomProfiler.jvmArgs( jvmVersion,
-                                 forkDirectory,
-                                 profilerRecordingDescriptor,
-                                 resources );
-            oomProfiler.afterProcess( forkDirectory, profilerRecordingDescriptor );
-        }
+        oomProfiler.jvmArgs( jvmVersion,
+                             forkDirectory,
+                             profilerRecordingDescriptor );
+        oomProfiler.afterProcess( forkDirectory, profilerRecordingDescriptor );
 
         // then
         Path recordingPath = forkDirectory.findRegisteredPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.HEAP_DUMP ) );
@@ -159,29 +145,25 @@ public class OOMProfilerTest
         Path java = javaHome.resolve( "bin/java" );
 
         // when
-        try ( Resources resources = new Resources( forkDirectoryPath ) )
-        {
-            ProfilerRecordingDescriptor profilerRecordingDescriptor = getProfilerRecordingDescriptor();
-            JvmArgs jvmArgs = oomProfiler.jvmArgs( jvmVersion,
-                                                   forkDirectory,
-                                                   profilerRecordingDescriptor,
-                                                   resources );
-            List<String> args = Lists.newArrayList(
-                    java.toString(),
-                    "-Xmx16m",
-                    "-cp",
-                    javaClassPath
-            );
-            args.addAll( jvmArgs.toArgs() );
-            args.add( OutOfMemory.class.getName() );
-            Process process = new ProcessBuilder()
-                    .command( args )
-                    .redirectErrorStream( true )
-                    .redirectOutput( ProcessBuilder.Redirect.INHERIT )
-                    .start();
-            int waitFor = process.waitFor();
-            assertNotEquals( 0, waitFor, "process should exit with non-zero code" );
-        }
+        ProfilerRecordingDescriptor profilerRecordingDescriptor = getProfilerRecordingDescriptor();
+        JvmArgs jvmArgs = oomProfiler.jvmArgs( jvmVersion,
+                                               forkDirectory,
+                                               profilerRecordingDescriptor );
+        List<String> args = Lists.newArrayList(
+                java.toString(),
+                "-Xmx16m",
+                "-cp",
+                javaClassPath
+        );
+        args.addAll( jvmArgs.toArgs() );
+        args.add( OutOfMemory.class.getName() );
+        Process process = new ProcessBuilder()
+                .command( args )
+                .redirectErrorStream( true )
+                .redirectOutput( ProcessBuilder.Redirect.INHERIT )
+                .start();
+        int waitFor = process.waitFor();
+        assertNotEquals( 0, waitFor, "process should exit with non-zero code" );
         // then
         Path oomDirectory = OOMProfiler.getOOMDirectory( forkDirectory );
         // check if there is a single heap dump file

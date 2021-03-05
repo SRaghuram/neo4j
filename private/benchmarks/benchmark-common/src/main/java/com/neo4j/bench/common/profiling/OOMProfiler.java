@@ -43,10 +43,9 @@ public class OOMProfiler implements ExternalProfiler
     public JvmArgs jvmArgs(
             JvmVersion jvmVersion,
             ForkDirectory forkDirectory,
-            ProfilerRecordingDescriptor profilerRecordingDescriptor,
-            Resources resources )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
-        Path oomScript = findOnOutOfMemoryScript( resources );
+        Path oomScript = findOnOutOfMemoryScript( forkDirectory );
         Path oomDirectory = createOOMDirectory( forkDirectory );
         // create parameters
         return JvmArgs.from(
@@ -125,11 +124,23 @@ public class OOMProfiler implements ExternalProfiler
         return oomDirectory;
     }
 
-    private Path findOnOutOfMemoryScript( Resources resources )
+    private Path findOnOutOfMemoryScript( ForkDirectory forkDirectory )
     {
-        Path onOutOfMemoryScript = resources.getResourceFile( "/bench/profiling/on-out-of-memory.sh" );
-        assertIsExecutable( onOutOfMemoryScript );
-        return onOutOfMemoryScript;
+        Path target = forkDirectory.pathFor( "on-out-of-memory.sh" ).toAbsolutePath();
+        try ( Resources resources = new Resources( Paths.get( forkDirectory.toAbsolutePath() ) ) )
+        {
+            Path onOutOfMemoryScript = resources.getResourceFile( "/bench/profiling/on-out-of-memory.sh" );
+            try
+            {
+                Files.copy( onOutOfMemoryScript, target );
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
+        }
+        assertIsExecutable( target );
+        return target;
     }
 
     private static void assertIsExecutable( Path onOutOfMemoryScript )

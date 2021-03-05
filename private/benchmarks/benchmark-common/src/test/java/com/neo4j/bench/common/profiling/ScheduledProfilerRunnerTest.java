@@ -13,7 +13,6 @@ import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.Benchmark.Mode;
 import com.neo4j.bench.model.model.BenchmarkGroup;
@@ -23,7 +22,6 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -68,20 +66,19 @@ public class ScheduledProfilerRunnerTest
         BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
         ForkDirectory forkDirectory = benchmarkDirectory.findOrCreate( "forkName" );
         CompletableFuture<List<Tick>> futureTicks = new CompletableFuture<>();
-        List<ExternalProfiler> externalProfilers = Arrays.asList( new SimpleScheduledProfiler( futureTicks, 2 ) );
         ScheduledProfilerRunner scheduledProfilerRunner = new ScheduledProfilerRunner();
-        List<ScheduledProfiler> scheduledProfilers = ScheduledProfilerRunner.toScheduleProfilers( externalProfilers );
+        ScheduledProfiler scheduledProfiler = new SimpleScheduledProfiler( futureTicks, 2 );
         Jvm jvm = Jvm.defaultJvmOrFail();
         // when
-        scheduledProfilers.forEach( profiler -> scheduledProfilerRunner.submit( profiler,
-                                                                                forkDirectory,
-                                                                                ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                                                                                    benchmark,
-                                                                                                                    RunPhase.MEASUREMENT,
-                                                                                                                    defaultProfiler( NO_OP ), /*not used*/
-                                                                                                                    Parameters.NONE ),
-                                                                                jvm,
-                                                                                new Pid( 1111 ) /*not used*/ ) );
+        scheduledProfilerRunner.submit( scheduledProfiler,
+                                        forkDirectory,
+                                        ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                                            benchmark,
+                                                                            RunPhase.MEASUREMENT,
+                                                                            defaultProfiler( NO_OP ), /*not used*/
+                                                                            Parameters.NONE ),
+                                        jvm,
+                                        new Pid( 1111 ) /*not used*/ );
         try
         {
             // then, wait double time of default fixed rate,
@@ -118,8 +115,7 @@ public class ScheduledProfilerRunnerTest
         @Override
         public JvmArgs jvmArgs( JvmVersion jvmVersion,
                                 ForkDirectory forkDirectory,
-                ProfilerRecordingDescriptor profilerRecordingDescriptor,
-                                Resources resources )
+                                ProfilerRecordingDescriptor profilerRecordingDescriptor )
         {
             return JvmArgs.empty();
         }

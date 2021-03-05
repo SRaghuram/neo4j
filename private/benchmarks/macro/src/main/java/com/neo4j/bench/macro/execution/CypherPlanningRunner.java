@@ -6,10 +6,9 @@
 package com.neo4j.bench.macro.execution;
 
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
-import com.neo4j.bench.macro.execution.process.InternalProfilerAssist;
+import com.neo4j.bench.common.profiling.assist.InternalProfilerAssist;
 import com.neo4j.bench.macro.workload.Query;
 
 import java.util.function.Function;
@@ -26,8 +25,7 @@ public class CypherPlanningRunner extends QueryRunner
     }
 
     @Override
-    protected void run( Jvm jvm,
-                        InternalProfilerAssist profilerAssist,
+    protected void run( InternalProfilerAssist profilerAssist,
                         Query query,
                         ForkDirectory forkDirectory,
                         MeasurementControl warmupControl,
@@ -37,13 +35,10 @@ public class CypherPlanningRunner extends QueryRunner
         {
             try ( Database database = databaseCreator.apply( forkDirectory ) )
             {
-                new Runner().run( jvm,
-                                  database,
+                new Runner().run( database,
                                   profilerAssist,
                                   query.copyWith( PLAN ).queryString(),
                                   query.copyWith( PLAN ).queryString(),
-                                  query.benchmarkGroup(),
-                                  query.benchmark(),
                                   query.parameters().create(),
                                   forkDirectory,
                                   warmupControl,

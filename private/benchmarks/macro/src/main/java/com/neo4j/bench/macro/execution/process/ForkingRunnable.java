@@ -9,13 +9,8 @@ import com.neo4j.bench.common.process.JpsPid;
 import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
 import com.neo4j.bench.common.process.PgrepAndPsPid;
-import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
-import com.neo4j.bench.common.profiling.Profiler;
-import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
-import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.profiling.ScheduledProfiler;
-import com.neo4j.bench.common.profiling.ScheduledProfilerRunner;
+import com.neo4j.bench.common.profiling.assist.ExternalProfilerAssist;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.Jvm;
@@ -28,14 +23,13 @@ import com.neo4j.bench.model.process.JvmArgs;
 
 import java.lang.ProcessBuilder.Redirect;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-
-import static com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor.create;
-import static java.util.stream.Collectors.toList;
 
 public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONNECTION extends AutoCloseable> extends RunnableFork<LAUNCHER,CONNECTION>
 {
+    private final ExternalProfilerAssist clientAssist;
+
     ForkingRunnable( LAUNCHER launcher,
                      Query query,
                      ForkDirectory forkDirectory,
@@ -51,6 +45,15 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                jvm,
                jvmArgs,
                resources );
+        // only provide additional parameters if multiple processes are involved in the benchmark
+        Parameters clientParameters = launcher.isDatabaseInDifferentProcess() ? Parameters.CLIENT : Parameters.NONE;
+        this.clientAssist = ExternalProfilerAssist.create( createExternalProfilers( profilers ),
+                                                           forkDirectory,
+                                                           query.benchmarkGroup(),
+                                                           query.benchmark(),
+                                                           Collections.emptySet(),
+                                                           jvm,
+                                                           clientParameters );
     }
 
     @Override
@@ -61,7 +64,6 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                List<ParameterizedProfiler> profilers,
                                Jvm jvm,
                                JvmArgs jvmArgs,
-                               Parameters clientParameters,
                                Resources resources )
     {
         ParameterizedProfiler.assertInternal( profilers );
@@ -71,24 +73,10 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                                       ParameterizedProfiler.profilerTypes( profilers ),
                                                       isClientForked,
                                                       resources );
-        // retrieves same external profiler _instances_ that were already used -- because external profilers are allowed to be stateful
-        List<ExternalProfiler> externalProfilers = externalProfilers();
-        List<String> clientInvokeArgs = externalProfilers.stream()
-                                                         .map( profiler -> profiler.invokeArgs( forkDirectory,
-                                                                                                profilerRecordingDescriptor( query,
-                                                                                                                             clientParameters,
-                                                                                                                             profiler ) ) )
-                                                         .flatMap( Collection::stream )
-                                                         .distinct()
-                                                         .collect( toList() );
+        List<String> clientInvokeArgs = clientAssist.invokeArgs();
 
-        JvmArgs clientJvmArgs = RunnableFork.addExternalProfilerJvmArgs( externalProfilers,
-                                                                         jvm,
-                                                                         forkDirectory,
-                                                                         query,
-                                                                         clientParameters,
-                                                                         jvmArgs,
-                                                                         resources );
+        JvmArgs profilersJvmArgs = clientAssist.jvmArgs();
+        JvmArgs clientJvmArgs = jvmArgs.merge( profilersJvmArgs );
 
         JvmArgs enrichedClientJvmArgs = launcher.toolJvmArgs( clientJvmArgs );
 
@@ -98,10 +86,7 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                                                           commandArgs,
                                                                           Main.class );
 
-        externalProfilers.forEach( profiler -> profiler.beforeProcess( forkDirectory,
-                                                                       profilerRecordingDescriptor( query,
-                                                                                                    clientParameters,
-                                                                                                    profiler ) ) );
+        clientAssist.beforeProcess();
 
         // inherit output
         Redirect outputRedirect = Redirect.INHERIT;
@@ -114,15 +99,7 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                 Arrays.asList( new JpsPid(), new PgrepAndPsPid() ) );
 
         // if any, schedule runs of scheduled profilers
-        List<ScheduledProfiler> scheduledProfilers = ScheduledProfilerRunner.toScheduleProfilers( externalProfilers );
-        ScheduledProfilerRunner scheduledProfilerRunner = new ScheduledProfilerRunner();
-        scheduledProfilers.forEach( profiler -> scheduledProfilerRunner.submit( profiler,
-                                                                                forkDirectory,
-                                                                                profilerRecordingDescriptor( query,
-                                                                                                             clientParameters,
-                                                                                                             profiler ),
-                                                                                jvm,
-                                                                                jvmProcess.pid() ) );
+        clientAssist.schedule( jvmProcess.pid() );
 
         try
         {
@@ -131,31 +108,13 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
         catch ( Exception e )
         {
             // make sure we clean up in profilers
-            externalProfilers.forEach( profiler -> profiler.processFailed( forkDirectory,
-                                                                           profilerRecordingDescriptor( query,
-                                                                                                        clientParameters,
-                                                                                                        profiler ) ) );
+            clientAssist.processFailed();
             // re throw exception
             throw e;
         }
-        finally
-        {
-            // stop scheduled profilers
-            scheduledProfilerRunner.stop();
-        }
 
-        externalProfilers.forEach( profiler -> profiler.afterProcess( forkDirectory,
-                                                                      profilerRecordingDescriptor( query, clientParameters, profiler ) ) );
+        clientAssist.afterProcess();
 
         return Results.loadFrom( forkDirectory, RunPhase.MEASUREMENT );
-    }
-
-    private ProfilerRecordingDescriptor profilerRecordingDescriptor( Query query, Parameters parameters, Profiler profiler )
-    {
-        return create( query.benchmarkGroup(),
-                       query.benchmark(),
-                       RunPhase.MEASUREMENT,
-                       ParameterizedProfiler.defaultProfiler( ProfilerType.typeOf( profiler ) ),
-                       parameters );
     }
 }

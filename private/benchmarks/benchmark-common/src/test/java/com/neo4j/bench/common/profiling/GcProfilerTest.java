@@ -65,8 +65,7 @@ class GcProfilerTest
         JvmVersion jvmVersion = JvmVersion.create( 8, "" );
         JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion,
                                             forkDirectory,
-                                            getProfilerRecordingDescriptor( Parameters.CLIENT ),
-                                            null );
+                                            getProfilerRecordingDescriptor( Parameters.CLIENT ) );
         assertThat( jvmArgs.toArgs(), hasItem( equalTo( "-XX:+PrintGC" ) ) );
     }
 
@@ -77,8 +76,7 @@ class GcProfilerTest
         JvmVersion jvmVersion = JvmVersion.create( 9, "" );
         JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion,
                                             forkDirectory,
-                                            getProfilerRecordingDescriptor( Parameters.NONE ),
-                                            null );
+                                            getProfilerRecordingDescriptor( Parameters.NONE ) );
         LOG.debug( jvmArgs.toString() );
         assertThat( jvmArgs.toArgs(), hasItem( startsWith( "-Xlog:gc,safepoint,gc+age=trace" ) ) );
     }

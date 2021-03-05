@@ -8,7 +8,6 @@ package com.neo4j.bench.common.profiling;
 import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.io.IOException;
@@ -37,8 +36,7 @@ public class NoOpProfiler implements ExternalProfiler
     public JvmArgs jvmArgs(
             JvmVersion jvmVersion,
             ForkDirectory forkDirectory,
-            ProfilerRecordingDescriptor profilerRecordingDescriptor,
-            Resources resources )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return JvmArgs.empty();
     }

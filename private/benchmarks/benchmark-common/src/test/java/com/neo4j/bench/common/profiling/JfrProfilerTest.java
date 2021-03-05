@@ -42,7 +42,7 @@ class JfrProfilerTest
     private Benchmark benchmark;
 
     @BeforeEach
-    void setUp() throws Exception
+    void setUp()
     {
         Path parentDir = tempFolder.absolutePath();
 
@@ -61,8 +61,7 @@ class JfrProfilerTest
         JfrProfiler profiler = new JfrProfiler();
         JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion,
                                             forkDirectory,
-                                            getProfilerRecordingDescriptor( Parameters.SERVER ),
-                                            null );
+                                            getProfilerRecordingDescriptor( Parameters.SERVER ) );
         assertThat( jvmArgs.toArgs(), hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) );
     }
 
@@ -73,8 +72,7 @@ class JfrProfilerTest
         JfrProfiler profiler = new JfrProfiler();
         JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion,
                                             forkDirectory,
-                                            getProfilerRecordingDescriptor( Parameters.NONE ),
-                                            null );
+                                            getProfilerRecordingDescriptor( Parameters.NONE ) );
         assertThat( jvmArgs.toArgs(), not( hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) ) );
     }
 

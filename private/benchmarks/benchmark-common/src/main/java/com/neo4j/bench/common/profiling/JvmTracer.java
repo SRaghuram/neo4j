@@ -7,7 +7,6 @@ package com.neo4j.bench.common.profiling;
 
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.model.profiling.RecordingType;
 
@@ -29,8 +28,7 @@ public class JvmTracer implements ExternalProfiler
     @Override
     public JvmArgs jvmArgs( JvmVersion jvmVersion,
                             ForkDirectory forkDirectory,
-                            ProfilerRecordingDescriptor profilerRecordingDescriptor,
-                            Resources resources )
+                            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.TRACE_JVM );
         Path safepointLogs = forkDirectory.create( recordingDescriptor.sanitizedName() + ".safepoint.log" );

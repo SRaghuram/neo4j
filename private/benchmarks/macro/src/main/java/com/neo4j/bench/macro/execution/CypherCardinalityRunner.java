@@ -6,11 +6,10 @@
 package com.neo4j.bench.macro.execution;
 
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.CardinalityMeasurement;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
-import com.neo4j.bench.macro.execution.process.InternalProfilerAssist;
+import com.neo4j.bench.common.profiling.assist.InternalProfilerAssist;
 import com.neo4j.bench.macro.workload.Query;
 
 import java.util.function.Function;
@@ -27,8 +26,7 @@ public class CypherCardinalityRunner extends QueryRunner
     }
 
     @Override
-    protected void run( Jvm jvm,
-                        InternalProfilerAssist profilerAssist,
+    protected void run( InternalProfilerAssist profilerAssist,
                         Query query,
                         ForkDirectory forkDirectory,
                         MeasurementControl warmupControl,
@@ -40,13 +38,10 @@ public class CypherCardinalityRunner extends QueryRunner
             MeasuringExecutor measuringExecutor = MeasuringExecutor.toMeasureCardinalityAccuracy( CardinalityMeasurement.geometricMean( maxError ),
                                                                                                   profilerAssist.ownParameter(),
                                                                                                   query );
-            new Runner().run( jvm,
-                              database,
+            new Runner().run( database,
                               profilerAssist,
                               query.queryString(),
                               query.copyWith( CARDINALITY ).queryString(),
-                              query.benchmarkGroup(),
-                              query.benchmark(),
                               query.parameters().create(),
                               forkDirectory,
                               // no need to warm-up, as we are measuring accuracy rather than latency

@@ -33,22 +33,19 @@ import com.neo4j.bench.common.ParameterVerifier;
 import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.process.ProcessFailureException;
-import com.neo4j.bench.common.profiling.ExternalProfiler;
-import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.Profiler;
-import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.assist.ExternalProfilerAssist;
+import com.neo4j.bench.common.profiling.assist.InternalProfilerAssist;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.Args;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.PasswordManager;
 import com.neo4j.bench.infra.ResultStoreCredentials;
@@ -57,16 +54,16 @@ import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunnerException;
-import com.neo4j.bench.model.model.BranchAndVersion;
-import com.neo4j.bench.model.model.Metrics;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.BenchmarkTool;
+import com.neo4j.bench.model.model.BranchAndVersion;
 import com.neo4j.bench.model.model.Environment;
 import com.neo4j.bench.model.model.Instance;
 import com.neo4j.bench.model.model.Java;
+import com.neo4j.bench.model.model.Metrics;
 import com.neo4j.bench.model.model.Metrics.MetricsUnit;
 import com.neo4j.bench.model.model.Neo4j;
 import com.neo4j.bench.model.model.Neo4jConfig;
@@ -88,11 +85,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
 import javax.inject.Inject;
 
 import static com.ldbc.driver.control.ConsoleAndFileDriverConfiguration.fromParamsMap;
@@ -455,7 +452,7 @@ public class RunReportCommand implements Runnable
             assertDisallowFormatMigration( neo4jConfig );
             assertStoreFormatIsSet( neo4jConfig );
             neo4jBranch = BranchAndVersion.teamcityBranchToRealBranch( neo4jBranch );
-            ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch, triggeredBy);
+            ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch, triggeredBy );
             Files.createDirectories( resultsDir.toPath() );
 
             jvmArgs = buildJvmArgsString( jvmArgs, neo4jConfig );
@@ -672,22 +669,17 @@ public class RunReportCommand implements Runnable
                 copyStore( ldbcRunConfig );
             }
 
-            List<InternalProfiler> internalProfilers = new ArrayList<>();
-            List<ExternalProfiler> externalProfilers = new ArrayList<>();
-            for ( ParameterizedProfiler parameterizedProfiler : profilers )
-            {
-                ProfilerType profilerType = parameterizedProfiler.profilerType();
-                Profiler profiler = profilerType.create();
-                if ( profilerType.isInternal() )
-                {
-                    internalProfilers.add( (InternalProfiler) profiler );
-                }
-                if ( profilerType.isExternal() )
-                {
-                    externalProfilers.add( (ExternalProfiler) profiler );
-                }
-            }
+            List<Profiler> allProfilers = profilers.stream()
+                                                   .map( parameterizedProfiler -> parameterizedProfiler.profilerType().create() )
+                                                   .collect( toList() );
 
+            ExternalProfilerAssist externalAssist = ExternalProfilerAssist.create( ProfilerType.filterExternal( allProfilers ),
+                                                                                   forkDirectory,
+                                                                                   benchmarkGroup,
+                                                                                   summaryBenchmark,
+                                                                                   Collections.emptySet(),
+                                                                                   jvm,
+                                                                                   Parameters.NONE );
             File waitForFile = forkDirectory.pathFor( "wait-for-file" ).toFile();
             LdbcRunConfig forkLdbcRunConfig = new LdbcRunConfig(
                     ldbcRunConfig.storeDir,
@@ -714,19 +706,21 @@ public class RunReportCommand implements Runnable
                     jvmArgs,
                     neo4jLdbcJar,
                     cliPrefix,
-                    externalProfilers,
-                    benchmarkGroup,
-                    summaryBenchmark,
-                    LDBC_FORK_NAME ).inheritIO()
+                    LDBC_FORK_NAME,
+                    externalAssist ).inheritIO()
                                     .redirectOutput( outputLog )
                                     .redirectErrorStream( true )
                                     .start();
+            externalAssist.beforeProcess();
 
-            ProfilerRunner.beforeProcess(
-                    forkDirectory,
-                    benchmarkGroup,
-                    summaryBenchmark,
-                    externalProfilers );
+            Pid pid = ProfilerRunner.getPid( jvm, LDBC_FORK_NAME );
+            InternalProfilerAssist internalAssist = InternalProfilerAssist.forProcess( ProfilerType.filterInternal( allProfilers ),
+                                                                                       forkDirectory,
+                                                                                       benchmarkGroup,
+                                                                                       summaryBenchmark,
+                                                                                       Collections.emptySet(),
+                                                                                       jvm,
+                                                                                       pid );
 
             try
             {
@@ -736,9 +730,7 @@ public class RunReportCommand implements Runnable
                         ldbcFork,
                         LDBC_FORK_NAME,
                         forkDirectory,
-                        benchmarkGroup,
-                        summaryBenchmark,
-                        internalProfilers );
+                        internalAssist );
             }
             catch ( ProfilerRunnerException e )
             {
@@ -756,11 +748,7 @@ public class RunReportCommand implements Runnable
                 throw new ProcessFailureException( format( "Benchmark execution failed with code: %s", ldbcForkResultCode ), outputLog.toPath() );
             }
 
-            ProfilerRunner.afterProcess(
-                    forkDirectory,
-                    benchmarkGroup,
-                    summaryBenchmark,
-                    externalProfilers );
+            externalAssist.afterProcess();
         }
         catch ( Throwable e )
         {
@@ -775,57 +763,27 @@ public class RunReportCommand implements Runnable
             String jvmArgsString,
             File neo4jLdbcJar,
             String cliPrefix,
-            List<ExternalProfiler> profilers,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark summaryBenchmark,
-            String processName )
+            String processName,
+            ExternalProfilerAssist assist )
     {
         String[] ldbcRunArgs = RunCommand.buildArgs( ldbcRunConfig, Paths.get( forkDirectory.toAbsolutePath() ).toFile() );
         JvmArgs jvmArgs = JvmArgs.parse( jvmArgsString );
 
-        JvmVersion jvmVersion = jvm.version();
+        JvmArgs profilerJvmArgs = assist.jvmArgs();
+        jvmArgs = jvmArgs.merge( profilerJvmArgs );
+        List<String> jvmInvokeArgs = assist.invokeArgs();
 
-        try ( Resources resources = new Resources( Paths.get( forkDirectory.toAbsolutePath() ) ) )
-        {
-            for ( ExternalProfiler profiler : profilers )
-            {
-                JvmArgs profilerJvmArgs = profiler.jvmArgs( jvmVersion,
-                                                            forkDirectory,
-                                                            getProfilerRecordingDescriptor( benchmarkGroup, summaryBenchmark, profiler ),
-                                                            resources );
-                jvmArgs = jvmArgs.merge( profilerJvmArgs );
-            }
-            List<String> jvmInvokeArgs = new ArrayList<>();
-            for ( ExternalProfiler profiler : profilers )
-            {
-                List<String> profilerJvmInvokeArgs = profiler.invokeArgs( forkDirectory,
-                                                                          getProfilerRecordingDescriptor( benchmarkGroup, summaryBenchmark, profiler ) );
-                jvmInvokeArgs.addAll( profilerJvmInvokeArgs );
-            }
+        List<String> processArgs = buildCommandArgs(
+                jvm,
+                jvmInvokeArgs,
+                jvmArgs,
+                neo4jLdbcJar,
+                Lists.newArrayList( ldbcRunArgs ),
+                cliPrefix,
+                processName );
 
-            List<String> processArgs = buildCommandArgs(
-                    jvm,
-                    jvmInvokeArgs,
-                    jvmArgs,
-                    neo4jLdbcJar,
-                    Lists.newArrayList( ldbcRunArgs ),
-                    cliPrefix,
-                    processName );
-
-            LOG.debug( "LDBC Command Args: " + String.join( " ", processArgs ) );
-            return new ProcessBuilder( processArgs );
-        }
-    }
-
-    private static ProfilerRecordingDescriptor getProfilerRecordingDescriptor( BenchmarkGroup benchmarkGroup,
-                                                                               Benchmark summaryBenchmark,
-                                                                               ExternalProfiler profiler )
-    {
-        return ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                   summaryBenchmark,
-                                                   RunPhase.MEASUREMENT,
-                                                   ParameterizedProfiler.defaultProfiler( ProfilerType.typeOf( profiler ) ),
-                                                   Parameters.NONE );
+        LOG.debug( "LDBC Command Args: " + String.join( " ", processArgs ) );
+        return new ProcessBuilder( processArgs );
     }
 
     private TestRunReport packageResults(

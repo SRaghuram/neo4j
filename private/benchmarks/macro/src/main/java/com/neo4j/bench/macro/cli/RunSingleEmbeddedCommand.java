@@ -15,7 +15,12 @@ import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.process.HasPid;
+import com.neo4j.bench.common.process.Pid;
+import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.assist.ProfilerPidMapping;
+import com.neo4j.bench.common.profiling.assist.ProfilerPidMappings;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
@@ -24,16 +29,17 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
-import com.neo4j.bench.macro.execution.process.InternalProfilerAssist;
 import com.neo4j.bench.macro.execution.process.MeasurementOptions;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.options.Edition;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.configuration.connectors.BoltConnector;
@@ -185,7 +191,7 @@ public class RunSingleEmbeddedCommand implements Runnable
                                           planner,
                                           runtime,
                                           executionMode,
-                                          InternalProfilerAssist.forEmbedded( ProfilerType.deserializeProfilers( profilerNames ) ),
+                                          profilerMappings(),
                                           warmupCount,
                                           minMeasurementSeconds,
                                           maxMeasurementSeconds,
@@ -206,6 +212,21 @@ public class RunSingleEmbeddedCommand implements Runnable
         return Neo4jConfigBuilder.fromFile( neo4jConfigFile )
                 .withSetting( BoltConnector.enabled, FALSE )
                 .build();
+    }
+
+    private ProfilerPidMappings profilerMappings()
+    {
+        Pid pid = HasPid.getPid();
+        List<InternalProfiler> profilers = createInternalProfilers();
+        List<ProfilerPidMapping> mappings = Collections.singletonList( new ProfilerPidMapping( pid, Parameters.NONE, profilers ) );
+        return new ProfilerPidMappings( Parameters.NONE, mappings );
+    }
+
+    private List<InternalProfiler> createInternalProfilers()
+    {
+        List<ProfilerType> profilerTypes = ProfilerType.deserializeProfilers( profilerNames );
+        ProfilerType.assertInternal( profilerTypes );
+        return ProfilerType.createInternalProfilers( profilerTypes );
     }
 
     static EmbeddedDatabase createDatabase( Store store,

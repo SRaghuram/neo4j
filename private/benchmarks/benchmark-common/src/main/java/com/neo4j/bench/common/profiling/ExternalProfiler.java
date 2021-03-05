@@ -8,7 +8,6 @@ package com.neo4j.bench.common.profiling;
 import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.Resources;
 
 import java.util.List;
 
@@ -31,13 +30,11 @@ public interface ExternalProfiler extends Profiler
      * @param jvmVersion the version of JVM that was used to launch the benchmarked process
      * @param forkDirectory directory to write files into
      * @param profilerRecordingDescriptor contains the data and logic needed to create appropriate profiler recording files
-     * @param resources from JAR files
      * @return additional JVM arguments
      */
     JvmArgs jvmArgs( JvmVersion jvmVersion,
                      ForkDirectory forkDirectory,
-                     ProfilerRecordingDescriptor profilerRecordingDescriptor,
-                     Resources resources );
+                     ProfilerRecordingDescriptor profilerRecordingDescriptor );
 
     /**
      * Will be called before benchmark process is launched.

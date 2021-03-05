@@ -12,8 +12,12 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.process.HasPid;
 import com.neo4j.bench.common.process.Pid;
+import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.assist.ProfilerPidMapping;
+import com.neo4j.bench.common.profiling.assist.ProfilerPidMappings;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.DeploymentMode;
@@ -22,15 +26,16 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.Neo4jServerDatabase;
-import com.neo4j.bench.macro.execution.process.InternalProfilerAssist;
 import com.neo4j.bench.macro.execution.process.MeasurementOptions;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.bench.model.model.Parameters;
 
 import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Command( name = "run-single-server", description = "runs one query in a new process for a single workload" )
@@ -154,6 +159,8 @@ public class RunSingleServerCommand implements Runnable
     @Override
     public void run()
     {
+        Pid clientPid = HasPid.getPid();
+        Pid serverPid = new Pid( neo4jPid );
         Workload workload;
         try ( Resources resources = new Resources( workDir.toPath() ) )
         {
@@ -164,8 +171,9 @@ public class RunSingleServerCommand implements Runnable
         QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
                                                               forkDirectory -> Neo4jServerDatabase.connectClient( boltUri,
                                                                                                                   workload.getDatabaseName(),
-                                                                                                                  new Pid( neo4jPid ) ) );
+                                                                                                                  serverPid ) );
 
+        ProfilerPidMappings mappings = profilerMappings( clientPid, serverPid );
         QueryRunner.runSingleCommand( queryRunner,
                                       Jvm.bestEffortOrFail( jvmFile ),
                                       ForkDirectory.openAt( outputDir.toPath() ),
@@ -174,13 +182,27 @@ public class RunSingleServerCommand implements Runnable
                                       planner,
                                       runtime,
                                       executionMode,
-                                      InternalProfilerAssist.forLocalServer( neo4jPid,
-                                                                             ProfilerType.deserializeProfilers( clientProfilerNames ),
-                                                                             ProfilerType.deserializeProfilers( serverProfilerNames ) ),
+                                      mappings,
                                       warmupCount,
                                       minMeasurementSeconds,
                                       maxMeasurementSeconds,
                                       measurementCount );
+    }
+
+    private ProfilerPidMappings profilerMappings( Pid clientPid, Pid serverPid )
+    {
+        List<InternalProfiler> clientProfilers = createInternalProfilers( clientProfilerNames );
+        List<InternalProfiler> serverProfilers = createInternalProfilers( serverProfilerNames );
+        List<ProfilerPidMapping> profilerPidMappings = Arrays.asList( new ProfilerPidMapping( clientPid, Parameters.CLIENT, clientProfilers ),
+                                                                      new ProfilerPidMapping( serverPid, Parameters.SERVER, serverProfilers ) );
+        return new ProfilerPidMappings( Parameters.CLIENT, profilerPidMappings );
+    }
+
+    private List<InternalProfiler> createInternalProfilers( String profilerNames )
+    {
+        List<ProfilerType> profilersTypes = ProfilerType.deserializeProfilers( profilerNames );
+        ProfilerType.assertInternal( profilersTypes );
+        return ProfilerType.createInternalProfilers( profilersTypes );
     }
 
     public static List<String> argsFor(

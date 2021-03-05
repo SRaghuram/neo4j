@@ -256,6 +256,14 @@ public enum ProfilerType
                                                  .collect( toList() );
     }
 
+    public static List<ExternalProfiler> filterExternal( List<Profiler> profilers )
+    {
+        return profilers.stream()
+                        .filter( profiler -> typeOf( profiler ).isExternal() )
+                        .map( profiler -> (ExternalProfiler) profiler )
+                        .collect( toList() );
+    }
+
     public static List<InternalProfiler> createInternalProfilers( List<ProfilerType> profilerTypes )
     {
         return internalProfilers( profilerTypes ).stream()
@@ -264,7 +272,15 @@ public enum ProfilerType
                                                  .collect( toList() );
     }
 
-    public static List<ProfilerType> internalProfilers()
+    public static List<InternalProfiler> filterInternal( List<Profiler> profilers )
+    {
+        return profilers.stream()
+                        .filter( profiler -> typeOf( profiler ).isInternal() )
+                        .map( profiler -> (InternalProfiler) profiler )
+                        .collect( toList() );
+    }
+
+    private static List<ProfilerType> internalProfilers()
     {
         return internalProfilers( Arrays.asList( ProfilerType.values() ) );
     }
@@ -274,7 +290,7 @@ public enum ProfilerType
         return profilerTypes.stream().filter( ProfilerType::isInternal ).collect( toList() );
     }
 
-    public static List<ProfilerType> externalProfilers()
+    private static List<ProfilerType> externalProfilers()
     {
         return externalProfilers( Arrays.asList( ProfilerType.values() ) );
     }
