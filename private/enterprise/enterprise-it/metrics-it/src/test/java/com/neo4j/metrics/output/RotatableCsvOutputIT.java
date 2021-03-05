@@ -34,6 +34,7 @@ import static com.neo4j.configuration.MetricsSettings.csv_max_archives;
 import static com.neo4j.configuration.MetricsSettings.csv_path;
 import static com.neo4j.configuration.MetricsSettings.csv_rotation_threshold;
 import static com.neo4j.configuration.MetricsSettings.metrics_filter;
+import static com.neo4j.configuration.MetricsSettings.metrics_namespaces_enabled;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static java.time.Duration.ofMinutes;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -41,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
+import static org.neo4j.test.conditions.Conditions.greaterThan;
 
 @TestDirectoryExtension
 class RotatableCsvOutputIT
@@ -49,7 +51,6 @@ class RotatableCsvOutputIT
     private TestDirectory testDirectory;
 
     private Path outputPath;
-    private GraphDatabaseService database;
     private static final BiPredicate<Long,Long> MONOTONIC = ( newValue, currentValue ) -> newValue >= currentValue;
     private static final int MAX_ARCHIVES = 20;
     private DatabaseManagementService managementService;
@@ -63,9 +64,9 @@ class RotatableCsvOutputIT
                 .setConfig( csv_rotation_threshold, "t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1L )
                 .setConfig( csv_interval, Duration.ofMillis( 100 ) )
                 .setConfig( csv_max_archives, MAX_ARCHIVES )
+                .setConfig( metrics_namespaces_enabled, true )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .setConfig( metrics_filter, GlobbingPattern.create( "*" ) ).build();
-        database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
@@ -77,21 +78,57 @@ class RotatableCsvOutputIT
     @Test
     void rotateMetricsFile()
     {
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
+
         assertTimeoutPreemptively( ofMinutes( 3 ), () ->
         {
             // Commit a transaction and wait for rotation to happen
-            doTransaction();
-            String committedMetricFile = "neo4j.neo4j.transaction.committed.csv";
+            doTransaction( database );
+            String committedMetricFile = "neo4j.database.neo4j.transaction.committed.csv";
 
             // Latest file should now have recorded the transaction
             checkTransactionCount( committedMetricFile, 1L );
 
             // Commit yet another transaction and wait for it to appear in metrics
-            doTransaction();
+            doTransaction( database );
 
             // Latest file should now have recorded the new transaction
             checkTransactionCount( committedMetricFile, 2L );
         } );
+    }
+
+    @Test
+    void droppingDatabaseShouldRemoveMetricFiles()
+    {
+        String databaseName = "dropper";
+        String committedMetricFile = "neo4j.database.dropper.transaction.committed.csv";
+        managementService.createDatabase( databaseName );
+        GraphDatabaseService database = managementService.database( databaseName );
+
+        // Ensue we do have some metrics
+        doTransaction( database );
+        checkTransactionCount( committedMetricFile, 1L );
+        assertEventually( () -> getNumberOfFiles( outputPath, "neo4j.database.dropper.*" ), greaterThan( 0 ), 2, TimeUnit.MINUTES );
+
+        // Drop database should removes the files belonging to that database ...
+        managementService.dropDatabase( databaseName );
+        assertEventually( () -> getNumberOfFiles( outputPath, "neo4j.database.dropper.*" ), equalityCondition( 0 ), 2, TimeUnit.MINUTES );
+
+        // .. but not all of the metrics files
+        assertEventually( () -> getNumberOfFiles( outputPath, "*" ), greaterThan( 0 ), 2, TimeUnit.MINUTES );
+    }
+
+    private static int getNumberOfFiles( Path outputPath, String glob ) throws IOException
+    {
+        int numberOfFiles = 0;
+        try ( DirectoryStream<Path> paths = Files.newDirectoryStream( outputPath, glob ) )
+        {
+            for ( Path path : paths )
+            {
+                numberOfFiles++;
+            }
+        }
+        return numberOfFiles;
     }
 
     private void checkTransactionCount( String metricFileName, long expectedValue )
@@ -103,7 +140,7 @@ class RotatableCsvOutputIT
         }, equalityCondition( expectedValue ), 2, TimeUnit.MINUTES );
     }
 
-    private void doTransaction()
+    private static void doTransaction( GraphDatabaseService database )
     {
         try ( Transaction transaction = database.beginTx() )
         {

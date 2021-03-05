@@ -103,6 +103,39 @@ class MultiDatabaseEventsIT
         assertEquals( 1, getPanicEvents( eventListener, secondDatabaseName ) );
     }
 
+    @Test
+    void databaseCreateDropNotification()
+    {
+        MultiDatabaseEventListener eventListener = new MultiDatabaseEventListener();
+        managementService.registerDatabaseEventListener( eventListener );
+
+        String firstDatabaseName = "firstDatabaseD";
+        String secondDatabaseName = "secondDatabaseD";
+        String thirdDatabaseName = "thirdDatabaseD";
+
+        managementService.createDatabase( firstDatabaseName );
+        assertEquals( 1, getCreateEvents( eventListener, firstDatabaseName ) );
+        assertEquals( 0, getCreateEvents( eventListener, secondDatabaseName ) );
+        assertEquals( 0, getCreateEvents( eventListener, thirdDatabaseName ) );
+
+        managementService.createDatabase( secondDatabaseName );
+        managementService.createDatabase( thirdDatabaseName );
+        assertEquals( 1, getCreateEvents( eventListener, firstDatabaseName ) );
+        assertEquals( 1, getCreateEvents( eventListener, secondDatabaseName ) );
+        assertEquals( 1, getCreateEvents( eventListener, thirdDatabaseName ) );
+
+        managementService.dropDatabase( firstDatabaseName );
+        assertEquals( 1, getDropEvents( eventListener, firstDatabaseName ) );
+        assertEquals( 0, getDropEvents( eventListener, secondDatabaseName ) );
+        assertEquals( 0, getDropEvents( eventListener, thirdDatabaseName ) );
+
+        managementService.dropDatabase( thirdDatabaseName );
+        managementService.dropDatabase( secondDatabaseName );
+        assertEquals( 1, getDropEvents( eventListener, firstDatabaseName ) );
+        assertEquals( 1, getDropEvents( eventListener, secondDatabaseName ) );
+        assertEquals( 1, getDropEvents( eventListener, thirdDatabaseName ) );
+    }
+
     private static void panicDatabase( GraphDatabaseService database )
     {
         ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseHealth.class ).panic( new RuntimeException() );
@@ -123,11 +156,23 @@ class MultiDatabaseEventsIT
         return eventListener.getPanicEvents().getOrDefault( dbName.toLowerCase(), ZERO ).intValue();
     }
 
+    private static int getCreateEvents( MultiDatabaseEventListener eventListener, String dbName )
+    {
+        return eventListener.getCreateEvents().getOrDefault( dbName.toLowerCase(), ZERO ).intValue();
+    }
+
+    private static int getDropEvents( MultiDatabaseEventListener eventListener, String dbName )
+    {
+        return eventListener.getDropEvents().getOrDefault( dbName.toLowerCase(), ZERO ).intValue();
+    }
+
     private static class MultiDatabaseEventListener implements DatabaseEventListener
     {
         private final Map<String,MutableInt> startEvents = new HashMap<>();
         private final Map<String,MutableInt> shutdownEvents = new HashMap<>();
         private final Map<String,MutableInt> panicEvents = new HashMap<>();
+        private final Map<String,MutableInt> createEvents = new HashMap<>();
+        private final Map<String,MutableInt> dropEvents = new HashMap<>();
 
         @Override
         public void databaseStart( DatabaseEventContext eventContext )
@@ -145,6 +190,18 @@ class MultiDatabaseEventsIT
         public void databasePanic( DatabaseEventContext eventContext )
         {
             consumeEvent( eventContext, panicEvents );
+        }
+
+        @Override
+        public void databaseCreate( DatabaseEventContext eventContext )
+        {
+            consumeEvent( eventContext, createEvents );
+        }
+
+        @Override
+        public void databaseDrop( DatabaseEventContext eventContext )
+        {
+            consumeEvent( eventContext, dropEvents );
         }
 
         private static void consumeEvent( DatabaseEventContext eventContext, Map<String,MutableInt> trackingMap )
@@ -165,6 +222,16 @@ class MultiDatabaseEventsIT
         Map<String,MutableInt> getPanicEvents()
         {
             return panicEvents;
+        }
+
+        Map<String,MutableInt> getCreateEvents()
+        {
+            return createEvents;
+        }
+
+        Map<String,MutableInt> getDropEvents()
+        {
+            return dropEvents;
         }
     }
 }

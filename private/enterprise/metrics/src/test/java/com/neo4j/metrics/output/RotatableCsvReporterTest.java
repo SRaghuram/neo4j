@@ -19,6 +19,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.logging.NullLog;
 import org.neo4j.logging.log4j.RotatingLogFileWriter;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -26,6 +27,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.configuration.MetricsSettings.CompressionOption.NONE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -55,7 +57,8 @@ class RotatableCsvReporterTest
         when( factory.createWriter( any(), any(), anyLong(), anyInt(), anyString(), anyString() ) ).thenReturn( writer1 ).thenReturn( writer2 )
                 .thenReturn( writer3 );
         RotatableCsvReporter reporter =
-                new RotatableCsvReporter( mock( MetricRegistry.class ), fileSystemAbstraction, testDirectory.homePath(), 10, 2, NONE, factory );
+                new RotatableCsvReporter( mock( MetricRegistry.class ), fileSystemAbstraction, testDirectory.homePath(), 10, 2, NONE, factory,
+                        NullLog.getInstance() );
         TreeMap<String,Gauge> gauges = new TreeMap<>();
         gauges.put( "a", () -> ThreadLocalRandom.current().nextLong() );
         gauges.put( "b", () -> ThreadLocalRandom.current().nextLong() );
@@ -78,14 +81,45 @@ class RotatableCsvReporterTest
         Path csvFile = testDirectory.homePath().resolve( metricName + ".csv" );
         RotatableCsvReporter reporter =
                 new RotatableCsvReporter( mock( MetricRegistry.class ), fileSystemAbstraction, testDirectory.homePath(), 10, 1, NONE,
-                        RotatingLogFileWriter::new );
+                        RotatingLogFileWriter::new, NullLog.getInstance() );
 
         TreeMap<String,Gauge> gauges = new TreeMap<>();
         gauges.put( metricName, () -> ThreadLocalRandom.current().nextLong() );
         reporter.report( gauges, new TreeMap<>(), new TreeMap<>(), new TreeMap<>(), new TreeMap<>() );
 
-        assertTrue( Files.exists( csvFile ) );
-        assertThat( Files.readAllLines( csvFile ) ).hasSize( 2 ); // header line and one with metrics
+        containsOneMetric( csvFile );
+        reporter.stop();
+    }
+
+    @Test
+    void deleteFilesWhileRunning() throws IOException
+    {
+        String aMetric = "a";
+        String bMetric = "b";
+        Path aCsvFile = testDirectory.homePath().resolve( aMetric + ".csv" );
+        Path bCsvFile = testDirectory.homePath().resolve( bMetric + ".csv" );
+
+        RotatableCsvReporter reporter =
+                new RotatableCsvReporter( mock( MetricRegistry.class ), fileSystemAbstraction, testDirectory.homePath(), 10, 1, NONE,
+                        RotatingLogFileWriter::new, NullLog.getInstance() );
+
+        // Generate one metric line
+        TreeMap<String,Gauge> gauges = new TreeMap<>();
+        gauges.put( aMetric, () -> ThreadLocalRandom.current().nextLong() );
+        gauges.put( bMetric, () -> ThreadLocalRandom.current().nextLong() );
+        reporter.report( gauges, new TreeMap<>(), new TreeMap<>(), new TreeMap<>(), new TreeMap<>() );
+
+        // Both files should exists
+        containsOneMetric( aCsvFile );
+        containsOneMetric( bCsvFile );
+
+        // Delete "b"
+        reporter.deleteAll( "b" );
+
+        // Now only "a" should be there
+        containsOneMetric( aCsvFile );
+        assertFalse( Files.exists( bCsvFile ) );
+
         reporter.stop();
     }
 
@@ -98,7 +132,8 @@ class RotatableCsvReporterTest
         RotatingLogFileFactory factory = mock( RotatingLogFileFactory.class );
         when( factory.createWriter( any(), any(), anyLong(), anyInt(), anyString(), anyString() ) ).thenReturn( mock( RotatingLogFileWriter.class ) );
         RotatableCsvReporter reporter =
-                new RotatableCsvReporter( mock( MetricRegistry.class ), fileSystemAbstraction, testDirectory.homePath(), 10, 1, compression, factory );
+                new RotatableCsvReporter( mock( MetricRegistry.class ), fileSystemAbstraction, testDirectory.homePath(), 10, 1, compression, factory,
+                        NullLog.getInstance() );
 
         TreeMap<String,Gauge> gauges = new TreeMap<>();
         gauges.put( metricName, () -> ThreadLocalRandom.current().nextLong() );
@@ -120,5 +155,11 @@ class RotatableCsvReporterTest
         }
         verify( factory ).createWriter( fileSystemAbstraction, csvFile, 10, 1, expectedFileSuffix, "t,value%n" );
         reporter.stop();
+    }
+
+    private static void containsOneMetric( Path csvFile ) throws IOException
+    {
+        assertTrue( Files.exists( csvFile ) );
+        assertThat( Files.readAllLines( csvFile ) ).hasSize( 2 ); // header line and one with metrics
     }
 }

@@ -10,10 +10,12 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
-import org.neo4j.kernel.monitoring.InternalDatabaseEventListener;
-import org.neo4j.kernel.monitoring.PanicDatabaseEvent;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.kernel.monitoring.CreateDatabaseEvent;
+import org.neo4j.kernel.monitoring.DropDatabaseEvent;
+import org.neo4j.kernel.monitoring.InternalDatabaseEventListener;
+import org.neo4j.kernel.monitoring.PanicDatabaseEvent;
 import org.neo4j.kernel.monitoring.StartDatabaseEvent;
 import org.neo4j.kernel.monitoring.StopDatabaseEvent;
 import org.neo4j.logging.Log;
@@ -73,5 +75,15 @@ public class StandaloneInternalDbmsOperator extends DbmsOperator implements Inte
     public void databasePanic( PanicDatabaseEvent panic )
     {
         stopOnPanic( panic.getDatabaseId(), panic.getCauseOfPanic() );
+    }
+
+    @Override
+    public void databaseCreate( CreateDatabaseEvent createDatabaseEvent )
+    { //no-op
+    }
+
+    @Override
+    public void databaseDrop( DropDatabaseEvent eventContext )
+    { //no-op
     }
 }

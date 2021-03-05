@@ -17,6 +17,8 @@ import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
 import com.neo4j.configuration.MetricsSettings;
 
+import java.io.IOException;
+import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Locale;
@@ -26,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.log4j.RotatingLogFileWriter;
 
 import static com.neo4j.configuration.MetricsSettings.CompressionOption.NONE;
@@ -39,11 +42,12 @@ public class RotatableCsvReporter extends ScheduledReporter
     private final int maxArchives;
     private final MetricsSettings.CompressionOption compression;
     private final RotatingLogFileFactory logFileFactory;
+    private final Log logger;
 
     private boolean stopped;
 
-    RotatableCsvReporter( MetricRegistry registry, FileSystemAbstraction fileSystemAbstraction, Path directory, long rotationThreshold, int maxArchives,
-            MetricsSettings.CompressionOption compression, RotatingLogFileFactory logFileFactory )
+    public RotatableCsvReporter( MetricRegistry registry, FileSystemAbstraction fileSystemAbstraction, Path directory, long rotationThreshold, int maxArchives,
+            MetricsSettings.CompressionOption compression, RotatingLogFileFactory logFileFactory, Log logger )
     {
         super( registry, "csv-reporter", MetricFilter.ALL, TimeUnit.SECONDS, TimeUnit.MILLISECONDS );
         this.directory = directory;
@@ -52,6 +56,7 @@ public class RotatableCsvReporter extends ScheduledReporter
         this.maxArchives = maxArchives;
         this.compression = compression;
         this.logFileFactory = logFileFactory;
+        this.logger = logger;
         this.writers = new HashMap<>();
     }
 
@@ -61,6 +66,56 @@ public class RotatableCsvReporter extends ScheduledReporter
         super.stop();
         stopped = true;
         IOUtils.closeAllSilently( writers.values() );
+    }
+
+    public synchronized void deleteAll( String prefix )
+    {
+        // Remove and close mapped files
+        writers.entrySet().removeIf( entry ->
+        {
+            Path path = entry.getKey();
+            if ( path.getFileName().toString().startsWith( prefix ) )
+            {
+                IOUtils.closeAllSilently( entry.getValue() );
+                tryDelete( path );
+                return true;
+            }
+            return false;
+        } );
+
+        // Remove any leftovers
+        try
+        {
+            for ( Path path : fileSystemAbstraction.listFiles( directory, path -> path.getFileName().toString().startsWith( prefix ) ) )
+            {
+                tryDelete( path );
+            }
+        }
+        catch ( NotDirectoryException e )
+        {
+            // This is fine, since this can be called even when metrics are disabled
+        }
+        catch ( IOException e )
+        {
+            logger.warn( "Unable to cleanup metric files in " + directory, e );
+        }
+    }
+
+    public Path outputPath()
+    {
+        return directory;
+    }
+
+    private void tryDelete( Path path )
+    {
+        try
+        {
+            fileSystemAbstraction.delete( path );
+        }
+        catch ( IOException e )
+        {
+            logger.warn( "Unable to delete file " + path, e );
+        }
     }
 
     @Override

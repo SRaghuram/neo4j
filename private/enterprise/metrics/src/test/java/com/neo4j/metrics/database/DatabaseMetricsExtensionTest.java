@@ -38,7 +38,9 @@ import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.transaction.stats.TransactionLogCounters;
 import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.kernel.monitoring.DatabaseEventListeners;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
+import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
@@ -214,6 +216,12 @@ class DatabaseMetricsExtensionTest
         public MemoryPools memoryPools()
         {
             return new MemoryPools();
+        }
+
+        @Override
+        public DatabaseEventListeners databaseEventListeners()
+        {
+            return new DatabaseEventListeners( NullLog.getInstance() );
         }
     }
 

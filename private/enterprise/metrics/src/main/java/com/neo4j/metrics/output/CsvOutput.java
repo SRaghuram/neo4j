@@ -5,65 +5,52 @@
  */
 package com.neo4j.metrics.output;
 
-import com.codahale.metrics.MetricRegistry;
-import com.neo4j.configuration.MetricsSettings;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.log4j.RotatingLogFileWriter;
 
-import static com.neo4j.configuration.MetricsSettings.csv_enabled;
 import static com.neo4j.configuration.MetricsSettings.csv_interval;
-import static com.neo4j.configuration.MetricsSettings.csv_path;
 
 public class CsvOutput implements Lifecycle
 {
     private final Config config;
-    private final MetricRegistry registry;
     private final Log logger;
-    private final ExtensionContext extensionContext;
+    private final RotatableCsvReporter csvReporter;
     private final FileSystemAbstraction fileSystem;
-    private RotatableCsvReporter csvReporter;
-    private Path outputPath;
 
-    CsvOutput( Config config, MetricRegistry registry, Log logger, ExtensionContext extensionContext, FileSystemAbstraction fileSystem )
+    CsvOutput( Config config, Log logger, RotatableCsvReporter csvReporter, FileSystemAbstraction fileSystem )
     {
         this.config = config;
-        this.registry = registry;
         this.logger = logger;
-        this.extensionContext = extensionContext;
+        this.csvReporter = csvReporter;
         this.fileSystem = fileSystem;
     }
 
     @Override
     public void init() throws IOException
     {
-        // Setup CSV reporting
-        Path configuredPath = config.get( csv_path );
-        if ( configuredPath == null )
+        // Ensure directory exists
+        Path dir = csvReporter.outputPath();
+        if ( !fileSystem.fileExists( dir ) )
         {
-            throw new IllegalArgumentException( csv_path.name() + " configuration is required since " +
-                                                csv_enabled.name() + " is enabled" );
+            fileSystem.mkdirs( dir );
         }
-        Long rotationThreshold = config.get( MetricsSettings.csv_rotation_threshold );
-        Integer maxArchives = config.get( MetricsSettings.csv_max_archives );
-        outputPath = absoluteFileOrRelativeTo( extensionContext.directory(), configuredPath );
-        csvReporter = new RotatableCsvReporter( registry, fileSystem, ensureDirectoryExists( outputPath ), rotationThreshold, maxArchives,
-                config.get( MetricsSettings.csv_archives_compression ), RotatingLogFileWriter::new );
+        if ( !fileSystem.isDirectory( dir ) )
+        {
+            throw new IllegalStateException( "The given path for CSV files points to a file, but a directory is required: " + dir.toAbsolutePath() );
+        }
     }
 
     @Override
     public void start()
     {
         csvReporter.start( config.get( csv_interval ).toMillis(), TimeUnit.MILLISECONDS );
-        logger.info( "Sending metrics to CSV file at " + outputPath );
+        logger.info( "Sending metrics to CSV file at " + csvReporter.outputPath() );
     }
 
     @Override
@@ -75,36 +62,5 @@ public class CsvOutput implements Lifecycle
     @Override
     public void shutdown()
     {
-        csvReporter = null;
-    }
-
-    private Path ensureDirectoryExists( Path dir ) throws IOException
-    {
-        if ( !fileSystem.fileExists( dir ) )
-        {
-            fileSystem.mkdirs( dir );
-        }
-        if ( !fileSystem.isDirectory( dir ) )
-        {
-            throw new IllegalStateException(
-                    "The given path for CSV files points to a file, but a directory is required: " +
-                            dir.toAbsolutePath() );
-        }
-        return dir;
-    }
-
-    /**
-     * Looks at configured file {@code absoluteOrRelativeFile} and just returns it if absolute, otherwise
-     * returns a {@link Path} with {@code baseDirectoryIfRelative} as parent.
-     *
-     * @param baseDirectoryIfRelative base directory to use as parent if {@code absoluteOrRelativeFile}
-     * is relative, otherwise unused.
-     * @param absoluteOrRelativeFile file to return as absolute or relative to {@code baseDirectoryIfRelative}.
-     */
-    private static Path absoluteFileOrRelativeTo( Path baseDirectoryIfRelative, Path absoluteOrRelativeFile )
-    {
-        return absoluteOrRelativeFile.isAbsolute()
-                ? absoluteOrRelativeFile
-                : baseDirectoryIfRelative.resolve( absoluteOrRelativeFile );
     }
 }

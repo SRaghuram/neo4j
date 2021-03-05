@@ -16,6 +16,7 @@ import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.monitoring.DatabaseEventListeners;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.monitoring.Monitors;
@@ -46,6 +47,8 @@ public class GlobalMetricsExtensionFactory extends ExtensionFactory<GlobalMetric
         Supplier<WebContainerThreadInfo> webContainerThreadInfo();
 
         MemoryPools memoryPools();
+
+        DatabaseEventListeners databaseEventListeners();
     }
 
     public GlobalMetricsExtensionFactory()

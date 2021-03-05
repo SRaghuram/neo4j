@@ -22,6 +22,8 @@ import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.extension.context.GlobalExtensionContext;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.kernel.monitoring.DatabaseEventListeners;
+import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
@@ -170,6 +172,12 @@ class GlobalMetricsExtensionTest
         public MemoryPools memoryPools()
         {
             return null;
+        }
+
+        @Override
+        public DatabaseEventListeners databaseEventListeners()
+        {
+            return new DatabaseEventListeners( NullLog.getInstance() );
         }
     }
 }

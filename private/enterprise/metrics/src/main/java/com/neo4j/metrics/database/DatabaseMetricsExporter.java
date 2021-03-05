@@ -45,7 +45,7 @@ public class DatabaseMetricsExporter
 
     public void export()
     {
-        String metricsPrefix = databaseMetricsPrefix();
+        String metricsPrefix = databaseMetricsPrefix( this.config, dependencies.database().getNamedDatabaseId().name() );
 
         life.add( new TransactionMetrics( metricsPrefix, registry, dependencies.transactionIdStoreSupplier(), dependencies.transactionCounters() ) );
 
@@ -82,9 +82,9 @@ public class DatabaseMetricsExporter
         }
     }
 
-    private String databaseMetricsPrefix()
+    public static String databaseMetricsPrefix( Config config, String name )
     {
         var databaseNamespaceSeparator = config.get( MetricsSettings.metrics_namespaces_enabled ) ? ".database." : ".";
-        return config.get( MetricsSettings.metrics_prefix ) + databaseNamespaceSeparator + dependencies.database().getNamedDatabaseId().name();
+        return config.get( MetricsSettings.metrics_prefix ) + databaseNamespaceSeparator + name;
     }
 }

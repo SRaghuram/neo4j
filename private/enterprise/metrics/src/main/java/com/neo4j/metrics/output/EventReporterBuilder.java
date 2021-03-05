@@ -17,7 +17,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 
@@ -38,21 +37,21 @@ public class EventReporterBuilder
     private final Config config;
     private final MetricRegistry registry;
     private final Log logger;
-    private final ExtensionContext extensionContext;
     private final LifeSupport life;
     private final ConnectorPortRegister portRegister;
     private final FileSystemAbstraction fileSystem;
+    private final RotatableCsvReporter csvReporter;
 
-    public EventReporterBuilder( Config config, MetricRegistry registry, Log logger, ExtensionContext extensionContext,
-            LifeSupport life, FileSystemAbstraction fileSystem, ConnectorPortRegister portRegister )
+    public EventReporterBuilder( Config config, MetricRegistry registry, Log logger, LifeSupport life, FileSystemAbstraction fileSystem,
+            ConnectorPortRegister portRegister, RotatableCsvReporter csvReporter )
     {
         this.config = config;
         this.registry = registry;
         this.logger = logger;
-        this.extensionContext = extensionContext;
         this.life = life;
         this.fileSystem = fileSystem;
         this.portRegister = portRegister;
+        this.csvReporter = csvReporter;
     }
 
     public boolean configure()
@@ -65,7 +64,7 @@ public class EventReporterBuilder
 
         if ( config.get( csv_enabled ) )
         {
-            CsvOutput csvOutput = new CsvOutput( config, registry, logger, extensionContext, fileSystem );
+            CsvOutput csvOutput = new CsvOutput( config, logger, csvReporter, fileSystem );
             life.add( csvOutput );
             consumersConfigured = true;
         }
