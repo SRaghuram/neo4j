@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.neo4j.bolt.BoltServer;
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.bolt.runtime.BoltConnectionMetricsMonitor;
+import org.neo4j.buffer.CentralBufferMangerHolder;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
@@ -106,7 +107,8 @@ public class TestBoltServer
                                      authManager,
                                      authManager,
                                      new MemoryPools(),
-                                     defaultDatabaseResolver
+                                     defaultDatabaseResolver,
+                                     CentralBufferMangerHolder.EMPTY
         );
 
         try
