@@ -24,7 +24,9 @@ object Configs {
 
   def InterpretedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Interpreted))
 
-  def SlottedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(SlottedWithInterpretedExpressions, SlottedWithCompiledExpressions))
+  def SlottedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(SlottedWithInterpretedExpressions, Runtimes.SlottedWithCompiledExpressions))
+
+  def SlottedWithCompiledExpressions: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.SlottedWithCompiledExpressions))
 
   def InterpretedAndSlotted: TestConfiguration = InterpretedRuntime + SlottedRuntime
 
@@ -70,4 +72,5 @@ object Configs {
   val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
   val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedNonFused
   val ProcedureCallRead     : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
+  val Spatial               : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined - Configs.SlottedWithCompiledExpressions
 }

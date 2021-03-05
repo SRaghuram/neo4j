@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionC
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpressionContext
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.NullExpressionConversionLogger
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.logging.AssertableLogProvider
@@ -67,9 +68,9 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
     val e = add(literalString("*" * (65535 + 1)), literalString("*"))
 
     // Then
-    converterByteCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters]) should equal(None)
+    converterByteCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters], NullExpressionConversionLogger) should equal(None)
     logByteCode.serialize should include(s"Failed to compile expression: $e")
-    converterSourceCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters]) should equal(None)
+    converterSourceCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters], NullExpressionConversionLogger) should equal(None)
     logSourceCode.serialize should include(s"Failed to compile expression: $e")
   }
 }

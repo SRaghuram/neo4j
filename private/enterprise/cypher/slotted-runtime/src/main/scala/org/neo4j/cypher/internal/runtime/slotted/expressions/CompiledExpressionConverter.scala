@@ -8,8 +8,10 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 import org.neo4j.codegen.api.CodeGeneration.CodeGenerationMode
 import org.neo4j.cypher.internal.Assertion.assertionsEnabled
 import org.neo4j.cypher.internal.NonFatalCypherError
+import org.neo4j.cypher.internal.compiler.CodeGenerationFailedNotification
 import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
+import org.neo4j.cypher.internal.expressions.ShortestPathExpression
 import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -26,17 +28,56 @@ import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConversionLogger
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.NullExpressionConversionLogger
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.ExtendedExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.RandFunction
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeCollectExpression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExistsExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter.COMPILE_LIMIT
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
+import org.neo4j.cypher.internal.util.InternalNotification
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.logging.Log
 import org.neo4j.values.AnyValue
+
+import scala.collection.mutable
+
+class CompiledExpressionConversionLogger extends ExpressionConversionLogger {
+  private val _warnings: mutable.Set[InternalNotification] = mutable.Set.empty
+
+  override def failedToConvertExpression(expression: expressions.Expression): Unit = {
+    if (!containsWhitelisted(expression)) {
+      _warnings += CodeGenerationFailedNotification(s"Failed to compile expression: $expression")
+    }
+  }
+
+  override def failedToConvertProjection(projection: Map[String, expressions.Expression]): Unit = {
+    if (!projection.values.exists(containsWhitelisted)) {
+      _warnings += CodeGenerationFailedNotification(s"Failed to compile projection: $projection")
+    }
+  }
+
+  private def containsWhitelisted(expression: expressions.Expression): Boolean = {
+    isWhitelisted(expression) || expression.subExpressions.exists(isWhitelisted)
+  }
+
+  private def isWhitelisted(expression: expressions.Expression): Boolean = expression match {
+    // it is expected that code generation is not performed for the following expressions
+    case _: NestedPipeExistsExpression |
+         _: NestedPipeCollectExpression |
+         _: ShortestPathExpression =>
+      true
+    case _ =>
+      false
+  }
+
+  override def warnings: Set[InternalNotification] = _warnings.toSet
+}
 
 class CompiledExpressionConverter(log: Log,
                                   physicalPlan: PhysicalPlan,
@@ -47,19 +88,26 @@ class CompiledExpressionConverter(log: Log,
                                   neverFail: Boolean = false) extends ExpressionConverter {
 
   //uses an inner converter to simplify compliance with Expression trait
-  private val inner = new ExpressionConverters(SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(tokenContext))
+  private val inner = new ExpressionConverters(NullExpressionConversionLogger, SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(tokenContext))
 
-  override def toCommandExpression(id: Id, expression: expressions.Expression,
-                                   self: ExpressionConverters): Option[Expression] = expression match {
-
+  override def toCommandExpression(id: Id,
+                                   expression: expressions.Expression,
+                                   self: ExpressionConverters,
+                                   logger: ExpressionConversionLogger): Option[Expression] = expression match {
     //we don't deal with aggregations
     case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => None
 
     case e if sizeOf(e) > COMPILE_LIMIT => try {
       log.debug(s"Compiling expression: $expression")
-      StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext, tokenContext)
+      val maybeCompiledExpression = StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext, tokenContext)
         .compileExpression(e, id)
-        .map(CompileWrappingExpression(_, inner.toCommandExpression(id, expression)))
+      maybeCompiledExpression match {
+        case Some(compiledExpression) =>
+          Some(CompileWrappingExpression(compiledExpression, inner.toCommandExpression(id, expression)))
+        case None =>
+          logger.failedToConvertExpression(expression)
+          None
+      }
     } catch {
       case NonFatalCypherError(t) =>
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
@@ -67,6 +115,7 @@ class CompiledExpressionConverter(log: Log,
         //converter
         if (shouldThrow) throw t
         else log.debug(s"Failed to compile expression: $e", t)
+        logger.failedToConvertExpression(expression)
         None
     }
 
@@ -79,15 +128,23 @@ class CompiledExpressionConverter(log: Log,
     case _: expressions.Expression => true
   }
 
-  override def toCommandProjection(id: Id, projections: Map[String, expressions.Expression],
-                                   self: ExpressionConverters): Option[CommandProjection] = {
+  override def toCommandProjection(id: Id,
+                                   projections: Map[String, expressions.Expression],
+                                   self: ExpressionConverters,
+                                   logger: ExpressionConversionLogger): Option[CommandProjection] = {
     try {
       val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
       if (totalSize > COMPILE_LIMIT) {
         log.debug(s" Compiling projection: $projections")
-        StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext, tokenContext)
+        val maybeCompiledExpression = StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext, tokenContext)
           .compileProjection(projections, id)
-          .map(CompileWrappingProjection(_, projections.isEmpty))
+        maybeCompiledExpression match {
+          case Some(compiledProjection) =>
+            Some(CompileWrappingProjection(compiledProjection, projections.isEmpty))
+          case None =>
+            logger.failedToConvertProjection(projections)
+            None
+        }
       } else None
     }
     catch {
@@ -97,6 +154,7 @@ class CompiledExpressionConverter(log: Log,
         //converter
         if (shouldThrow) throw t
         else log.debug(s"Failed to compile projection: $projections", t)
+        logger.failedToConvertProjection(projections)
         None
     }
   }
@@ -104,19 +162,27 @@ class CompiledExpressionConverter(log: Log,
   override def toGroupingExpression(id: Id,
                                     projections: Map[String, expressions.Expression],
                                     orderToLeverage: Seq[expressions.Expression],
-                                    self: ExpressionConverters): Option[GroupingExpression] = {
+                                    self: ExpressionConverters,
+                                    logger: ExpressionConversionLogger): Option[GroupingExpression] = {
     try {
       if(orderToLeverage.nonEmpty) {
         // TODO Support compiled ordered GroupingExpression
         // UPDATE: In theory this should now be supported...
+        logger.failedToConvertProjection(projections)
         None
       } else {
         val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
         if (totalSize > COMPILE_LIMIT) {
           log.debug(s" Compiling grouping expression: $projections")
-          StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext, tokenContext)
+          val maybeCompiledExpression = StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext, tokenContext)
             .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage), id)
-            .map(CompileWrappingDistinctGroupingExpression(_, projections.isEmpty))
+          maybeCompiledExpression match {
+            case Some(compiledExpression) =>
+              Some(CompileWrappingDistinctGroupingExpression(compiledExpression, projections.isEmpty))
+            case None =>
+              logger.failedToConvertProjection(projections)
+              None
+          }
         } else None
       }
     }
@@ -127,6 +193,7 @@ class CompiledExpressionConverter(log: Log,
         //converter
         if (shouldThrow) throw t
         else log.debug(s"Failed to compile grouping expression: $projections", t)
+        logger.failedToConvertProjection(projections)
         None
     }
   }

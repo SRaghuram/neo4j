@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeTreeBuilder
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionResultBuilderFactory
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipelineBreakingPolicy
+import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConversionLogger
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
 import org.neo4j.cypher.internal.runtime.slotted.expressions.MaterializedEntitiesExpressionConverter
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
@@ -73,7 +74,8 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
           baseConverters
         }
 
-      val converters = new ExpressionConverters(allConverters:_*)
+      val expressionConversionLogger = new CompiledExpressionConversionLogger
+      val converters = new ExpressionConverters(expressionConversionLogger, allConverters:_*)
 
       val queryIndexRegistrator = new QueryIndexRegistrator(context.schemaRead)
       val fallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)
@@ -112,7 +114,8 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         resultBuilderFactory,
         SlottedRuntimeName,
         query.readOnly,
-        metadata)
+        metadata,
+        expressionConversionLogger.warnings)
     }
     catch {
       case e: CypherException =>

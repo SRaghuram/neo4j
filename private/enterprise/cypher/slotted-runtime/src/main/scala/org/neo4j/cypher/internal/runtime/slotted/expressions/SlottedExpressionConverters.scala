@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConversionLogger
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
@@ -66,8 +67,10 @@ object SlottedExpressionConverters {
 
 case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPipe: Option[Pipe] = None) extends ExpressionConverter {
 
-  override def toCommandProjection(id: Id, projections: Map[String, Expression],
-                                   self: ExpressionConverters): Option[CommandProjection] = {
+  override def toCommandProjection(id: Id,
+                                   projections: Map[String, Expression],
+                                   self: ExpressionConverters,
+                                   logger: ExpressionConversionLogger): Option[CommandProjection] = {
     val slots = physicalPlan.slotConfigurations(id)
     val projected = for {(k, v) <- projections if !slots(k).isLongSlot } yield slots(k).offset -> self.toCommandExpression(id, v)
     Some(SlottedCommandProjection(projected))
@@ -76,7 +79,8 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
   override def toGroupingExpression(id: Id,
                                     projections: Map[String, Expression],
                                     orderToLeverage: Seq[Expression],
-                                    self: ExpressionConverters): Option[GroupingExpression] = {
+                                    self: ExpressionConverters,
+                                    logger: ExpressionConversionLogger): Option[GroupingExpression] = {
     val slots = physicalPlan.slotConfigurations(id)
     val orderedGroupings = orderGroupingKeyExpressions(projections, orderToLeverage)(slots)
       .map(e => (slots(e._1), self.toCommandExpression(id, e._2), e._3))
@@ -90,7 +94,7 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
     }
   }
 
-  override def toCommandExpression(id: Id, expression: expressions.Expression, self: ExpressionConverters): Option[commands.expressions.Expression] =
+  override def toCommandExpression(id: Id, expression: expressions.Expression, self: ExpressionConverters, logger: ExpressionConversionLogger): Option[commands.expressions.Expression] =
     expression match {
       case physicalplanning.ast.NodeFromSlot(offset, _) =>
         Some(slotted.expressions.NodeFromSlot(offset))
@@ -186,7 +190,7 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
         val a = self.toCommandExpression(id, inner)
         Some(slotted.expressions.NullCheckReference(offset, a))
       case e: expressions.PathExpression =>
-        Some(toCommandProjectedPath(id, e, self))
+        Some(toCommandProjectedPath(id, e, self, logger))
       case physicalplanning.ast.IsPrimitiveNull(offset) =>
         Some(slotted.expressions.IsPrimitiveNull(offset))
       case e: ExpressionVariable =>
@@ -230,52 +234,52 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
     commands.predicates.Ands(preds: _*)
   }
 
-  def toCommandProjectedPath(id:Id, e: expressions.PathExpression, self: ExpressionConverters): SlottedProjectedPath = {
+  def toCommandProjectedPath(id:Id, e: expressions.PathExpression, self: ExpressionConverters, logger: ExpressionConversionLogger): SlottedProjectedPath = {
     def project(pathStep: PathStep): Projector = pathStep match {
 
       case NodePathStep(nodeExpression, next) =>
-        singleNodeProjector(toCommandExpression(id, nodeExpression, self).get, project(next))
+        singleNodeProjector(toCommandExpression(id, nodeExpression, self, logger).get, project(next))
 
       case expressions.SingleRelationshipPathStep(relExpression, _, Some(targetNodeExpression), next) =>
-        singleRelationshipWithKnownTargetProjector(toCommandExpression(id, relExpression, self).get,
-          toCommandExpression(id, targetNodeExpression, self).get,
+        singleRelationshipWithKnownTargetProjector(toCommandExpression(id, relExpression, self, logger).get,
+          toCommandExpression(id, targetNodeExpression, self, logger).get,
           project(next))
 
       case SingleRelationshipPathStep(relExpression, SemanticDirection.INCOMING, _, next) =>
-        singleIncomingRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))
+        singleIncomingRelationshipProjector(toCommandExpression(id, relExpression, self, logger).get, project(next))
 
       case SingleRelationshipPathStep(relExpression, SemanticDirection.OUTGOING, _, next) =>
-        singleOutgoingRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))
+        singleOutgoingRelationshipProjector(toCommandExpression(id, relExpression, self, logger).get, project(next))
 
       case SingleRelationshipPathStep(relExpression, SemanticDirection.BOTH, _, next) =>
-        singleUndirectedRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))
+        singleUndirectedRelationshipProjector(toCommandExpression(id, relExpression, self, logger).get, project(next))
 
       case MultiRelationshipPathStep(relExpression, SemanticDirection.INCOMING, Some(targetNodeExpression), next) =>
         multiIncomingRelationshipWithKnownTargetProjector(
-          toCommandExpression(id, relExpression, self).get,
-          toCommandExpression(id, targetNodeExpression, self).get,
+          toCommandExpression(id, relExpression, self, logger).get,
+          toCommandExpression(id, targetNodeExpression, self, logger).get,
           project(next))
 
       case MultiRelationshipPathStep(relExpression, SemanticDirection.INCOMING, _, next) =>
-        multiIncomingRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))
+        multiIncomingRelationshipProjector(toCommandExpression(id, relExpression, self, logger).get, project(next))
 
       case MultiRelationshipPathStep(relExpression, SemanticDirection.OUTGOING, Some(targetNodeExpression), next) =>
         multiOutgoingRelationshipWithKnownTargetProjector(
-          toCommandExpression(id, relExpression, self).get,
-          toCommandExpression(id, targetNodeExpression, self).get,
+          toCommandExpression(id, relExpression, self, logger).get,
+          toCommandExpression(id, targetNodeExpression, self, logger).get,
           project(next))
 
       case MultiRelationshipPathStep(relExpression, SemanticDirection.OUTGOING, _, next) =>
-        multiOutgoingRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))
+        multiOutgoingRelationshipProjector(toCommandExpression(id, relExpression, self, logger).get, project(next))
 
       case MultiRelationshipPathStep(relExpression, SemanticDirection.BOTH, Some(targetNodeExpression), next) =>
         multiUndirectedRelationshipWithKnownTargetProjector(
-          toCommandExpression(id, relExpression, self).get,
-          toCommandExpression(id, targetNodeExpression, self).get,
+          toCommandExpression(id, relExpression, self, logger).get,
+          toCommandExpression(id, targetNodeExpression, self, logger).get,
           project(next))
 
       case MultiRelationshipPathStep(relExpression, SemanticDirection.BOTH, _, next) =>
-        multiUndirectedRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))
+        multiUndirectedRelationshipProjector(toCommandExpression(id, relExpression, self, logger).get, project(next))
 
       case NilPathStep =>
         nilProjector

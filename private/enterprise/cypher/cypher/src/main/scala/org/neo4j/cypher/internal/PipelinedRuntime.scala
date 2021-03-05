@@ -68,6 +68,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.rewriters.pipelinedPrePhysica
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipelineBreakingPolicy
+import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConversionLogger
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.util.CypherException
@@ -138,7 +139,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         query,
         context,
         new QueryIndexRegistrator(context.schemaRead),
-        Set.empty)
+        Set.empty,
+        new CompiledExpressionConversionLogger)
     } catch {
       case e: CypherException if ENABLE_DEBUG_PRINTS =>
         printFailureStackTrace(e)
@@ -157,7 +159,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           query: LogicalQuery,
                           context: EnterpriseRuntimeContext,
                           queryIndexRegistrator: QueryIndexRegistrator,
-                          warnings: Set[InternalNotification]): ExecutionPlan = {
+                          warnings: Set[InternalNotification],
+                          expressionConversionLogger: CompiledExpressionConversionLogger): ExecutionPlan = {
     val batchSize = Batched(context.config.pipelinedBatchSizeSmall, context.config.pipelinedBatchSizeBig)
       .selectBatchSize(query.logicalPlan, query.effectiveCardinalities)
 
@@ -191,7 +194,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         builder += new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode, context.compiledExpressionsContext)
       builder += SlottedExpressionConverters(physicalPlan, Some(NoPipe))
       builder += CommunityExpressionConverter(context.tokenContext)
-      new ExpressionConverters(builder.result():_*)
+      new ExpressionConverters(expressionConversionLogger, builder.result():_*)
     }
 
     //=======================================================
@@ -291,7 +294,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                  context.config.memoryTrackingController,
                                  maybeThreadSafeExecutionResources,
                                  metadata,
-                                 warnings,
+                                 warnings ++ expressionConversionLogger.warnings,
                                  executionGraphSchedulingPolicy,
                                  logicalPlan,
                                  context.config.lenientCreateRelationship)
@@ -314,7 +317,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
           DebugSupport.PHYSICAL_PLANNING.log("Could not compile pipeline because of %s. Retrying with %s", e, nextOperatorFusionPolicy)
         }
 
-        compilePlan(nextOperatorFusionPolicy, query, context, queryIndexRegistrator, warnings + warning)
+        compilePlan(nextOperatorFusionPolicy, query, context, queryIndexRegistrator, warnings + warning, expressionConversionLogger)
     }
   }
 

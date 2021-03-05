@@ -43,6 +43,7 @@ import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableE
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.NullExpressionConversionLogger
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ShortestPathPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.TestPipe
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AllNodeScanOperator
@@ -227,6 +228,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
     physicalPlan.argumentSizes.set(theId, Size.zero)
     val expressionConverters =
       new ExpressionConverters(
+        NullExpressionConversionLogger,
         SlottedExpressionConverters(physicalPlan),
         CommunityExpressionConverter(TokenContext.EMPTY)
       )

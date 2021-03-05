@@ -62,6 +62,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.interpreted.commands.LiteralHelper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.NullExpressionConversionLogger
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.FakeEntityTestSupport
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.EagerAggregationPipe
@@ -120,7 +121,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     when(tokenContext.getOptPropertyKeyId("propertyKey")).thenReturn(Some(0))
     val physicalPlan = PhysicalPlanner.plan(tokenContext, beforeRewrite, table, SlottedPipelineBreakingPolicy,
       CypherRuntimeConfiguration.defaultConfiguration)
-    val converters = new ExpressionConverters(SlottedExpressionConverters(physicalPlan),
+    val converters = new ExpressionConverters(NullExpressionConversionLogger, SlottedExpressionConverters(physicalPlan),
       CommunityExpressionConverter(TokenContext.EMPTY))
 
     val fallback = InterpretedPipeMapper(true, converters, tokenContext, mock[QueryIndexRegistrator])(table)
