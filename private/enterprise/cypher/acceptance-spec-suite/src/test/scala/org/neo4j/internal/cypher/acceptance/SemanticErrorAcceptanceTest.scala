@@ -5,6 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.util
+
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.InterpretedRuntimeName
 import org.neo4j.cypher.internal.PipelinedRuntimeName
@@ -12,7 +14,6 @@ import org.neo4j.cypher.internal.SlottedRuntimeName
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
 
-import java.util
 import scala.collection.JavaConverters.asScalaIteratorConverter
 
 class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
@@ -509,10 +510,6 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
       s"$msg (line 1, column 20 (offset: 19))"
     )
     executeAndEnsureError(
-      "WITH 1 AS n CALL { FROM g WITH n+1 AS x RETURN x } RETURN x",
-      s"$msg (line 1, column 27 (offset: 26))"
-    )
-    executeAndEnsureError(
       "WITH 1 AS n CALL { USE g WITH n+1 AS x RETURN x } RETURN x",
       s"$msg (line 1, column 26 (offset: 25))"
     )
@@ -548,7 +545,6 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
       (withClause, errorMsg) <- badImportingWithClauses
       query <- Seq(
         s"WITH 1 AS n CALL { $withClause RETURN x } RETURN x",
-        s"WITH 1 AS n CALL { FROM g $withClause RETURN x } RETURN x",
         s"WITH 1 AS n CALL { USE g $withClause RETURN x } RETURN x",
         s"WITH 1 AS n CALL { WITH n RETURN n+1 AS x UNION $withClause RETURN n-1 AS x } RETURN x",
         s"WITH 1 AS n CALL { WITH n CALL { $withClause RETURN n+1 AS x } RETURN x } RETURN x",
