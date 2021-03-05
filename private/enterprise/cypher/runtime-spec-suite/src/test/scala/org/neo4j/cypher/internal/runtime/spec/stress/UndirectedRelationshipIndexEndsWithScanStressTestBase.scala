@@ -9,18 +9,18 @@ import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.Edition
 
-abstract class IndexContainsScanStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
+abstract class UndirectedRelationshipIndexEndsWithScanStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(edition, runtime)
   with RHSOfApplyLeafStressSuite {
 
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String): RHSOfApplyLeafTD =
     RHSOfApplyLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(text CONTAINS ???)", paramExpr = Some(function("toString", varFor(propArgument))), argumentIds = Set(propArgument)),
+      _.relationshipIndexOperator(s"(ignore1)-[$variable:NEXT(text ENDS WITH ???)]-(ignore2)", paramExpr = Some(function("toString", varFor(propArgument))), argumentIds = Set(propArgument)),
       rowsComingIntoTheOperator =>
-        for {
+        (for {
           Array(x) <- rowsComingIntoTheOperator
-          y <- nodes.filter(n =>
-            n.getProperty("text").asInstanceOf[String].contains(x.getId.toString))
-        } yield Array(x, y)
+          y <- relationships.filter(r =>
+            r.getProperty("text").asInstanceOf[String].endsWith(x.getId.toString))
+        } yield Seq.fill(2)(Array(x, y))).flatten
     )
 }

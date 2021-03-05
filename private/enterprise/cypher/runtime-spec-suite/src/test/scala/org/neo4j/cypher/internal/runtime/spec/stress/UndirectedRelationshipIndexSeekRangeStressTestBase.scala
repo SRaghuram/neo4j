@@ -9,17 +9,19 @@ import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.Edition
 
-abstract class IndexScanStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
+abstract class UndirectedRelationshipIndexSeekRangeStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(edition, runtime)
   with RHSOfApplyLeafStressSuite {
 
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String): RHSOfApplyLeafTD =
     RHSOfApplyLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(prop)", argumentIds = Set(propArgument)),
+      _.relationshipIndexOperator(s"(ignore1)-[$variable:NEXT(prop > ???)]-(ignore2)",
+        paramExpr = Some(varFor(propArgument)),
+        argumentIds = Set(propArgument)),
       rowsComingIntoTheOperator =>
-        for {
+        (for {
           Array(x) <- rowsComingIntoTheOperator
-          y <- nodes
-        } yield Array(x, y)
+          y <- relationships.filter(n => n.getProperty("prop").asInstanceOf[Int] > x.getId)
+        } yield Seq.fill(2)(Array(x, y))).flatten
     )
 }

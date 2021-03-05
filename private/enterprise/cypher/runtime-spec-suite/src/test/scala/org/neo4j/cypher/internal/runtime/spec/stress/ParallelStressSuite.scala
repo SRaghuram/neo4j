@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
 import org.neo4j.cypher.internal.runtime.spec.stress.ParallelStressSuite.MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec.stress.ParallelStressSuite.WORKERS
 import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.Relationship
 
 object ParallelStressSuite {
   val MORSEL_SIZE = 20
@@ -42,6 +43,7 @@ abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], r
    * All nodes in the test definition
    */
   var nodes: Seq[Node] = _
+  var relationships: Seq[Relationship] = _
 
   implicit class RichLogicalQueryBuilder(inner: LogicalQueryBuilder) {
     def theOperator(op: LogicalQueryBuilder => LogicalQueryBuilder): LogicalQueryBuilder = {
@@ -74,11 +76,13 @@ abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], r
   }
 
   def init(): Unit = {
-    nodes = given {
+    val (ns, rs) = given {
       try {
         nodeIndex("Label", "prop")
         nodeIndex("Label", "text")
         nodeIndex("Label", "propWithDuplicates")
+        relationshipIndex("NEXT", "prop")
+        relationshipIndex("NEXT", "text")
       } catch {
         case e: IllegalStateException =>
           // TODO This is to investigate flaky tests
@@ -99,9 +103,16 @@ abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], r
           (i, (i + 5) % ns.length, "NEXT")
         )
       }).reduce(_ ++ _)
-      connect(ns, relTuples)
-      ns
+      val rs = connect(ns, relTuples)
+      rs.zipWithIndex.foreach {
+        case (r, i) =>
+          r.setProperty("prop", i)
+          r.setProperty("text", i.toString)
+      }
+      (ns, rs)
     }
+    nodes = ns
+    relationships = rs
   }
 
   def allNodesNTimes(n: Int): InputValues = {
