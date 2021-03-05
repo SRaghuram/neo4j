@@ -20,7 +20,6 @@ import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
-import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.time.Duration;
@@ -193,7 +192,7 @@ public final class CatchupComponentsProvider
 
         var storeCopy = new StoreCopyProcess( fileSystem, pageCache, clusteredDatabaseContext, copiedStoreRecovery, remoteStore, databaseLogProvider );
 
-        return new CatchupComponentsRepository.CatchupComponents( remoteStore, storeCopy, catchupClientFactory );
+        return new CatchupComponentsRepository.CatchupComponents( remoteStore, storeCopy, catchupClientFactory, copiedStoreRecovery );
     }
 
     public CatchupClientFactory catchupClientFactory()

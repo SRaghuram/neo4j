@@ -49,7 +49,9 @@ import org.neo4j.logging.NullLog;
 import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.storageengine.api.StoreVersion;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
@@ -62,6 +64,7 @@ import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRU
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -82,7 +85,9 @@ class TxPullRequestHandlerTest
     private final ChannelHandlerContext context = mock( ChannelHandlerContext.class );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
 
-    private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
+    private final StoreId storeId = getStoreFromId( 1 );
+    private final StoreId upgradedStoreId = minorUpgradedStore( storeId );
+    private final StoreId upgradedIncompatibleStoreId = crossFormatUpgradedStore( storeId );
     private final Database database = mock( Database.class );
     private final DatabaseAvailabilityGuard availabilityGuard = new DatabaseAvailabilityGuard(
             NAMED_DATABASE_ID,
@@ -110,6 +115,22 @@ class TxPullRequestHandlerTest
         when( database.getStoreId() ).thenReturn( storeId );
         var databaseLogService = new DatabaseLogService( NAMED_DATABASE_ID, new SimpleLogService( logProvider ) );
         when( database.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
+
+        StorageEngineFactory sef = mock( StorageEngineFactory.class );
+        when( sef.versionInformation( anyLong() ) ).thenAnswer( inv ->
+        {
+            StoreVersion storeVersion = mock( StoreVersion.class );
+            when( storeVersion.storeVersion() ).thenReturn( inv.getArgument( 0 ).toString() );
+            when( storeVersion.isCompatibleWithIncludingMinorMigration( any() ) )
+                    .thenAnswer( check ->
+                    {
+                        long v1 = Long.parseLong( storeVersion.storeVersion() );
+                        long v2 = Long.parseLong( check.getArgument( 0, StoreVersion.class ).storeVersion() );
+                        return v1 < v2 && v1 / 10 == v2 / 10; //Makeup format for same family identification
+                    } );
+            return storeVersion;
+        });
+        when( database.getStorageEngineFactory() ).thenReturn( sef );
         final var protocol = new CatchupServerProtocol();
         txPullRequestHandler = new TxPullRequestHandler( protocol, database, TransactionStreamingStrategy.UNBOUNDED );
         lifeSupport.add( availabilityGuard );
@@ -129,6 +150,53 @@ class TxPullRequestHandlerTest
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
         verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_STORE_UNAVAILABLE, -1L ) );
+    }
+
+    @Test
+    void shouldFailWithStoreIdMismatchWhenFetchingFromIncompatibleUpgradedStore() throws Exception
+    {
+        // given
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
+        var channelFuture = mock( ChannelFuture.class );
+        when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
+
+        // when
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, upgradedIncompatibleStoreId, DATABASE_ID ) );
+
+        // then
+        verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
+        verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_STORE_ID_MISMATCH, -1L ) );
+    }
+
+    @Test
+    void shouldNotFailWithStoreIdMismatchWhenFetchingFromCompatibleUpgradedStore() throws Exception
+    {
+        // given
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
+        var channelFuture = mock( ChannelFuture.class );
+        when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
+
+        // when
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, upgradedStoreId, DATABASE_ID ) );
+
+        // then
+        verify( context ).writeAndFlush( isA( TransactionStream.class ) );
+    }
+
+    @Test
+    void shouldNotFailWithStoreIdMismatchWhenFetchingFromCompatibleOlderStore() throws Exception
+    {
+        // given
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
+        var channelFuture = mock( ChannelFuture.class );
+        when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
+        when( database.getStoreId() ).thenReturn( upgradedStoreId );
+
+        // when
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DATABASE_ID ) );
+
+        // then
+        verify( context ).writeAndFlush( isA( TransactionStream.class ) );
     }
 
     @Test
@@ -330,5 +398,18 @@ class TxPullRequestHandlerTest
                 return cursor.get();
             }
         };
+    }
+
+    private static StoreId getStoreFromId( int id )
+    {
+        return new StoreId( System.currentTimeMillis(), id, 1, System.currentTimeMillis(), 1 );
+    }
+    private static StoreId minorUpgradedStore( StoreId from )
+    {
+        return new StoreId( from.getCreationTime(), from.getRandomId(), from.getStoreVersion() + 1, System.currentTimeMillis(), from.getUpgradeTxId() + 1 );
+    }
+    private static StoreId crossFormatUpgradedStore( StoreId from )
+    {
+        return new StoreId( from.getCreationTime(), from.getRandomId(), from.getStoreVersion() + 10, System.currentTimeMillis(), from.getUpgradeTxId() + 1 );
     }
 }

@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
+import com.neo4j.causalclustering.catchup.storecopy.CopiedStoreRecovery;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
@@ -52,7 +53,9 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.storageengine.api.StoreVersion;
 
 import static com.neo4j.causalclustering.readreplica.ReadReplicaBootstrapTest.Outcome.DELETE_AND_STORE_COPY;
 import static com.neo4j.causalclustering.readreplica.ReadReplicaBootstrapTest.Outcome.DO_NOTHING;
@@ -60,10 +63,12 @@ import static com.neo4j.causalclustering.readreplica.ReadReplicaBootstrapTest.Ou
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
@@ -83,7 +88,9 @@ class ReadReplicaBootstrapTest
     private final RaftGroupId raftGroupId = RaftGroupId.from( namedDatabaseA.databaseId() );
     private final ServerId serverA = IdFactory.randomServerId();
     private final SocketAddress addressA = new SocketAddress( "127.0.0.1", 123 );
-    private final StoreId storeA = new StoreId( 0, 1, 2, 3, 4 );
+    private final StoreId storeA = getStoreFromId( 1 );
+    private final StoreId storeACompatibleUpgrade = minorUpgradedStore( storeA );
+    private final StoreId storeAIncompatibleUpgrade = crossFormatUpgradedStore( storeA );
     private final StoreId storeB = new StoreId( 5, 6, 7, 8, 9 );
     private final TimeoutStrategy timeoutStrategy = exponential( 100, 3000, TimeUnit.MILLISECONDS );
     private final ClusterSystemGraphDbmsModel systemDbmsModel = mock( ClusterSystemGraphDbmsModel.class );
@@ -272,6 +279,54 @@ class ReadReplicaBootstrapTest
     }
 
     @Test
+    void shouldNotStartWithIncompatibleRemoteVersion() throws Throwable
+    {
+        // given
+        TopologyService topologyService = topologyService( namedDatabaseA, serverA, addressA );
+        CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeAIncompatibleUpgrade );
+
+        ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, createStoreFiles( storeA, false, Optional.empty() ) );
+
+        ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, neverAbort() );
+
+        // when / then
+        RuntimeException ex = assertThrows( RuntimeException.class, bootstrap::perform );
+        assertThat( ex.getMessage(), allOf(
+                containsString( "This read replica cannot join the cluster." ),
+                containsString( "is not empty, it has a mismatching storeId" ) ) );
+    }
+
+    @Test
+    void shouldStartWithCompatibleUpgradedStore() throws Throwable
+    {
+        // given
+        TopologyService topologyService = topologyService( namedDatabaseA, serverA, addressA );
+        CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeA );
+
+        ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, createStoreFiles( storeACompatibleUpgrade, false, Optional.empty() ) );
+
+        ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, neverAbort() );
+
+        // when / then
+        assertDoesNotThrow( bootstrap::perform );
+    }
+
+    @Test
+    void shouldStartWithRemoteCompatibleUpgradedStore() throws Throwable
+    {
+        // given
+        TopologyService topologyService = topologyService( namedDatabaseA, serverA, addressA );
+        CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeACompatibleUpgrade );
+
+        ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, createStoreFiles( storeA, false, Optional.empty() ) );
+
+        ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, neverAbort() );
+
+        // when / then
+        assertDoesNotThrow( bootstrap::perform );
+    }
+
+    @Test
     void shouldStartWithMatchingDatabase() throws Throwable
     {
         // given
@@ -443,7 +498,7 @@ class ReadReplicaBootstrapTest
         when( remoteStore.getStoreId( address ) ).thenReturn( remoteStoreId );
         StoreCopyProcess storeCopyProcess = mock( StoreCopyProcess.class );
         CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
-        return new CatchupComponentsRepository.CatchupComponents( remoteStore, storeCopyProcess, catchupClientFactory );
+        return new CatchupComponentsRepository.CatchupComponents( remoteStore, storeCopyProcess, catchupClientFactory, mock( CopiedStoreRecovery.class ) );
     }
 
     private DatabaseStartAborter neverAbort()
@@ -456,6 +511,21 @@ class ReadReplicaBootstrapTest
     private ReadReplicaDatabaseContext normalDatabase( NamedDatabaseId namedDatabaseId, StoreFiles storeFiles ) throws IOException
     {
         Database kernelDatabase = mock( Database.class );
+        StorageEngineFactory sef = mock( StorageEngineFactory.class );
+        when( sef.versionInformation( anyLong() ) ).thenAnswer( inv ->
+        {
+            StoreVersion storeVersion = mock( StoreVersion.class );
+            when( storeVersion.storeVersion() ).thenReturn( inv.getArgument( 0 ).toString() );
+            when( storeVersion.isCompatibleWithIncludingMinorMigration( any() ) )
+                    .thenAnswer( check ->
+                    {
+                        long v1 = Long.parseLong( storeVersion.storeVersion() );
+                        long v2 = Long.parseLong( check.getArgument( 0, StoreVersion.class ).storeVersion() );
+                        return v1 < v2 && v1 / 10 == v2 / 10; //Makeup format for same family identification
+                    } );
+            return storeVersion;
+        });
+        when( kernelDatabase.getStorageEngineFactory() ).thenReturn( sef );
         final var databaseLayout = mock( DatabaseLayout.class );
         when( kernelDatabase.getNamedDatabaseId() ).thenReturn( namedDatabaseId );
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
@@ -518,5 +588,19 @@ class ReadReplicaBootstrapTest
             DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
             return Optional.ofNullable( coreTopology.servers().keySet().iterator().next() );
         }
+
+    }
+
+    private static StoreId getStoreFromId( int id )
+    {
+        return new StoreId( System.currentTimeMillis(), id, 1, System.currentTimeMillis(), 1 );
+    }
+    private static StoreId minorUpgradedStore( StoreId from )
+    {
+        return new StoreId( from.getCreationTime(), from.getRandomId(), from.getStoreVersion() + 1, System.currentTimeMillis(), from.getUpgradeTxId() + 1 );
+    }
+    private static StoreId crossFormatUpgradedStore( StoreId from )
+    {
+        return new StoreId( from.getCreationTime(), from.getRandomId(), from.getStoreVersion() + 10, System.currentTimeMillis(), from.getUpgradeTxId() + 1 );
     }
 }

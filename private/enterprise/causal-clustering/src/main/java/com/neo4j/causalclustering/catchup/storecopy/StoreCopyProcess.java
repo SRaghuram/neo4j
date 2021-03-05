@@ -15,7 +15,9 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.storageengine.api.StoreVersion;
 
 public class StoreCopyProcess
 {
@@ -42,9 +44,17 @@ public class StoreCopyProcess
     public void replaceWithStoreFrom( CatchupAddressProvider addressProvider, StoreId expectedStoreId )
             throws IOException, StoreCopyFailedException, DatabaseShutdownException
     {
+        StorageEngineFactory storageEngineFactory = clusteredDatabaseContext.database().getStorageEngineFactory();
         try ( TemporaryStoreDirectory tempStore = new TemporaryStoreDirectory( fs, pageCache, clusteredDatabaseContext.databaseLayout(),
-                clusteredDatabaseContext.database().getStorageEngineFactory() ) )
+                storageEngineFactory ) )
         {
+            //Check version compatibility before copy, just in case
+            StoreVersion remoteStoreVersion = storageEngineFactory.versionInformation( expectedStoreId.getStoreVersion() );
+            if ( !copiedStoreRecovery.canRecoverRemoteStore( config, tempStore.databaseLayout(), remoteStoreVersion ) )
+            {
+                throw new IllegalStateException( "Store copy failed due to store version mismatch. The copied database will not be able to recover." +
+                        " Copied store version " + remoteStoreVersion + " incompatible with current configuration." );
+            }
             remoteStore.copy( addressProvider, expectedStoreId, tempStore.databaseLayout() );
             try
             {

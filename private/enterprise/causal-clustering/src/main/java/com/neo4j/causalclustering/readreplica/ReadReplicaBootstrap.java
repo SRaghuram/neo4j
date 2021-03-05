@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedExcepti
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.helper.StoreValidation;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
@@ -24,7 +25,6 @@ import com.neo4j.dbms.DatabaseStartAborter;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
@@ -196,7 +196,8 @@ class ReadReplicaBootstrap
     private void syncExistingStore( ReadReplicaDatabaseContext databaseContext, CatchupComponents catchupComponents, StoreId remoteStoreId )
             throws IOException, StoreCopyFailedException, DatabaseShutdownException
     {
-        var localAndRemoteStoreIdMatch = Objects.equals( databaseContext.storeId(), remoteStoreId );
+        var localAndRemoteStoreIdMatch = StoreValidation
+                .validRemoteToUseTransactionsFrom( databaseContext.storeId(), remoteStoreId, databaseContext.kernelDatabase().getStorageEngineFactory() );
         var databaseIdMatch = databaseIdMatch();
 
         if ( localAndRemoteStoreIdMatch && databaseIdMatch )

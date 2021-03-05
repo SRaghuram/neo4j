@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.catchup.MockCatchupClient;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
+import com.neo4j.causalclustering.catchup.storecopy.CopiedStoreRecovery;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
@@ -21,8 +22,8 @@ import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.readreplica.tx.AsyncTaskEventHandler;
-import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplierFactory;
 import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplier;
+import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplierFactory;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
@@ -129,8 +130,9 @@ class CatchupPollingProcessTest
             ((AsyncTaskEventHandler) invocationOnMock.getArgument( 0 )).onSuccess();
             return null;
         } ).when( txApplier ).applyBatchAsync( any( AsyncTaskEventHandler.class ) );
+        CopiedStoreRecovery recovery = mock( CopiedStoreRecovery.class );
         txPuller = new CatchupPollingProcess( 100, 10, databaseContext, batchingTxApplierFactory, databaseEventDispatch,
-                nullLogProvider(), panicker, catchupAddressProvider, new StubCatchupComponentProvider( storeCopy, catchupClientFactory ) );
+                nullLogProvider(), panicker, catchupAddressProvider, new StubCatchupComponentProvider( storeCopy, catchupClientFactory, recovery ) );
     }
 
     @Test
@@ -408,18 +410,20 @@ class CatchupPollingProcessTest
 
         private final StoreCopyProcess storeCopyProcess;
         private final CatchupClientFactory catchupClientFactory;
+        private final CopiedStoreRecovery recovery;
 
-        private StubCatchupComponentProvider( StoreCopyProcess storeCopyProcess, CatchupClientFactory catchupClientFactory )
+        private StubCatchupComponentProvider( StoreCopyProcess storeCopyProcess, CatchupClientFactory catchupClientFactory, CopiedStoreRecovery recovery )
         {
             super( null, null );
             this.storeCopyProcess = storeCopyProcess;
             this.catchupClientFactory = catchupClientFactory;
+            this.recovery = recovery;
         }
 
         @Override
         CatchupComponentsRepository.CatchupComponents catchupComponents()
         {
-            return new CatchupComponentsRepository.CatchupComponents( null, storeCopyProcess, catchupClientFactory );
+            return new CatchupComponentsRepository.CatchupComponents( null, storeCopyProcess, catchupClientFactory, recovery );
         }
     }
 }

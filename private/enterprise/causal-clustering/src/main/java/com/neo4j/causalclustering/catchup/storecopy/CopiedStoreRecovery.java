@@ -5,17 +5,17 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
+import com.neo4j.causalclustering.helper.StoreValidation;
+
 import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.DatabaseTracers;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.memory.MemoryTracker;
@@ -56,6 +56,13 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         shutdown = true;
     }
 
+    public synchronized boolean canRecoverRemoteStore( Config config, DatabaseLayout databaseLayout, StoreVersion remoteStoreVersion )
+    {
+        StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck( fs, databaseLayout, config, pageCache, NullLogService.getInstance(),
+                databaseTracers.getPageCacheTracer() );
+        return canRecoverRemoteStore( storeVersionCheck, remoteStoreVersion );
+    }
+
     public synchronized void recoverCopiedStore( Config config, DatabaseLayout databaseLayout ) throws DatabaseShutdownException, IOException
     {
         if ( shutdown )
@@ -67,17 +74,10 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck( fs, databaseLayout, config, pageCache, NullLogService.getInstance(),
                 pageCacheTracer );
         Optional<String> storeVersion = getStoreVersion( storeVersionCheck, pageCacheTracer );
-        if ( databaseLayout.getDatabaseName().equals( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) )
+        if ( storeVersion.isPresent() )
         {
-            // TODO: System database does not support older formats, remove this when it does!
-            config = Config.newBuilder().fromConfig( config ).set( record_format, Standard.LATEST_NAME ).build();
-        }
-        else if ( storeVersion.isPresent() )
-        {
-            StoreVersion version = storeVersionCheck.versionInformation( storeVersion.get() );
-            String configuredVersion = storeVersionCheck.configuredVersion();
-
-            if ( configuredVersion != null && !version.isCompatibleWith( storeVersionCheck.versionInformation( configuredVersion ) ) )
+            //It is ok to have recover an older version of the store. In that case we will migrate it after recovery. Minor migrations are fast
+            if ( !canRecoverRemoteStore( storeVersionCheck, storeVersionCheck.versionInformation( storeVersion.get() ) ) )
             {
                 throw new RuntimeException( failedToStartMessage( config ) );
             }
@@ -95,6 +95,12 @@ public class CopiedStoreRecovery extends LifecycleAdapter
             }
             throw e;
         }
+    }
+
+    private boolean canRecoverRemoteStore( StoreVersionCheck storeVersionCheck, StoreVersion remoteStoreVersion )
+    {
+        String storeVersion = storeVersionCheck.configuredVersion(); //When can this be null? Kept for compatibility reasons
+        return storeVersion == null || StoreValidation.validRemoteToUseStoreFrom( storageEngineFactory.versionInformation( storeVersion ), remoteStoreVersion );
     }
 
     private Optional<String> getStoreVersion( StoreVersionCheck storeVersionCheck, PageCacheTracer pageCacheTracer )

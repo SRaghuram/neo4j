@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
+import com.neo4j.causalclustering.catchup.storecopy.CopiedStoreRecovery;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
@@ -41,12 +42,15 @@ public class CatchupComponentsRepository
     {
         final RemoteStore remoteStore;
         final StoreCopyProcess storeCopy;
+        final CopiedStoreRecovery copiedStoreRecovery;
         private final CatchupClientFactory catchupClientFactory;
 
-        public CatchupComponents( RemoteStore remoteStore, StoreCopyProcess storeCopy, CatchupClientFactory catchupClientFactory )
+        public CatchupComponents( RemoteStore remoteStore, StoreCopyProcess storeCopy, CatchupClientFactory catchupClientFactory,
+                CopiedStoreRecovery copiedStoreRecovery )
         {
             this.remoteStore = remoteStore;
             this.storeCopy = storeCopy;
+            this.copiedStoreRecovery = copiedStoreRecovery;
             this.catchupClientFactory = catchupClientFactory;
         }
 
@@ -63,6 +67,11 @@ public class CatchupComponentsRepository
         public CatchupClientFactory catchupClientFactory()
         {
             return catchupClientFactory;
+        }
+
+        public CopiedStoreRecovery copiedStoreRecovery()
+        {
+            return copiedStoreRecovery;
         }
     }
 }

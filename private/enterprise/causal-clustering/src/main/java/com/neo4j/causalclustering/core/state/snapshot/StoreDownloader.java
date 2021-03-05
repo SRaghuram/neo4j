@@ -9,9 +9,9 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
+import com.neo4j.causalclustering.helper.StoreValidation;
 
 import java.io.IOException;
 
@@ -42,16 +42,16 @@ public class StoreDownloader
         try
         {
             var catchupComponents = getCatchupComponents( context.databaseId() );
-            var storeId = validateStoreId( context, catchupComponents.remoteStore(), primaryAddress );
+            StoreId remoteStoreId = catchupComponents.remoteStore().getStoreId( primaryAddress );
             if ( context.hasStore() )
             {
-                if ( tryCatchup( context, addressProvider, catchupComponents.remoteStore() ) )
+                if ( tryCatchup( context, addressProvider, catchupComponents, remoteStoreId, primaryAddress ) )
                 {
                     return;
                 }
                 context.delete();
             }
-            replaceStore( addressProvider, catchupComponents, storeId );
+            replaceStore( addressProvider, catchupComponents, remoteStoreId );
         }
         catch ( IOException e )
         {
@@ -67,29 +67,6 @@ public class StoreDownloader
         }
     }
 
-    /**
-     * Returns a store ID which is to be considered locally valid and used in subsequent requests. A store ID is valid either because it matches between the
-     * local and the upstream or because the local database is empty anyway so it should be overridden by the remote store ID when the remote database is
-     * copied.
-     *
-     * @return {@link StoreId} returns remote store id if it matches the local store id or if local store id is empty.
-     * @throws SnapshotFailedException        with unrecoverable error if remote store id does not match local.
-     * @throws StoreIdDownloadFailedException if unable to download remote store id.
-     */
-    private StoreId validateStoreId( StoreDownloadContext context, RemoteStore remoteStore, SocketAddress address )
-            throws StoreIdDownloadFailedException, SnapshotFailedException, IOException
-    {
-        var remoteStoreId = remoteStore.getStoreId( address );
-
-        if ( context.hasStore() && !remoteStoreId.equals( context.storeId() ) )
-        {
-            throw new SnapshotFailedException(
-                    "Store copy failed due to store ID mismatch. There are database operating with different store ids. Received a different store ID from " +
-                    address, SnapshotFailedException.Status.UNRECOVERABLE );
-        }
-        return remoteStoreId;
-    }
-
     private void replaceStore( CatchupAddressProvider addressProvider, CatchupComponents catchupComponents, StoreId storeId )
             throws IOException, StoreCopyFailedException, DatabaseShutdownException
     {
@@ -101,12 +78,21 @@ public class StoreDownloader
     /**
      * @return true if catchup was successful.
      */
-    private boolean tryCatchup( StoreDownloadContext context, CatchupAddressProvider addressProvider, RemoteStore remoteStore ) throws IOException
+    private boolean tryCatchup( StoreDownloadContext context, CatchupAddressProvider addressProvider, CatchupComponents catchupComponents,
+            StoreId remoteStoreId, SocketAddress address )
+            throws IOException, DatabaseShutdownException, SnapshotFailedException, StoreIdDownloadFailedException
     {
         try
         {
+            StoreId localStoreId = context.storeId();
+            if ( !StoreValidation.validRemoteToUseTransactionsFrom( localStoreId, remoteStoreId, context.kernelDatabase().getStorageEngineFactory() ) )
+            {
+                throw new SnapshotFailedException( "Store copy failed due to store ID mismatch. There are database operating with different store ids." +
+                        " Received a different store ID from " + address, SnapshotFailedException.Status.UNRECOVERABLE );
+            }
             log.info( "Begin trying to catch up store" );
-            remoteStore.tryCatchingUp( addressProvider, context.storeId(), context.databaseLayout(), false );
+            catchupComponents.remoteStore().tryCatchingUp( addressProvider, localStoreId, context.databaseLayout(), false );
+            catchupComponents.copiedStoreRecovery().recoverCopiedStore( context.kernelDatabase().getConfig(), context.databaseLayout() );
             log.info( "Successfully caught up store" );
             return true;
         }

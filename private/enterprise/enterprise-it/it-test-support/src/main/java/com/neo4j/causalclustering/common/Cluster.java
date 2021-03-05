@@ -244,6 +244,11 @@ public class Cluster implements ServerAddressResolver
         return addCoreMemberWithIndex( index, coreParams, instanceCoreParams, recordFormat );
     }
 
+    public CoreClusterMember newCoreMemberWithRecordFormat( String recordFormat )
+    {
+        return addCoreMemberWithIndex( ++highestCoreIndex, coreParams, instanceCoreParams, recordFormat );
+    }
+
     public CoreClusterMember newCoreMember()
     {
         var newCoreServerIndex = ++highestCoreIndex;
@@ -279,6 +284,11 @@ public class Cluster implements ServerAddressResolver
             cm.start();
             return null;
         } ) ).get();
+    }
+
+    public ReadReplica newReadReplicaWithRecordFormat( String recordFormat )
+    {
+        return addReadReplicaWithIndexAndRecordFormat( ++highestReplicaIndex, recordFormat );
     }
 
     public ReadReplica addReadReplicaWithIndexAndRecordFormat( int index, String recordFormat )

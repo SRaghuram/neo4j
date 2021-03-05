@@ -13,6 +13,9 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -38,6 +41,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -59,6 +63,8 @@ import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_NAME_PROPERT
 @TestDirectoryExtension
 @ClusterExtension
 @PageCacheExtension
+@ExtendWith( SuppressOutputExtension.class )
+@ResourceLock( Resources.SYSTEM_OUT )
 public class DesignatedSeederIT
 {
     private static final Label NODE_LABEL = Label.label( "test_node" );

@@ -34,6 +34,7 @@ import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
+import org.neo4j.kernel.impl.store.format.standard.StandardV4_3;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.EphemeralNeo4jLayoutExtension;
@@ -56,6 +57,7 @@ import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.defaultFormat;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.findSuccessor;
+import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.isStoreFormatsCompatibleIncludingMinorUpgradable;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForConfig;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForStore;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForStoreOrConfig;
@@ -356,6 +358,15 @@ class RecordFormatSelectorTest
         assertEquals( HighLimitV3_4_0.RECORD_FORMATS, findSuccessor( HighLimitV3_2_0.RECORD_FORMATS ).get() );
         assertEquals( HighLimitV4_0_0.RECORD_FORMATS, findSuccessor( HighLimitV3_4_0.RECORD_FORMATS ).get() );
         assertEquals( HighLimit.RECORD_FORMATS, findSuccessor( HighLimitV4_0_0.RECORD_FORMATS ).get() );
+    }
+
+    @Test
+    void shouldFindMinorUpgradableFormatsCompatible()
+    {
+        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV4_0.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isTrue();
+        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV4_3.RECORD_FORMATS, StandardV4_0.RECORD_FORMATS ) ).isFalse();
+        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV3_4.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isFalse();
+        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( PageAlignedV4_1.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isFalse();
     }
 
     private void verifySelectForStore( PageCache pageCache, RecordFormats format ) throws IOException

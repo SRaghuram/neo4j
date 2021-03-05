@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressPr
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
+import com.neo4j.causalclustering.catchup.storecopy.CopiedStoreRecovery;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
@@ -29,12 +30,16 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.storageengine.api.StoreVersion;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -99,7 +104,7 @@ class StoreDownloaderTest
     {
         // given
         StoreDownloadContext databaseContext = mockLocalDatabase( namedDatabaseId, false, storeId );
-        RemoteStore remoteStore = mockRemoteSuccessfulStore( namedDatabaseId );
+        RemoteStore remoteStore = mockRemoteSuccessfulStore( namedDatabaseId, storeId );
 
         // when
         downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
@@ -107,6 +112,69 @@ class StoreDownloaderTest
         // then
         verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean() );
         verify( remoteStore, never() ).copy( any(), any(), any() );
+    }
+
+    @Test
+    void shouldNotCatchupDifferentStore() throws Exception
+    {
+        // given
+        StoreId store = getStoreFromId( 1 );
+        StoreId otherStore = getStoreFromId( 2 );
+        StoreDownloadContext databaseContext = mockLocalDatabase( namedDatabaseId, false, otherStore );
+        mockRemoteSuccessfulStore( namedDatabaseId, store );
+
+        assertThatThrownBy( () -> downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) ) )
+                .isInstanceOf( SnapshotFailedException.class )
+                .hasMessageContaining( "failed due to store ID mismatch" );
+    }
+
+    @Test
+    void shouldCatchupSameStoreFromOldCompatibleVersion() throws Exception
+    {
+        // given
+        StoreId store = getStoreFromId( 1 );
+        StoreId upgradedStore = minorUpgradedStore( store );
+        StoreDownloadContext databaseContext = mockLocalDatabase( namedDatabaseId, false, upgradedStore );
+        RemoteStore remoteStore = mockRemoteSuccessfulStore( namedDatabaseId, store );
+
+        // when
+        downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
+
+        // then
+        verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean() );
+        verify( remoteStore, never() ).copy( any(), any(), any() );
+    }
+
+    @Test
+    void shouldCatchupSameStoreNewCompatibleVersion() throws Exception
+    {
+        // given
+        StoreId store = getStoreFromId( 1 );
+        StoreId upgradedStore = minorUpgradedStore( store );
+        StoreDownloadContext databaseContext = mockLocalDatabase( namedDatabaseId, false, store );
+        RemoteStore remoteStore = mockRemoteSuccessfulStore( namedDatabaseId, upgradedStore );
+
+        // when
+        downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
+
+        // then
+        verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean() );
+        verify( remoteStore, never() ).copy( any(), any(), any() );
+    }
+
+    @Test
+    void shouldNotCatchupSameStoreOldIncompatibleVersion() throws Exception
+    {
+        // given
+        StoreId store = getStoreFromId( 1 );
+        StoreId upgradedStore = crossFormatUpgradedStore( store );
+        StoreDownloadContext databaseContext = mockLocalDatabase( namedDatabaseId, false, upgradedStore );
+        mockRemoteSuccessfulStore( namedDatabaseId, store );
+
+        // when/then
+        assertThatThrownBy( () -> downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) ) )
+                .isInstanceOf( SnapshotFailedException.class )
+                .hasMessageContaining( "failed due to store ID mismatch" );
     }
 
     @Test
@@ -144,14 +212,30 @@ class StoreDownloaderTest
     private StoreDownloadContext mockLocalDatabase( NamedDatabaseId namedDatabaseId, boolean isEmpty, StoreId storeId ) throws IOException
     {
         StubClusteredDatabaseContext db = databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId ).withCatchupComponentsFactory(
-                ignored -> new CatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ), mock( CatchupClientFactory.class ) ) )
-                .withStoreId( storeId ).register();
+                ignored -> new CatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ), mock( CatchupClientFactory.class ),
+                        mock( CopiedStoreRecovery.class ) ) ).withStoreId( storeId ).register();
 
         db.setEmpty( isEmpty );
 
         Database database = mock( Database.class );
         when( database.getNamedDatabaseId() ).thenReturn( namedDatabaseId );
         when( database.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
+
+        StorageEngineFactory sef = mock( StorageEngineFactory.class );
+        when( sef.versionInformation( anyLong() ) ).thenAnswer( inv ->
+        {
+            StoreVersion storeVersion = mock( StoreVersion.class );
+            when( storeVersion.storeVersion() ).thenReturn( inv.getArgument( 0 ).toString() );
+            when( storeVersion.isCompatibleWithIncludingMinorMigration( any() ) )
+                    .thenAnswer( check ->
+                    {
+                        long v1 = Long.parseLong( storeVersion.storeVersion() );
+                        long v2 = Long.parseLong( check.getArgument( 0, StoreVersion.class ).storeVersion() );
+                        return v1 < v2 && v1 / 10 == v2 / 10; //Makeup format for same family identification
+                    } );
+            return storeVersion;
+        });
+        when( database.getStorageEngineFactory() ).thenReturn( sef );
 
         StoreFiles storeFiles = mock( StoreFiles.class );
         when( storeFiles.isEmpty( any() ) ).thenReturn( isEmpty );
@@ -163,7 +247,7 @@ class StoreDownloaderTest
                                          new ClusterInternalDbmsOperator( NullLogProvider.getInstance() ), PageCacheTracer.NULL );
     }
 
-    private RemoteStore mockRemoteSuccessfulStore( NamedDatabaseId namedDatabaseId ) throws StoreIdDownloadFailedException
+    private RemoteStore mockRemoteSuccessfulStore( NamedDatabaseId namedDatabaseId, StoreId storeId ) throws StoreIdDownloadFailedException
     {
         RemoteStore remoteStore = getRemoteStore( namedDatabaseId );
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( storeId );
@@ -188,5 +272,18 @@ class StoreDownloaderTest
     {
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         return new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
+    }
+
+    private static StoreId getStoreFromId( int id )
+    {
+        return new StoreId( System.currentTimeMillis(), id, 1, System.currentTimeMillis(), 1 );
+    }
+    private static StoreId minorUpgradedStore( StoreId from )
+    {
+        return new StoreId( from.getCreationTime(), from.getRandomId(), from.getStoreVersion() + 1, System.currentTimeMillis(), from.getUpgradeTxId() + 1 );
+    }
+    private static StoreId crossFormatUpgradedStore( StoreId from )
+    {
+        return new StoreId( from.getCreationTime(), from.getRandomId(), from.getStoreVersion() + 10, System.currentTimeMillis(), from.getUpgradeTxId() + 1 );
     }
 }

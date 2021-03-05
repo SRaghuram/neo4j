@@ -460,7 +460,7 @@ public final class CausalClusteringTestHelpers
                       .collect( toMap( identity(), member -> memberDatabaseState( member, databaseName ) ) );
     }
 
-    private static EnterpriseOperatorState memberDatabaseState( ClusterMember member, String databaseName )
+    public static EnterpriseOperatorState memberDatabaseState( ClusterMember member, String databaseName )
     {
         GraphDatabaseFacade database;
         try
