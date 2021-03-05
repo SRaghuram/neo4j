@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
@@ -61,7 +60,11 @@ class PlannerDescriptionTestsSupport
         Path tempDirectory = Files.createTempDirectory( "resource" );
         try ( Resources resources = new Resources( tempDirectory ) )
         {
-            return Workload.all( resources, mode ).stream().map( w -> new Object[]{w} ).collect( Collectors.toList() );
+            return Workload.all( resources, mode )
+                           .stream()
+                           .filter( w -> !"error".equals( w.name() ) )
+                           .map( w -> new Object[]{w} )
+                           .collect( toList() );
         }
         finally
         {
