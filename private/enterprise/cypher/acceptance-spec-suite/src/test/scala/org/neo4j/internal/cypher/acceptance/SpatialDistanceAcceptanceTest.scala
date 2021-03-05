@@ -279,7 +279,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 9.99))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, config = Configs.Spatial)
     }
     // < cartesian
     {
@@ -294,7 +294,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 9.99))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, config = Configs.Spatial)
     }
     // <= geographic
     {
@@ -313,7 +313,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 0, -10)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 0, 0))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, config = Configs.Spatial)
     }
     // < geographic
     {
@@ -328,7 +328,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       val expected = Set(
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 0, 0))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, config = Configs.Spatial)
     }
   }
 
@@ -355,7 +355,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 9.99))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, config = Configs.Spatial)
     }
   }
 
@@ -432,7 +432,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
           Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, -180, -10)),
           Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 180, -10))
         )
-        expectResultsAndIndexUsage(query, expected, inclusiveRange = inequality.contains("="))
+        expectResultsAndIndexUsage(query, expected, inclusiveRange = inequality.contains("="), Configs.Spatial)
       }
     }
   }
@@ -461,7 +461,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 0, 0, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 0, 0, 10))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, config = Configs.Spatial)
     }
     // < cartesian
     {
@@ -476,7 +476,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 0, 0, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 0, 9.99, 0))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, config = Configs.Spatial)
     }
     // <= geographic
     {
@@ -497,7 +497,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, 0, 0, -1000000)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, 0, 0, 1000000))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, config = Configs.Spatial)
     }
     // < geographic
     {
@@ -514,7 +514,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, 0, 0, -1000000)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, 0, 0, 1000000))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, config = Configs.Spatial)
     }
   }
 
@@ -539,7 +539,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, -10)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 9.99))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, config = Configs.Spatial)
     }
     // < cartesian
     {
@@ -553,7 +553,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       val expected = Set(
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 9.99))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, config = Configs.Spatial)
     }
     // <= geographic
     {
@@ -571,7 +571,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, -10, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 0, -10))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, config = Configs.Spatial)
     }
     // < geographic
     {
@@ -584,7 +584,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
       // Then
       val expected = Set.empty
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, config = Configs.Spatial)
     }
   }
 
@@ -609,7 +609,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 0, -10, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 0, 9.99, 0))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, config = Configs.Spatial)
     }
     // < cartesian
     {
@@ -623,7 +623,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       val expected = Set(
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 0, 9.99, 0))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, config = Configs.Spatial)
     }
     // <= geographic
     {
@@ -641,7 +641,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, -10, 0, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, 0, -10, 0))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, config = Configs.Spatial)
     }
     // < geographic
     {
@@ -654,7 +654,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
       // Then
       val expected = Set.empty
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, config = Configs.Spatial)
     }
   }
 
@@ -677,7 +677,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       """.stripMargin
 
     // Then
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val result = executeWith(Configs.Spatial, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("Filter").containingArgumentRegex("distance.*".r)
@@ -723,7 +723,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
          |RETURN p.location as point
         """.stripMargin
     // When & Then
-    expectResultsAndIndexUsage(query, Set.empty, inclusiveRange = true)
+    expectResultsAndIndexUsage(query, Set.empty, inclusiveRange = true, config = Configs.Spatial)
   }
 
   test("invalid location without index") {
@@ -760,7 +760,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN p.location as point
         """.stripMargin
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("poi" -> 5))
+    val result = executeWith(Configs.Spatial, query, params = Map("poi" -> 5))
 
     // Then
     result.toList shouldBe empty
@@ -786,7 +786,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN p.location as point
       """.stripMargin
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val result = executeWith(Configs.Spatial, query)
 
     // Then
     result.toList shouldBe empty

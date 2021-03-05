@@ -71,7 +71,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
         | ][0..5] AS related
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused, query)
+    val result = executeWith(Configs.NestedPlan, query)
     result.toList should equal(
       List(Map("related" -> List(Map("tagged" -> Vector(Map("owner" -> Map("name" -> "Michael Hunger"))))))))
   }
@@ -469,7 +469,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
         |optional match (a)-[:ACTED_IN]->(movie:Movie)
         |return a.name as name,  [(a)-[:DIRECTED]->(dirMovie:Movie) | dirMovie.title] as dirMovie""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query)
     result.toList should equal(List(
       Map("name" -> "Tom Cruise", "dirMovie" -> Seq()),
       Map("name" -> "Ron Howard", "dirMovie" -> Seq("Cocoon")),

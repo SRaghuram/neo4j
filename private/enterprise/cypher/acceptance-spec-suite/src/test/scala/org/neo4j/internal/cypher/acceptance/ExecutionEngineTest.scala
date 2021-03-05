@@ -93,7 +93,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val node1: Node = createNode()
     val node2: Node = createNode()
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"match (node) where id(node) in [${node1.getId}, ${node2.getId}] return node")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, s"match (node) where id(node) in [${node1.getId}, ${node2.getId}] return node")
 
     result.columnAs[Node]("node").toList should equal(List(node1, node2))
   }
@@ -143,7 +143,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n1 = createNode(Map("name" -> "boy"))
     val n2 = createNode(Map("name" -> "girl"))
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions,
       s"match (n) where id(n) in [${n1.getId}, ${n2.getId}] and (n.name = 'boy' OR n.name = 'girl') return n"
     )
 
@@ -154,7 +154,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n1 = createNode(Map("name" -> "boy"))
     val n2 = createNode(Map("name" -> "girl"))
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions,
       s"match (n) where id(n) in [${n1.getId}, ${n2.getId}] and (n.name = 'boy' XOR n.name = 'girl') return n"
     )
 
@@ -166,7 +166,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n2 = createNode(Map("animal" -> "cow", "food" -> "grass"))
     val n3 = createNode(Map("animal" -> "cow", "food" -> "banana"))
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions,
       s"match (n) where id(n) in [${n1.getId}, ${n2.getId}, ${n3.getId}] " +
         """and (
           (n.animal = 'monkey' AND n.food = 'banana') OR
@@ -236,7 +236,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |return pA, pB, pC, pD, pE
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map(
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query, params = Map(
       "a" -> Seq[Long](a),
       "b" -> b.toInt,
       "c" -> Seq(c).asJava,
@@ -258,7 +258,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNodes("A")
 
     val query = "match (pA) where id(pA) IN $a return pA"
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("a" -> Seq[Long](0)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query, params = Map("a" -> Seq[Long](0)))
 
     graph.withTx( tx => result.toList should equal(List(Map("pA" -> node(tx, "A")))))
   }
@@ -326,7 +326,7 @@ return a""")
     val a = createNode("COL1" -> "A", "COL2" -> "A", "num" -> 1).getId
     val b = createNode("COL1" -> "B", "COL2" -> "B", "num" -> 2).getId
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, """
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, """
 match (a)
 where id(a) IN [%d, %d]
 return a.COL1, a.COL2, avg(a.num)
@@ -402,7 +402,7 @@ order by a.COL1""".format(a, b))
   test("shouldHandleComparisonsWithDifferentTypes") {
     createNode("belt" -> 13)
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) where id(n) = 0 and (n.belt = 'white' OR n.belt = false) return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, "match (n) where id(n) = 0 and (n.belt = 'white' OR n.belt = false) return n")
     result.toList shouldBe empty
   }
 
@@ -420,7 +420,7 @@ order by a.COL1""".format(a, b))
     createNode("foo" -> 49)
 
     val q = "match (x) where id(x) in [0,1] with x WHERE x.foo = 42 return x"
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, q)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, q)
 
     result.toList should equal(List(Map("x" -> a)))
   }
@@ -511,7 +511,7 @@ order by a.COL1""".format(a, b))
   test("shouldSupportArrayOfArrayOfPrimitivesAsParameterForInKeyword") {
     val node = createNode("lotteryNumbers" -> Array(42, 87))
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) where id(n) = 0 and n.lotteryNumbers in [[42, 87], [13], [42]] return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, "match (n) where id(n) = 0 and n.lotteryNumbers in [[42, 87], [13], [42]] return n")
 
     result.toList should equal(List(Map("n" -> node)))
   }
@@ -561,7 +561,7 @@ order by a.COL1""".format(a, b))
   test("filtering in match should not fail") {
     val n = createNode()
     relate(n, createNode("name" -> "Neo"))
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n)-->(me) WHERE id(n) = 0 AND me.name IN ['Neo'] RETURN me.name")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, "MATCH (n)-->(me) WHERE id(n) = 0 AND me.name IN ['Neo'] RETURN me.name")
 
     result.toList should equal(List(Map("me.name"->"Neo")))
   }
@@ -629,7 +629,7 @@ order by a.COL1""".format(a, b))
     val c = createNode()
 
     // WHEN
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE id(n) in [%d, %d, %d] AND n:foo RETURN n".format(a.getId, b.getId, c.getId))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, "MATCH (n) WHERE id(n) in [%d, %d, %d] AND n:foo RETURN n".format(a.getId, b.getId, c.getId))
 
     // THEN
     result.toList should equal(List(Map("n" -> a), Map("n" -> b)))
@@ -642,7 +642,7 @@ order by a.COL1""".format(a, b))
     val c = createNode()
 
     // WHEN
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE id(n) in [0, 1, 2] AND not(n:foo) RETURN n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, "MATCH (n) WHERE id(n) in [0, 1, 2] AND not(n:foo) RETURN n")
 
     // THEN
     result.toList should equal(List(Map("n" -> c)))
@@ -655,7 +655,7 @@ order by a.COL1""".format(a, b))
     val c = createNode()
 
     // WHEN
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE id(n) in [%d, %d, %d] AND n:foo:bar RETURN n"
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, "MATCH (n) WHERE id(n) in [%d, %d, %d] AND n:foo:bar RETURN n"
       .format(a.getId, b.getId, c.getId))
 
     // THEN
@@ -803,7 +803,7 @@ order by a.COL1""".format(a, b))
     val nodeIds = s"[${nodes.map(_.getId).mkString(",")}]"
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (src)-[r:EDGE]-(dst) WHERE id(src) IN $nodeIds AND id(dst) IN $nodeIds RETURN r")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, s"MATCH (src)-[r:EDGE]-(dst) WHERE id(src) IN $nodeIds AND id(dst) IN $nodeIds RETURN r")
 
     // then
     val relationships: List[Relationship] = result.columnAs[Relationship]("r").toList

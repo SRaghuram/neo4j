@@ -11,6 +11,7 @@ import java.time.ZoneOffset
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.config.Setting
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.io.fs.FileUtils
 import org.neo4j.kernel.impl.index.schema.config.CrsConfig
 import org.neo4j.test.rule.TestDirectory
@@ -174,15 +175,17 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
     val min = Values.pointValue(CoordinateReferenceSystem.WGS84, 1, 41)
     val max = Values.pointValue(CoordinateReferenceSystem.WGS84, 19, 59)
 
-    assertRangeScanFor(">", min, "<", max, node)
+    val config = Configs.InterpretedAndSlottedAndPipelined
+
+    assertRangeScanFor(">", min, "<", max, config, node)
 
     restartGraphDatabase(settings)
 
-    assertRangeScanFor(">", min, "<", max, node)
+    assertRangeScanFor(">", min, "<", max, config, node)
 
     dropIndex()
     createIndex()
 
-    assertRangeScanFor(">", min, "<", max, node)
+    assertRangeScanFor(">", min, "<", max, config, node)
   }
 }

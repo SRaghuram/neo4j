@@ -257,7 +257,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CYPHER MATCH (p:Place) WHERE p.location > point({x: 0, y: 0}) RETURN p.location as point")
+    val result = executeWith(Configs.Spatial, "CYPHER MATCH (p:Place) WHERE p.location > point({x: 0, y: 0}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -276,7 +276,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CYPHER MATCH (p:Place) WHERE p.location < point({x: 0, y: 0}) RETURN p.location as point")
+    val result = executeWith(Configs.Spatial, "CYPHER MATCH (p:Place) WHERE p.location < point({x: 0, y: 0}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -296,7 +296,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CYPHER MATCH (p:Place) WHERE p.location > point({x: 0, y: 0}) AND p.location < point({x: 200000, y: 200000}) RETURN p.location as point")
+    val result = executeWith(Configs.Spatial, "CYPHER MATCH (p:Place) WHERE p.location > point({x: 0, y: 0}) AND p.location < point({x: 200000, y: 200000}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -315,7 +315,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: -10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.0, longitude: 12.0, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.Spatial, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.0, longitude: 12.0, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -373,7 +373,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.0, longitude: 12.0, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.Spatial, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.0, longitude: 12.0, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -393,7 +393,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.Spatial, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -413,7 +413,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.Spatial, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -433,7 +433,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.Spatial, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -453,7 +453,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'}) AND p.location < point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.Spatial, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'}) AND p.location < point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -488,10 +488,11 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     assertRangeScanFor(">=", originPoint, origin, upRightTop)
     assertRangeScanFor("<", originPoint, downLeftBottom)
     assertRangeScanFor("<=", originPoint, origin, downLeftBottom)
-    assertRangeScanFor(">=", minPoint, "<=", maxPoint, origin, upRightTop, downLeftBottom, downLeftTop, downRightBottom, downrightTop, upLeftBottom, upLeftTop, upRightBottom)
-    assertRangeScanFor(">", minPoint, "<=", maxPoint, origin, upRightTop)
-    assertRangeScanFor(">=", minPoint, "<", maxPoint, origin, downLeftBottom)
-    assertRangeScanFor(">", minPoint, "<", maxPoint, origin)
+    val config = Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions
+    assertRangeScanFor(">=", minPoint, "<=", maxPoint, config, origin, upRightTop, downLeftBottom, downLeftTop, downRightBottom, downrightTop, upLeftBottom, upLeftTop, upRightBottom)
+    assertRangeScanFor(">", minPoint, "<=", maxPoint, config, origin, upRightTop)
+    assertRangeScanFor(">=", minPoint, "<", maxPoint, config, origin, downLeftBottom)
+    assertRangeScanFor(">", minPoint, "<", maxPoint, config, origin)
   }
 
   test("indexed points 3D WGS84 space - range queries") {
@@ -518,10 +519,11 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     assertRangeScanFor(">=", midPoint, n0, n1)
     assertRangeScanFor("<", midPoint, n8)
     assertRangeScanFor("<=", midPoint, n0, n8)
-    assertRangeScanFor(">=", minPoint, "<=", maxPoint, n0, n1, n2, n3, n4, n5, n6, n7, n8)
-    assertRangeScanFor(">", minPoint, "<=", maxPoint, n0, n1)
-    assertRangeScanFor(">=", minPoint, "<", maxPoint, n0, n8)
-    assertRangeScanFor(">", minPoint, "<", maxPoint, n0)
+    val config = Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions
+    assertRangeScanFor(">=", minPoint, "<=", maxPoint, config, n0, n1, n2, n3, n4, n5, n6, n7, n8)
+    assertRangeScanFor(">", minPoint, "<=", maxPoint, config, n0, n1)
+    assertRangeScanFor(">=", minPoint, "<", maxPoint, config, n0, n8)
+    assertRangeScanFor(">", minPoint, "<", maxPoint, config, n0)
   }
 
   test("Range query should return points greater on both axes or less on both axes") {
@@ -601,8 +603,9 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     // And when using the range scan assertions we should find the same results
     val minPoint = cartesianPoint(1, 5)
     val maxPoint = cartesianPoint(2, 6)
-    assertRangeScanFor(">=", minPoint, "<=", maxPoint, vertices :+ nodeToFind: _*)
-    assertRangeScanFor(">", minPoint, "<", maxPoint, nodeToFind)
+    val config = Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions
+    assertRangeScanFor(">=", minPoint, "<=", maxPoint, config, vertices :+ nodeToFind: _*)
+    assertRangeScanFor(">", minPoint, "<", maxPoint, config, nodeToFind)
   }
 
   test("should not return points on edges even when using transaction state") {
@@ -646,7 +649,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     val result =
       executeWith(
-        Configs.InterpretedAndSlottedAndPipelined,
+        Configs.Spatial,
         query,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
           .containingArgument(s"p:$LABEL($PROPERTY) WHERE $PROPERTY > min AND $PROPERTY < max"))
@@ -676,7 +679,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     val result =
       executeWith(
-        Configs.InterpretedAndSlottedAndPipelined,
+        Configs.Spatial,
         query,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
           .containingArgument(s"p:$LABEL($PROPERTY) WHERE $PROPERTY > point({x: min.x, y: min.y}) AND $PROPERTY < max"))

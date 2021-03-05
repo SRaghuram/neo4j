@@ -343,7 +343,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2, "T", Map("x" -> 1))
     relate(n2, n3, "T", Map("x" -> 2))
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused - Configs.SlottedWithCompiledExpressions,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "WHERE any(r IN relationships(p) WHERE r:T) " +
@@ -414,7 +414,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2, "T", Map("x" -> 1))
     relate(n2, n3, "T", Map("x" -> 2))
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused - Configs.SlottedWithCompiledExpressions,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "WHERE none(r IN relationships(p) WHERE r:Fake) " +
@@ -557,7 +557,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     //when
     val result =
-      executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions,
         """MATCH path=(src:Test)-[r1:NEXT]->(dst:Test)
           |WHERE ANY(ne IN src.ne WHERE ne IN ["TIT"]) AND ANY(ne IN dst.ne WHERE ne IN ["PER"])
           |RETURN path""".stripMargin)

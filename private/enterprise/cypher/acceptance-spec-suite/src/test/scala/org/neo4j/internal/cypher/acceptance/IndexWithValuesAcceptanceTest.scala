@@ -195,7 +195,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should correctly project cached node property through ORDER BY") {
-    val result = executeWith(Configs.UDF,
+    val result = executeWith(Configs.UDF - Configs.SlottedWithCompiledExpressions,
       "MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds",
       executeBefore = createSomeNodes)
 
@@ -244,7 +244,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue when the property is part of a distinct column") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 AND n.prop1 < 44 RETURN DISTINCT n.prop1", executeBefore = createSomeNodes,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 AND n.prop1 < 44 RETURN DISTINCT n.prop1", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("OrderedDistinct")
         .withDBHits(0)
         .onTopOf(aPlan("NodeIndexSeekByRange")

@@ -39,7 +39,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       """ WITH 1 AS node, [] AS nodes1
         | RETURN ANY(n IN collect(distinct node) WHERE n IN nodes1) as exists """.stripMargin
 
-    val r = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val r = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query)
     r.toList should equal(List(Map("exists" -> false)))
   }
 

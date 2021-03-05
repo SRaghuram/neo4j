@@ -3162,7 +3162,7 @@ class EagerizationAcceptanceTest
   test("matching node property using or'd string equality and writing other node should be eager 2") {
     relate(createNode(Map("prop" -> "5")), createNode())
     val query = "MATCH (n)-[r]-(m) WHERE n.prop = '5' OR n.prop = '6' SET m.prop = '5' RETURN count(*)"
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     assertStats(result, propertiesWritten = 1)
     result.toList should equal(List(Map("count(*)" -> 1)))
@@ -3558,7 +3558,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH (m:Lol), (n) WHERE m.prop >= 1 AND m.prop <= 3 SET n.prop = 3 RETURN count(*)"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     result.columnAs[Long]("count(*)").next shouldBe 8

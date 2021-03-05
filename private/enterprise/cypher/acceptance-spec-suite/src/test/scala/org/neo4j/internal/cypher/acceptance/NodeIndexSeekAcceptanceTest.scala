@@ -61,7 +61,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |OR (c.prop1 = 11 AND c.prop2 = 11))
         |RETURN c""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.nTimes(2, aPlan("NodeIndexSeek"))
         plan should includeSomewhere.aPlan("Union")
@@ -84,7 +84,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |OR (c.prop1 = 11 AND c.prop2 = 11))
         |RETURN c""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.nTimes(2, aPlan("NodeIndexSeek"))
         plan should includeSomewhere.aPlan("Union")

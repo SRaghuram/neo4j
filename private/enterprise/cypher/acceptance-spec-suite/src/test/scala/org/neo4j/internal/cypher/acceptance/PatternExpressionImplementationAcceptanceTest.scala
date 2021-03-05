@@ -271,7 +271,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) where n IN [x IN (n)-->() | head(nodes(x))] return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, "match (n) where n IN [x IN (n)-->() | head(nodes(x))] return n")
       .toList
 
     result should equal(List(

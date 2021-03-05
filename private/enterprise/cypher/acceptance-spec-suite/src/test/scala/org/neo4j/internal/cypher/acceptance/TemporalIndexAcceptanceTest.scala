@@ -142,7 +142,7 @@ class TemporalIndexAcceptanceTest extends IndexingTestSupport {
         | RETURN n
       """.stripMargin
 
-    val result = executeWith(Configs.UDF, query,
+    val result = executeWith(Configs.UDF - Configs.SlottedWithCompiledExpressions, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")))
 
     result.toList should equal(List(Map("n" -> node2)))
@@ -164,7 +164,8 @@ class TemporalIndexAcceptanceTest extends IndexingTestSupport {
     assertRangeScanFor("<", v3, n1, n2)
     assertRangeScanFor("<=", v3, n1, n2, n3)
 
-    assertRangeScanFor(">", v1, "<", v4, n2, n3)
-    assertRangeScanFor(">=", v1, "<=", v4, n1, n2, n3, n4)
+    val config = Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions
+    assertRangeScanFor(">", v1, "<", v4, config, n2, n3)
+    assertRangeScanFor(">=", v1, "<=", v4, config, n1, n2, n3, n4)
   }
 }

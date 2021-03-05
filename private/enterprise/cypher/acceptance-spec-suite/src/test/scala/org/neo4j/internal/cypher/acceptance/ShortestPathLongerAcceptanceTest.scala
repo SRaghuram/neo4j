@@ -606,7 +606,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
                   |WHERE ALL(id IN wps WHERE id IN [n IN nodes(p) | n.id])
                   |WITH p, size(nodes(p)) as length order by length DESC limit 1
                   |RETURN [n IN nodes(p) | n.id] as nodes""".stripMargin
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query)
 
     result.toList should equal(List(Map("nodes" -> List(3, 2, 1, 11, 12, 13, 26, 27, 14))))
   }

@@ -39,7 +39,7 @@ class StartPointFindingAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
     val n1= createNode("b")
     val n2 = createNode("c")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"match (n) where id(n) IN [${n1.getId}, ${n2.getId}] return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, s"match (n) where id(n) IN [${n1.getId}, ${n2.getId}] return n")
     result.columnAs("n").toList should equal(Seq(n1, n2))
   }
 

@@ -855,20 +855,24 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // For all combinations
     Seq(
-      ("n.name STARTS WITH 'B' AND exists(n.age)", "n:User\\(name, age\\).*".r, Set(Map("n" -> n2)), false, ""), // prefix
-      ("n.name <= 'C' AND exists(n.active)", "n:User\\(name, active\\).*".r, Set(Map("n" -> n2), Map("n" -> n3)), false, ""), // less than
-      ("n.age >= 18 AND exists(n.name)", "n:User\\(age, name\\).*".r, Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n4)), false, ""), // greater than
-      ("n.name STARTS WITH 'B' AND n.age = 19", "n:User\\(age, name\\).*".r, Set.empty, false, ""), // prefix after equality
-      ("n.age > 18 AND n.age < 60 AND exists(n.active)", "n:User\\(age, active\\).*".r, Set(Map("n" -> n1), Map("n" -> n4)), false, ""), // range between
-      ("n.name = 'Jake' AND n.active > false", "n:User\\(name, active\\).*".r, Set(Map("n" -> n5)), false, ""), // greater than on boolean
-      ("n.active < true AND exists(n.age)", "n:User\\(active, age\\).*".r, Set(Map("n" -> n2), Map("n" -> n3), Map("n" -> n4)), false, ""), // less than on boolean
-      ("n.active < false AND exists(n.age)", "n:User\\(active, age\\).*".r, Set.empty, false, ""), // less than false
-      ("n.active >= false AND n.active <= true AND n.age < 10", "n:User\\(active, age\\).*".r, Set(Map("n" -> n3)), true, ".*cache\\[n\\.age\\] < .*") // range between on boolean
+      ("n.name STARTS WITH 'B' AND exists(n.age)", "n:User\\(name, age\\).*".r, Set(Map("n" -> n2)), false, "", false), // prefix
+      ("n.name <= 'C' AND exists(n.active)", "n:User\\(name, active\\).*".r, Set(Map("n" -> n2), Map("n" -> n3)), false, "", false), // less than
+      ("n.age >= 18 AND exists(n.name)", "n:User\\(age, name\\).*".r, Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n4)), false, "", false), // greater than
+      ("n.name STARTS WITH 'B' AND n.age = 19", "n:User\\(age, name\\).*".r, Set.empty, false, "", false), // prefix after equality
+      ("n.age > 18 AND n.age < 60 AND exists(n.active)", "n:User\\(age, active\\).*".r, Set(Map("n" -> n1), Map("n" -> n4)), false, "", true), // range between
+      ("n.name = 'Jake' AND n.active > false", "n:User\\(name, active\\).*".r, Set(Map("n" -> n5)), false, "", false), // greater than on boolean
+      ("n.active < true AND exists(n.age)", "n:User\\(active, age\\).*".r, Set(Map("n" -> n2), Map("n" -> n3), Map("n" -> n4)), false, "", false), // less than on boolean
+      ("n.active < false AND exists(n.age)", "n:User\\(active, age\\).*".r, Set.empty, false, "", false), // less than false
+      ("n.active >= false AND n.active <= true AND n.age < 10", "n:User\\(active, age\\).*".r, Set(Map("n" -> n3)), true, ".*cache\\[n\\.age\\] < .*", true) // range between on boolean
     ).foreach {
-      case (predicates, indexOn, resultSet, shouldFilter, filterArgument) =>
+      case (predicates, indexOn, resultSet, shouldFilter, filterArgument, isRangeSeek) =>
         // When
         val query = s"MATCH (n:User) WHERE $predicates RETURN n"
-        val config = if (filterArgument.isEmpty) Configs.InterpretedAndSlottedAndPipelined else Configs.InterpretedAndSlottedAndPipelined
+
+        val config = if (isRangeSeek)
+          Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions
+        else
+          Configs.InterpretedAndSlottedAndPipelined
         val result = executeWith(config, query,
                                  planComparisonStrategy = ComparePlansWithAssertion(plan => {
             if (shouldFilter)
@@ -981,7 +985,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     resampleIndexes()
 
     // When
-    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query,
                           planComparisonStrategy = ComparePlansWithAssertion(plan => {
         // Then
         plan should includeSomewhere.aPlan(s"NodeIndexSeek")
@@ -1136,7 +1140,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("User", "name", "city", "age")
     resampleIndexes()
 
-    val resultIndex = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val resultIndex = executeWith(Configs.Spatial, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("Filter").containingArgumentRegex(".*distance\\(cache\\[n.city\\], point.*".r, ".*cache\\[n\\.age\\] >.*".r)
@@ -1672,7 +1676,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |RETURN n.name, n.city
         |""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
@@ -1716,7 +1720,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |RETURN n.name, n.city
         |""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")

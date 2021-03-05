@@ -76,7 +76,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       Seq("Person", "Company", "Product").foreach(l => createLabeledNode(Map("uuid" -> s"xxx$i"), l))
       Seq("City", "AdministrativeLocation1", "AdministrativeLocation2", "Country", "Region").foreach(l => createLabeledNode(Map("geonameId" -> i), l, "Location"))
     }
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlotted - Configs.SlottedWithCompiledExpressions, query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Optional").onTopOf(aPlan("Filter").onTopOf(aPlan("OrderedDistinct").onTopOf(aPlan("OrderedUnion"))))
     val results: Seq[Map[String, AnyRef]] = result.toList
     results.size should be(1)
@@ -297,7 +297,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val c = createNode("C")
     val r = relate(a, b, "X")
 
-    executeWith(Configs.InterpretedAndSlottedAndPipelined,
+    executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions,
       """
     match (a {name:'A'}), (x) where x.name in ['B', 'C']
     optional match p = shortestPath((a)-[*]->(x))
@@ -361,7 +361,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |MATCH paths = (n)-[*..1]-(m)
         |RETURN paths""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, query,
       params = Map("0" -> node1.getId, "1" -> node2.getId))
     graph.inTx(
       result.toSet should equal(
@@ -449,7 +449,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("should not fail if asking for a non existent node id with WHERE") {
-    executeWith(Configs.All, "match (n) where id(n) in [0,1] return n")
+    executeWith(Configs.All - Configs.SlottedWithCompiledExpressions, "match (n) where id(n) in [0,1] return n")
       .toList
     // should not throw an exception
   }

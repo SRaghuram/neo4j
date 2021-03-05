@@ -80,7 +80,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   test("multiple deletes should not break anything") {
     (1 to 4).foreach(_ => createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a), (b) where id(a) = 0 AND id(b) IN [1, 2, 3] delete a")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, "match (a), (b) where id(a) = 0 AND id(b) IN [1, 2, 3] delete a")
     assertStats(result, nodesDeleted = 1)
 
     result.toList shouldBe empty
@@ -109,7 +109,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     val b = createNode()
     val c = createNode()
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (n) with n MATCH (x) WHERE id(x) IN [0, 1, 2] create (n)-[:REL]->(x)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.SlottedWithCompiledExpressions, "create (n) with n MATCH (x) WHERE id(x) IN [0, 1, 2] create (n)-[:REL]->(x)")
     assertStats(result,
       nodesCreated = 1,
       relationshipsCreated = 3
