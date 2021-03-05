@@ -69,7 +69,7 @@ public class ViaEmbeddedWorkloadsPlannerDescriptionIT
     {
         Path neo4jConfigFile = testsSupport.writeEmbeddedNeo4jConfig();
         LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
-        Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), testsSupport.randId() ) ).toPath();
+        Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), testsSupport.randId() ) );
         try ( Store store = StoreTestUtil.createTemporaryEmptyStoreFor( workload, storePath, neo4jConfigFile );
               EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
         {

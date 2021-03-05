@@ -76,13 +76,13 @@ public class ViaDriverWorkloadsPlannerDescriptionIT
         LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
         ProcessBuilder.Redirect
                 outputRedirect =
-                ProcessBuilder.Redirect.to( temporaryFolder.file( format( "neo4j-out-%s-%s.log", workload.name(), testsSupport.randId() ) ) );
+                ProcessBuilder.Redirect.to( temporaryFolder.file( format( "neo4j-out-%s-%s.log", workload.name(), testsSupport.randId() ) ).toFile() );
         ProcessBuilder.Redirect
                 errorRedirect =
-                ProcessBuilder.Redirect.to( temporaryFolder.file( format( "neo4j-error-%s-%s.log", workload.name(), testsSupport.randId() ) ) );
-        Path logsDir = Files.createDirectories( temporaryFolder.directory( format( "logs-%s-%s", workload.name(), testsSupport.randId() ) ).toPath() );
+                ProcessBuilder.Redirect.to( temporaryFolder.file( format( "neo4j-error-%s-%s.log", workload.name(), testsSupport.randId() ) ).toFile() );
+        Path logsDir = Files.createDirectories( temporaryFolder.directory( format( "logs-%s-%s", workload.name(), testsSupport.randId() ) ) );
         Path neo4jConfigFile = testsSupport.writeServerNeo4jConfig( workload.name() );
-        Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), testsSupport.randId() ) ).toPath();
+        Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), testsSupport.randId() ) );
         try ( Store store = StoreTestUtil.createEmptyStoreFor( workload, storePath, neo4jConfigFile );
               ServerDatabase database = Neo4jServerDatabase.startServer( jvm,
                                                                          testsSupport.neo4jDir(),

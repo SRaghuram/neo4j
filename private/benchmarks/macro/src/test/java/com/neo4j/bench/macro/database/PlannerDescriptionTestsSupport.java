@@ -252,7 +252,7 @@ class PlannerDescriptionTestsSupport
     void copyNeo4jDir( TestDirectory temporaryFolder ) throws IOException
     {
         Path originalDir = Paths.get( System.getenv( "NEO4J_DIR" ) );
-        this.neo4jDir = temporaryFolder.directory( format( "neo4jDir-%s", randId ) ).toPath();
+        this.neo4jDir = temporaryFolder.directory( format( "neo4jDir-%s", randId ) );
         FileUtils.copyDirectory( originalDir.toFile(), neo4jDir.toFile() );
     }
 
