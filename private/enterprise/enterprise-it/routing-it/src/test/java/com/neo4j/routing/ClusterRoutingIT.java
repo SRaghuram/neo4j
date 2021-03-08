@@ -72,6 +72,7 @@ class ClusterRoutingIT extends ClusterTestSupport
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                                                    .withNumberOfCoreMembers( 2 )
                                                    .withSharedCoreParam( GraphDatabaseSettings.routing_enabled, "true" )
+                                                   .withSharedCoreParam( GraphDatabaseSettings.log_queries_obfuscate_literals, "true" )
                                                    .withNumberOfReadReplicas( 1 )
                                                    .withSharedReadReplicaParam( GraphDatabaseSettings.routing_enabled, "true" );
 
