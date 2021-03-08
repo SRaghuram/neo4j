@@ -126,6 +126,26 @@
       "parameters": {
         "file": "parameters/date.txt"
       }
+    },
+    {
+      "name": "Custom Q1",
+      "description": "Count the number of ENTITY_RESOLUTION:s above a certain attributeScore threshold",
+      "queryFile": "queries/custom-q1.cypher"
+    },
+    {
+      "name": "Custom Q2",
+      "description": "Find top payment sender/receiver pairs by number of payments",
+      "queryFile": "queries/custom-q2.cypher"
+    },
+    {
+      "name": "Custom Q3",
+      "description": "Find payment sender/receiver pairs that made exactly 300 payments with large average payment amount, ordered by average payment amount",
+      "queryFile": "queries/custom-q3.cypher"
+    },
+    {
+      "name": "Custom Q4",
+      "description": "Find payment sender/receiver pairs that made 10 or more payments with large average payment amount, ordered by average payment amount",
+      "queryFile": "queries/custom-q4.cypher"
     }
   ]
 }
