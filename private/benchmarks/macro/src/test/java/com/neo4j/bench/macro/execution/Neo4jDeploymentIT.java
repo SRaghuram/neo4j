@@ -15,6 +15,7 @@ import com.neo4j.bench.client.reporter.TarGzArchive;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.DatabaseName;
 import com.neo4j.bench.common.database.Neo4jStore;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
@@ -282,23 +283,17 @@ public class Neo4jDeploymentIT
         WorkspaceState workspaceState = shouldDownloadWorkspace( workspace );
         Path dataset = workspaceState.dataset();
         // deployment won't be started so this path does not matter
-        Deployment server = Deployment.server( workspaceState.product().toAbsolutePath().toString() );
-        try ( Resources resources = new Resources( workspace ) )
+        Neo4jDeployment<?> deployment = Neo4jDeployment.from( Deployment.server( workspaceState.product().toAbsolutePath().toString() ),
+                                                              EDITION,
+                                                              MEASUREMENT_OPTIONS,
+                                                              JVM,
+                                                              dataset );
+        try ( Store store = Neo4jStore.createFrom( dataset ) )
         {
-            Workload workload = Workload.fromName( "zero", resources, server );
-            Neo4jDeployment<?> deployment = Neo4jDeployment.from( server,
-                                                                  EDITION,
-                                                                  MEASUREMENT_OPTIONS,
-                                                                  JVM,
-                                                                  dataset );
-            RunMacroWorkloadCommand.verifySchema( dataset,
-                                                  EDITION,
-                                                  baseNeo4jConfigFile,
-                                                  expectedSchema,
-                                                  false,
-                                                  workload );
-            return deployment;
+            EmbeddedDatabase.verifySchema( store, EDITION, baseNeo4jConfigFile, expectedSchema );
+            EmbeddedDatabase.verifyStoreFormat( store );
         }
+        return deployment;
     }
 
     private WorkspaceState shouldDownloadWorkspace( Path workspace )
