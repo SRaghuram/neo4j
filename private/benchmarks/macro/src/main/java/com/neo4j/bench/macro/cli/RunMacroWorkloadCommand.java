@@ -191,7 +191,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             assertQueryNames( params, workload );
 
             Neo4jConfig neo4jConfig = prepareConfig( params.executionMode(), neo4jConfigFile );
-            verifySchema( storeDir, params.neo4jEdition(), neo4jConfigFile, workload.expectedSchema(), params.isRecreateSchema() );
+            verifySchema( storeDir, params.neo4jEdition(), neo4jConfigFile, workload.expectedSchema(), params.isRecreateSchema(), workload );
 
             ErrorReporter errorReporter = new ErrorReporter( errorPolicy );
             BenchmarkGroupBenchmarkMetrics allResults = new BenchmarkGroupBenchmarkMetrics();
@@ -349,10 +349,10 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
         return neo4jConfig;
     }
 
-    public static void verifySchema( Path dataset, Edition edition, Path neo4jConfigFile, Schema expectedSchema, boolean recreateSchema )
+    public static void verifySchema( Path dataset, Edition edition, Path neo4jConfigFile, Schema expectedSchema, boolean recreateSchema, Workload workload )
     {
         LOG.debug( "Verifying store..." );
-        try ( Store store = Neo4jStore.createFrom( dataset ) )
+        try ( Store store = Neo4jStore.createFrom( dataset, workload.getDatabaseName() ) )
         {
             EmbeddedDatabase.verifySchema( store, edition, neo4jConfigFile, expectedSchema );
             if ( recreateSchema )
