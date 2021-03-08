@@ -180,17 +180,3 @@ class DirectedRelationshipIndexScanTaskTemplate(inner: OperatorTaskTemplate,
     )
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

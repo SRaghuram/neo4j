@@ -98,14 +98,3 @@ class DirectedRelationshipIndexEndsWithScanTaskTemplate(inner: OperatorTaskTempl
   override protected def predicate(searchExpression: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(method[PropertyIndexQuery, StringSuffixPredicate, Int, TextValue]("stringSuffix"), constant(property.propertyKeyId), searchExpression)
 }
-
-
-
-
-
-
-
-
-
-
-

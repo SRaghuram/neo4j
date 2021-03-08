@@ -113,17 +113,3 @@ class UndirectedRelationshipIndexEndsWithScanTaskTemplate(inner: OperatorTaskTem
                                                             codeGen) with UndirectedRelationshipIndexTask {
   override def genMoreFields: Seq[Field] = super.genMoreFields :+ forwardDirection
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

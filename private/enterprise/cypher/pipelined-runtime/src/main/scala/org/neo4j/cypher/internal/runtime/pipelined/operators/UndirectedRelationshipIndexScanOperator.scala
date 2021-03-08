@@ -98,19 +98,3 @@ class UndirectedRelationshipIndexScanTaskTemplate(inner: OperatorTaskTemplate,
   extends DirectedRelationshipIndexScanTaskTemplate(inner, id, innermost, relOffset, startOffset, endOffset, properties, queryIndexId, indexOrder, argumentSize, codeGen) with UndirectedRelationshipIndexTask {
   override def genMoreFields: Seq[Field] = super.genMoreFields :+ forwardDirection
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

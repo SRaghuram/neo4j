@@ -98,14 +98,3 @@ class DirectedRelationshipIndexContainsScanTaskTemplate(inner: OperatorTaskTempl
   override protected def predicate(searchExpression: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(method[PropertyIndexQuery, StringContainsPredicate, Int, TextValue]("stringContains"), constant(property.propertyKeyId), searchExpression)
 }
-
-
-
-
-
-
-
-
-
-
-

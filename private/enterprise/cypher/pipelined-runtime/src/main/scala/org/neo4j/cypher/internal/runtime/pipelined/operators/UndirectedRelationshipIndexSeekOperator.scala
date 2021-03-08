@@ -199,26 +199,3 @@ class CompositeUndirectedRelationshipIndexSeekTaskTemplate(inner: OperatorTaskTe
   extends CompositeDirectedRelationshipIndexSeekTaskTemplate(inner, id, innermost, relOffset, startOffset, endOffset, properties, seekExpressions, queryIndexId, order, argumentSize)(codeGen) with UndirectedRelationshipIndexTask {
   override def genMoreFields: Seq[Field] = super.genMoreFields :+ forwardDirection
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

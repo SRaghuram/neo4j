@@ -734,27 +734,3 @@ class CompositeDirectedRelationshipIndexSeekTaskTemplate(inner: OperatorTaskTemp
   private def compile(generators: Seq[() => IntermediateExpression]): Seq[IntermediateExpression] = generators.map(_())
   private def nullCheck(in: Seq[IntermediateExpression]): Seq[IntermediateExpression] = in.map(v => v.copy(ir = nullCheckIfRequired(v)))
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
