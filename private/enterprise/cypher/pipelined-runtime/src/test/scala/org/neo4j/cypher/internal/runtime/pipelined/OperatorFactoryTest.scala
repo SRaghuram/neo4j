@@ -228,7 +228,6 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
     physicalPlan.argumentSizes.set(theId, Size.zero)
     val expressionConverters =
       new ExpressionConverters(
-        NullExpressionConversionLogger,
         SlottedExpressionConverters(physicalPlan),
         CommunityExpressionConverter(TokenContext.EMPTY)
       )

@@ -65,17 +65,17 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
 
       val baseConverters = List(SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(context.tokenContext))
 
+      val expressionConversionLogger = new CompiledExpressionConversionLogger
       val allConverters =
         if (context.materializedEntitiesMode) {
           MaterializedEntitiesExpressionConverter(context.tokenContext) +: baseConverters
         } else if (context.compileExpressions) {
-          new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode, context.compiledExpressionsContext) +: baseConverters
+          new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode, context.compiledExpressionsContext, expressionConversionLogger) +: baseConverters
         } else {
           baseConverters
         }
 
-      val expressionConversionLogger = new CompiledExpressionConversionLogger
-      val converters = new ExpressionConverters(expressionConversionLogger, allConverters:_*)
+      val converters = new ExpressionConverters(allConverters:_*)
 
       val queryIndexRegistrator = new QueryIndexRegistrator(context.schemaRead)
       val fallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)

@@ -31,7 +31,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityE
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConversionLogger
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.NullExpressionConversionLogger
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.ExtendedExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.RandFunction
@@ -85,15 +84,13 @@ class CompiledExpressionConverter(log: Log,
                                   readOnly: Boolean,
                                   codeGenerationMode: CodeGenerationMode,
                                   compiledExpressionsContext: CompiledExpressionContext,
+                                  logger: ExpressionConversionLogger,
                                   neverFail: Boolean = false) extends ExpressionConverter {
 
   //uses an inner converter to simplify compliance with Expression trait
-  private val inner = new ExpressionConverters(NullExpressionConversionLogger, SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(tokenContext))
+  private val inner = new ExpressionConverters(SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(tokenContext))
 
-  override def toCommandExpression(id: Id,
-                                   expression: expressions.Expression,
-                                   self: ExpressionConverters,
-                                   logger: ExpressionConversionLogger): Option[Expression] = expression match {
+  override def toCommandExpression(id: Id, expression: expressions.Expression, self: ExpressionConverters): Option[Expression] = expression match {
     //we don't deal with aggregations
     case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => None
 
@@ -128,10 +125,7 @@ class CompiledExpressionConverter(log: Log,
     case _: expressions.Expression => true
   }
 
-  override def toCommandProjection(id: Id,
-                                   projections: Map[String, expressions.Expression],
-                                   self: ExpressionConverters,
-                                   logger: ExpressionConversionLogger): Option[CommandProjection] = {
+  override def toCommandProjection(id: Id, projections: Map[String, expressions.Expression], self: ExpressionConverters): Option[CommandProjection] = {
     try {
       val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
       if (totalSize > COMPILE_LIMIT) {
@@ -159,11 +153,7 @@ class CompiledExpressionConverter(log: Log,
     }
   }
 
-  override def toGroupingExpression(id: Id,
-                                    projections: Map[String, expressions.Expression],
-                                    orderToLeverage: Seq[expressions.Expression],
-                                    self: ExpressionConverters,
-                                    logger: ExpressionConversionLogger): Option[GroupingExpression] = {
+  override def toGroupingExpression(id: Id, projections: Map[String, expressions.Expression], orderToLeverage: Seq[expressions.Expression], self: ExpressionConverters): Option[GroupingExpression] = {
     try {
       if(orderToLeverage.nonEmpty) {
         // TODO Support compiled ordered GroupingExpression

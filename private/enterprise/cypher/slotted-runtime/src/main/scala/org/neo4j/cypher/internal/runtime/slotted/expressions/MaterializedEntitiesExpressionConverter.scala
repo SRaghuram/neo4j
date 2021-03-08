@@ -20,7 +20,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConversionLogger
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -39,7 +38,7 @@ import org.neo4j.values.virtual.RelationshipValue
 
 case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) extends ExpressionConverter {
 
-  override def toCommandExpression(id: Id, expression: expressions.Expression, self: ExpressionConverters, logger: ExpressionConversionLogger): Option[commands.expressions.Expression] =
+  override def toCommandExpression(id: Id, expression: expressions.Expression, self: ExpressionConverters): Option[commands.expressions.Expression] =
     expression match {
       case e: expressions.Property           => toCommandProperty(id, e, self)
       case e: expressions.HasLabels          => hasLabels(id, e, self)
@@ -49,13 +48,9 @@ case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) e
       case _                         => None
     }
 
-  override def toGroupingExpression(id: Id,
-                                    groupings: Map[String, expressions.Expression],
-                                    orderToLeverage: Seq[expressions.Expression],
-                                    self: ExpressionConverters,
-                                    logger: ExpressionConversionLogger): Option[GroupingExpression] = None
+  override def toGroupingExpression(id: Id, groupings: Map[String, expressions.Expression], orderToLeverage: Seq[expressions.Expression], self: ExpressionConverters): Option[GroupingExpression] = None
 
-  override def toCommandProjection(id: Id, projections: Map[String, expressions.Expression], self: ExpressionConverters, logger: ExpressionConversionLogger): Option[CommandProjection] = None
+  override def toCommandProjection(id: Id, projections: Map[String, expressions.Expression], self: ExpressionConverters): Option[CommandProjection] = None
 
   private def toCommandExpression(id: Id, expression: Function, invocation: expressions.FunctionInvocation,
                                   self: ExpressionConverters): Option[commands.expressions.Expression] =

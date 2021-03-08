@@ -52,7 +52,8 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
       readOnly = false,
       codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false)),
       neverFail = true,
-      compiledExpressionsContext = compiledExpressionsContext)
+      compiledExpressionsContext = compiledExpressionsContext,
+      logger = NullExpressionConversionLogger)
     val logSourceCode = new AssertableLogProvider(true)
     val converterSourceCode = new CompiledExpressionConverter(logSourceCode.getLog("test"),
       physicalPlan,
@@ -60,7 +61,8 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
       readOnly = false,
       codeGenerationMode = SourceCodeGeneration(new CodeSaver(false, false)),
       neverFail = true,
-      compiledExpressionsContext = compiledExpressionsContext)
+      compiledExpressionsContext = compiledExpressionsContext,
+      logger = NullExpressionConversionLogger)
 
     // When
     //There is a limit of 65535 on the length of a String literal, so by exceeding that limit
@@ -68,9 +70,9 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
     val e = add(literalString("*" * (65535 + 1)), literalString("*"))
 
     // Then
-    converterByteCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters], NullExpressionConversionLogger) should equal(None)
+    converterByteCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters]) should equal(None)
     logByteCode.serialize should include(s"Failed to compile expression: $e")
-    converterSourceCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters], NullExpressionConversionLogger) should equal(None)
+    converterSourceCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters]) should equal(None)
     logSourceCode.serialize should include(s"Failed to compile expression: $e")
   }
 }

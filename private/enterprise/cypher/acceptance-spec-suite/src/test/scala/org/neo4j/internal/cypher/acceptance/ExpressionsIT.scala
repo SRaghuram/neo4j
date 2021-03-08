@@ -107,7 +107,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContex
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.NullExpressionConversionLogger
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
@@ -5144,7 +5143,6 @@ class InterpretedExpressionIT extends ExpressionsIT {
     val id = Id(0)
     plan.slotConfigurations.set(id, slots)
     val converters = new ExpressionConverters(
-      NullExpressionConversionLogger,
       SlottedExpressionConverters(plan),
       CommunityExpressionConverter(query))
     producer(converters, id)
