@@ -18,12 +18,12 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.internal.kernel.api.PropertyIndexQuery;
 import org.neo4j.internal.kernel.api.IndexQueryConstraints;
 import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
+import org.neo4j.internal.kernel.api.PropertyIndexQuery;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor;
@@ -164,6 +164,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
             tx.execute( "GRANT TRAVERSE ON GRAPH * NODES Foo, Bar TO testRole" );
             tx.execute( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A, B TO testRole" );
             tx.execute( "DENY TRAVERSE ON GRAPH * NODES Baz TO testRole" );
+            tx.execute( "GRANT CREATE ON GRAPH * RELATIONSHIPS A, B TO testRole" );
             tx.execute( "GRANT READ {prop1,prop2} ON GRAPH * NODES Bar TO testRole" );
             tx.execute( "GRANT READ {prop1} ON GRAPH * RELATIONSHIPS A TO testRole" );
             tx.execute( "GRANT CONSTRAINT MANAGEMENT ON DATABASE * TO testRole" );
@@ -479,26 +480,6 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
     }
 
     @Test
-    void relationshipTypeScan() throws Throwable
-    {
-        // given
-        changeUser( getLoginContext() );
-        List<Long> ids = new ArrayList<>();
-        try ( RelationshipScanCursor rels = cursors.allocateRelationshipScanCursor( NULL ) )
-        {
-            // when
-            read.relationshipTypeScan( aType, rels );
-            while ( rels.next() )
-            {
-                ids.add( rels.relationshipReference() );
-            }
-        }
-
-        // then
-        assertThat( ids ).containsExactlyInAnyOrder( fooAbar, barAfoo );
-    }
-
-    @Test
     void countsForRelationshipWithStartNode() throws Throwable
     {
         // given
@@ -519,6 +500,24 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
 
         // when
         long relCount = read.countsForRelationship( ANY_LABEL, aType, ANY_LABEL );
+
+        // then
+        assertThat( relCount ).isEqualTo( 2L );
+    }
+
+    @Test
+    void countsForRelationshipWithTypeWithTxState() throws Throwable
+    {
+        // given
+        changeUser( getLoginContext() );
+
+        long tmp = tx.dataWrite().relationshipCreate( foo, bType, bar );
+
+        // when
+        long relCount = read.countsForRelationship( ANY_LABEL, aType, ANY_LABEL );
+
+        // clean
+        tx.dataWrite().relationshipDelete( tmp );
 
         // then
         assertThat( relCount ).isEqualTo( 2L );

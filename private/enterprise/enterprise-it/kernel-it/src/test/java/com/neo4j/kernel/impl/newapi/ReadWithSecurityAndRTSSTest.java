@@ -64,6 +64,29 @@ public class ReadWithSecurityAndRTSSTest extends ReadWithSecurityTestBase<Enterp
     }
 
     @Test
+    void relationshipTypeScanWithTxState() throws Throwable
+    {
+        // given
+        changeUser( getLoginContext() );
+        List<Long> ids = new ArrayList<>();
+        try ( var rels = cursors.allocateRelationshipTypeIndexCursor( NULL ) )
+        {
+            long tmp = tx.dataWrite().relationshipCreate( foo, bType, bar );
+            // when
+            read.relationshipTypeScan( aType, rels, IndexOrder.NONE );
+            while ( rels.next() )
+            {
+                ids.add( rels.relationshipReference() );
+            }
+
+            tx.dataWrite().relationshipDelete( tmp );
+        }
+
+        // then
+        assertThat( ids ).containsExactlyInAnyOrder( fooAbar, barAfoo );
+    }
+
+    @Test
     void relationshipTypeIndexScanDeniedType() throws Throwable
     {
         // given
