@@ -279,6 +279,19 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     ))
   }
 
+  // TEST WITH BOOLEAN COERCION
+
+  test("should coerce pattern expression to boolean when boolean is expected") {
+    relate(createNode(), createNode())
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN NOT ()--()")
+      .toList
+
+    result should equal(List(
+      Map("NOT ()--()" -> false)
+    ))
+  }
+
   // TESTS WITH PLANNING ASSERTIONS
 
   test("should use full expand") {
