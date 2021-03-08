@@ -126,5 +126,11 @@
             <artifactId>neo4j-java-driver</artifactId>
             <scope>compile</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>annotations</artifactId>
+        </dependency>
+
     </dependencies>
 </project>

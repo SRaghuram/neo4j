@@ -5,10 +5,14 @@
  */
 package com.neo4j.causalclustering.common;
 
+import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 
 import java.nio.file.Path;
+import java.util.Optional;
 
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.identity.ServerId;
@@ -90,5 +94,24 @@ public interface ClusterMember
     default <T> T resolveDependency( String databaseName, Class<T> type )
     {
         return database( databaseName ).getDependencyResolver().resolveDependency( type );
+    }
+
+    default Optional<Role> roleFor( String databaseName )
+    {
+        var managementService = managementService();
+        if ( managementService != null )
+        {
+            var database = (GraphDatabaseFacade) managementService().database( databaseName );
+            DependencyResolver dependencyResolver = database.getDependencyResolver();
+            if ( dependencyResolver != null )
+            {
+                var roleProvider = dependencyResolver.resolveDependency( RoleProvider.class );
+                if ( roleProvider != null )
+                {
+                    return Optional.of( roleProvider.currentRole() );
+                }
+            }
+        }
+        return Optional.empty();
     }
 }

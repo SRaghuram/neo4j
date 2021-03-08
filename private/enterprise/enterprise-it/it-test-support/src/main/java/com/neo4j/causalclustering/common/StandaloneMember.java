@@ -5,86 +5,32 @@
  */
 package com.neo4j.causalclustering.common;
 
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
-import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.causalclustering.discovery.ConnectorAddresses;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.configuration.CausalClusteringInternalSettings;
-import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.EnterpriseEditionSettings;
-import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
+import java.util.Optional;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.dbms.identity.ServerIdentity;
-import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
-import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.layout.Neo4jLayout;
-import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.logging.Level;
-import org.neo4j.monitoring.Monitors;
 
-import static com.neo4j.causalclustering.common.Cluster.TOPOLOGY_REFRESH_INTERVAL;
-import static com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies.NO_BALANCING;
-import static java.lang.Boolean.TRUE;
-import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
-import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
-import static org.neo4j.configuration.helpers.SocketAddress.format;
+import static java.util.Collections.emptyMap;
 
-public class StandaloneMember implements ClusterMember
+public class StandaloneMember extends CoreClusterMember
 {
-    private GlobalModule globalModule;
-    public interface CoreGraphDatabaseFactory
-    {
-
-        CoreGraphDatabase create( Config memberConfig, GraphDatabaseDependencies databaseDependencies,
-                DiscoveryServiceFactory discoveryServiceFactory );
-    }
-
-    private final Path neo4jHome;
-    private final Neo4jLayout neo4jLayout;
-    private final DiscoveryServiceFactory discoveryServiceFactory;
-    private final DatabaseLayout defaultDatabaseLayout;
-    private final ClusterStateLayout clusterStateLayout;
-    private final Config.Builder config = Config.newBuilder();
-    private final String boltSocketAddress;
-    private final String intraClusterBoltSocketAddress;
-    private final SocketAddress discoveryAddress;
-    private final Path loopbackBoltFile;
-    private DatabaseManagementService managementService;
-    private GraphDatabaseFacade defaultDatabase;
-    private GraphDatabaseFacade systemDatabase;
-    private final Config memberConfig;
-    private final ThreadGroup threadGroup;
-    private final Monitors monitors = new Monitors();
-    private DatabaseIdRepository databaseIdRepository;
-
     public StandaloneMember(  int discoveryPort,
                               int txPort,
                               int boltPort,
@@ -100,153 +46,19 @@ public class StandaloneMember implements ClusterMember
                               String listenHost,
                               String advertisedHost )
     {
-        this.discoveryAddress = new SocketAddress( advertisedHost, discoveryPort );
-        this.loopbackBoltFile = loopbackBoltFile;
+        super( discoveryPort, discoveryPort, txPort, 0, boltPort, intraClusterBoltPort, loopbackBoltFile, httpPort, backupPort, 2, discoveryAddresses,
+               discoveryServiceFactory, recordFormat, parentDir, extraParams, emptyMap(), listenHost, advertisedHost );
 
-        boltSocketAddress = format( advertisedHost, boltPort );
-        intraClusterBoltSocketAddress = format( advertisedHost, intraClusterBoltPort );
-
-        config.set( default_database, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         config.set( EnterpriseEditionSettings.enable_clustering_in_standalone, true );
         config.set( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.SINGLE );
-        config.set( GraphDatabaseSettings.default_advertised_address, new SocketAddress( advertisedHost ) );
-        config.set( CausalClusteringSettings.initial_discovery_members, discoveryAddresses );
-        config.set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( listenHost, discoveryPort ) );
-        config.set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( advertisedHost, discoveryPort ) );
-        config.set( CausalClusteringSettings.transaction_listen_address, new SocketAddress( listenHost, txPort ) );
-        config.set( CausalClusteringSettings.transaction_advertised_address, new SocketAddress( txPort ) );
-        config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
-        config.set( CausalClusteringSettings.leader_balancing, NO_BALANCING );
-        config.set( CausalClusteringInternalSettings.raft_messages_log_enable, TRUE );
-        config.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
-        config.set( GraphDatabaseSettings.record_format, recordFormat );
-        config.set( BoltConnector.enabled, TRUE );
-        config.set( BoltConnector.listen_address, new SocketAddress( listenHost, boltPort ) );
-        config.set( BoltConnector.advertised_address, new SocketAddress( advertisedHost, boltPort ) );
-        config.set( GraphDatabaseSettings.routing_listen_address, new SocketAddress( listenHost, intraClusterBoltPort ) );
-        config.set( GraphDatabaseSettings.routing_advertised_address, new SocketAddress( advertisedHost, intraClusterBoltPort ) );
-        config.set( BoltConnector.encryption_level, DISABLED );
-        config.set( HttpConnector.enabled, TRUE );
-        config.set( HttpConnector.listen_address, new SocketAddress( listenHost, httpPort ) );
-        config.set( HttpConnector.advertised_address, new SocketAddress( advertisedHost, httpPort ) );
-        config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenHost, backupPort ) );
-        config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
-        config.set( GraphDatabaseInternalSettings.auth_store, parentDir.resolve( "auth" ).toAbsolutePath() );
-        config.set( GraphDatabaseInternalSettings.transaction_start_timeout, Duration.ZERO );
-        config.set( CausalClusteringInternalSettings.experimental_raft_protocol, true );
-        config.set( CausalClusteringInternalSettings.experimental_catchup_protocol, true );
-        config.set( CausalClusteringInternalSettings.middleware_akka_seed_node_timeout, Duration.ofSeconds( 6 ));
-        config.setRaw( extraParams );
-
-        this.neo4jHome = parentDir.resolve( "server-single" );
-        config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toAbsolutePath() );
-        config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.resolve( "single-tx-logs" ).toAbsolutePath() );
         memberConfig = config.build();
-
-        this.discoveryServiceFactory = discoveryServiceFactory;
-        clusterStateLayout = ClusterStateLayout.of( memberConfig.get( CausalClusteringSettings.cluster_state_directory ) );
-
-        threadGroup = new ThreadGroup( toString() );
-        this.neo4jLayout = Neo4jLayout.of( memberConfig );
-        this.defaultDatabaseLayout = neo4jLayout.databaseLayout( memberConfig.get( default_database ) );
     }
 
     @Override
-    public String boltAdvertisedAddress()
+    protected DatabaseManagementService createManagementService( GraphDatabaseDependencies dependencies )
     {
-        return boltSocketAddress;
-    }
-
-    @Override
-    public String intraClusterBoltAdvertisedAddress()
-    {
-        return intraClusterBoltSocketAddress;
-    }
-
-    @Override
-    public String loopbackUnixDomainSocketFile()
-    {
-        return loopbackBoltFile.toString();
-    }
-
-    public String routingURI()
-    {
-        return String.format( "neo4j://%s", boltSocketAddress );
-    }
-
-    public String directURI()
-    {
-        return String.format( "bolt://%s", boltSocketAddress );
-    }
-
-    @Override
-    public ServerId serverId()
-    {
-        return systemDatabase.getDependencyResolver().resolveDependency( ServerIdentity.class ).serverId();
-    }
-
-    @Override
-    public void start()
-    {
-        var dependencies = GraphDatabaseDependencies.newDependencies().monitors( monitors );
-        managementService = new DatabaseManagementServiceFactory( DbmsInfo.ENTERPRISE, EnterpriseEditionModule::new ).build( memberConfig, dependencies );
-        defaultDatabase = (GraphDatabaseFacade) managementService.database( config().get( default_database ) );
-        systemDatabase = (GraphDatabaseFacade) managementService.database( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-    }
-
-    @Override
-    public void shutdown()
-    {
-        if ( managementService != null )
-        {
-            try
-            {
-                managementService.shutdown();
-            }
-            finally
-            {
-                defaultDatabase = null;
-                databaseIdRepository = null;
-            }
-        }
-    }
-
-    @Override
-    public boolean isShutdown()
-    {
-        return managementService == null;
-    }
-
-    @Override
-    public DatabaseManagementService managementService()
-    {
-        return managementService;
-    }
-
-    @Override
-    public DatabaseLayout databaseLayout()
-    {
-        return defaultDatabaseLayout;
-    }
-
-    public SortedMap<Long, Path> getRaftLogFileNames( String databaseName ) throws IOException
-    {
-        try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
-        {
-            return new FileNames( raftLogDirectory( databaseName ) ).getAllFiles( fileSystem, null );
-        }
-    }
-
-    @Override
-    public Neo4jLayout neo4jLayout()
-    {
-        return neo4jLayout;
-    }
-
-    @Override
-    public Path homePath()
-    {
-        return neo4jHome;
+        return new DatabaseManagementServiceFactory( DbmsInfo.ENTERPRISE, EnterpriseEditionModule::new )
+                .build( memberConfig, dependencies );
     }
 
     @Override
@@ -258,81 +70,33 @@ public class StandaloneMember implements ClusterMember
     @Override
     public int index()
     {
-        return -1;
-    }
-
-    public NamedDatabaseId databaseId()
-    {
-        return defaultDatabase.getDependencyResolver().resolveDependency( Database.class ).getNamedDatabaseId();
+        return 0;
     }
 
     @Override
-    public ConnectorAddresses clientConnectorAddresses()
+    public ServerId serverId()
     {
-        return ConnectorAddresses.fromConfig( config.build() );
+        return systemDatabase.getDependencyResolver().resolveDependency( ServerIdentity.class ).serverId();
     }
 
     @Override
-    public <T> T settingValue( Setting<T> setting )
+    public Optional<Role> roleFor( String databaseName )
     {
-        return memberConfig.get( setting );
-    }
-
-    @Override
-    public Config config()
-    {
-        return memberConfig;
-    }
-
-    @Override
-    public ThreadGroup threadGroup()
-    {
-        return threadGroup;
-    }
-
-    @Override
-    public Monitors monitors()
-    {
-        return monitors;
-    }
-
-    public ClusterStateLayout clusterStateLayout()
-    {
-        return clusterStateLayout;
+        return Optional.of( Role.LEADER );
     }
 
     public Path clusterStateDirectory()
     {
-        return clusterStateLayout.getClusterStateDirectory();
+        throw new UnsupportedOperationException( "Not supported on standalone member" );
     }
 
     public Path raftLogDirectory( String databaseName )
     {
-        return clusterStateLayout.raftLogDirectory( databaseName );
-    }
-
-    public SocketAddress discoveryAddress()
-    {
-        return discoveryAddress;
-    }
-
-    public NamedDatabaseId databaseId( String databaseName )
-    {
-        if ( defaultDatabase == null )
-        {
-            throw new IllegalStateException( "defaultDatabase must not be null" );
-        }
-        else if ( databaseIdRepository == null )
-        {
-            DatabaseManager<?> databaseManager = defaultDatabase.getDependencyResolver().resolveDependency( DatabaseManager.class );
-            databaseIdRepository = databaseManager.databaseIdRepository();
-        }
-        return databaseIdRepository.getByName( databaseName ).orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: " + databaseName ) );
+        throw new UnsupportedOperationException( "Not supported on standalone member" );
     }
 
     public void unbind( FileSystemAbstraction fs ) throws IOException
     {
-        fs.deleteRecursively( clusterStateLayout.getClusterStateDirectory() );
         fs.deleteFile( neo4jLayout.serverIdFile() );
     }
 }

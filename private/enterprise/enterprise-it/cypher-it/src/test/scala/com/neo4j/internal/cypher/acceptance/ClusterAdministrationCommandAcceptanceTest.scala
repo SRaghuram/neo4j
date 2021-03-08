@@ -38,14 +38,11 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
   def randomString: String = Random.alphanumeric.take(8).mkString("")
 
   val testDir: TestDirectory = prepareTestDirectory
-  val cluster: Cluster = ClusterConfig.createCluster(
-    testDir.directory(randomString),
-    ClusterConfig
-      .clusterConfig()
+  val cluster: Cluster = ClusterConfig.clusterConfig()
       .withNumberOfCoreMembers(3)
       .withNumberOfReadReplicas(1)
       .withInstanceCoreParam(GraphDatabaseSettings.auth_enabled, _ => "true")
-  )
+      .build(testDir.directory(randomString))
 
   override def afterEach(): Unit = {
     super.afterEach()

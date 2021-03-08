@@ -6,6 +6,7 @@
 package com.neo4j.enterprise.edition;
 
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
+import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
@@ -27,10 +28,10 @@ import com.neo4j.configuration.FabricEnterpriseConfig;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphDbmsModel;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
+import com.neo4j.dbms.TopologyPublisher;
 import com.neo4j.dbms.database.StandaloneEnterpriseDatabaseContext;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
-import com.neo4j.dbms.TopologyPublisher;
 import com.neo4j.dbms.procedures.wait.WaitProcedure;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
@@ -378,6 +379,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 .build();
 
         globalModule.getGlobalLife().add( catchupServer );
+        // used by ReadReplicaHierarchicalCatchupIT
+        globalModule.getGlobalDependencies().satisfyDependencies( (CatchupServerProvider) () -> catchupServer );
     }
 
     private TopologyPublisher getTopologyPublisher( NamedDatabaseId namedDatabaseId )

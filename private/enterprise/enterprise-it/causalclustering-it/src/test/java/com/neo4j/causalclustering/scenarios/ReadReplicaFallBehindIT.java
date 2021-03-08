@@ -10,11 +10,12 @@ import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import com.neo4j.test.causalclustering.TestAllClusterTypes;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
@@ -28,6 +29,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
@@ -35,6 +37,7 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
+@TestInstance( PER_METHOD )
 class ReadReplicaFallBehindIT
 {
     @Inject
@@ -42,22 +45,27 @@ class ReadReplicaFallBehindIT
 
     private Cluster cluster;
 
-    private final ClusterConfig clusterConfig = ClusterConfig
-            .clusterConfig()
-            .withNumberOfCoreMembers( 3 )
-            .withSharedCoreParam( keep_logical_logs, FALSE )
-            .withNumberOfReadReplicas( 1 );
-
-    @BeforeAll
-    void setup() throws Exception
+    private Cluster start( ClusterConfig.ClusterType clusterType ) throws ExecutionException, InterruptedException
     {
-        cluster = clusterFactory.createCluster( clusterConfig );
-        cluster.start();
+        this.cluster = clusterFactory.start( clusterConfig( clusterType ) );
+        return cluster;
     }
 
-    @Test
-    void shouldReconcileCopiedStore() throws Exception
+    private ClusterConfig clusterConfig( ClusterConfig.ClusterType clusterType )
     {
+        return ClusterConfig
+                .clusterConfig()
+                .withClusterType( clusterType )
+                .withSharedCoreParam( keep_logical_logs, FALSE )
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 1 );
+    }
+
+    @TestAllClusterTypes
+    void shouldReconcileCopiedStore( ClusterConfig.ClusterType clusterType ) throws Exception
+    {
+        start( clusterType );
+
         var readReplica = cluster.getReadReplicaByIndex( 0 );
         assertDatabaseEventuallyStarted( SYSTEM_DATABASE_NAME, Set.of( readReplica ) );
 

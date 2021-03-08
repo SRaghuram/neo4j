@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.function.IntFunction;
+import javax.annotation.Nullable;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
@@ -69,31 +70,31 @@ public class CoreClusterMember implements ClusterMember
     public interface CoreGraphDatabaseFactory
     {
         CoreGraphDatabase create( Config memberConfig, GraphDatabaseDependencies databaseDependencies,
-                DiscoveryServiceFactory discoveryServiceFactory );
+                                  DiscoveryServiceFactory discoveryServiceFactory );
     }
 
-    private final Path neo4jHome;
-    private final Neo4jLayout neo4jLayout;
+    protected final Path neo4jHome;
+    protected final Neo4jLayout neo4jLayout;
     private final DiscoveryServiceFactory discoveryServiceFactory;
     private final DatabaseLayout defaultDatabaseLayout;
     private final ClusterStateLayout clusterStateLayout;
-    private final Config.Builder config = Config.newBuilder();
+    protected final Config.Builder config = Config.newBuilder();
     private final int index;
     private final String boltSocketAddress;
     private final String intraClusterBoltSocketAddress;
     private final Path loopbackBoltServerUnixDomainSocketFile;
     private final SocketAddress discoveryAddress;
     private final String raftListenAddress;
-    private CoreGraphDatabase coreGraphDatabase;
-    private GraphDatabaseFacade defaultDatabase;
-    private GraphDatabaseFacade systemDatabase;
-    private final Config memberConfig;
+    private DatabaseManagementService managementService;
+    protected GraphDatabaseFacade defaultDatabase;
+    protected GraphDatabaseFacade systemDatabase;
+    protected Config memberConfig;
     private final ThreadGroup threadGroup;
-    private final Monitors monitors = new Monitors();
+    protected final Monitors monitors = new Monitors();
     private final CoreGraphDatabaseFactory dbFactory =
             ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory ) ->
                     new TestCoreGraphDatabase( config, dependencies, discoveryServiceFactory, this::coreEditionModuleSupplier );
-    private DatabaseIdRepository databaseIdRepository;
+    protected DatabaseIdRepository databaseIdRepository;
 
     public CoreClusterMember( int index,
                               int discoveryPort,
@@ -229,24 +230,30 @@ public class CoreClusterMember implements ClusterMember
     @Override
     public void start()
     {
-        coreGraphDatabase = dbFactory.create( memberConfig,
-                GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory );
-        defaultDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( config().get( default_database ) );
-        systemDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+        var dependencies = GraphDatabaseDependencies.newDependencies().monitors( this.monitors );
+        managementService = createManagementService( dependencies );
+        defaultDatabase = (GraphDatabaseFacade) managementService.database( config().get( default_database ) );
+        systemDatabase = (GraphDatabaseFacade) managementService.database( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+    }
+
+    protected DatabaseManagementService createManagementService( GraphDatabaseDependencies dependencies )
+    {
+        return dbFactory.create( memberConfig, dependencies, discoveryServiceFactory )
+                        .getManagementService();
     }
 
     @Override
     public void shutdown()
     {
-        if ( coreGraphDatabase != null )
+        if ( managementService != null )
         {
             try
             {
-                coreGraphDatabase.getManagementService().shutdown();
+                managementService.shutdown();
             }
             finally
             {
-                coreGraphDatabase = null;
+                managementService = null;
                 defaultDatabase = null;
                 databaseIdRepository = null;
             }
@@ -256,17 +263,14 @@ public class CoreClusterMember implements ClusterMember
     @Override
     public boolean isShutdown()
     {
-        return coreGraphDatabase == null;
+        return managementService == null;
     }
 
     @Override
+    @Nullable
     public DatabaseManagementService managementService()
     {
-        if ( coreGraphDatabase == null )
-        {
-            return null;
-        }
-        return coreGraphDatabase.getManagementService();
+        return managementService;
     }
 
     @Override
@@ -296,7 +300,7 @@ public class CoreClusterMember implements ClusterMember
     }
 
     @Override
-    public final String toString()
+    public String toString()
     {
         return "CoreClusterMember{index=" + index + ", serverId=" + (systemDatabase == null ? null : serverId()) + "}";
     }
@@ -315,7 +319,7 @@ public class CoreClusterMember implements ClusterMember
     @Override
     public ConnectorAddresses clientConnectorAddresses()
     {
-        return ConnectorAddresses.fromConfig( config.build() );
+        return ConnectorAddresses.fromConfig( memberConfig );
     }
 
     @Override

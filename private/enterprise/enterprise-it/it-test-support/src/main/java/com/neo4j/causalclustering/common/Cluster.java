@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
@@ -51,7 +50,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
@@ -194,8 +192,9 @@ public class Cluster implements ServerAddressResolver
         List<SocketAddress> initialHosts = initialHosts( 1, standaloneParams, emptyMap() );
         this.standalone = createStandalone( initialHosts, standaloneParams, recordFormat );
         initialHosts.addAll( initialHosts( noOfReadReplicas, readReplicaParams, instanceReadReplicaParams ) );
+        this.coreMembers.put( 0, standalone );
         createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat,
-                index -> initialHosts.get( initialHosts.size() - index - 1 ).getPort() );
+                            index -> initialHosts.get( initialHosts.size() - index - 1 ).getPort() );
         this.log = LoggerFactory.getLogger( this.getClass() );
     }
 
@@ -207,14 +206,19 @@ public class Cluster implements ServerAddressResolver
                 .collect( toList() );
     }
 
-    public void start() throws InterruptedException, ExecutionException
+    public Cluster start() throws InterruptedException, ExecutionException
     {
         if ( standalone != null )
         {
             startMembers( standalone );
         }
-        startCoreMembers();
+        else
+        {
+            startCoreMembers();
+        }
+
         startReadReplicas();
+        return this;
     }
 
     public Set<CoreClusterMember> healthyCoreMembers()
@@ -509,19 +513,11 @@ public class Cluster implements ServerAddressResolver
         var list = new ArrayList<CoreClusterMember>();
         for ( CoreClusterMember member : coreMembers.values() )
         {
-            var managementService = member.managementService();
-            if ( managementService == null )
-            {
-                continue;
-            }
-
             try
             {
-                var database = (GraphDatabaseFacade) managementService.database( databaseName );
-                if ( roleSet.contains( getCurrentDatabaseRole( database ) ) )
-                {
-                    list.add( member );
-                }
+                member.roleFor( databaseName )
+                      .filter( roleSet::contains )
+                      .ifPresent( ignored -> list.add( member ) );
             }
             catch ( DatabaseNotFoundException e )
             {
@@ -534,19 +530,11 @@ public class Cluster implements ServerAddressResolver
         return list;
     }
 
-    private static Role getCurrentDatabaseRole( GraphDatabaseFacade database )
-    {
-        DependencyResolver dependencyResolver = database.getDependencyResolver();
-        if ( dependencyResolver == null )
-        {
-            return null;
-        }
-        return dependencyResolver.resolveDependency( RoleProvider.class ).currentRole();
-    }
-
     public boolean isCoreLeader( CoreClusterMember core, String databaseName )
     {
-        return getCurrentDatabaseRole( core.database( databaseName ) ) == Role.LEADER;
+        return core.roleFor( databaseName )
+                   .filter( role -> role == Role.LEADER )
+                   .isPresent();
     }
 
     public CoreClusterMember awaitLeader() throws TimeoutException

@@ -18,11 +18,13 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.driver.exceptions.ClientException;
@@ -31,6 +33,8 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.test.causalclustering.ClusterConfig.ClusterType.CORES;
+import static com.neo4j.test.causalclustering.ClusterConfig.ClusterType.STANDALONE;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.function.Function.identity;
@@ -54,17 +58,27 @@ class ReadReplicaServerSideRoutingIT
     @Inject
     private ClusterFactory clusterFactory;
 
-    private Cluster startClusterWithServerSideRoutingConfig( boolean serverSideRoutingEnabled ) throws Exception
+    private Cluster startCluster( boolean serverSideRoutingEnabled, ClusterConfig.ClusterType type ) throws Exception
     {
-        return startCluster( serverSideRoutingConfig( serverSideRoutingEnabled ) );
+        return startCluster( serverSideRoutingConfig( serverSideRoutingEnabled, type ) );
     }
 
-    @ParameterizedTest()
-    @ValueSource( booleans = {true, false} )
-    void shouldBeAbleToWriteToReadReplicaWhenServerSideRoutingEnabled( boolean serverSideRoutingEnabled ) throws Exception
+    public static Stream<Arguments> testArgsForAllCases()
+    {
+        return Stream.of(
+                Arguments.of( true, CORES ),
+                Arguments.of( true, STANDALONE ),
+                Arguments.of( false, CORES ),
+                Arguments.of( false, STANDALONE )
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource( "testArgsForAllCases" )
+    void shouldBeAbleToWriteToReadReplicaWhenServerSideRoutingEnabled( boolean serverSideRoutingEnabled, ClusterConfig.ClusterType type ) throws Exception
     {
         // given
-        var cluster = startClusterWithServerSideRoutingConfig( serverSideRoutingEnabled );
+        var cluster = startCluster( serverSideRoutingEnabled, type );
         var readReplica = cluster.findAnyReadReplica();
 
         // when doing write transaction
@@ -138,9 +152,10 @@ class ReadReplicaServerSideRoutingIT
         return cluster;
     }
 
-    private static ClusterConfig serverSideRoutingConfig( boolean serverSideRoutingEnabled )
+    private static ClusterConfig serverSideRoutingConfig( boolean serverSideRoutingEnabled, ClusterConfig.ClusterType type )
     {
         return clusterConfig()
+                .withClusterType( type )
                 .withNumberOfCoreMembers( NR_CORE_MEMBERS )
                 .withNumberOfReadReplicas( NR_READ_REPLICAS )
                 .withSharedReadReplicaParam( GraphDatabaseSettings.routing_enabled, serverSideRoutingEnabled ? "true" : "false" )

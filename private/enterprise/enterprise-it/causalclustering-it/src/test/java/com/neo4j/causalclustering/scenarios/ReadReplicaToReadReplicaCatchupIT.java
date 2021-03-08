@@ -11,10 +11,11 @@ import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import com.neo4j.test.causalclustering.TestAllClusterTypes;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -38,6 +39,7 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
+@TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class ReadReplicaToReadReplicaCatchupIT
 {
     @Inject
@@ -45,23 +47,22 @@ class ReadReplicaToReadReplicaCatchupIT
 
     private Cluster cluster;
 
-    @BeforeEach
-    void beforeEach() throws Exception
+    void start( ClusterConfig.ClusterType clusterType ) throws Exception
     {
         var clusterConfig = clusterConfig()
+                .withClusterType( clusterType )
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
                 .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
                 .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
                 .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE );
-
-        cluster = clusterFactory.createCluster( clusterConfig );
-        cluster.start();
+        cluster = clusterFactory.start( clusterConfig );
     }
 
-    @Test
-    void shouldEventuallyPullTransactionAcrossReadReplicas() throws Throwable
+    @TestAllClusterTypes
+    void shouldEventuallyPullTransactionAcrossReadReplicas( ClusterConfig.ClusterType type ) throws Throwable
     {
+        start( type );
         // given
         int numberOfNodesToCreate = 100;
 
@@ -97,9 +98,11 @@ class ReadReplicaToReadReplicaCatchupIT
         checkDataHasReplicatedToReadReplicas( cluster, numberOfNodesToCreate );
     }
 
-    @Test
-    void shouldCatchUpFromCoresWhenPreferredReadReplicasAreUnavailable() throws Throwable
+    @TestAllClusterTypes
+    void shouldCatchUpFromCoresWhenPreferredReadReplicasAreUnavailable( ClusterConfig.ClusterType type ) throws Throwable
     {
+        start(type);
+
         // given
         int numberOfNodes = 1;
         int firstReadReplicaLocalIndex = 101;

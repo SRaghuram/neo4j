@@ -20,6 +20,7 @@ import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import com.neo4j.test.causalclustering.TestAllClusterTypes;
 import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -135,11 +136,11 @@ class ReadReplicaReplicationIT
         }
     }
 
-    @Test
-    void shouldEventuallyPullTransactionDownToAllReadReplicas() throws Exception
+    @TestAllClusterTypes
+    void shouldEventuallyPullTransactionDownToAllReadReplicas( ClusterConfig.ClusterType type ) throws Exception
     {
         // given
-        var cluster = startCluster( defaultClusterConfig().withNumberOfReadReplicas( 0 ) );
+        var cluster = startCluster( defaultClusterConfig( type ).withNumberOfReadReplicas( 0 ) );
         var nodesBeforeReadReplicaStarts = 1;
 
         DataCreator.createSchema( cluster );
@@ -202,15 +203,15 @@ class ReadReplicaReplicationIT
         }
     }
 
-    @Test
-    void shouldShutdownRatherThanPullUpdatesFromCoreMemberWithDifferentStoreIdIfLocalStoreIsNonEmpty()
+    @TestAllClusterTypes
+    void shouldShutdownRatherThanPullUpdatesFromCoreMemberWithDifferentStoreIdIfLocalStoreIsNonEmpty( ClusterConfig.ClusterType type )
             throws Exception
     {
-        var cluster = startCluster( defaultClusterConfig().withNumberOfReadReplicas( 0 ) );
+        var cluster = startCluster( defaultClusterConfig( type ).withNumberOfReadReplicas( 0 ) );
 
         createDataInOneTransaction( cluster, 10 );
 
-        assertNotNull( cluster.getMemberWithAnyRole( Role.FOLLOWER ) );
+        assertNotNull( cluster.getMemberWithAnyRole( Role.LEADER ) );
 
         // Get a read replica and make sure that it is operational
         var readReplica = cluster.addReadReplicaWithIndex( 4 );
@@ -225,11 +226,11 @@ class ReadReplicaReplicationIT
         assertFailedToStart( readReplica, DEFAULT_DATABASE_NAME );
     }
 
-    @Test
-    void aReadReplicaShouldBeAbleToRejoinTheCluster() throws Exception
+    @TestAllClusterTypes
+    void aReadReplicaShouldBeAbleToRejoinTheCluster( ClusterConfig.ClusterType type ) throws Exception
     {
         var readReplicaId = 4;
-        var cluster = startCluster( defaultClusterConfig().withNumberOfReadReplicas( 0 ) );
+        var cluster = startCluster( defaultClusterConfig( type ).withNumberOfReadReplicas( 0 ) );
 
         createDataInOneTransaction( cluster, 10 );
 
@@ -253,11 +254,11 @@ class ReadReplicaReplicationIT
         cluster.shutdown();
     }
 
-    @Test
-    void readReplicasShouldRestartIfTheWholeClusterIsRestarted() throws Exception
+    @TestAllClusterTypes
+    void readReplicasShouldRestartIfTheWholeClusterIsRestarted( ClusterConfig.ClusterType type ) throws Exception
     {
         // given
-        var cluster = startClusterWithDefaultConfig();
+        var cluster = startCluster( defaultClusterConfig( type ) );
 
         // when
         cluster.shutdown();
@@ -271,15 +272,17 @@ class ReadReplicaReplicationIT
         }
     }
 
-    @Test
-    void shouldBeAbleToDownloadANewStoreAfterPruning() throws Exception
+    @TestAllClusterTypes
+    void shouldBeAbleToDownloadANewStoreAfterPruning( ClusterConfig.ClusterType type ) throws Exception
     {
         // given
         var params = Map.of( GraphDatabaseSettings.keep_logical_logs.name(), "keep_none",
                 GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
                 GraphDatabaseSettings.check_point_interval_time.name(), "100ms" );
 
-        var cluster = startCluster( defaultClusterConfig().withSharedCoreParams( params ) );
+        var cluster = startCluster( defaultClusterConfig( type )
+                                            .withSharedCoreParams( params )
+        );
 
         createDataInOneTransaction( cluster, 10 );
 
@@ -308,7 +311,7 @@ class ReadReplicaReplicationIT
                 equalityCondition( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 30, SECONDS );
     }
 
-    @Test
+    @TestAllClusterTypes
     void shouldBeAbleToPullTxAfterHavingDownloadedANewStoreAfterPruning() throws Exception
     {
         // given
@@ -346,11 +349,11 @@ class ReadReplicaReplicationIT
                 equalityCondition( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 30, SECONDS );
     }
 
-    @Test
-    void transactionsShouldNotAppearOnTheReadReplicaWhilePollingIsPaused() throws Throwable
+    @TestAllClusterTypes
+    void transactionsShouldNotAppearOnTheReadReplicaWhilePollingIsPaused( ClusterConfig.ClusterType type ) throws Throwable
     {
         // given
-        var cluster = startClusterWithDefaultConfig();
+        var cluster = startCluster( defaultClusterConfig( type ) );
 
         var readReplica = cluster.findAnyReadReplica();
         var readReplicaGraphDatabase = readReplica.defaultDatabase();
@@ -377,11 +380,11 @@ class ReadReplicaReplicationIT
         transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) );
     }
 
-    @Test
-    void transactionsShouldNotAppearOnTheReadReplicaWhileCatchupPollingIsPaused() throws Throwable
+    @TestAllClusterTypes
+    void transactionsShouldNotAppearOnTheReadReplicaWhileCatchupPollingIsPaused( ClusterConfig.ClusterType type ) throws Throwable
     {
         // given
-        var cluster = startClusterWithDefaultConfig();
+        var cluster = startCluster( defaultClusterConfig( type ) );
 
         var readReplica = cluster.findAnyReadReplica();
         var readReplicaGraphDatabase = readReplica.defaultDatabase();
@@ -430,11 +433,11 @@ class ReadReplicaReplicationIT
         MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis(), NULL );
     }
 
-    @Test
-    void shouldThrowExceptionIfReadReplicaRecordFormatDiffersToCoreRecordFormat() throws Exception
+    @TestAllClusterTypes
+    void shouldThrowExceptionIfReadReplicaRecordFormatDiffersToCoreRecordFormat( ClusterConfig.ClusterType type ) throws Exception
     {
         // given
-        var cluster = startCluster( defaultClusterConfig().withNumberOfReadReplicas( 0 ).withRecordFormat( HighLimit.NAME ) );
+        var cluster = startCluster( defaultClusterConfig( type ).withNumberOfReadReplicas( 0 ).withRecordFormat( HighLimit.NAME ) );
 
         // when
         createDataInOneTransaction( cluster, 10 );
@@ -509,11 +512,11 @@ class ReadReplicaReplicationIT
         }
     }
 
-    @Test
-    void pageFaultsFromReplicationMustCountInMetrics() throws Exception
+    @TestAllClusterTypes
+    void pageFaultsFromReplicationMustCountInMetrics( ClusterConfig.ClusterType type ) throws Exception
     {
         // Given initial pin counts on all members
-        var cluster = startClusterWithDefaultConfig();
+        var cluster = startCluster( defaultClusterConfig( type ) );
         Function<ReadReplica,PageCacheCounters> getPageCacheCounters =
                 ccm -> ccm.defaultDatabase().getDependencyResolver().resolveDependency( PageCacheCounters.class );
         var countersList = cluster.readReplicas().stream().map( getPageCacheCounters ).collect( Collectors.toList() );
@@ -555,23 +558,27 @@ class ReadReplicaReplicationIT
 
     private Cluster startClusterWithDefaultConfig() throws Exception
     {
-        return startCluster( defaultClusterConfig() );
+        return startCluster( defaultClusterConfig( ClusterConfig.ClusterType.CORES ) );
     }
 
     private Cluster startCluster( ClusterConfig clusterConfig ) throws Exception
     {
-        var cluster = clusterFactory.createCluster( clusterConfig );
-        cluster.start();
-        return cluster;
+        return clusterFactory.start( clusterConfig );
+    }
+
+    private static ClusterConfig defaultClusterConfig( ClusterConfig.ClusterType type )
+    {
+        return clusterConfig()
+                .withClusterType( type )
+                .withNumberOfCoreMembers( NR_CORE_MEMBERS )
+                .withNumberOfReadReplicas( NR_READ_REPLICAS )
+                .withSharedReadReplicaParam( cluster_topology_refresh, "5s" )
+                .withSharedCoreParam( cluster_topology_refresh, "5s" );
     }
 
     private static ClusterConfig defaultClusterConfig()
     {
-        return clusterConfig()
-                .withNumberOfCoreMembers( NR_CORE_MEMBERS )
-                .withNumberOfReadReplicas( NR_READ_REPLICAS )
-                .withSharedCoreParam( cluster_topology_refresh, "5s" )
-                .withSharedReadReplicaParam( cluster_topology_refresh, "5s" );
+        return defaultClusterConfig( ClusterConfig.ClusterType.CORES );
     }
 
     private static void assertReadReplicasEventuallyUpToDateWithLeader( Cluster cluster )

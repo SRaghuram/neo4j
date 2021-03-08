@@ -66,7 +66,7 @@ class Resources
                 .withRecordFormat( Standard.LATEST_NAME )
                 .withIpFamily( IpFamily.IPV4 )
                 .useWildcard( false );
-        cluster = ClusterConfig.createCluster( clusterDir, clusterConfig );
+        cluster = clusterConfig.build( clusterDir );
     }
 
     public Cluster cluster()

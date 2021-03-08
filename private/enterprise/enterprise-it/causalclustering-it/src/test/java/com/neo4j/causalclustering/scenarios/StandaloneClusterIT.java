@@ -16,11 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
@@ -39,12 +36,13 @@ class StandaloneClusterIT
 
     private final ClusterConfig clusterConfig = ClusterConfig
             .clusterConfig()
+            .withStandalone()
             .withNumberOfReadReplicas( 2 );
 
     @BeforeEach
     void setup() throws Exception
     {
-        cluster = clusterFactory.createStandaloneCluster( clusterConfig );
+        cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
     }
 

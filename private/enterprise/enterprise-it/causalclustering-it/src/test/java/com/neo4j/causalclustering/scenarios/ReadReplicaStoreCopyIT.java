@@ -10,10 +10,10 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
+import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import com.neo4j.test.causalclustering.TestAllClusterTypes;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 
@@ -43,22 +43,22 @@ class ReadReplicaStoreCopyIT
 
     private Cluster cluster;
 
-    @BeforeEach
-    void beforeEach() throws Exception
+    void start( ClusterConfig.ClusterType type ) throws Exception
     {
         var clusterConfig = clusterConfig()
+                .withClusterType( type )
                 .withSharedCoreParam( GraphDatabaseSettings.keep_logical_logs, FALSE )
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 1 );
 
-        cluster = clusterFactory.createCluster( clusterConfig );
-        cluster.start();
+        cluster = clusterFactory.start( clusterConfig );
     }
 
-    @Test
+    @TestAllClusterTypes
     @Timeout( 240 )
-    void shouldNotBePossibleToStartTransactionsWhenReadReplicaCopiesStore() throws Throwable
+    void shouldNotBePossibleToStartTransactionsWhenReadReplicaCopiesStore( ClusterConfig.ClusterType clusterType ) throws Throwable
     {
+        start( clusterType );
         var readReplica = cluster.findAnyReadReplica();
 
         var catchupPollingProcess = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupPollingProcess.class );

@@ -71,7 +71,7 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    cluster = ClusterConfig.createCluster(testDir.directory(Random.alphanumeric.take(8).mkString("")), clusterConfig)
+    cluster = clusterConfig.build(testDir.directory(Random.alphanumeric.take(8).mkString("")))
     cluster.start()
   }
 
