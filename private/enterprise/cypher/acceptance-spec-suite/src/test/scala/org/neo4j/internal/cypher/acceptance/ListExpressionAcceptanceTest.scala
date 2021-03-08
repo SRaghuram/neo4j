@@ -601,4 +601,14 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     //then
     result.toList should equal(List(Map("result" -> null)))
   }
+
+  test("reduce building up a big list should not overflow the stack") {
+    val query =
+      """UNWIND range(0,15000) AS i
+        |WITH collect([i]) AS set
+        |WITH reduce(c = [], x in set| c + x) AS reduced
+        |UNWIND reduced AS x RETURN x""".stripMargin
+
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal((0 to 15000).map(i => Map("x" -> i)))
+  }
 }
