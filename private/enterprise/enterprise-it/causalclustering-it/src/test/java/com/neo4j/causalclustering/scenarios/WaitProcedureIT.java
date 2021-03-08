@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -89,11 +90,11 @@ public class WaitProcedureIT
             var result = runProcedure( systemDbDriver, lastCommitTxId, databaseId, Duration.ofSeconds( 2 ) );
 
             var coreStates = result.stream()
-                    .filter( not( response -> response.address().equals( replica.boltAdvertisedAddress().toString() ) ) )
+                    .filter( not( response -> response.address().equals( replica.boltAdvertisedAddress() ) ) )
                     .collect( toList() );
 
             var readReplicaStates = result.stream()
-                    .filter( response -> response.address().equals( replica.boltAdvertisedAddress().toString() ) )
+                    .filter( response -> response.address().equals( replica.boltAdvertisedAddress() ) )
                     .collect( toList() );
 
             assertThat( coreStates ).hasSize( 3 );
@@ -129,12 +130,15 @@ public class WaitProcedureIT
                 .hasSize( 4 )
                 .allMatch( response -> response.state() == WaitResponseStates.CaughtUp )
                 .allMatch( WaitResponse::success )
-                .noneMatch( waitResponse -> temporaryReplicaServerId.toString().equals( waitResponse.address() ) );
+                .noneMatch( waitResponse -> temporaryReplicaServerId.equals( waitResponse.address() ) );
     }
 
     @Test
     void shouldProjectReconciliationError() throws Exception
     {
+        var readReplica = cluster.findAnyReadReplica();
+        assertDatabaseEventuallyStarted( "foo", Set.of( readReplica ) );
+
         createDatabase( "bar", cluster );
         var lastCommitTxId =
                 cluster.awaitLeader( "system" ).resolveDependency( "system", TransactionIdStore.class ).getLastCommittedTransactionId();
@@ -144,9 +148,9 @@ public class WaitProcedureIT
         var responses = runProcedure( systemDbDriver, lastCommitTxId, newDatabaseId, DEFAULT_PROCEDURE_TIMEOUT );
 
         // RR is configured to not allow more than 3 databases
-        var constrainedServer = cluster.findAnyReadReplica().boltAdvertisedAddress();
-        var failed = responses.stream().filter( response -> response.address().equals( constrainedServer.toString() ) ).collect( toList() );
-        var successful = responses.stream().filter( not( response -> response.address().equals( constrainedServer.toString() ) ) ).collect( toList() );
+        var constrainedServer = readReplica.boltAdvertisedAddress();
+        var failed = responses.stream().filter( response -> response.address().equals( constrainedServer ) ).collect( toList() );
+        var successful = responses.stream().filter( not( response -> response.address().equals( constrainedServer ) ) ).collect( toList() );
 
         assertThat( failed ).hasSize( 1 )
                 .allMatch( response -> response.state() == WaitResponseStates.Failed )

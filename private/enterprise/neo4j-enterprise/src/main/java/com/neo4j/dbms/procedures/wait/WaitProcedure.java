@@ -122,7 +122,7 @@ public class WaitProcedure extends CallableProcedure.BasicProcedure
         }
         var txId = ((LongValue) input[0]).longValue();
         var databaseId = getDatabaseId( input );
-        var procedureTimeout = clock.instant().now().plus( getTimeout( input ) );
+        var procedureTimeout = clock.instant().plus( getTimeout( input ) );
         try
         {
             var serverResponses = awaitResponses( procedureTimeout, txId, databaseId );
@@ -186,7 +186,7 @@ public class WaitProcedure extends CallableProcedure.BasicProcedure
 
     boolean poll( Instant procedureTimeout, long timeout ) throws InterruptedException
     {
-        if ( clock.instant().now().isAfter( procedureTimeout ) )
+        if ( clock.instant().isAfter( procedureTimeout ) )
         {
             return false;
         }
