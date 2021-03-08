@@ -5,6 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
+import java.util
+import java.util.Optional
+import java.util.regex
+
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
@@ -264,9 +268,6 @@ import org.neo4j.values.virtual.VirtualNodeValue
 import org.neo4j.values.virtual.VirtualRelationshipValue
 import org.neo4j.values.virtual.VirtualValues
 
-import java.util
-import java.util.Optional
-import java.util.regex
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
@@ -2983,7 +2984,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         load[AnyValue](returnVar)
       )
       IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
-                             collection.variables ++ inner.variables, Set.empty, requireNullCheck = false)
+                             collection.variables ++ inner.variables, collection.nullChecks, requireNullCheck = false)
     }
   }
 

@@ -581,4 +581,24 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     //then
     result.toList should equal(List(Map("result" -> null)))
   }
+
+  test("list expression on a null results in a null") {
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      " RETURN [r IN null| r] as result")
+
+    //then
+    result.toList should equal(List(Map("result" -> null)))
+  }
+
+  test("head of list expression on a null results in a null") {
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      " RETURN head([r IN null| r]) as result")
+
+    //then
+    result.toList should equal(List(Map("result" -> null)))
+  }
 }

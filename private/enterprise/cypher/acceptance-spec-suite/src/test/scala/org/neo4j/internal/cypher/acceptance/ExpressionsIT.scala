@@ -5,6 +5,13 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.lang.Math.PI
+import java.lang.Math.sin
+import java.time.Clock
+import java.time.Duration
+import java.util.UUID
+import java.util.concurrent.ThreadLocalRandom
+
 import org.neo4j.codegen.api.CodeGeneration.ByteCodeGeneration
 import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -175,12 +182,6 @@ import org.neo4j.values.virtual.VirtualValues.list
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
 
-import java.lang.Math.PI
-import java.lang.Math.sin
-import java.time.Clock
-import java.time.Duration
-import java.util.UUID
-import java.util.concurrent.ThreadLocalRandom
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -2820,6 +2821,14 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, 1) should equal(list(stringValue("a"), stringValue("aa"), stringValue("aaa")))
   }
 
+  test("head of filter on null collection") {
+    //When, head([bar IN NULL WHERE bar STARTS WITH "aa"])
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(function("head", listComprehension(bar, nullLiteral, Some(startsWith(bar, literalString("aa"))), None)))
+
+    //Then
+    evaluate(compiled, 1) should equal(NO_VALUE)
+  }
 
   test("nested list expressions basic") {
 
@@ -3012,6 +3021,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //Then
     evaluate(compiled, 1) should equal(EMPTY_LIST)
+  }
+
+  test("head of extract on null collection") {
+    //When, head([bar IN NULL WHERE bar STARTS WITH "aa"])
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(function("head", listComprehension(bar, nullLiteral, None, Some(equals(bar, literalInt(42))))))
+
+    //Then
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
   test("reduce basic") {
