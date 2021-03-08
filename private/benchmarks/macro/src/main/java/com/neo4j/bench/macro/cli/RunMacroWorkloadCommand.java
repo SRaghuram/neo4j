@@ -168,7 +168,6 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             profiler.profilerType().assertEnvironmentVariablesPresent( errorOnMissingFlameGraphDependencies );
         }
 
-        Store originalStore = Neo4jStore.createFrom( storeDir.toAbsolutePath() );
         MeasurementOptions measurementOptions = new MeasurementOptions( params.warmupCount(),
                                                                         params.measurementCount(),
                                                                         params.minMeasurementDuration(),
@@ -184,6 +183,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
         try ( Resources resources = new Resources( workDir ) )
         {
             Workload workload = Workload.fromName( params.workloadName(), resources, neo4jDeployment.deployment() );
+            Store originalStore = Neo4jStore.createFrom( storeDir.toAbsolutePath(), workload.getDatabaseName() );
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( workDir, workload.benchmarkGroup() );
 
             LOG.debug( params.toString() );
@@ -191,7 +191,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             assertQueryNames( params, workload );
 
             Neo4jConfig neo4jConfig = prepareConfig( params.executionMode(), neo4jConfigFile );
-            verifySchema( storeDir, params.neo4jEdition(), neo4jConfigFile, workload.expectedSchema(), params.isRecreateSchema(), workload );
+            verifySchema( storeDir, params.neo4jEdition(), neo4jConfigFile, params.isRecreateSchema(), workload );
 
             ErrorReporter errorReporter = new ErrorReporter( errorPolicy );
             BenchmarkGroupBenchmarkMetrics allResults = new BenchmarkGroupBenchmarkMetrics();
@@ -349,16 +349,16 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
         return neo4jConfig;
     }
 
-    public static void verifySchema( Path dataset, Edition edition, Path neo4jConfigFile, Schema expectedSchema, boolean recreateSchema, Workload workload )
+    public static void verifySchema( Path dataset, Edition edition, Path neo4jConfigFile, boolean recreateSchema, Workload workload )
     {
         LOG.debug( "Verifying store..." );
         try ( Store store = Neo4jStore.createFrom( dataset, workload.getDatabaseName() ) )
         {
-            EmbeddedDatabase.verifySchema( store, edition, neo4jConfigFile, expectedSchema );
+            EmbeddedDatabase.verifySchema( store, edition, neo4jConfigFile, workload.expectedSchema() );
             if ( recreateSchema )
             {
                 LOG.debug( "Preparing to recreate schema..." );
-                EmbeddedDatabase.recreateSchema( store, edition, neo4jConfigFile, expectedSchema );
+                EmbeddedDatabase.recreateSchema( store, edition, neo4jConfigFile, workload.expectedSchema() );
             }
             LOG.debug( "Store verified" );
             EmbeddedDatabase.verifyStoreFormat( store );
