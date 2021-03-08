@@ -27,13 +27,9 @@ import org.neo4j.values.storable.TextValue
 /**
  * For index operators that get nodes together with actual property values.
  */
-abstract class RelationshipIndexScanWithValues(relOffset: Int,
-                                               startOffset: Int,
-                                               endOffset: Int,
-                                               indexPropertyIndices: Array[Int],
-                                               indexPropertySlotOffsets: Array[Int],
-                                               argumentSize: SlotConfiguration.Size,
-                                               inputMorsel: Morsel)
+abstract class RelationshipIndexScanWithValues(indexPropertyIndices: Array[Int],
+                                                indexPropertySlotOffsets: Array[Int],
+                                                inputMorsel: Morsel)
   extends InputLoopTask(inputMorsel) {
 
   protected var relCursor: RelationshipValueIndexCursor = _
@@ -75,7 +71,7 @@ abstract class DirectedRelationshipIndexScanWithValues(relOffset: Int,
                                                indexPropertySlotOffsets: Array[Int],
                                                argumentSize: SlotConfiguration.Size,
                                                inputMorsel: Morsel)
-  extends RelationshipIndexScanWithValues(relOffset, startOffset, endOffset, indexPropertyIndices, indexPropertySlotOffsets, argumentSize, inputMorsel) {
+  extends RelationshipIndexScanWithValues(indexPropertyIndices, indexPropertySlotOffsets, inputMorsel) {
 
   override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
     val read = state.query.transactionalContext.transaction.dataRead
@@ -101,7 +97,7 @@ abstract class UndirectedRelationshipIndexScanWithValues(relOffset: Int,
                                                          indexPropertySlotOffsets: Array[Int],
                                                          argumentSize: SlotConfiguration.Size,
                                                          inputMorsel: Morsel)
-  extends RelationshipIndexScanWithValues(relOffset, startOffset, endOffset, indexPropertyIndices, indexPropertySlotOffsets, argumentSize, inputMorsel) {
+  extends RelationshipIndexScanWithValues(indexPropertyIndices, indexPropertySlotOffsets, inputMorsel) {
 
   private var forwardDirection = true
 
@@ -145,10 +141,10 @@ abstract class DirectedRelationshipIndexStringSearchTask(relOffset: Int,
 
   protected def predicate(value: TextValue): StringPredicate
 
-  override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+  override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initRow: ReadWriteRow): Boolean = {
     val queryState = state.queryStateForExpressionEvaluation(resources)
-    initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
-    maybeTextValue(valueExpr(initExecutionContext, queryState)) match {
+    initRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
+    maybeTextValue(valueExpr(initRow, queryState)) match {
       case Some(value)=>
         val index = state.queryIndexes(queryIndexId)
         relCursor = resources.cursorPools.relationshipValueIndexCursorPool.allocateAndTrace()
@@ -186,10 +182,10 @@ abstract class UndirectedRelationshipIndexStringSearchTask(relOffset: Int,
 
   protected def predicate(value: TextValue): StringPredicate
 
-  override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+  override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initRow: ReadWriteRow): Boolean = {
     val queryState = state.queryStateForExpressionEvaluation(resources)
-    initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
-    maybeTextValue(valueExpr(initExecutionContext, queryState)) match {
+    initRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
+    maybeTextValue(valueExpr(initRow, queryState)) match {
       case Some(value)=>
         val index = state.queryIndexes(queryIndexId)
         relCursor = resources.cursorPools.relationshipValueIndexCursorPool.allocateAndTrace()
