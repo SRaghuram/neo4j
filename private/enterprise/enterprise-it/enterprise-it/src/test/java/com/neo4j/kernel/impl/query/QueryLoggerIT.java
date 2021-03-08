@@ -785,7 +785,7 @@ class QueryLoggerIT
                 "MATCH (n) WHERE n.isEvil = true RETURN n", "MATCH (n) WHERE n.isEvil = ****** RETURN n",
                 "MATCH (n) WHERE n.creditCard = 123123 RETURN n", "MATCH (n) WHERE n.creditCard = ****** RETURN n",
                 "MATCH (n) WHERE n.secret = 'There \\\'is\\\' \\\"no\\\" god!' RETURN n", "MATCH (n) WHERE n.secret = ****** RETURN n",
-                 "MATCH (n) WHERE n.secret = \"There \\\"is\\\" 'no' god!\" RETURN n", "MATCH (n) WHERE n.secret = ****** RETURN n",
+                "MATCH (n) WHERE n.secret = \"There \\\"is\\\" 'no' god!\" RETURN n", "MATCH (n) WHERE n.secret = ****** RETURN n",
                 "RETURN ['the', 'answer', 'is',  42]", "RETURN [******, ******, ******,  ******]",
                 "RETURN ['there', 'is', ' no', 'god', $p, '!']", "[******, ******, ******, ******, $p, ******]",
                 "RETURN {answer: 42}", "RETURN {answer: ******}",
