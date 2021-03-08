@@ -7,10 +7,24 @@ package com.neo4j.bench.infra;
 
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Objects;
+
 import static java.util.Objects.requireNonNull;
 
 public final class InfraNamesHelper
 {
+
+    /**
+     * Sanitizes CloudFormation Output Logical Id, https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html.
+     *
+     * @param logicalId
+     * @return
+     */
+    public static String sanitizeOutputLogicalId( String logicalId )
+    {
+        return Objects.requireNonNull( logicalId, "logical ID cannot be null" ).replaceAll( "[^\\p{Alnum}]", "" );
+    }
+
     public static String sanitizeJobName( String jobName )
     {
         return sanitizeInfraName( jobName );
@@ -27,16 +41,6 @@ public final class InfraNamesHelper
                 requireNonNull( tag, "docker image tag name cannot be null" ).replaceAll( "[^\\p{Alnum}|^_]", "_" ),
                 0,
                 127 );
-    }
-
-    public static String sanitizeJobQueueName( String jobQueueName )
-    {
-        return sanitizeInfraName( jobQueueName );
-    }
-
-    public static String sanitizeComputeEnvironmentName( String computeEnvironmentName )
-    {
-        return sanitizeInfraName( computeEnvironmentName );
     }
 
     /**

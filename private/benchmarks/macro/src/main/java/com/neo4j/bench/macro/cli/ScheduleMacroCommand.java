@@ -12,6 +12,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.common.command.ResultsStoreArgs;
+import com.neo4j.bench.common.database.AllSupportedVersions;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.DeploymentModes;
@@ -38,10 +39,6 @@ import com.neo4j.bench.infra.resources.InfrastructureResources;
 import com.neo4j.bench.infra.scheduler.BenchmarkJobScheduler;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
-import com.neo4j.bench.model.util.JsonUtil;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.RetryPolicy;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,14 +54,19 @@ import java.util.concurrent.ExecutionException;
 import javax.inject.Inject;
 
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
+import static com.neo4j.bench.infra.InfraNamesHelper.sanitizeOutputLogicalId;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.commons.lang3.StringUtils.removeEnd;
 
 @Command( name = "schedule" )
 public class ScheduleMacroCommand extends BaseRunWorkloadCommand
 {
+
+    private static Logger LOG = LoggerFactory.getLogger( ScheduleMacroCommand.class );
+    private static final String DEFAULT_UPGRADE_JOB_DEFINITION_NAME = "MacroUpgradeJobDefinition-openjdk-11";
 
     // job queue name in CloudFormation stack
     @Option( type = OptionType.COMMAND,
@@ -160,6 +162,13 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             title = "Recordings and profiles S3 URI" )
     private URI recordingsBaseUri = URI.create( "s3://benchmarking.neo4j.com/recordings/" );
 
+    private static final String CMD_UPGRADE_STORE = "--upgrade-store";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_UPGRADE_STORE},
+            description = "If set upgrade store before running and use this store",
+            title = "Upgrade store" )
+    private boolean upgradeStore;
+
     private static String getJobName( String tool, String benchmark, String version, String triggered )
     {
         return format( "%s-%s-%s-%s", tool, benchmark, version, triggered );
@@ -169,7 +178,8 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
     protected final void doRun( RunMacroWorkloadParams runMacroWorkloadParams )
     {
         AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
-        try ( ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( awsCredentials ) )
+        try ( ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( awsCredentials );
+              Resources resources = new Resources( Paths.get( "." ) ) )
         {
             Infrastructure infrastructure = matchInfrastructure( awsCredentials );
 
@@ -195,7 +205,6 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.teamcityBuild().toString() ) )
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.workloadName() ) );
 
-            CompletableFuture<Void> awaitFinished = CompletableFuture.runAsync( benchmarkJobScheduler::awaitFinished );
             InfraParams infraParams = new InfraParams( awsCredentials,
                                                        resultsStoreArgs.resultsStoreUsername(),
                                                        resultsStorePasswordSecretName,
@@ -205,9 +214,20 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                        errorReportingPolicy,
                                                        workspace,
                                                        recordingsBaseUri );
-            try ( Resources resources = new Resources( Paths.get( "." ) ) )
+
+            Workload workload = Workload.fromName( runMacroWorkloadParams.workloadName(), resources, runMacroWorkloadParams.deployment() );
+
+            URI currentDataSetBaseUri = upgradeStoreIfNeeded( runMacroWorkloadParams,
+                                                              awsCredentials,
+                                                              artifactStorage,
+                                                              workspace,
+                                                              infraParams,
+                                                              workload,
+                                                              artifactBaseWorkloadURI );
+
+            CompletableFuture<Void> awaitFinished = CompletableFuture.runAsync( benchmarkJobScheduler::awaitFinished );
+            try
             {
-                Workload workload = Workload.fromName( runMacroWorkloadParams.workloadName(), resources, runMacroWorkloadParams.deployment() );
                 List<List<Query>> partitions = Lists.partition( workload.queries(), workload.queryPartitionSize() );
 
                 for ( List<Query> queries : partitions )
@@ -227,7 +247,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                                                        new RunToolMacroWorkloadParams(
                                                                                                runMacroWorkloadParams.setQueryNames( queryNames ),
                                                                                                storeName,
-                                                                                               dataSetBaseUri ) ),
+                                                                                               currentDataSetBaseUri ) ),
                                                                  testRunId ) );
 
                     workspace.assertArtifactsExist();
@@ -259,13 +279,78 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
         }
     }
 
+    private URI upgradeStoreIfNeeded( RunMacroWorkloadParams runMacroWorkloadParams,
+                                      AWSCredentials awsCredentials,
+                                      ArtifactStorage artifactStorage,
+                                      Workspace workspace,
+                                      InfraParams infraParams,
+                                      Workload workload,
+                                      URI artifactBaseWorkloadURI ) throws ArtifactStoreException
+    {
+        if ( upgradeStore )
+        {
+            URI originDataSetBaseUri = URI.create( removeEnd( dataSetBaseUri.toString(), "/" ) );
+            URI destDataSetBaseUri = artifactBaseWorkloadURI.resolve( "datasets" );
+            LOG.info( "will try to upgrade store from{} into {}", originDataSetBaseUri, destDataSetBaseUri );
+
+            String jobDefinitionName =
+                    BenchmarkJobScheduler
+                            .resolveOutputRef( sanitizeOutputLogicalId( DEFAULT_UPGRADE_JOB_DEFINITION_NAME ),
+                                               awsCredentials.awsCredentialsProvider(),
+                                               awsRegion,
+                                               batchStack );
+            LOG.info( "found job definition {}", jobDefinitionName );
+            BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( "MacroStoreUpgradeJobQueue",
+                                                                                        jobDefinitionName,
+                                                                                        batchStack,
+                                                                                        awsCredentials,
+                                                                                        artifactStorage );
+
+            String newVersion = runMacroWorkloadParams.neo4jVersion().minorVersion();
+            benchmarkJobScheduler.scheduleStoreUpgrade( Workspace.defaultUpgradeStoreWorkspace( workspace ),
+                                                        originDataSetBaseUri,
+                                                        destDataSetBaseUri,
+                                                        newVersion,
+                                                        AllSupportedVersions.prevVersion( newVersion ),
+                                                        workload.name(),
+                                                        storeName,
+                                                        infraParams.withArtifactBaseUri( artifactBaseWorkloadURI.resolve( "upgrade" ) ),
+                                                        workload.recordFormat() );
+
+            // await finished throws exception when there is job failure
+            benchmarkJobScheduler.awaitFinished();
+
+            return destDataSetBaseUri;
+        }
+        else
+        {
+            return dataSetBaseUri;
+        }
+    }
+
+    private Workspace prepareWorkspace( RunMacroWorkloadParams runMacroWorkloadParams, Path workspacePath ) throws IOException
+    {
+        File jobParameterJson = workspacePath.resolve( Workspace.JOB_PARAMETERS_JSON ).toFile();
+        jobParameterJson.createNewFile();
+
+        if ( runMacroWorkloadParams.deployment().deploymentModes().equals( DeploymentModes.SERVER ) )
+        {
+            Deployment.Server server = (Deployment.Server) runMacroWorkloadParams.deployment();
+            return Workspace.defaultMacroServerWorkspace( workspacePath, server.path().toString() );
+        }
+        else
+        {
+            return Workspace.defaultMacroEmbeddedWorkspace( workspacePath );
+        }
+    }
+
     private Infrastructure matchInfrastructure( AWSCredentials awsCredentials )
     {
         Infrastructure infrastructure;
         if ( isNotEmpty( jobDefinition ) && isNotEmpty( jobQueue ) && isEmpty( infrastructureCapabilities ) )
         {
             infrastructure = new Infrastructure(
-                    BenchmarkJobScheduler.resolveJobQueueName( jobQueue, awsCredentials.awsCredentialsProvider(), awsCredentials.awsRegion(), batchStack ),
+                    BenchmarkJobScheduler.resolveOutputRef( jobQueue, awsCredentials.awsCredentialsProvider(), awsCredentials.awsRegion(), batchStack ),
                     jobDefinition );
         }
         else if ( isEmpty( jobDefinition ) && isEmpty( jobQueue ) && isNotEmpty( infrastructureCapabilities ) )

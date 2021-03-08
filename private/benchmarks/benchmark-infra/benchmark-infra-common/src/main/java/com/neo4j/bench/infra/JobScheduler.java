@@ -54,6 +54,16 @@ public interface JobScheduler
      */
     List<JobStatus> jobsStatuses( List<JobId> jobIds );
 
+    JobId scheduleStoreUpgrade( URI artifactBaseURI,
+                                String sanitizedJobName,
+                                String newVersion,
+                                String oldVersion,
+                                String workloadName,
+                                String storeName,
+                                URI originDataSetBaseUri,
+                                URI destDataSetBaseUri,
+                                String recordFormat );
+
     public interface JobRequestConsumer extends Consumer<SubmitJobRequest>
     {
     }

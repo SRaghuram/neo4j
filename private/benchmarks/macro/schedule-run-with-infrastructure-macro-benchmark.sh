@@ -125,7 +125,7 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
   --db-edition \
   ENTERPRISE \
   --jvm \
-  /usr/lib/jvm/oracle-jdk-8/bin/java \
+  /usr/lib/jvm/oracle-jdk-11/bin/java \
   --profilers \
   "$profilers" \
   --warmup-count \
@@ -173,4 +173,5 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
   --batch-stack \
   "$batch_stack" \
   ${dataset_base_uri:+--dataset-base-uri $dataset_base_uri} \
-  ${recordings_base_uri:+--recordings-base-uri $recordings_base_uri}
+  ${recordings_base_uri:+--recordings-base-uri $recordings_base_uri} \
+  --upgrade-store

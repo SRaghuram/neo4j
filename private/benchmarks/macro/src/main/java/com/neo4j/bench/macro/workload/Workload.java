@@ -42,6 +42,8 @@ public class Workload
     private static final String SCHEMA = "schema";
     private static final String DATABASE_NAME = "databaseName";
     private static final String QUERY_PARTITION_SIZE = "queryPartitionSize";
+    private static final String RECORD_FORMAT = "recordFormat";
+    private static final String DEFAULT_RECORD_FORMAT = "high_limit";
 
     private final List<Query> queries;
     private final String name;
@@ -49,6 +51,7 @@ public class Workload
     private final Schema schema;
     private final DatabaseName databaseName;
     private final int queryPartitionSize;
+    private final String recordFormat;
 
     public static Workload fromName( String workloadName, Resources resources, DeploymentMode mode )
     {
@@ -126,6 +129,7 @@ public class Workload
             Map<String,Object> config = deserializeGroupConfigJson( workloadConfigFile );
             assertConfigHasAllAndOnlyExpectedKeys( config );
             String workloadName = ((String) config.get( NAME )).trim();
+            String recordFormat = ((String) config.getOrDefault( RECORD_FORMAT, DEFAULT_RECORD_FORMAT )).trim();
             List<Query> queries = AdditionalQueries.queriesFor( workloadName, mode );
 
             if ( config.containsKey( QUERIES ) )
@@ -166,7 +170,7 @@ public class Workload
                 queryPartitionSize = Integer.parseInt( config.get( QUERY_PARTITION_SIZE ).toString() );
             }
 
-            return new Workload( queries, workloadName, workloadConfigFile, schema, databaseName, queryPartitionSize );
+            return new Workload( queries, workloadName, workloadConfigFile, schema, databaseName, queryPartitionSize, recordFormat );
         }
         catch ( WorkloadConfigException e )
         {
@@ -217,6 +221,7 @@ public class Workload
         invalidKeys.remove( DATABASE_NAME );
         // has default value, is optional
         invalidKeys.remove( QUERY_PARTITION_SIZE );
+        invalidKeys.remove( RECORD_FORMAT );
 
         if ( !workloadConfig.containsKey( NAME ) )
         {
@@ -256,7 +261,13 @@ public class Workload
         }
     }
 
-    private Workload( List<Query> queries, String name, Path configFile, Schema schema, DatabaseName databaseName, int queryPartitionSize )
+    private Workload( List<Query> queries,
+                      String name,
+                      Path configFile,
+                      Schema schema,
+                      DatabaseName databaseName,
+                      int queryPartitionSize,
+                      String recordFormat )
     {
         this.queries = queries;
         this.name = name;
@@ -264,6 +275,7 @@ public class Workload
         this.schema = schema;
         this.databaseName = Objects.requireNonNull( databaseName );
         this.queryPartitionSize = queryPartitionSize;
+        this.recordFormat = recordFormat;
     }
 
     public Schema expectedSchema()
@@ -306,6 +318,11 @@ public class Workload
     Path configFile()
     {
         return configFile;
+    }
+
+    public String recordFormat()
+    {
+        return recordFormat;
     }
 
     @Override

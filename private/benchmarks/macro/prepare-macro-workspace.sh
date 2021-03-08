@@ -41,6 +41,7 @@ cp "../benchmark-infra/benchmark-infra-worker/target/benchmark-infra-worker.jar"
 mkdir -p "$workspace_dir/macro/target"
 cp run-report-benchmarks.sh "$workspace_dir/macro"
 cp target/macro.jar "$workspace_dir/macro/target"
+cp upgrade-store.sh "$workspace_dir"
 
 cp "../../packaging/standalone/target/neo4j-$neo4j_edition-$neo4j_version-unix.tar.gz" "$workspace_dir"
 tar -xz -f "$workspace_dir/neo4j-$neo4j_edition-$neo4j_version-unix.tar.gz" --strip-components=2 -C "$workspace_dir" "neo4j-$neo4j_edition-$neo4j_version/conf/neo4j.conf"

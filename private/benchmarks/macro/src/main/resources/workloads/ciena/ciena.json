@@ -2,6 +2,7 @@
   "name": "ciena",
   "schema": "schema.txt",
   "databaseName": "graph.db",
+  "recordFormat" : "standard",
   "queries": [
     {
       "name": "Simplified Q1 ORDER BY drniId",

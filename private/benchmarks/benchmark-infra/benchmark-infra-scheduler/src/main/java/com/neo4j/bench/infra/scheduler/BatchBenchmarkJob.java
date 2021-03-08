@@ -69,7 +69,7 @@ class BatchBenchmarkJob
                         lastJobStatus().logStreamName() );
     }
 
-    JobStatus lastJobStatus()
+    public JobStatus lastJobStatus()
     {
         return lastJobStatus;
     }

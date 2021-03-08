@@ -70,7 +70,7 @@ public class BenchmarkJobScheduler
                                                 AWSCredentials awsCredentials,
                                                 ArtifactStorage artifactStorage )
     {
-        String jobQueue = resolveJobQueueName( jobQueueRef, awsCredentials.awsCredentialsProvider(), awsCredentials.awsRegion(), batchStack );
+        String jobQueue = resolveOutputRef( jobQueueRef, awsCredentials.awsCredentialsProvider(), awsCredentials.awsRegion(), batchStack );
         return create( new Infrastructure( jobQueue, jobDefinition ),
                        batchStack,
                        awsCredentials,
@@ -97,15 +97,16 @@ public class BenchmarkJobScheduler
     }
 
     /**
-     * Resolves queue name in CloudFormation stack (where queue names are output of CloudFormation template).
+     * Resolves resource name in CloudFormation stack (where  names are output of CloudFormation template).
      *
-     * @param jobQueueRef         queue name in CloudFormation output
+     * @param outputRef           resource name in CloudFormation output
      * @param credentialsProvider AWS credentials provider
      * @param region              AWS region
      * @param stack               benchmarking batch stack name
      */
-    public static String resolveJobQueueName( String jobQueueRef, AWSCredentialsProvider credentialsProvider, String region, String stack )
+    public static String resolveOutputRef( String outputRef, AWSCredentialsProvider credentialsProvider, String region, String stack )
     {
+        LOG.info( "resolving stack output reference {}", outputRef );
         AmazonCloudFormation amazonCloudFormation = AmazonCloudFormationClientBuilder.standard()
                                                                                      .withCredentials( credentialsProvider )
                                                                                      .withRegion( region )
@@ -115,10 +116,10 @@ public class BenchmarkJobScheduler
                                    .getStacks()
                                    .stream()
                                    .flatMap( stacks -> stacks.getOutputs().stream() )
-                                   .filter( output -> output.getOutputKey().equals( jobQueueRef ) )
+                                   .filter( output -> output.getOutputKey().equals( outputRef ) )
                                    .map( Output::getOutputValue )
                                    .findFirst()
-                                   .orElseThrow( () -> new RuntimeException( format( "job queue %s not found in stack %s ", jobQueueRef, stack ) ) );
+                                   .orElseThrow( () -> new RuntimeException( format( "resource output \"%s\" not found in stack %s", outputRef, stack ) ) );
     }
 
     // for testing
@@ -239,6 +240,47 @@ public class BenchmarkJobScheduler
         return jobId;
     }
 
+    public JobId scheduleStoreUpgrade( Workspace workspace,
+                                       URI originDataSetBaseUri,
+                                       URI destDataSetBaseUri,
+                                       String newVersion,
+                                       String oldVersion,
+                                       String workloadName,
+                                       String storeName,
+                                       InfraParams infraParams,
+                                       String recordFormat ) throws ArtifactStoreException
+    {
+
+        LOG.info( "scheduling store \"{}\" upgrade, from version {} to version {}, from bucket {} to {}",
+                  storeName,
+                  oldVersion,
+                  newVersion,
+                  originDataSetBaseUri,
+                  destDataSetBaseUri );
+
+        URI artifactBaseURI = uploadWorkspace( workspace, infraParams );
+
+        String jobName = format( "upgrade-%s-%s", newVersion, oldVersion );
+        String sanitizedJobName = InfraNamesHelper.sanitizeJobName( jobName );
+
+        JobId jobId = jobScheduler.scheduleStoreUpgrade( artifactBaseURI,
+                                                         sanitizedJobName,
+                                                         newVersion,
+                                                         oldVersion,
+                                                         workloadName,
+                                                         storeName,
+                                                         originDataSetBaseUri,
+                                                         destDataSetBaseUri,
+                                                         recordFormat );
+
+        LOG.info( "store upgrade scheduled, with id {}", jobId.id() );
+        scheduledJobs.put( jobId, BatchBenchmarkJob.newJob( jobName,
+                                                            null,
+                                                            new JobStatus( jobId, null, null, null ),
+                                                            Clock.systemDefaultZone() ) );
+        return jobId;
+    }
+
     public Collection<BatchBenchmarkJob> awaitFinished()
     {
 
@@ -283,6 +325,11 @@ public class BenchmarkJobScheduler
         LOG.info( "creating job parameters json in {}", jobParameterJson );
         JsonUtil.serializeJson( jobParameterJson, jobParams );
 
+        return uploadWorkspace( workspace, infraParams );
+    }
+
+    private URI uploadWorkspace( Workspace workspace, InfraParams infraParams ) throws ArtifactStoreException
+    {
         URI artifactBaseURI = infraParams.artifactBaseUri();
         artifactStorage.uploadBuildArtifacts( artifactBaseURI, workspace );
         LOG.info( "uploaded build artifacts into {}", artifactBaseURI );

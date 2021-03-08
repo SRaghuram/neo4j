@@ -25,6 +25,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class WorkspaceTest
@@ -197,5 +198,25 @@ public class WorkspaceTest
         assertThat( format( "Found: %s", workspaceFiles ), workspaceFiles, containsInAnyOrder( childFile1, childFile2 ) );
         List<String> workspaceKeys = workspace.allArtifactKeys();
         assertThat( format( "Found: %s", workspaceKeys ), workspaceKeys, containsInAnyOrder( "folder1/file1.txt", "folder1/folder2/file2.txt" ) );
+    }
+
+    @Test
+    public void createUpgradeStoreWorkspace( @TempDir Path workspaceDir ) throws IOException
+    {
+        // given
+        Files.createFile( workspaceDir.resolve( "neo4j.conf" ) );
+        Files.createFile( workspaceDir.resolve( "benchmark-infra-worker.jar" ) );
+        Files.createDirectories( workspaceDir.resolve( "macro/target" ) );
+        Files.createFile( workspaceDir.resolve( "macro/target/macro.jar" ) );
+        Files.createFile( workspaceDir.resolve( "macro/run-report-benchmarks.sh" ) );
+        Files.createFile( workspaceDir.resolve( Workspace.JOB_PARAMETERS_JSON ) );
+        Files.createFile( workspaceDir.resolve( "upgrade-store.sh" ) );
+
+        Workspace workspace = Workspace.defaultMacroEmbeddedWorkspace( workspaceDir );
+        // when
+        Workspace upgradeStoreWorkspace = Workspace.defaultUpgradeStoreWorkspace( workspace );
+        // then
+        assertEquals( workspace.get( Workspace.BENCHMARKING_JAR ), upgradeStoreWorkspace.get( Workspace.BENCHMARKING_JAR ) );
+        assertEquals( "upgrade-store.sh", workspaceDir.relativize( upgradeStoreWorkspace.get( Workspace.UPGRADE_STORE_SCRIPT ) ).toString() );
     }
 }

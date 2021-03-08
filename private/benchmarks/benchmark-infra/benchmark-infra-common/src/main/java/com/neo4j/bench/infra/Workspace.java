@@ -10,6 +10,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.io.FileFilter;
 import java.io.IOException;
@@ -20,11 +22,11 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -42,6 +44,8 @@ public class Workspace
     public static final String BENCHMARKING_JAR = "tool_jar";
     public static final String RUN_SCRIPT = "run_script";
     public static final String NEO4J_ARCHIVE = "neo4j_archive";
+    public static final String UPGRADE_STORE_SCRIPT = "upgrade_store_script";
+    public static final String MACRO_JAR = "macro/target/macro.jar";
 
     public static Workspace defaultMacroEmbeddedWorkspace( Path workspaceDir )
     {
@@ -49,7 +53,7 @@ public class Workspace
                 .create( workspaceDir )
                 .withArtifact( NEO4J_CONFIG, "neo4j.conf" )
                 .withArtifact( WORKER_JAR, "benchmark-infra-worker.jar" )
-                .withArtifact( BENCHMARKING_JAR, "macro/target/macro.jar" )
+                .withArtifact( BENCHMARKING_JAR, MACRO_JAR )
                 .withArtifact( RUN_SCRIPT, "macro/run-report-benchmarks.sh" )
                 .withArtifact( JOB_PARAMETERS_JSON, JOB_PARAMETERS_JSON )
                 .build();
@@ -62,7 +66,7 @@ public class Workspace
                 .withArtifact( NEO4J_CONFIG, "neo4j.conf" )
                 .withArtifact( WORKER_JAR, "benchmark-infra-worker.jar" )
                 .withArtifact( NEO4J_ARCHIVE, format( "%s-unix.tar.gz", neo4jPath ) )
-                .withArtifact( BENCHMARKING_JAR, "macro/target/macro.jar" )
+                .withArtifact( BENCHMARKING_JAR, MACRO_JAR )
                 .withArtifact( RUN_SCRIPT, "macro/run-report-benchmarks.sh" )
                 .withArtifact( JOB_PARAMETERS_JSON, JOB_PARAMETERS_JSON )
                 .build();
@@ -78,6 +82,18 @@ public class Workspace
                 .withArtifact( BENCHMARKING_JAR, "micro/target/micro-benchmarks.jar" )
                 .withArtifact( RUN_SCRIPT, "micro/run-report-benchmarks.sh" )
                 .withArtifact( JOB_PARAMETERS_JSON, JOB_PARAMETERS_JSON )
+                .build();
+    }
+
+    public static Workspace defaultUpgradeStoreWorkspace( Workspace workspace )
+    {
+        return Workspace
+                .create( workspace.baseDir() )
+                .withArtifact( BENCHMARKING_JAR, workspace.baseDir()
+                                                          .relativize( requireNonNull( workspace.get( BENCHMARKING_JAR ),
+                                                                                       "benchmarking jar is missing from workspace" ) )
+                                                          .toString() )
+                .withArtifact( UPGRADE_STORE_SCRIPT, "upgrade-store.sh" )
                 .build();
     }
 
@@ -139,15 +155,15 @@ public class Workspace
 
         public Builder withArtifact( String key, String file )
         {
-            Objects.requireNonNull( file, "build artifacts cannot be null" );
-            Objects.requireNonNull( key, "build artifacts cannot be null" );
+            requireNonNull( file, "build artifacts cannot be null" );
+            requireNonNull( key, "build artifacts cannot be null" );
             this.artifacts.put( key, file );
             return this;
         }
 
         public Builder withFilesRecursively( FileFilter fileFilter )
         {
-            Objects.requireNonNull( fileFilter, "file filter cannot be null" );
+            requireNonNull( fileFilter, "file filter cannot be null" );
             this.fileFilter = fileFilter;
             return this;
         }
@@ -190,7 +206,7 @@ public class Workspace
 
     public static Builder create( Path baseDir )
     {
-        Objects.requireNonNull( baseDir, "workspace base path cannot be null" );
+        requireNonNull( baseDir, "workspace base path cannot be null" );
         return new Builder( baseDir );
     }
 
@@ -244,5 +260,11 @@ public class Workspace
     public int hashCode()
     {
         return HashCodeBuilder.reflectionHashCode( this );
+    }
+
+    @Override
+    public String toString()
+    {
+        return ToStringBuilder.reflectionToString( this, ToStringStyle.SHORT_PREFIX_STYLE );
     }
 }

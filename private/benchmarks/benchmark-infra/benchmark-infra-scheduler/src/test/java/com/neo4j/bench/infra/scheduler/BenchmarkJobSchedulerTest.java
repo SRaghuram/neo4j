@@ -6,6 +6,7 @@
 package com.neo4j.bench.infra.scheduler;
 
 import com.google.common.collect.Queues;
+import com.google.common.io.Files;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.submit.CreateJob;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
@@ -32,7 +33,6 @@ import org.mockito.stubbing.Answer;
 
 import java.io.File;
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collection;
@@ -77,7 +77,7 @@ public class BenchmarkJobSchedulerTest
                                              "awsSecretAccessKey",
                                              "awsRegion" );
 
-        File workDir = Files.createTempDirectory( tempDir, "work_dir" ).toFile();
+        File workDir = java.nio.file.Files.createTempDirectory( tempDir, "work_dir" ).toFile();
         workspace = Workspace.create( workDir.toPath() ).build();
         benchmarkJobScheduler = BenchmarkJobScheduler.create( jobScheduler, artifactStorage, awsCredentials, Duration.ofSeconds( 1 ) );
     }
@@ -257,6 +257,59 @@ public class BenchmarkJobSchedulerTest
         assertCreateJob( benchmarkJob, testRunId, actualCreateJob );
     }
 
+    @Test
+    @Timeout( 10_000 )
+    public void scheduleStoreUpgradeAwaitSuccess( @TempDir Path workspaceDir ) throws Exception
+    {
+        // given
+
+        // prepare workspace
+        Files.createParentDirs( workspaceDir.resolve( Workspace.MACRO_JAR ).toFile() );
+        java.nio.file.Files.createFile( workspaceDir.resolve( Workspace.MACRO_JAR ) );
+        java.nio.file.Files.createFile( workspaceDir.resolve( "upgrade-store.sh" ) );
+
+        Workspace workspace = Workspace.create( workspaceDir ).withArtifact( Workspace.BENCHMARKING_JAR, Workspace.MACRO_JAR ).build();
+
+        URI originDataSetBaseUri = URI.create( "s3://storage/datasets" );
+        URI destDataSetBaseUri = URI.create( "s3://storage/artifacts/1/datasets" );
+        String newVersion = "4.0";
+        String oldVersion = "3.5";
+        String workloadName = "workload";
+        String storeName = "store";
+        InfraParams infraParams = getInfraParams();
+        JobId jobId = new JobId( "job-id" );
+        String recordFormat = "high_limit";
+
+        when( jobScheduler.scheduleStoreUpgrade( infraParams.artifactBaseUri(),
+                                                 "upgrade-4_0-3_5",
+                                                 newVersion,
+                                                 oldVersion,
+                                                 workloadName,
+                                                 storeName,
+                                                 originDataSetBaseUri,
+                                                 destDataSetBaseUri,
+                                                 recordFormat ) ).thenReturn( jobId );
+
+        LinkedBlockingDeque<String> jobStatuses = Queues.newLinkedBlockingDeque( asList( "SUBMITTED", "RUNNING", "SUCCEEDED" ) );
+        when( jobScheduler.jobsStatuses( anyList() ) )
+                .then( (Answer<List<JobStatus>>) invocation ->
+                        singletonList( new JobStatus( jobId, jobStatuses.take(), null, null ) ) );
+
+        // when
+        benchmarkJobScheduler
+                .scheduleStoreUpgrade( Workspace.defaultUpgradeStoreWorkspace( workspace ),
+                                       originDataSetBaseUri,
+                                       destDataSetBaseUri,
+                                       newVersion,
+                                       oldVersion,
+                                       workloadName,
+                                       storeName,
+                                       infraParams,
+                                       recordFormat );
+
+        benchmarkJobScheduler.awaitFinished();
+    }
+
     private static void assertCreateJob( BatchBenchmarkJob expectedBenchmarkJob, String expectedTestRunId, CreateJob actualCreateJob )
     {
         assertEquals( expectedBenchmarkJob.lastJobStatus().jobId().id(), actualCreateJob.job().id() );
@@ -276,17 +329,22 @@ public class BenchmarkJobSchedulerTest
 
     private JobParams<NoopBenchmarkingToolRunnerParams> getJobParams( String testRunId )
     {
-        return new JobParams<>( new InfraParams( awsCredentials,
-                                                 "resultsStoreUsername",
-                                                 "resultsStorePasswordSecretName",
-                                                 URI.create( "http://localhost" ),
-                                                 URI.create( "http://localhost/artifact/" ),
-                                                 ErrorReportingPolicy.FAIL,
-                                                 workspace ),
+        return new JobParams<>( getInfraParams(),
                                 new BenchmarkingRun<>(
                                         new BenchmarkingTool<>( NoopBenchmarkingToolRunner.class,
                                                                 new NoopBenchmarkingToolRunnerParams() ),
                                         testRunId ) );
+    }
+
+    private InfraParams getInfraParams()
+    {
+        return new InfraParams( awsCredentials,
+                                "resultsStoreUsername",
+                                "resultsStorePasswordSecretName",
+                                URI.create( "http://localhost" ),
+                                URI.create( "http://localhost/artifact/" ),
+                                ErrorReportingPolicy.FAIL,
+                                workspace );
     }
 
     public static class NoopBenchmarkingToolRunner implements BenchmarkingToolRunner<NoopBenchmarkingToolRunnerParams>

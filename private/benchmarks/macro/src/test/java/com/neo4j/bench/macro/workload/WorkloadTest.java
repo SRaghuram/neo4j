@@ -10,7 +10,6 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Resources;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -65,8 +64,9 @@ class WorkloadTest
     }
 
     @Test
-    // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
-    //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
+        // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
+        //       that is not the case for any query existing at this time, however,
+        //       and having this sanity may protect us from quietly doing dumb things in future.
     void shouldAlwaysMarkMutatingQueriesAsMutating()
     {
         try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
@@ -92,8 +92,9 @@ class WorkloadTest
     }
 
     @Test
-    // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
-    //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
+        // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
+        //       that is not the case for any query existing at this time, however,
+        //       and having this sanity may protect us from quietly doing dumb things in future.
     void shouldNeverHaveMutatingWarmupQueries()
     {
         try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
@@ -210,7 +211,7 @@ class WorkloadTest
     }
 
     @Test
-    public void workloadsShouldHaveUniquelyNamedQueries() throws IOException
+    public void workloadsShouldHaveUniquelyNamedQueries()
     {
         try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ) ) )
         {
@@ -294,6 +295,7 @@ class WorkloadTest
             Workload workload = Workload.fromFile( validWorkloadConfig, Deployment.embedded() );
             String expectedWorkloadName = workload.configFile().getFileName().toString().replace( ".json", "" );
             assertEquals( 2, workload.queryPartitionSize() );
+            assertEquals( "high_limit", workload.recordFormat() );
             assertThat( format( "Workload with config: %s%n" +
                                 "Should have name: %s%n" +
                                 "But had name: %s",
@@ -548,7 +550,7 @@ class WorkloadTest
 
     //There is some problems with parsing queries with commas,and we should not allow that.
     @Test
-    public void queriesNamesShouldNotHaveCommas() throws IOException
+    public void queriesNamesShouldNotHaveCommas()
     {
         try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {

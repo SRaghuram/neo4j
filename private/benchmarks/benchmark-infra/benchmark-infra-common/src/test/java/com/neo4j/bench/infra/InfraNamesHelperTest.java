@@ -12,6 +12,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class InfraNamesHelperTest
 {
     @Test
+    public void sanitizeOutputLogicalId()
+    {
+        // given
+        String logicalId = "MacroStoreUpgradeJobDefinition-openjdk-11";
+        // when
+        String actual = InfraNamesHelper.sanitizeOutputLogicalId( logicalId );
+        // then
+        assertEquals( "MacroStoreUpgradeJobDefinitionopenjdk11", actual );
+    }
+
+    @Test
     public void sanitizeDockerImageTag()
     {
         //given

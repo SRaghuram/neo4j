@@ -76,4 +76,50 @@ public class AWSBatchJobSchedulerTest
         assertEquals( expectedParams, jobRequestParameters );
         assertEquals( timeout, jobRequest.getTimeout() );
     }
+
+    @Test
+    public void scheduleStoreUpgrade() throws Exception
+    {
+        // given
+        AWSBatch awsBatch = mock( AWSBatch.class );
+        String jobId = "1";
+        when( awsBatch.submitJob( Mockito.any() ) ).thenReturn( new SubmitJobResult().withJobId( jobId ) );
+        AWSBatchJobScheduler jobScheduler = new AWSBatchJobScheduler( awsBatch, "job-queue", "job-definition" );
+
+        URI baseArtifactUri = URI.create( "s3://benchmarking.neohq.net/" );
+
+        Map<String,String> expectedParams = new HashMap<>();
+        expectedParams.put( InfraParams.CMD_ARTIFACT_BASE_URI, baseArtifactUri.toString() );
+        expectedParams.put( "--new-neo4j-version", "4.0" );
+        expectedParams.put( "--old-neo4j-version", "3.5" );
+        expectedParams.put( "--workload", "workload" );
+        expectedParams.put( "--db-name", "store" );
+        expectedParams.put( "--s3-dest-datasets-url", "s3://storage/artifacts/1/datasets" );
+        expectedParams.put( "--s3-origin-datasets-url", "s3://storage/datasets" );
+        expectedParams.put( "--record-format", "high_limit" );
+
+        // when
+        JobId scheduleJobId = jobScheduler.scheduleStoreUpgrade( baseArtifactUri,
+                                                                 "upgrade-4_0-3_5",
+                                                                 "4.0",
+                                                                 "3.5",
+                                                                 "workload",
+                                                                 "store",
+                                                                 URI.create( "s3://storage/datasets" ),
+                                                                 URI.create( "s3://storage/artifacts/1/datasets" ),
+                                                                 "high_limit" );
+
+        // then
+        assertEquals( new JobId( jobId ), scheduleJobId, "invalid job id in submit job request response" );
+
+        ArgumentCaptor<SubmitJobRequest> jobRequestCaptor = ArgumentCaptor.forClass( SubmitJobRequest.class );
+        verify( awsBatch ).submitJob( jobRequestCaptor.capture() );
+        SubmitJobRequest jobRequest = jobRequestCaptor.getValue();
+        Map<String,String> jobRequestParameters = jobRequest.getParameters();
+
+        assertEquals( "job-queue", jobRequest.getJobQueue() );
+        assertEquals( "job-definition", jobRequest.getJobDefinition() );
+        assertEquals( "upgrade-4_0-3_5", jobRequest.getJobName() );
+        assertEquals( expectedParams, jobRequestParameters );
+    }
 }

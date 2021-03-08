@@ -128,6 +128,40 @@ public class AWSBatchJobScheduler implements JobScheduler
     }
 
     @Override
+    public JobId scheduleStoreUpgrade( URI baseArtifactUri,
+                                       String jobName,
+                                       String newVersion,
+                                       String oldVersion,
+                                       String workloadName,
+                                       String storeName,
+                                       URI originDataSetBaseUri,
+                                       URI destDataSetBaseUri,
+                                       String recordFormat )
+    {
+        LOG.info( "scheduling upgrade job with base artifact URI {}", baseArtifactUri );
+
+        assertJobName( jobName );
+        Map<String,String> paramsMap = new HashMap<>();
+        paramsMap.put( InfraParams.CMD_ARTIFACT_BASE_URI, baseArtifactUri.toString() );
+        paramsMap.put( RunMacroWorkloadParams.CMD_WORKLOAD, workloadName );
+        paramsMap.put( RunMacroWorkloadParams.CMD_DB_NAME, storeName );
+        paramsMap.put( "--new-neo4j-version", newVersion );
+        paramsMap.put( "--old-neo4j-version", oldVersion );
+        paramsMap.put( "--s3-dest-datasets-url", destDataSetBaseUri.toString() );
+        paramsMap.put( "--s3-origin-datasets-url", originDataSetBaseUri.toString() );
+        paramsMap.put( "--record-format", recordFormat );
+
+        SubmitJobRequest submitJobRequest = new SubmitJobRequest()
+                .withJobDefinition( jobDefinition )
+                .withJobQueue( jobQueue )
+                .withJobName( jobName )
+                .withParameters( paramsMap );
+
+        SubmitJobResult submitJobResult = awsBatch.submitJob( submitJobRequest );
+        return new JobId( submitJobResult.getJobId() );
+    }
+
+    @Override
     public List<JobStatus> jobsStatuses( List<JobId> jobIds )
     {
         List<String> jobIdsAsStrings = jobIds.stream().map( JobId::id ).collect( toList() );
