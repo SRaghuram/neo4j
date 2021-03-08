@@ -176,10 +176,10 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
 
     public Set<String> getAllNames( Transaction tx, Label label )
     {
-        ResourceIterator<Node> nodes = tx.findNodes( label );
-        Set<String> usernames = nodes.stream().map( node -> (String) node.getProperty( "name" ) ).collect( Collectors.toSet() );
-        nodes.close();
-        return usernames;
+        try ( ResourceIterator<Node> nodes = tx.findNodes( label ) )
+        {
+            return nodes.stream().map( node -> (String) node.getProperty( "name" ) ).collect( Collectors.toSet() );
+        }
     }
 
     public InvalidArgumentsException logAndCreateException( String message )

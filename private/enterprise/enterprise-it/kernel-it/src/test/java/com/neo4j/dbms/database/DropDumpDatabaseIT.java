@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.LoadCommand;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.archive.Loader;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -147,12 +146,11 @@ public class DropDumpDatabaseIT
 
     boolean nodeExistsWithLabel( GraphDatabaseService db, Label label )
     {
-        var result = false;
-        try ( var tx = db.beginTx() )
+        try ( var tx = db.beginTx();
+              var nodes = tx.findNodes( label ) )
         {
-            result = tx.findNodes( label ).stream().findFirst().isPresent();
+            return nodes.stream().findFirst().isPresent();
         }
-        return result;
     }
 
     void setupConfFile( Path configDir ) throws IOException

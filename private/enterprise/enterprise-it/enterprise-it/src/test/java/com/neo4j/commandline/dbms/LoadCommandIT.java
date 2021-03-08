@@ -27,11 +27,9 @@ import org.neo4j.io.layout.Neo4jLayout;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.dbms.archive.CompressionFormat.ZSTD;
 import static org.neo4j.function.Predicates.alwaysFalse;
-import static org.neo4j.function.Predicates.alwaysTrue;
 
 @EnterpriseDbmsExtension
 class LoadCommandIT extends AbstractCommandIT
@@ -89,7 +87,7 @@ class LoadCommandIT extends AbstractCommandIT
 
         try ( Transaction tx = database.beginTx() )
         {
-            assertTrue( tx.findNodes( marker ).stream().anyMatch( alwaysTrue() ) );
+            assertThat( tx.findNodes( marker ).stream().count() ).isNotZero();
         }
     }
 
@@ -121,7 +119,7 @@ class LoadCommandIT extends AbstractCommandIT
 
         try ( Transaction tx = database.beginTx() )
         {
-            assertTrue( tx.findNodes( marker ).stream().anyMatch( alwaysTrue() ) );
+            assertThat( tx.findNodes( marker ).stream().count() ).isNotZero();
         }
     }
 
