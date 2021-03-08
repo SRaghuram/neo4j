@@ -168,7 +168,7 @@ class CompiledExpressionConverter(log: Log,
       if(orderToLeverage.nonEmpty) {
         // TODO Support compiled ordered GroupingExpression
         // UPDATE: In theory this should now be supported...
-        logger.failedToConvertProjection(projections)
+        // REMINDER: once code generation for this case is supported, remember to log compilation failures in ExpressionConversionLogger
         None
       } else {
         val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
