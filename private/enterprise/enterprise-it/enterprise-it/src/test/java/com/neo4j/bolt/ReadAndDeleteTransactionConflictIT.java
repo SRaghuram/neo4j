@@ -24,7 +24,9 @@ import org.neo4j.driver.Value;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.driver.summary.SummaryCounters;
+import org.neo4j.driver.types.Relationship;
 import org.neo4j.harness.Neo4j;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
@@ -103,6 +105,7 @@ public class ReadAndDeleteTransactionConflictIT
     @Test
     void relationshipsThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
+        int relCounter = 0;
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
@@ -112,7 +115,6 @@ public class ReadAndDeleteTransactionConflictIT
             assertThat( counters.nodesCreated() ).isEqualTo( 1 );
             assertThat( counters.relationshipsCreated() ).isEqualTo( 1000 );
 
-            int relCounter = 0;
             try ( Transaction reader = readSession.beginTransaction() )
             {
                 Result readResult;
@@ -132,17 +134,19 @@ public class ReadAndDeleteTransactionConflictIT
                     assertThat( value.asRelationship().type() ).isEqualTo( "REL" );
                 }
             }
-            assertThat( relCounter ).isLessThanOrEqualTo( 1000 );
         }
-        catch ( TransientException ignore )
+        catch ( TransientException e )
         {
             // Getting a transient exception is allowed, because that just signals to clients that their transaction conflicted, and should be retried.
+            assertThat( e.code() ).isEqualTo( Status.Transaction.Outdated.code().serialize() );
         }
+        assertThat( relCounter ).isLessThanOrEqualTo( 1000 );
     }
 
     @Test
     void relationshipsWithPropertiesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
+        int relCounter = 0;
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
@@ -152,7 +156,6 @@ public class ReadAndDeleteTransactionConflictIT
             assertThat( counters.nodesCreated() ).isEqualTo( 1 );
             assertThat( counters.relationshipsCreated() ).isEqualTo( 1000 );
 
-            int relCounter = 0;
             try ( Transaction reader = readSession.beginTransaction() )
             {
                 Result readResult;
@@ -172,17 +175,19 @@ public class ReadAndDeleteTransactionConflictIT
                     assertThat( value.asRelationship().asMap().get( "a" ) ).isIn(1L, null );
                 }
             }
-            assertThat( relCounter ).isLessThanOrEqualTo( 1000 );
         }
-        catch ( TransientException ignore )
+        catch ( TransientException e )
         {
             // Getting a transient exception is allowed, because that just signals to clients that their transaction conflicted, and should be retried.
+            assertThat( e.code() ).isEqualTo( Status.Transaction.Outdated.code().serialize() );
         }
+        assertThat( relCounter ).isLessThanOrEqualTo( 1000 );
     }
 
     @Test
     void nodesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
+        int nodeCounter = 0;
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
@@ -192,7 +197,6 @@ public class ReadAndDeleteTransactionConflictIT
             assertThat( counters.nodesCreated() ).isEqualTo( 1000 );
             assertThat( counters.relationshipsCreated() ).isEqualTo( 0 );
 
-            int nodeCounter = 0;
             try ( Transaction reader = readSession.beginTransaction() )
             {
                 Result readResult;
@@ -212,17 +216,19 @@ public class ReadAndDeleteTransactionConflictIT
                     assertThat( value.asNode() ).isNotNull();
                 }
             }
-            assertThat( nodeCounter ).isLessThanOrEqualTo( 1000 );
         }
-        catch ( TransientException ignore )
+        catch ( TransientException e )
         {
             // Getting a transient exception is allowed, because that just signals to clients that their transaction conflicted, and should be retried.
+            assertThat( e.code() ).isEqualTo( Status.Transaction.Outdated.code().serialize() );
         }
+        assertThat( nodeCounter ).isLessThanOrEqualTo( 1000 );
     }
 
     @Test
     void nodesWithPropertiesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
+        int nodeCounter = 0;
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
@@ -232,7 +238,6 @@ public class ReadAndDeleteTransactionConflictIT
             assertThat( counters.nodesCreated() ).isEqualTo( 1000 );
             assertThat( counters.relationshipsCreated() ).isEqualTo( 0 );
 
-            int nodeCounter = 0;
             try ( Transaction reader = readSession.beginTransaction() )
             {
                 Result readResult;
@@ -252,11 +257,59 @@ public class ReadAndDeleteTransactionConflictIT
                     assertThat( value.asNode().asMap().get( "a" ) ).isIn( 1L, null );
                 }
             }
-            assertThat( nodeCounter ).isLessThanOrEqualTo( 1000 );
         }
-        catch ( TransientException ignore )
+        catch ( TransientException e )
         {
             // Getting a transient exception is allowed, because that just signals to clients that their transaction conflicted, and should be retried.
+            assertThat( e.code() ).isEqualTo( Status.Transaction.Outdated.code().serialize() );
         }
+        assertThat( nodeCounter ).isLessThanOrEqualTo( 1000 );
+    }
+
+    @Test
+    void relationshipsThatAreConcurrentlyDeletedWhileStreamingPathResultThroughBoltMustBeIgnored()
+    {
+        int relCounter = 0;
+        try ( Session readSession = driver.session();
+              Session writeSession = driver.session() )
+        {
+            Result result = writeSession.run(
+                    "create (n:L4) with n unwind range(1, 1000) as x create (n)-[:REL {a: 1}]->(n)" );
+            SummaryCounters counters = result.consume().counters();
+            assertThat( counters.nodesCreated() ).isEqualTo( 1 );
+            assertThat( counters.relationshipsCreated() ).isEqualTo( 1000 );
+
+            try ( Transaction reader = readSession.beginTransaction() )
+            {
+                Result readResult;
+                try ( Transaction deleter = writeSession.beginTransaction() )
+                {
+                    // Ask for a path to go through writePath
+                    readResult = reader.run( "match p=(:L4)-[r]->() return 1 as whatever, p" );
+                    Result deleteResult = deleter.run( "match (n:L4) detach delete n" );
+                    deleteResult.consume();
+                    deleter.commit();
+                }
+
+                while ( readResult.hasNext() )
+                {
+                    Record record = readResult.next();
+                    Value value = record.get( "p" );
+                    Iterable<Relationship> relationships = value.asPath().relationships();
+                    for ( Relationship relationship : relationships )
+                    {
+                        relCounter++;
+                        assertThat( relationship.type() ).isEqualTo( "REL" );
+                        assertThat( relationship.asMap().get( "a" ) ).isIn( 1L, null );
+                    }
+                }
+            }
+        }
+        catch ( TransientException e )
+        {
+            // Getting a transient exception is allowed, because that just signals to clients that their transaction conflicted, and should be retried.
+            assertThat( e.code() ).isEqualTo( Status.Transaction.Outdated.code().serialize() );
+        }
+        assertThat( relCounter ).isLessThanOrEqualTo( 1000 );
     }
 }
