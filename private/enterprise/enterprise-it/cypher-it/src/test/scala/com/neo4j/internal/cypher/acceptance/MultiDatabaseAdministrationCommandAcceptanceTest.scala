@@ -690,7 +690,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     exception.getMessage should startWith("Invalid input. '-1' is not a valid value. Must be a non-negative integer")
-    exception.getMessage should include("(line 1, column 58 (offset: 57))")
+    exception.getMessage should include("(line 1, column 59 (offset: 58))")
   }
 
   test("should not show database with yield and return and invalid limit") {
@@ -704,7 +704,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     exception.getMessage should startWith("Invalid input. '-1' is not a valid value. Must be a non-negative integer")
-    exception.getMessage should include("(line 1, column 59 (offset: 58))")
+    exception.getMessage should include("(line 1, column 60 (offset: 59))")
   }
 
   test("should not show database with invalid order by") {
