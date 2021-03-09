@@ -222,7 +222,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
 object NodeLeftOuterHashJoinOperator {
   class LeftOuterJoinFactory(lhsOffsets: KeyOffsets) extends ArgumentStateFactory[HashTableAndSet] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): StandardHashTableAndSet =
-      new StandardHashTableAndSet(new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, memoryTracker, acceptNulls = true), memoryTracker)
+      StandardHashTableAndSet(argumentRowId, argumentRowIdsForReducers, lhsOffsets, memoryTracker)
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ConcurrentHashTableAndSet = {
       new ConcurrentHashTableAndSet(new ConcurrentHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, acceptNulls = true))
     }
@@ -236,7 +236,10 @@ object NodeLeftOuterHashJoinOperator {
     def keysWithoutRhsMatch: java.util.Iterator[Value]
   }
 
-  class StandardHashTableAndSet(val hashTable: HashTable, memoryTracker: MemoryTracker) extends HashTableAndSet {
+  class StandardHashTableAndSet private (
+    val hashTable: HashTable, // We are responsible for this instance
+    private[this] val memoryTracker: MemoryTracker
+  ) extends HashTableAndSet {
     private val scopedMemoryTracker = memoryTracker.getScopedMemoryTracker
     private val rhsKeys: MutableSet[Value] = HeapTrackingCollections.newSet[Value](scopedMemoryTracker)
 
@@ -257,6 +260,7 @@ object NodeLeftOuterHashJoinOperator {
     }
 
     override def close(): Unit = {
+      hashTable.close()
       scopedMemoryTracker.close()
     }
 
@@ -265,6 +269,19 @@ object NodeLeftOuterHashJoinOperator {
 
   object StandardHashTableAndSet {
     private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[StandardHashTableAndSet])
+
+    /**
+     * Factory method to create a new [[StandardHashTableAndSet]]
+     */
+    def apply(
+      argumentRowId: Long,
+      argumentRowIdsForReducers: Array[Long],
+      lhsOffsets: KeyOffsets,
+      memoryTracker: MemoryTracker
+    ): StandardHashTableAndSet = {
+      val table = new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, memoryTracker, acceptNulls = true)
+      new StandardHashTableAndSet(table, memoryTracker)
+    }
   }
 
   class ConcurrentHashTableAndSet(val hashTable: ConcurrentHashTable) extends HashTableAndSet {
