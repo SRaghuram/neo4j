@@ -34,7 +34,7 @@ class TransientFailurePredicate implements Predicate<Throwable>
 
     private static boolean isLockExpired( Throwable error )
     {
-        return error instanceof TransactionFailureException &&
-               ((TransactionFailureException) error.getCause()).status() == LeaseExpired;
+        return error instanceof TransactionFailureException && ((TransactionFailureException) error).status() == LeaseExpired ||
+                error.getCause() instanceof TransactionFailureException && ((TransactionFailureException) error.getCause()).status() == LeaseExpired;
     }
 }
