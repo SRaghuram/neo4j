@@ -941,9 +941,39 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     evaluate(compiled, params(doubleValue(3.2))) should equal(longValue(3))
     evaluate(compiled, params(intValue(3))) should equal(intValue(3))
+    evaluate(compiled, params(booleanValue(true))) should equal(intValue(1))
     evaluate(compiled, params(stringValue("3"))) should equal(longValue(3))
     evaluate(compiled, params(stringValue("three"))) should equal(NO_VALUE)
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+  }
+
+  test("toIntegerOrNull function") {
+    val compiled = compile(function("toIntegerOrNull", parameter(0)))
+    evaluate(compiled, params(doubleValue(3.2))) should equal(longValue(3))
+    evaluate(compiled, params(intValue(3))) should equal(intValue(3))
+    evaluate(compiled, params(booleanValue(true))) should equal(intValue(1))
+    evaluate(compiled, params(stringValue("3"))) should equal(longValue(3))
+    evaluate(compiled, params(stringValue("three"))) should equal(NO_VALUE)
+    evaluate(compiled, params(VirtualValues.EMPTY_MAP)) should equal(NO_VALUE)
+    evaluate(compiled, params(VirtualValues.EMPTY_LIST)) should equal(NO_VALUE)
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled, params(evaluate(compiled, params(DateValue.MIN_VALUE)))) should equal(NO_VALUE)
+  }
+
+  test("toIntegerList function") {
+    val compiled = compile(function("toIntegerList", parameter(0)))
+
+    evaluate(compiled, params(list(doubleValue(3.2)))) should equal(list(longValue(3)))
+    evaluate(compiled, params(list(intValue(3)))) should equal(list(intValue(3)))
+    evaluate(compiled, params(list(stringValue("3"), intValue(2), doubleValue(1.2)))) should equal(
+      list(longValue(3), longValue(2), longValue(1)))
+    evaluate(compiled, params(list(stringValue("three")))) should equal(list(NO_VALUE))
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled, params(list(booleanValue(true)))) should equal(list(longValue(1)))
+    evaluate(compiled, params(list(stringValue("1"), stringValue("2wo"), stringValue("three")))) should
+      equal(list(longValue(1), NO_VALUE, NO_VALUE))
+    evaluate(compiled, params(list(doubleValue(3.2), VirtualValues.EMPTY_MAP))) should equal(list(longValue(3), NO_VALUE))
+    evaluate(compiled, params(list(NO_VALUE))) should equal(list(NO_VALUE))
   }
 
   test("toString function") {

@@ -79,10 +79,17 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     )
   }
 
-  test("cant use toInteger() on booleans") {
+  test("cant use toInteger() on point") {
     executeAndEnsureError(
-      "RETURN toInteger(true)",
-      "Type mismatch: expected Float, Integer, Number or String but was Boolean (line 1, column 18 (offset: 17))"
+      "RETURN toInteger(point({ x: 2.3, y: 4.5, crs: 'cartesian' }))",
+      "Type mismatch: expected Boolean, Float, Integer, Number or String but was Point (line 1, column 18 (offset: 17))"
+    )
+  }
+
+  test("cant use toIntegerList() on string") {
+    executeAndEnsureError(
+      "RETURN toIntegerList('foo')",
+      "Type mismatch: expected List<T> but was String (line 1, column 22 (offset: 21))"
     )
   }
 

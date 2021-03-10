@@ -2338,11 +2338,34 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)
       }
 
+    case functions.ToIntegerOrNull =>
+      for (in <- compileExpression(c.args.head, id)) yield {
+        val variableName = namer.nextVariableName()
+        val lazySet = oneTime(declareAndAssign(variableName,
+          noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toIntegerOrNull"), in.ir))))
+
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(variableName, noValue))
+
+        IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)    }
+
     case functions.ToInteger =>
       for (in <- compileExpression(c.args.head, id)) yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toInteger"), in.ir))))
+
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(variableName, noValue))
+
+        IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)
+      }
+
+    case functions.ToIntegerList =>
+      for (in <- compileExpression(c.args.head, id)) yield {
+        val variableName = namer.nextVariableName()
+        val lazySet = oneTime(declareAndAssign(variableName,
+          noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("toIntegerList"), in.ir))))
 
         val ops = block(lazySet, load[AnyValue](variableName))
         val nullChecks = block(lazySet, equal(variableName, noValue))
