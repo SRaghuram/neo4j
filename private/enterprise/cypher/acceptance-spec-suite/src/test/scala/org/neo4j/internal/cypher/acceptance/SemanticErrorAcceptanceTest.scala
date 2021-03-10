@@ -5,8 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.util
-
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.InterpretedRuntimeName
 import org.neo4j.cypher.internal.PipelinedRuntimeName
@@ -14,6 +12,7 @@ import org.neo4j.cypher.internal.SlottedRuntimeName
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
 
+import java.util
 import scala.collection.JavaConverters.asScalaIteratorConverter
 
 class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
@@ -241,7 +240,8 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
                           """.stripMargin,
       List(
         "reduce(...) requires '| expression' (an accumulation expression) (line 3, column 8 (offset: 84))",
-        """Encountered " ")" ")"" at line 3, column 69."""
+        """Encountered " ")" ")"" at line 3, column 69.""",
+        "Invalid input ')'"
       )
     )
   }
@@ -251,7 +251,8 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
       "match (a) where id(a) = 0 return reduce(i = 0, x in a.List : i + x.prop)",
       List(
         "reduce(...) requires '| expression' (an accumulation expression) (line 1, column 34 (offset: 33))",
-        """Encountered " ")" ")"" at line 1, column 72."""
+        """Encountered " ")" ")"" at line 1, column 72.""",
+        "Invalid input ')"
       )
     )
 

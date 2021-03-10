@@ -238,3 +238,12 @@ Feature "ExpressionAcceptance": Scenario "Fail at runtime when trying to index s
 Feature "ListOperations": Scenario "Fail at runtime when trying to index into a list with a list"
 Feature "SkipLimitAcceptanceTest": Scenario "Floating point parameter for LIMIT should fail"
 Feature "SkipLimitAcceptanceTest": Scenario "Floating point parameter for LIMIT with ORDER BY should fail"
+
+// JavaCC fails invalid hex string during parsing, while parboiled defers failing until semantic checking
+Feature "Literals3 - Hexadecimal integer": Scenario "Fail on an hexadecimal literal containing a upper case invalid alphanumeric character"
+Feature "Literals3 - Hexadecimal integer": Scenario "Fail on an incomplete hexadecimal integer"
+Feature "Literals3 - Hexadecimal integer": Scenario "Fail on an hexadecimal literal containing a lower case invalid alphanumeric character"
+
+// Failing with M16 TCK - require investigation
+Feature "Literals2 - Decimal integer": Scenario "Fail on an integer containing a alphabetic character"
+Feature "Literals7 - List": Scenario "Fail on a nested list with non-matching brackets"
