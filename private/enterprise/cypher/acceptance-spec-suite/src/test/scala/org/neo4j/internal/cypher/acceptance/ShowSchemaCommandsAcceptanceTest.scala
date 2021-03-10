@@ -7,6 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.util
 import java.util.concurrent.ThreadLocalRandom
+
 import org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
@@ -531,53 +532,6 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // THEN
     exception.getMessage should include("Variable `foo` not defined")
-  }
-
-  test("should fail to show index with additional clauses") {
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("SHOW INDEXES YIELD * WITH * MATCH (n) RETURN n")
-    }
-
-    // THEN
-    // should start with 'YIELD may only be followed by RETURN', but parboiled can't parse it (javaCC could)
-    exception.getMessage should startWith("Invalid input 'I': expected 'h/H'")
-  }
-
-  test("should fail to show index with clauses in front") {
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("UNWIND range(1,10) as b SHOW INDEXES YIELD * RETURN *")
-    }
-
-    // THEN
-    // should start with 'SHOW INDEXES may only be preceded by USE GRAPH', but parboiled can't parse it (javaCC could)
-    exception.getMessage should startWith("Invalid input 'H': expected 't/T' or 'e/E'")
-  }
-
-  test("should fail to show index with clauses inside") {
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("SHOW INDEXES WITH name, type RETURN *")
-    }
-
-    // THEN
-    // should start with 'SHOW INDEXES may only be followed by WHERE or YIELD', but parboiled can't parse it (javaCC could)
-    exception.getMessage should startWith("Invalid input 'I': expected 'h/H'")
-  }
-
-  test("should fail with incorrect clause order") {
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("SHOW INDEXES WHERE name = 'a' YIELD * RETURN *")
-    }
-
-    // THEN
-    exception.getMessage should startWith("Invalid input 'Y': expected")
   }
 
   // Planner tests
