@@ -64,7 +64,7 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
 
     protected void editionInvariants( GlobalModule globalModule, Dependencies dependencies )
     {
-        ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
+        ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig(), globalModule.getGlobalClock() );
 
         constraintSemantics = new EnterpriseConstraintSemantics();
 

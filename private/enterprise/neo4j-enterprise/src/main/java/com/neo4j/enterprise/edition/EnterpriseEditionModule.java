@@ -110,7 +110,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         this.dependencies = dependencies;
 
         satisfyEnterpriseOnlyDependencies( globalModule );
-        ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
+        ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig(), globalModule.getGlobalClock() );
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
         fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.Single( globalModule.getGlobalLife(), dependencies, globalModule.getLogService() );
         SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalModule.getGlobalConfig() );

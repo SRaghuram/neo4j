@@ -15,7 +15,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.tracing.FlushEventOpportunity;
-import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.util.VisibleForTesting;
 
@@ -43,9 +42,9 @@ public class ConfigurableIOLimiter implements IOLimiter
     @SuppressWarnings( "unused" ) // Updated via stateUpdater
     private volatile long state;
 
-    public ConfigurableIOLimiter( Config config )
+    public ConfigurableIOLimiter( Config config, SystemNanoClock clock )
     {
-        this( config, LockSupport::parkNanos, Clocks.nanoClock() );
+        this( config, LockSupport::parkNanos, clock );
     }
 
     @VisibleForTesting
