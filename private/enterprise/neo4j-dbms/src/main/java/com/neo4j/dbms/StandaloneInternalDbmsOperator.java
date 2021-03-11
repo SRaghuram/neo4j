@@ -10,14 +10,11 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
+import org.neo4j.graphdb.event.DatabaseEventContext;
+import org.neo4j.graphdb.event.DatabaseEventListener;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.kernel.monitoring.CreateDatabaseEvent;
-import org.neo4j.kernel.monitoring.DropDatabaseEvent;
-import org.neo4j.kernel.monitoring.InternalDatabaseEventListener;
 import org.neo4j.kernel.monitoring.PanicDatabaseEvent;
-import org.neo4j.kernel.monitoring.StartDatabaseEvent;
-import org.neo4j.kernel.monitoring.StopDatabaseEvent;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
@@ -30,7 +27,7 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
  * Initially this is only registered as an event handler to detect {@code panic} events in {@link DatabaseHealth}
  * classes.
  */
-public class StandaloneInternalDbmsOperator extends DbmsOperator implements InternalDatabaseEventListener
+public class StandaloneInternalDbmsOperator extends DbmsOperator implements DatabaseEventListener
 {
     private final Set<NamedDatabaseId> shouldStop = new CopyOnWriteArraySet<>();
     private final Log log;
@@ -62,28 +59,19 @@ public class StandaloneInternalDbmsOperator extends DbmsOperator implements Inte
     }
 
     @Override
-    public void databaseStart( StartDatabaseEvent startDatabaseEvent )
+    public void databaseStart( DatabaseEventContext eventContext )
     { //no-op
     }
 
     @Override
-    public void databaseShutdown( StopDatabaseEvent stopDatabaseEvent )
+    public void databaseShutdown( DatabaseEventContext eventContext )
     { //no-op
     }
 
     @Override
-    public void databasePanic( PanicDatabaseEvent panic )
+    public void databasePanic( DatabaseEventContext eventContext )
     {
+        PanicDatabaseEvent panic = (PanicDatabaseEvent) eventContext;
         stopOnPanic( panic.getDatabaseId(), panic.getCauseOfPanic() );
-    }
-
-    @Override
-    public void databaseCreate( CreateDatabaseEvent createDatabaseEvent )
-    { //no-op
-    }
-
-    @Override
-    public void databaseDrop( DropDatabaseEvent eventContext )
-    { //no-op
     }
 }

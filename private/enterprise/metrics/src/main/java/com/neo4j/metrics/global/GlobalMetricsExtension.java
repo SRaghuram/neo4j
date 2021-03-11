@@ -13,24 +13,22 @@ import com.neo4j.metrics.output.EventReporterBuilder;
 import com.neo4j.metrics.output.RotatableCsvReporter;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.graphdb.event.DatabaseEventContext;
+import org.neo4j.graphdb.event.DatabaseEventListenerAdapter;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.kernel.monitoring.CreateDatabaseEvent;
 import org.neo4j.kernel.monitoring.DatabaseEventListeners;
-import org.neo4j.kernel.monitoring.DropDatabaseEvent;
-import org.neo4j.kernel.monitoring.InternalDatabaseEventListener;
-import org.neo4j.kernel.monitoring.PanicDatabaseEvent;
-import org.neo4j.kernel.monitoring.StartDatabaseEvent;
-import org.neo4j.kernel.monitoring.StopDatabaseEvent;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.log4j.RotatingLogFileWriter;
 
+import static com.neo4j.configuration.MetricsSettings.csv_enabled;
 import static com.neo4j.configuration.MetricsSettings.csv_path;
 import static com.neo4j.configuration.MetricsSettings.metrics_enabled;
 import static com.neo4j.configuration.MetricsSettings.metrics_filter;
+import static com.neo4j.configuration.MetricsSettings.metrics_namespaces_enabled;
 import static com.neo4j.metrics.database.DatabaseMetricsExporter.databaseMetricsPrefix;
 
 public class GlobalMetricsExtension implements Lifecycle, MetricsManager
@@ -57,7 +55,7 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
                 config.get( MetricsSettings.csv_rotation_threshold ), config.get( MetricsSettings.csv_max_archives ),
                 config.get( MetricsSettings.csv_archives_compression ), RotatingLogFileWriter::new, logger );
         this.metricsRegister = new MetricsRegister( registry, config.get( metrics_filter ) );
-        this.metricsFileCleaner = new MetricsFileCleaner( config, csvReporter );
+        this.metricsFileCleaner = new MetricsFileCleaner( logger, config, csvReporter );
         this.configured =
                 new EventReporterBuilder( config, registry, logger, life, fileSystemAbstraction, dependencies.portRegister(), csvReporter ).configure();
         this.databaseEventListeners = dependencies.databaseEventListeners();
@@ -117,44 +115,30 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
         return configured;
     }
 
-    private static final class MetricsFileCleaner implements InternalDatabaseEventListener
+    private static final class MetricsFileCleaner extends DatabaseEventListenerAdapter
     {
+        private final Log logger;
         private final Config config;
         private final RotatableCsvReporter csvReporter;
 
-        private MetricsFileCleaner( Config config, RotatableCsvReporter csvReporter )
+        private MetricsFileCleaner( Log logger, Config config, RotatableCsvReporter csvReporter )
         {
+            this.logger = logger;
             this.config = config;
             this.csvReporter = csvReporter;
         }
 
         @Override
-        public void databaseStart( StartDatabaseEvent startDatabaseEvent )
+        public void databaseDrop( DatabaseEventContext eventContext )
         {
-        }
-
-        @Override
-        public void databaseShutdown( StopDatabaseEvent stopDatabaseEvent )
-        {
-        }
-
-        @Override
-        public void databasePanic( PanicDatabaseEvent panicDatabaseEvent )
-        {
-        }
-
-        @Override
-        public void databaseCreate( CreateDatabaseEvent createDatabaseEvent )
-        {
-        }
-
-        @Override
-        public void databaseDrop( DropDatabaseEvent eventContext )
-        {
-            if ( !config.get( MetricsSettings.metrics_namespaces_enabled ) )
+            if ( !config.get( metrics_namespaces_enabled ) )
             {
-                // TODO: here we might delete metrics that are actually not part of the database since there are collisions if the namespace is not enabled and
-                // TODO: we might get away with a blacklist filter, but not sure if that is needed at all since namespace should be on by default
+                // Here we might delete metrics that are actually NOT part of the database since there are collisions if the namespace is not enabled
+                if ( config.get( csv_enabled ) )
+                {
+                    logger.warn( "Unable to remove database specific metric files because metric namespaces are not enabled. In order to remove this " +
+                            "warning you have set '" + metrics_namespaces_enabled.name() + "=true' in your configuration file." );
+                }
                 return;
             }
             csvReporter.deleteAll( databaseMetricsPrefix( config, eventContext.getDatabaseName() ) );
