@@ -23,7 +23,7 @@ import static com.neo4j.configuration.EnterpriseEditionSettings.max_number_of_da
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
-public abstract class MultiDatabaseManager<DB extends CompositeDatabaseContext> extends AbstractDatabaseManager<DB>
+public abstract class MultiDatabaseManager<DB extends EnterpriseDatabaseContext> extends AbstractDatabaseManager<DB>
 {
     private final long maximumNumberOfDatabases;
     private volatile boolean databaseManagerStarted;
@@ -172,13 +172,18 @@ public abstract class MultiDatabaseManager<DB extends CompositeDatabaseContext> 
     {
         try
         {
-            log.info( "Starting '%s'.", namedDatabaseId );
-            context.compositeDatabase().start();
+            startDatabase0( namedDatabaseId, context );
         }
         catch ( Throwable t )
         {
             throw new DatabaseManagementException( format( "Unable to start database `%s`", namedDatabaseId ), t );
         }
+    }
+
+    protected void startDatabase0( NamedDatabaseId namedDatabaseId, DB context )
+    {
+        log.info( "Starting '%s'.", namedDatabaseId );
+        context.enterpriseDatabase().start();
     }
 
     @Override
@@ -187,7 +192,7 @@ public abstract class MultiDatabaseManager<DB extends CompositeDatabaseContext> 
         try
         {
             log.info( "Stopping '%s'.", namedDatabaseId );
-            context.compositeDatabase().stop();
+            context.enterpriseDatabase().stop();
         }
         catch ( Throwable t )
         {

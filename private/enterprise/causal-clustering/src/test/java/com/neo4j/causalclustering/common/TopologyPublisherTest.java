@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.dbms.TopologyPublisher;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -14,7 +15,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-class DatabaseTopologyNotifierTest
+class TopologyPublisherTest
 {
     @Test
     void shouldNotifyTopologyServiceOnStartAndStop()
@@ -22,7 +23,7 @@ class DatabaseTopologyNotifierTest
         // given
         var databaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
         var topologyService = mock( TopologyService.class );
-        var notifier = new DatabaseTopologyNotifier( databaseId, topologyService );
+        var notifier = TopologyPublisher.from( databaseId, topologyService::onDatabaseStart, topologyService::onDatabaseStop );
 
         // when
         notifier.start();

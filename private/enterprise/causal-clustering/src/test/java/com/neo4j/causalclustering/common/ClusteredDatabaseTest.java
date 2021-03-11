@@ -21,7 +21,7 @@ class ClusteredDatabaseTest
     void shouldNotAllowRestart()
     {
         var kernel = mock( Database.class );
-        var database = new ClusteredDatabase( List.of(), kernel, List.of() );
+        var database = new ClusteredDatabase( List.of( kernel ) );
 
         database.start();
         assertTrue( database.hasBeenStarted() );

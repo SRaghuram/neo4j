@@ -14,21 +14,48 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleException;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 
-class CompositeDatabaseTest
+class EnterpriseDatabaseTest
 {
-    @Test
-    void shouldCleanlyStartWhenNoFailures() throws Throwable
-    {
-        var componentA = mock( Lifecycle.class );
-        var kernel = mock( Database.class );
-        var componentB = mock( Lifecycle.class );
+    private final Lifecycle componentA = mock( Lifecycle.class );
+    private final Lifecycle componentB = mock( Lifecycle.class );
+    private final Database kernel = mock( Database.class );
+    private final Lifecycle componentC = mock( Lifecycle.class );
+    private final Lifecycle componentD = mock( Lifecycle.class );
 
-        var database = new CompositeDatabase( List.of( componentA ), kernel, List.of( componentB ) );
+    @Test
+    void shouldCleanlyStartBuiltDatabase() throws Exception
+    {
+        var database = EnterpriseDatabase.builder( EnterpriseDatabase::new )
+                .withComponent( componentA )
+                .withKernelDatabase( kernel )
+                .withComponent( componentB )
+                .build();
+
+        database.start();
+
+        InOrder inOrder = inOrder( componentA, kernel, componentB );
+
+        inOrder.verify( componentA ).init();
+        inOrder.verify( kernel ).init();
+        inOrder.verify( componentB ).init();
+
+        inOrder.verify( componentA ).start();
+        inOrder.verify( kernel ).start();
+        inOrder.verify( componentB ).start();
+
+        inOrder.verifyNoMoreInteractions();
+    }
+
+    @Test
+    void shouldCleanlyStartWhenNoFailures() throws Exception
+    {
+        var database = new EnterpriseDatabase( List.of( componentA, kernel, componentB ) );
 
         database.start();
 
@@ -48,15 +75,9 @@ class CompositeDatabaseTest
     @Test
     void shouldCleanupComponentsOnFailure() throws Exception
     {
-        var componentA = mock( Lifecycle.class );
-        var componentB = mock( Lifecycle.class );
-        var kernel = mock( Database.class );
-        var componentC = mock( Lifecycle.class );
-        var componentD = mock( Lifecycle.class );
-
         doThrow( RuntimeException.class ).when( componentC ).start();
 
-        var database = new CompositeDatabase( List.of( componentA, componentB ), kernel, List.of( componentC, componentD ) );
+        var database = new EnterpriseDatabase( List.of( componentA, componentB, kernel, componentC, componentD ) );
 
         assertThrows( LifecycleException.class, database::start );
 
@@ -84,5 +105,20 @@ class CompositeDatabaseTest
         inOrder.verify( componentA ).shutdown();
 
         inOrder.verifyNoMoreInteractions();
+    }
+
+    @Test
+    void builderShouldReturnSame()
+    {
+        var databaseConstructed = new EnterpriseDatabase( List.of( componentA, componentB, kernel, componentC, componentD ) );
+        var databaseBuilt = EnterpriseDatabase.builder( EnterpriseDatabase::new )
+                .withComponent( componentA )
+                .withComponent( componentB )
+                .withKernelDatabase( kernel )
+                .withComponent( componentC )
+                .withComponent( componentD )
+                .build();
+
+        assertEquals( databaseConstructed.components.getLifecycleInstances(), databaseBuilt.components.getLifecycleInstances() );
     }
 }

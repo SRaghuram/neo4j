@@ -27,7 +27,7 @@ import com.neo4j.configuration.FabricEnterpriseConfig;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphDbmsModel;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
-import com.neo4j.dbms.database.EnterpriseDatabaseContext;
+import com.neo4j.dbms.database.StandaloneEnterpriseDatabaseContext;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.dbms.TopologyPublisher;
@@ -214,7 +214,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         return databaseManager;
     }
 
-    private void createDatabaseManagerDependentModules( MultiDatabaseManager<EnterpriseDatabaseContext> databaseManager,
+    private void createDatabaseManagerDependentModules( MultiDatabaseManager<StandaloneEnterpriseDatabaseContext> databaseManager,
             StandaloneDbmsReconcilerModule reconcilerModule )
     {
         initDiscoveryAndCatchupIfNeeded( databaseManager, reconcilerModule );
@@ -301,7 +301,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
     }
 
-    private void initBackupIfNeeded( GlobalModule globalModule, Config config, MultiDatabaseManager<EnterpriseDatabaseContext> databaseManager )
+    private void initBackupIfNeeded( GlobalModule globalModule, Config config, MultiDatabaseManager<StandaloneEnterpriseDatabaseContext> databaseManager )
     {
         FileSystemAbstraction fs = globalModule.getFileSystem();
         JobScheduler jobScheduler = globalModule.getJobScheduler();
@@ -329,7 +329,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         backupServer.ifPresent( globalModule.getGlobalLife()::add );
     }
 
-    private void initDiscoveryAndCatchupIfNeeded( MultiDatabaseManager<EnterpriseDatabaseContext> databaseManager,
+    private void initDiscoveryAndCatchupIfNeeded( MultiDatabaseManager<StandaloneEnterpriseDatabaseContext> databaseManager,
             StandaloneDbmsReconcilerModule reconcilerModule )
     {
         if ( globalModule.getGlobalConfig().get( EnterpriseEditionSettings.enable_clustering_in_standalone ) )
@@ -348,7 +348,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         reconcilerModule.registerDatabaseStateChangedListener( topologyService );
     }
 
-    private void createCatchupService( MultiDatabaseManager<EnterpriseDatabaseContext> databaseManager )
+    private void createCatchupService( MultiDatabaseManager<StandaloneEnterpriseDatabaseContext> databaseManager )
     {
         var config = globalModule.getGlobalConfig();
         var logProvider = globalModule.getLogService().getInternalLogProvider();

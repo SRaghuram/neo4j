@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.SessionTracker;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
-import com.neo4j.causalclustering.common.DatabaseTopologyNotifier;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
@@ -76,6 +75,7 @@ import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
+import com.neo4j.dbms.TopologyPublisher;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
 
@@ -361,7 +361,7 @@ class CoreDatabaseFactory
         var messageHandler = raftMessageHandlerChainFactory.createMessageHandlerChain( raftGroup, downloadService, applicationProcess );
 
         var topologyComponents = new LifeSupport();
-        topologyComponents.add( new DatabaseTopologyNotifier( namedDatabaseId, topologyService ) );
+        topologyComponents.add( TopologyPublisher.from( namedDatabaseId, topologyService::onDatabaseStart, topologyService::onDatabaseStop ) );
         topologyComponents.add( new RaftCoreTopologyConnector( topologyService, raftContext.raftGroup().raftMachine(), namedDatabaseId ) );
 
         var panicHandler = new CorePanicHandlers( raftGroup.raftMachine(), kernelDatabase, applicationProcess, internalOperator, panicService );
@@ -370,8 +370,8 @@ class CoreDatabaseFactory
         var raftStarter = new RaftStarter( kernelDatabase, raftContext.raftBinder(), messageHandler, snapshotService, downloadService, internalOperator,
                 databaseStartAborter, raftContext.raftIdStorage(), bootstrapSaver, tempBootstrapDir, raftComponents );
 
-        return new CoreDatabase( raftGroup.raftMachine(), kernelDatabase, applicationProcess, messageHandler, downloadService, recoveryFacade,
-                                 panicHandler, raftStarter, topologyComponents );
+        return CoreDatabase.create( raftGroup.raftMachine(), kernelDatabase, applicationProcess, messageHandler, downloadService, recoveryFacade,
+                panicHandler, raftStarter, topologyComponents );
     }
 
     private RaftBinder createRaftBinder( NamedDatabaseId namedDatabaseId, Config config, Monitors monitors, SimpleStorage<RaftGroupId> raftIdStorage,

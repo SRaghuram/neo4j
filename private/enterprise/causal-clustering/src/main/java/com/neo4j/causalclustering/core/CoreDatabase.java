@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
+import com.neo4j.dbms.database.EnterpriseDatabase;
 
 import java.util.List;
 
@@ -33,19 +34,30 @@ import static org.neo4j.kernel.lifecycle.LifecycleAdapter.simpleLife;
  */
 class CoreDatabase extends ClusteredDatabase
 {
-    CoreDatabase( RaftMachine raftMachine, Database kernelDatabase, CommandApplicationProcess commandApplicationProcess,
+    static CoreDatabase create( RaftMachine raftMachine, Database kernelDatabase, CommandApplicationProcess commandApplicationProcess,
             LifecycleMessageHandler<?> raftMessageHandler, CoreDownloaderService downloadService, RecoveryFacade recoveryFacade,
             CorePanicHandlers panicHandler, RaftStarter raftStarter, Lifecycle topologyComponents )
     {
-        super( List.of( panicHandler,
-                        onStart( () -> recoveryFacade.recovery( kernelDatabase.getDatabaseLayout() ) ),
-                        topologyComponents,
-                        raftStarter ),
-               kernelDatabase,
-               List.of( simpleLife( commandApplicationProcess::start, commandApplicationProcess::stop ),
-                        onStart( raftMachine::postRecoveryActions ),
-                        onStop( raftMessageHandler::stop ),
-                        onStop( raftMachine::stopTimers ),
-                        downloadService ) );
+        return builder( CoreDatabase::new )
+
+                .withComponent( panicHandler )
+                .withComponent( onStart( () -> recoveryFacade.recovery( kernelDatabase.getDatabaseLayout() ) ) )
+                .withComponent( topologyComponents )
+                .withComponent( raftStarter )
+
+                .withKernelDatabase( kernelDatabase )
+
+                .withComponent( simpleLife( commandApplicationProcess::start, commandApplicationProcess::stop ) )
+                .withComponent( onStart( raftMachine::postRecoveryActions ) )
+                .withComponent( onStop( raftMessageHandler::stop ) )
+                .withComponent( onStop( raftMachine::stopTimers ) )
+                .withComponent( downloadService )
+
+                .build();
+    }
+
+    private CoreDatabase( List<Lifecycle> components )
+    {
+        super( components );
     }
 }

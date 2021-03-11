@@ -5,22 +5,9 @@
  */
 package com.neo4j.dbms.database;
 
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
-import org.neo4j.kernel.database.Database;
+import org.neo4j.dbms.database.DatabaseContext;
 
-public class EnterpriseDatabaseContext extends StandaloneDatabaseContext implements CompositeDatabaseContext
+public interface EnterpriseDatabaseContext extends DatabaseContext
 {
-    private final CompositeDatabase enterpriseDatabase;
-
-    public EnterpriseDatabaseContext( Database database, CompositeDatabase enterpriseDatabase )
-    {
-        super( database );
-        this.enterpriseDatabase = enterpriseDatabase;
-    }
-
-    @Override
-    public CompositeDatabase compositeDatabase()
-    {
-        return enterpriseDatabase;
-    }
+    EnterpriseDatabase enterpriseDatabase();
 }

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.common.ClusteredDatabase;
-import com.neo4j.causalclustering.common.DatabaseTopologyNotifier;
+import com.neo4j.dbms.TopologyPublisher;
 
 import java.util.List;
 
@@ -28,17 +28,24 @@ import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onStart;
  */
 class ReadReplicaDatabase extends ClusteredDatabase
 {
-    ReadReplicaDatabase( CatchupPollingProcess catchupPollingProcess, CatchupJobScheduler catchupJobScheduler, Database kernelDatabase,
+    static ReadReplicaDatabase create( CatchupPollingProcess catchupPollingProcess, CatchupJobScheduler catchupJobScheduler, Database kernelDatabase,
             Lifecycle clusterComponents, ReadReplicaBootstrap bootstrap, ReadReplicaPanicHandlers panicHandler, RaftIdCheck raftIdCheck,
-            DatabaseTopologyNotifier topologyNotifier )
+            TopologyPublisher topologyPublisher )
     {
-        super( List.of( panicHandler,
-                        onInit( raftIdCheck::perform ),
-                        clusterComponents,
-                        topologyNotifier,
-                        onStart( bootstrap::perform ) ),
-               kernelDatabase,
-               List.of( catchupPollingProcess,
-                        catchupJobScheduler ) );
+        return builder( ReadReplicaDatabase::new )
+                .withComponent( panicHandler )
+                .withComponent( onInit( raftIdCheck::perform ) )
+                .withComponent( clusterComponents )
+                .withComponent( topologyPublisher )
+                .withComponent( onStart( bootstrap::perform ) )
+                .withKernelDatabase( kernelDatabase )
+                .withComponent( catchupPollingProcess )
+                .withComponent( catchupJobScheduler )
+                .build();
+    }
+
+    private ReadReplicaDatabase( List<Lifecycle> components )
+    {
+        super( components );
     }
 }

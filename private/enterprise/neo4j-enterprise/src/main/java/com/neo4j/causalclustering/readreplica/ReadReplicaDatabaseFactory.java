@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
-import com.neo4j.causalclustering.common.DatabaseTopologyNotifier;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
@@ -27,6 +26,7 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
+import com.neo4j.dbms.TopologyPublisher;
 
 import java.util.function.Supplier;
 
@@ -114,12 +114,12 @@ class ReadReplicaDatabaseFactory
 
         var raftIdCheck = new RaftIdCheck( raftIdStorage, namedDatabaseId );
 
-        var topologyNotifier = new DatabaseTopologyNotifier( namedDatabaseId, topologyService );
+        var topologyPublisher = TopologyPublisher.from( namedDatabaseId, topologyService::onDatabaseStart, topologyService::onDatabaseStop );
 
         var panicHandler = new ReadReplicaPanicHandlers( panicService, kernelDatabase, clusterInternalOperator );
 
-        return new ReadReplicaDatabase( catchupPollingProcess, catchupJobScheduler, kernelDatabase, clusterComponents, bootstrap, panicHandler, raftIdCheck,
-                topologyNotifier );
+        return ReadReplicaDatabase.create( catchupPollingProcess, catchupJobScheduler, kernelDatabase, clusterComponents, bootstrap, panicHandler, raftIdCheck,
+                topologyPublisher );
     }
 
     private CatchupPollingProcess createCatchupPollingProcess( ReadReplicaDatabaseContext databaseContext,

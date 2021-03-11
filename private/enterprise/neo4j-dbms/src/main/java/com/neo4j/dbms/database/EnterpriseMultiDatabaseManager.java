@@ -7,14 +7,12 @@ package com.neo4j.dbms.database;
 
 import com.neo4j.dbms.TopologyPublisher;
 
-import java.util.List;
-
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-public class EnterpriseMultiDatabaseManager extends MultiDatabaseManager<EnterpriseDatabaseContext>
+public class EnterpriseMultiDatabaseManager extends MultiDatabaseManager<StandaloneEnterpriseDatabaseContext>
 {
     private final TopologyPublisher.Factory topologyPublisherFactory;
 
@@ -26,11 +24,14 @@ public class EnterpriseMultiDatabaseManager extends MultiDatabaseManager<Enterpr
     }
 
     @Override
-    protected EnterpriseDatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
+    protected StandaloneEnterpriseDatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
         var databaseCreationContext = newDatabaseCreationContext( namedDatabaseId, globalModule.getGlobalDependencies(), globalModule.getGlobalMonitors() );
         var kernelDatabase = new Database( databaseCreationContext );
-        return new EnterpriseDatabaseContext( kernelDatabase, new CompositeDatabase(
-                List.of( topologyPublisherFactory.apply( namedDatabaseId ) ), kernelDatabase, List.of() ) );
+        var enterpriseDatabase = EnterpriseDatabase.builder( EnterpriseDatabase::new )
+                .withComponent( topologyPublisherFactory.apply( namedDatabaseId ) )
+                .withKernelDatabase( kernelDatabase )
+                .build();
+        return new StandaloneEnterpriseDatabaseContext( kernelDatabase, enterpriseDatabase );
     }
 }

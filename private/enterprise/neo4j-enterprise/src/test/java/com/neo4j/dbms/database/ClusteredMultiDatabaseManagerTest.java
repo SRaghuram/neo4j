@@ -37,7 +37,7 @@ class ClusteredMultiDatabaseManagerTest
         StubClusteredMultiDatabaseManager manager = new StubClusteredMultiDatabaseManager();
         ClusteredDatabaseContext ctx = manager.createDatabaseContext( dbId );
 
-        StubClusteredDatabase dbLife = (StubClusteredDatabase) ctx.compositeDatabase();
+        StubClusteredDatabase dbLife = (StubClusteredDatabase) ctx.enterpriseDatabase();
 
         // when
         manager.testStartDatabase( dbId, ctx );
@@ -78,7 +78,7 @@ class ClusteredMultiDatabaseManagerTest
             when( dbCtx.databaseId() ).thenReturn( namedDatabaseId );
             StartStop startStopTracker = mock( StartStop.class );
             ClusteredDatabase dbLife = new StubClusteredDatabase( startStopTracker );
-            when( dbCtx.compositeDatabase() ).thenReturn( dbLife );
+            when( dbCtx.enterpriseDatabase() ).thenReturn( dbLife );
             context = dbCtx;
             return dbCtx;
         }
@@ -112,7 +112,7 @@ class ClusteredMultiDatabaseManagerTest
 
         StubClusteredDatabase( StartStop startStopTracker )
         {
-            super( List.of( simpleLife( startStopTracker::start, startStopTracker::stop ) ), mock( Database.class ), List.of() );
+            super( List.of( simpleLife( startStopTracker::start, startStopTracker::stop ), mock( Database.class ) ) );
             this.startStopTracker = startStopTracker;
         }
     }

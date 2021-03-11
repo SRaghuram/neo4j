@@ -5,8 +5,6 @@
  */
 package com.neo4j.dbms.database;
 
-import com.neo4j.dbms.TopologyPublisher;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +31,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 //TODO: Merge this and StubClusteredDatabasemanager into a single class heirarchy
-public class StubMultiDatabaseManager extends MultiDatabaseManager<CompositeDatabaseContext>
+public class StubMultiDatabaseManager extends MultiDatabaseManager<EnterpriseDatabaseContext>
 {
     private Map<NamedDatabaseId, Consumer<Database>> onContextCreationActions = new HashMap<>();
     private RuntimeDatabaseDumper runtimeDatabaseDumper;
@@ -49,7 +47,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<CompositeData
     }
 
     @Override
-    protected CompositeDatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
+    protected EnterpriseDatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
         return mockDatabaseContext( namedDatabaseId );
     }
@@ -70,7 +68,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<CompositeData
         return globalModule;
     }
 
-    private CompositeDatabaseContext mockDatabaseContext( NamedDatabaseId namedDatabaseId )
+    private EnterpriseDatabaseContext mockDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
         var facade = mock( GraphDatabaseFacade.class );
         Dependencies deps = new Dependencies();
@@ -84,7 +82,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<CompositeData
         {
             action.accept( db );
         }
-        return spy( new EnterpriseDatabaseContext( db, new CompositeDatabase( List.of(), db, List.of() ) ) );
+        return spy( new StandaloneEnterpriseDatabaseContext( db, new EnterpriseDatabase( List.of( db ) ) ) );
     }
 
     public void addOnCreationAction( NamedDatabaseId id, Consumer<Database> action )

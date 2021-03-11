@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.common;
 
-import com.neo4j.dbms.database.CompositeDatabase;
+import com.neo4j.dbms.database.EnterpriseDatabase;
 
 import java.util.List;
 
@@ -24,13 +24,13 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
  * In fact, instances of this interface are only ever managed directly by a {@link DatabaseManager},
  * never by a {@link LifeSupport}.
  */
-public class ClusteredDatabase extends CompositeDatabase
+public class ClusteredDatabase extends EnterpriseDatabase
 {
     private boolean hasBeenStarted;
 
-    public ClusteredDatabase( List<Lifecycle> beforeKernelComponents, Database kernelDatabase, List<Lifecycle> afterKernelComponents )
+    protected ClusteredDatabase( List<Lifecycle> components )
     {
-        super( beforeKernelComponents, kernelDatabase, afterKernelComponents );
+        super( components );
     }
 
     @Override

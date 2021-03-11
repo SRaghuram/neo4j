@@ -29,7 +29,7 @@ import org.neo4j.storageengine.api.StoreId;
  *
  * Collections of these instances should be managed by a {@link DatabaseManager}
  */
-public interface ClusteredDatabaseContext extends CompositeDatabaseContext
+public interface ClusteredDatabaseContext extends EnterpriseDatabaseContext
 {
     /**
      * Reads metadata about this database from disk and calculates a uniquely {@link StoreId}.
@@ -80,7 +80,7 @@ public interface ClusteredDatabaseContext extends CompositeDatabaseContext
      * clustered database instance, including the {@link RaftMachine} and kernel {@link Database}
      * @return lifecycle controller for this database and its supporting lifecycled components
      */
-    ClusteredDatabase compositeDatabase();
+    ClusteredDatabase enterpriseDatabase();
 
     /**
      *

@@ -60,8 +60,7 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         try
         {
             context = recreateContextIfNeeded( namedDatabaseId, context );
-            log.info( "Starting '%s'.", namedDatabaseId );
-            context.compositeDatabase().start();
+            super.startDatabase0( namedDatabaseId, context );
         }
         catch ( Throwable t )
         {
@@ -71,9 +70,9 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
 
     private ClusteredDatabaseContext recreateContextIfNeeded( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context ) throws Exception
     {
-        if ( context.compositeDatabase().hasBeenStarted() )
+        if ( context.enterpriseDatabase().hasBeenStarted() )
         {
-            context.compositeDatabase().stop();
+            context.enterpriseDatabase().stop();
             // Clustering components cannot be reused, so we have to create a new context on each start->stop-start cycle.
             var updatedContext = createDatabaseContext( namedDatabaseId );
             databaseMap.put( namedDatabaseId, updatedContext );
