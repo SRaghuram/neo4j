@@ -5,6 +5,7 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 
@@ -329,7 +330,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
       }
   }
 
-  //// SET USER HOME DATABASE
+  //// SET/REMOVE USER HOME DATABASE
 
   Seq("user management", "alter user", "set user home database").foreach {
     privilege =>
@@ -357,6 +358,31 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         } should have message PERMISSION_DENIED_SET_USER_HOME_DATABASE
       }
 
+      test(s"should enforce privilege for removing user home database with $privilege") {
+        // GIVEN
+        setupUserWithCustomRole("foo", "123")
+        execute("CREATE DATABASE bar")
+        execute("GRANT ACCESS ON DATABASE bar TO custom")
+        execute("ALTER USER foo SET HOME DATABASE bar")
+
+        // WHEN
+        execute(s"GRANT $privilege ON DBMS TO custom")
+
+        // THEN
+        executeOnSystem("foo", "123", "ALTER USER foo REMOVE HOME DATABASE")
+        executeOnSystem("foo", "123", "SHOW HOME DATABASE", resultHandler = (row, _) => {
+          row.get("name") should be(DEFAULT_DATABASE_NAME)
+        }) should be (1)
+
+        // WHEN
+        execute(s"REVOKE $privilege ON DBMS FROM custom")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "123", "ALTER USER user REMOVE HOME DATABASE")
+        } should have message PERMISSION_DENIED_SET_USER_HOME_DATABASE
+      }
+
       test(s"should fail setting user home database when denied $privilege") {
         // GIVEN
         setupUserWithCustomAdminRole("foo", "bar")
@@ -370,7 +396,6 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
           executeOnSystem("foo", "bar", "ALTER USER user SET HOME DATABASE neo4j")
         } should have message PERMISSION_DENIED_SET_USER_HOME_DATABASE
       }
-
   }
 
   Seq("user management", "create user").foreach {
