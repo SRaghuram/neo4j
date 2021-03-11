@@ -1376,7 +1376,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val variableName = namer.nextVariableName()
         val propertyGet = getProperty(key, nullCheckIfRequired(map))
         val call = noValueOr(map)(propertyGet)
-        val lazySet = oneTime(declareAndAssign(variableName, call))
+        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, call))
         val ops = block(lazySet, load[AnyValue](variableName))
         val nullChecks = block(lazySet, equal(variableName, noValue))
         IntermediateExpression(ops, map.fields, map.variables ++ vCURSORS , Set(nullChecks), requireNullCheck = false)
@@ -2185,7 +2185,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case functions.Head =>
       compileExpression(c.args.head, id).map(in => {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(variableName,
+        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue],
+                                               variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("head"), in.ir))))
 
         val ops = block(lazySet, load[AnyValue](variableName))
@@ -2212,7 +2213,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case functions.Last =>
       compileExpression(c.args.head, id).map(in => {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(variableName,
+        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue],
+                                               variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("last"), in.ir))))
 
         val ops = block(lazySet, load[AnyValue](variableName))
@@ -3047,7 +3049,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                 // expressionVariables[innerVarOffset] = currentValue;
                 setExpressionVariable(innerVariable, load[AnyValue](currentValue)),
                 // extracted.add([result from inner expression]);
-                declareAndAssign(innerVar, nullCheckIfRequired(inner)),
+                declareAndAssign(typeRefOf[AnyValue], innerVar, nullCheckIfRequired(inner)),
                 assign(payloadVar, add(load[Long](payloadVar), invoke(load[AnyValue](innerVar), method[AnyValue, Long]("estimatedHeapUsage")))),
                 invokeSideEffect(load[java.util.ArrayList[AnyValue]](extractedVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
                   load[AnyValue](innerVar))): _*)
@@ -3127,7 +3129,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     for ((nodeOps, relOps) <- compileSteps(steps) ) yield {
       val variableName = namer.nextVariableName()
-      val lazySet = oneTime(declareAndAssign(variableName,
+      val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                              noValueOr(nodeOps ++ relOps: _*)(
                                      invokeStatic(
                                        method[VirtualValues, PathValue, Array[NodeValue], Array[RelationshipValue]](
@@ -3298,7 +3300,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           NodeCursor, RelationshipScanCursor, PropertyCursor]("containerIndex"),
           c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)
       }
-      val lazySet = oneTime(declareAndAssign(variableName, noValueOr(c, idx)(invocation)))
+      val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(c, idx)(invocation)))
       val ops = block(lazySet, load[AnyValue](variableName))
       val nullChecks = block(lazySet, equal(variableName, noValue))
       IntermediateExpression(ops, c.fields ++ idx.fields, c.variables ++ idx.variables ++ vCURSORS, Set(nullChecks), requireNullCheck = false)

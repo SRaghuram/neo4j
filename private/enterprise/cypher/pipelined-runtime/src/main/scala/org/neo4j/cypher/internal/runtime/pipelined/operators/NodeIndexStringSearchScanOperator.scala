@@ -201,7 +201,7 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
   private val needsValues = property.getValueFromIndex
   private var seekExpression: IntermediateExpression = _
-  private val seekVariable = variable[Value](codeGen.namer.nextVariableName(), constant(null))
+  private val seekVariable = variable[AnyValue](codeGen.namer.nextVariableName(), constant(null))
 
   codeGen.registerCursor(nodeVarName, NodeIndexCursorRepresentation(loadField(nodeIndexCursorField)))
 

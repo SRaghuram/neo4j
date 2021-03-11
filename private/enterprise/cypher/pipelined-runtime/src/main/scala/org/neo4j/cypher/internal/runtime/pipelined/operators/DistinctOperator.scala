@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.concurrent.ConcurrentHashMap
-
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
@@ -26,6 +25,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
@@ -262,7 +262,7 @@ abstract class BaseDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
      */
     block(
       beginOperate,
-      declareAndAssign(keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
+      declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
       condition(or(innerCanContinue, seen(loadField(distinctStateField), load[AnyValue](keyVar)))) {
         block(
           nullCheckIfRequired(groupingExpression.projectKey),
