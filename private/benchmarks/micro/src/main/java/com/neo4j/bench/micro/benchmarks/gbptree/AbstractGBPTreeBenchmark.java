@@ -24,7 +24,7 @@ import org.neo4j.internal.helpers.progress.ProgressListener;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -150,7 +150,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 }
             }
         }
-        gbpTree.checkpoint( IOLimiter.UNLIMITED, NULL );
+        gbpTree.checkpoint( IOController.DISABLED, NULL );
     }
 
     static Random randomSequence( long pos )

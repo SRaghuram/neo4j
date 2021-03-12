@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.dbms.ClusterDbmsRuntimeRepository;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
-import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
+import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOController;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 
 import java.util.Set;
@@ -64,7 +64,7 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
 
     protected void editionInvariants( GlobalModule globalModule, Dependencies dependencies )
     {
-        ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig(), globalModule.getGlobalClock() );
+        ioController = new ConfigurableIOController( globalModule.getGlobalConfig(), globalModule.getGlobalClock() );
 
         constraintSemantics = new EnterpriseConstraintSemantics();
 

@@ -30,7 +30,7 @@ import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
-import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.io.pagecache.IOController;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.api.index.IndexingService;
@@ -356,7 +356,7 @@ public class HalfAppliedConstraintRecoveryIT
 
     private static void flushStores( GraphDatabaseAPI db ) throws IOException
     {
-        db.getDependencyResolver().resolveDependency( RecordStorageEngine.class ).testAccessNeoStores().flush( IOLimiter.UNLIMITED, NULL );
+        db.getDependencyResolver().resolveDependency( RecordStorageEngine.class ).testAccessNeoStores().flush( IOController.DISABLED, NULL );
     }
 
     private static void apply( GraphDatabaseAPI db, List<TransactionRepresentation> transactions )

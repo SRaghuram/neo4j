@@ -13,7 +13,7 @@ import java.nio.file.Path;
 
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.GBPTreeBuilder;
-import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.index.schema.TokenScanLayout;
 import org.neo4j.test.extension.Inject;
@@ -39,7 +39,7 @@ class GBPTreeDumpToolTest
         Path file = dir.file( "index" );
         try ( GBPTree<?,?> tree = new GBPTreeBuilder<>( pageCache, file, new TokenScanLayout() ).build() )
         {
-            tree.checkpoint( IOLimiter.UNLIMITED, NULL );
+            tree.checkpoint( IOController.DISABLED, NULL );
         }
 
         // When dumping

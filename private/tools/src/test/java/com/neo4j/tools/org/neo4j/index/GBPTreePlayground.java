@@ -20,7 +20,7 @@ import org.neo4j.index.internal.gbptree.SimpleLongLayout;
 import org.neo4j.index.internal.gbptree.Writer;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -113,7 +113,7 @@ public class GBPTreePlayground
         @Override
         public void run( String[] args, PrintStream out )
         {
-            tree.checkpoint( IOLimiter.UNLIMITED, NULL );
+            tree.checkpoint( IOController.DISABLED, NULL );
         }
         @Override
         public String toString()

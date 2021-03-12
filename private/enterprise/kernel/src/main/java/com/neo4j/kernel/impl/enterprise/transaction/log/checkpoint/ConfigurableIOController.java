@@ -13,17 +13,17 @@ import java.util.function.ObjLongConsumer;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.tracing.FlushEventOpportunity;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.Math.min;
 
-public class ConfigurableIOLimiter implements IOLimiter
+public class ConfigurableIOController implements IOController
 {
-    private static final AtomicLongFieldUpdater<ConfigurableIOLimiter> stateUpdater =
-            AtomicLongFieldUpdater.newUpdater( ConfigurableIOLimiter.class, "state" );
+    private static final AtomicLongFieldUpdater<ConfigurableIOController> stateUpdater =
+            AtomicLongFieldUpdater.newUpdater( ConfigurableIOController.class, "state" );
 
     private static final int NO_LIMIT = 0;
     private static final int QUANTUM_MILLIS = 100;
@@ -42,13 +42,13 @@ public class ConfigurableIOLimiter implements IOLimiter
     @SuppressWarnings( "unused" ) // Updated via stateUpdater
     private volatile long state;
 
-    public ConfigurableIOLimiter( Config config, SystemNanoClock clock )
+    public ConfigurableIOController( Config config, SystemNanoClock clock )
     {
         this( config, LockSupport::parkNanos, clock );
     }
 
     @VisibleForTesting
-    ConfigurableIOLimiter( Config config, ObjLongConsumer<Object> pauseNanos, SystemNanoClock clock )
+    ConfigurableIOController( Config config, ObjLongConsumer<Object> pauseNanos, SystemNanoClock clock )
     {
         this.pauseNanos = pauseNanos;
         this.clock = clock;
@@ -150,7 +150,7 @@ public class ConfigurableIOLimiter implements IOLimiter
     }
 
     @Override
-    public void disableLimit()
+    public void disable()
     {
         long currentState;
         long newState;
@@ -165,7 +165,7 @@ public class ConfigurableIOLimiter implements IOLimiter
     }
 
     @Override
-    public void enableLimit()
+    public void enable()
     {
         long currentState;
         long newState;
@@ -180,7 +180,7 @@ public class ConfigurableIOLimiter implements IOLimiter
     }
 
     @Override
-    public boolean isLimited()
+    public boolean isEnabled()
     {
         return getDisabledCounter( state ) == 0;
     }

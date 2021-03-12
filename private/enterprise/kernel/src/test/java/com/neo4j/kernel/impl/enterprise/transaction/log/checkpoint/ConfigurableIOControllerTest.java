@@ -15,18 +15,18 @@ import java.util.function.ObjLongConsumer;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.FlushEventOpportunity;
 import org.neo4j.time.FakeClock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.io.pagecache.IOLimiter.INITIAL_STAMP;
+import static org.neo4j.io.pagecache.IOController.INITIAL_STAMP;
 
-class ConfigurableIOLimiterTest
+class ConfigurableIOControllerTest
 {
-    private ConfigurableIOLimiter limiter;
+    private ConfigurableIOController limiter;
     private FakeClock clock;
     private Config config;
     private AtomicLong pauseNanosCounter;
@@ -57,23 +57,23 @@ class ConfigurableIOLimiterTest
     void mustNotPutLimitOnIOWhenLimitingIsDisabledAndNoLimitIsConfigured()
     {
         createIOLimiter( Config.defaults() );
-        limiter.disableLimit();
+        limiter.disable();
         try
         {
             assertUnlimited();
-            limiter.disableLimit();
+            limiter.disable();
             try
             {
                 assertUnlimited();
             }
             finally
             {
-                limiter.enableLimit();
+                limiter.enable();
             }
         }
         finally
         {
-            limiter.enableLimit();
+            limiter.enable();
         }
     }
 
@@ -97,24 +97,24 @@ class ConfigurableIOLimiterTest
         createIOLimiter( 100 );
 
         long stamp = INITIAL_STAMP;
-        limiter.disableLimit();
+        limiter.disable();
         try
         {
             stamp = repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
-            limiter.disableLimit();
+            limiter.disable();
             try
             {
                 stamp = repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
             }
             finally
             {
-                limiter.enableLimit();
+                limiter.enable();
             }
             repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
         }
         finally
         {
-            limiter.enableLimit();
+            limiter.enable();
         }
 
         // We should've spent no time rushing
@@ -150,13 +150,13 @@ class ConfigurableIOLimiterTest
         // Create initially unlimited
         createIOLimiter( 0 );
         // Disable the limiter...
-        limiter.disableLimit();
+        limiter.disable();
         // ...while a dynamic configuration update happens
         config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, 100, getClass().getSimpleName()  );
         // The limiter must still be disabled...
         assertUnlimited();
         // ...and re-enabling it...
-        limiter.enableLimit();
+        limiter.enable();
         // ...must make the limiter limit.
         long stamp = INITIAL_STAMP;
         repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
@@ -169,13 +169,13 @@ class ConfigurableIOLimiterTest
         // Create initially limited
         createIOLimiter( 100 );
         // Disable the limiter...
-        limiter.disableLimit();
+        limiter.disable();
         // ...while a dynamic configuration update happens
         config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, -1, getClass().getSimpleName()  );
         // The limiter must still be disabled...
         assertUnlimited();
         // ...and re-enabling it...
-        limiter.enableLimit();
+        limiter.enable();
         // ...must maintain the limiter disabled.
         assertUnlimited();
         // Until it is re-enabled.
@@ -190,9 +190,9 @@ class ConfigurableIOLimiterTest
     {
         createIOLimiter( 100 );
 
-        assertThat( limiter.isLimited() ).isEqualTo( true );
+        assertThat( limiter.isEnabled() ).isEqualTo( true );
         multipleDisableShouldReportUnlimited( limiter );
-        assertThat( limiter.isLimited() ).isEqualTo( true );
+        assertThat( limiter.isEnabled() ).isEqualTo( true );
     }
 
     @Test
@@ -200,28 +200,28 @@ class ConfigurableIOLimiterTest
     {
         createIOLimiter( -1 );
 
-        assertThat( limiter.isLimited() ).isEqualTo( false );
+        assertThat( limiter.isEnabled() ).isEqualTo( false );
         multipleDisableShouldReportUnlimited( limiter );
-        assertThat( limiter.isLimited() ).isEqualTo( false );
+        assertThat( limiter.isEnabled() ).isEqualTo( false );
     }
 
     @Test
     void unlimitedShouldAlwaysBeUnlimited()
     {
-        IOLimiter limiter = IOLimiter.UNLIMITED;
+        IOController limiter = IOController.DISABLED;
 
-        assertThat( limiter.isLimited() ).isEqualTo( false );
+        assertThat( limiter.isEnabled() ).isEqualTo( false );
         multipleDisableShouldReportUnlimited( limiter );
-        assertThat( limiter.isLimited() ).isEqualTo( false );
+        assertThat( limiter.isEnabled() ).isEqualTo( false );
 
-        limiter.enableLimit();
+        limiter.enable();
         try
         {
-            assertThat( limiter.isLimited() ).isEqualTo( false );
+            assertThat( limiter.isEnabled() ).isEqualTo( false );
         }
         finally
         {
-            limiter.disableLimit();
+            limiter.disable();
         }
     }
 
@@ -266,7 +266,7 @@ class ConfigurableIOLimiterTest
         pauseNanosCounter = new AtomicLong();
         ObjLongConsumer<Object> pauseNanos = ( blocker, nanos ) -> pauseNanosCounter.getAndAdd( nanos );
         clock = new FakeClock();
-        limiter = new ConfigurableIOLimiter( config, pauseNanos, clock );
+        limiter = new ConfigurableIOController( config, pauseNanos, clock );
     }
 
     private void createIOLimiter( int limit )
@@ -281,35 +281,35 @@ class ConfigurableIOLimiterTest
         assertThat( pauseNanosCounter.get() ).isEqualTo( pauseTime );
     }
 
-    private static long repeatedlyCallMaybeLimitIO( IOLimiter ioLimiter, long stamp, int iosPerIteration )
+    private static long repeatedlyCallMaybeLimitIO( IOController ioController, long stamp, int iosPerIteration )
     {
         for ( int i = 0; i < 100; i++ )
         {
-            stamp = ioLimiter.maybeLimitIO( stamp, iosPerIteration, FLUSHABLE, FlushEventOpportunity.NULL );
+            stamp = ioController.maybeLimitIO( stamp, iosPerIteration, FLUSHABLE, FlushEventOpportunity.NULL );
         }
         return stamp;
     }
 
-    private static void multipleDisableShouldReportUnlimited( IOLimiter limiter )
+    private static void multipleDisableShouldReportUnlimited( IOController limiter )
     {
-        limiter.disableLimit();
+        limiter.disable();
         try
         {
-            assertThat( limiter.isLimited() ).isEqualTo( false );
-            limiter.disableLimit();
+            assertThat( limiter.isEnabled() ).isEqualTo( false );
+            limiter.disable();
             try
             {
-                assertThat( limiter.isLimited() ).isEqualTo( false );
+                assertThat( limiter.isEnabled() ).isEqualTo( false );
             }
             finally
             {
-                limiter.enableLimit();
+                limiter.enable();
             }
-            assertThat( limiter.isLimited() ).isEqualTo( false );
+            assertThat( limiter.isEnabled() ).isEqualTo( false );
         }
         finally
         {
-            limiter.enableLimit();
+            limiter.enable();
         }
     }
 }

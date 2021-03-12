@@ -50,7 +50,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
-import static org.neo4j.io.pagecache.IOLimiter.UNLIMITED;
+import static org.neo4j.io.pagecache.IOController.DISABLED;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.database.DatabaseTracers.EMPTY;
 import static org.neo4j.time.Clocks.nanoClock;
@@ -89,7 +89,7 @@ class EnterpriseCheckPointerImplTest
         CheckpointAppender checkpointAppender = checkpointFile.getCheckpointAppender();
         SystemNanoClock clock = nanoClock();
         CheckPointerImpl checkPointer =
-                new CheckPointerImpl( metaDataProvider, threshold, flusher, logPruning, checkpointAppender, health, logProvider, EMPTY, UNLIMITED,
+                new CheckPointerImpl( metaDataProvider, threshold, flusher, logPruning, checkpointAppender, health, logProvider, EMPTY, DISABLED,
                         new StoreCopyCheckPointMutex(), clock );
         LifeSupport life = new LifeSupport();
         life.add( logFiles );
