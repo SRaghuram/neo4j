@@ -39,6 +39,7 @@ import com.neo4j.bench.model.model.TestRunReport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -116,6 +117,7 @@ public class RunReportCommand extends BaseRunReportCommand
     @Override
     public void doRun( RunReportParams runReportParams )
     {
+        deleteDir( runReportParams.workDir() );
         TestRunReport testRunReport = run( runReportParams );
 
         ResultStoreCredentials resultStoreCredentials = PasswordManager.getResultStoreCredentials( new ResultStoreCredentials(
@@ -134,14 +136,19 @@ public class RunReportCommand extends BaseRunReportCommand
                                          runReportParams.workDir(),
                                          awsEndpointURL,
                                          REPORT_THEN_FAIL );
+        deleteDir( runReportParams.workDir() );
+    }
+
+    private void deleteDir( File dir )
+    {
         try
         {
-            LOG.debug( "Deleting: " + runReportParams.workDir().getAbsolutePath() );
-            FileUtils.deleteDirectory( runReportParams.workDir().toPath() );
+            LOG.debug( "Deleting: " + dir.getAbsolutePath() );
+            FileUtils.deleteDirectory( dir.toPath() );
         }
         catch ( IOException e )
         {
-            throw new UncheckedIOException( "Failed to to delete stores directory", e );
+            throw new UncheckedIOException( "Failed to to delete directory", e );
         }
     }
 
