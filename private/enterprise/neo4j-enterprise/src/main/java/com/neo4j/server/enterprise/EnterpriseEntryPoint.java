@@ -6,12 +6,12 @@
 package com.neo4j.server.enterprise;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.internal.unsafe.IllegalAccessLoggerSuppressor;
 import org.neo4j.server.BlockingBootstrapper;
 import org.neo4j.server.Bootstrapper;
 import org.neo4j.server.NeoBootstrapper;
 import org.neo4j.server.startup.EntryPoint;
 
-import static org.neo4j.internal.unsafe.UnsafeUtil.disableIllegalAccessLogger;
 
 @ServiceProvider
 public class EnterpriseEntryPoint implements EntryPoint
@@ -20,7 +20,7 @@ public class EnterpriseEntryPoint implements EntryPoint
 
     public static void main( String[] args )
     {
-        disableIllegalAccessLogger();
+        IllegalAccessLoggerSuppressor.suppress();
         int status = NeoBootstrapper.start( new EnterpriseBootstrapper(), args );
         if ( status != 0 )
         {
