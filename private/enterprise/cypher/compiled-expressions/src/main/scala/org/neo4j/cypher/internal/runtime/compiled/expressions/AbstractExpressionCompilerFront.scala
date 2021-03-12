@@ -84,7 +84,13 @@ import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.GetDegree
 import org.neo4j.cypher.internal.expressions.GreaterThan
 import org.neo4j.cypher.internal.expressions.GreaterThanOrEqual
+import org.neo4j.cypher.internal.expressions.HasDegree
+import org.neo4j.cypher.internal.expressions.HasDegreeGreaterThan
+import org.neo4j.cypher.internal.expressions.HasDegreeGreaterThanOrEqual
+import org.neo4j.cypher.internal.expressions.HasDegreeLessThan
+import org.neo4j.cypher.internal.expressions.HasDegreeLessThanOrEqual
 import org.neo4j.cypher.internal.expressions.HasLabels
+import org.neo4j.cypher.internal.expressions.HasTypes
 import org.neo4j.cypher.internal.expressions.HasLabelsOrTypes
 import org.neo4j.cypher.internal.expressions.In
 import org.neo4j.cypher.internal.expressions.IntegerLiteral
@@ -116,6 +122,7 @@ import org.neo4j.cypher.internal.expressions.PropertyKeyName
 import org.neo4j.cypher.internal.expressions.RELATIONSHIP_TYPE
 import org.neo4j.cypher.internal.expressions.ReduceExpression
 import org.neo4j.cypher.internal.expressions.RegexMatch
+import org.neo4j.cypher.internal.expressions.RelTypeName
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.expressions.SingleIterablePredicate
 import org.neo4j.cypher.internal.expressions.SingleRelationshipPathStep
@@ -228,6 +235,7 @@ import org.neo4j.cypher.operations.CypherMath
 import org.neo4j.cypher.operations.PathValueBuilder
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InternalException
+import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.ParameterWrongTypeException
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
@@ -1579,6 +1587,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       Some(IntermediateExpression(block(inits :+ predicate:_*),
         tokenFields, Seq(vRELATIONSHIP_CURSOR), Set.empty, requireNullCheck = false))
 
+    case HasTypes(expression, types) if types.nonEmpty =>
+      compileExpression(expression, id).map { relationship =>
+        hasTypes(types.map(_.name), relationship)
+      }
+
     case HasLabels(nodeExpression, labels) if labels.nonEmpty =>
       for (node <- compileExpression(nodeExpression, id)) yield {
         hasLabels(labels.map(_.name), node)
@@ -1644,19 +1657,34 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       })
 
     case HasDegreeGreaterThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
-     checkDegree(offset, typ, dir, maxDegreeExpression, greaterThan, d => add(d, 1), id)
+      checkDegree(getLongAt(offset), typ, dir, maxDegreeExpression, greaterThan, d => add(d, 1), id)
+
+    case HasDegreeGreaterThan(expression, relType, dir, degree) =>
+      checkDegreeExpression(id, expression, relType, dir, degree, greaterThan, d => add(d, 1))
 
     case HasDegreeGreaterThanOrEqualPrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, greaterThanOrEqual, identity, id)
+      checkDegree(getLongAt(offset), typ, dir, maxDegreeExpression, greaterThanOrEqual, identity, id)
+
+    case HasDegreeGreaterThanOrEqual(expression, relType, dir, degree) =>
+      checkDegreeExpression(id, expression, relType, dir, degree, greaterThanOrEqual, identity)
 
     case HasDegreePrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, equal, d => add(d, 1), id)
+      checkDegree(getLongAt(offset), typ, dir, maxDegreeExpression, equal, d => add(d, 1), id)
+
+    case HasDegree(expression, relType, dir, degree) =>
+      checkDegreeExpression(id, expression, relType, dir, degree, equal, d => add(d, 1))
 
     case HasDegreeLessThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, lessThan, identity, id)
+      checkDegree(getLongAt(offset), typ, dir, maxDegreeExpression, lessThan, identity, id)
+
+    case HasDegreeLessThan(expression, relType, dir, degree) =>
+      checkDegreeExpression(id, expression, relType, dir, degree, lessThan, identity)
 
     case HasDegreeLessThanOrEqualPrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, lessThanOrEqual, d => add(d, 1), id)
+      checkDegree(getLongAt(offset), typ, dir, maxDegreeExpression, lessThanOrEqual, d => add(d, 1), id)
+
+    case HasDegreeLessThanOrEqual(expression, relType, dir, degree) =>
+      checkDegreeExpression(id, expression, relType, dir, degree, lessThanOrEqual, d => add(d, 1))
 
     case f@ResolvedFunctionInvocation(name, Some(signature), args) if !f.isAggregate =>
       val inputArgs = args.map(Some(_))
@@ -1789,12 +1817,13 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     val predicate: IntermediateRepresentation = ternary(
       and(tokenFields.map { tokenId =>
-        invoke(
-          DB_ACCESS,
-          method[DbAccess, Boolean, Int, Long, RelationshipScanCursor]("isTypeSetOnRelationship"),
+        invokeStatic(
+          method[CypherFunctions, Boolean, AnyValue, Int, DbAccess, RelationshipScanCursor]("hasType"),
+          relationship.ir,
           loadField(tokenId),
-          invoke(cast[VirtualRelationshipValue](relationship.ir), method[VirtualRelationshipValue, Long]("id")), // TODO: cast outside function
-          RELATIONSHIP_CURSOR)
+          DB_ACCESS,
+          RELATIONSHIP_CURSOR
+        )
       }), trueValue, falseValue)
 
     IntermediateExpression(block(inits :+ predicate: _*),
@@ -1851,7 +1880,31 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case SemanticDirection.BOTH => "nodeGetTotalDegree"
   }
 
-  private def checkDegree(offset: Int,
+  private def checkDegreeExpression(
+    id: Id,
+    expression: Expression,
+    relType: Option[RelTypeName],
+    dir: SemanticDirection,
+    degree: Expression,
+    comparison: (IntermediateRepresentation, IntermediateRepresentation) => IntermediateRepresentation,
+    computeMax: IntermediateRepresentation => IntermediateRepresentation
+  ): Option[IntermediateExpression] = {
+    for {
+      compiledExpression <- compileExpression(expression, id)
+      nodeIdIr = invokeStatic(method[CypherFunctions, Long, AnyValue]("nodeId"), compiledExpression.ir)
+      relTypeRight = relType.map(_.name).map(Right.apply)
+      degreeExpression <- checkDegree(nodeIdIr, relTypeRight, dir, degree, comparison, computeMax, id)
+    } yield {
+      IntermediateExpression(
+        degreeExpression.ir, // Safe because we include degreeExpression.nullChecks
+        compiledExpression.fields ++ degreeExpression.fields,
+        compiledExpression.variables ++ degreeExpression.variables,
+        compiledExpression.nullChecks ++ degreeExpression.nullChecks
+      )
+    }
+  }
+
+  private def checkDegree(nodeIdIr: IntermediateRepresentation,
                           typ: Option[Either[Int, String]],
                           dir: SemanticDirection,
                           maxDegreeExpression: Expression,
@@ -1865,7 +1918,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     typ match {
       case None =>
         for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
-          val lazySet = oneTime(declareAndAssign(localDegree, nullCheckIfRequired(maxDegree)))
+          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
           val nullCheck = Set(block(lazySet, equal(load[AnyValue](localDegree), noValue)))
           IntermediateExpression(
             block(
@@ -1876,13 +1929,13 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                   invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load[AnyValue](localDegree)))),
               ternary(
                 comparison(
-                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), getLongAt(offset), NODE_CURSOR), load[Int](localDegreeInt)
+                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), nodeIdIr, NODE_CURSOR), load[Int](localDegreeInt)
                 ), trueValue, falseValue)
             ), maxDegree.fields, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }
       case Some(Left(typeId)) =>
         for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
-          val lazySet = oneTime(declareAndAssign(localDegree, nullCheckIfRequired(maxDegree)))
+          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
           val nullCheck = Set(block(lazySet, equal(load[AnyValue](localDegree), noValue)))
           IntermediateExpression(
             block(
@@ -1893,14 +1946,14 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                   invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load[AnyValue](localDegree)))),
               ternary(
                 comparison(
-                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), getLongAt(offset), constant(typeId), NODE_CURSOR), load[Int](localDegreeInt)
+                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), nodeIdIr, constant(typeId), NODE_CURSOR), load[Int](localDegreeInt)
                 ), trueValue, falseValue)
             ), maxDegree.fields, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }
       case Some(Right(typeName)) =>
         val f = field[Int](namer.nextVariableName(), constant(-1))
         for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
-          val lazySet = oneTime(declareAndAssign(localDegree, nullCheckIfRequired(maxDegree)))
+          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
           val nullCheck = Set(block(lazySet, equal(load[AnyValue](localDegree), noValue)))
           IntermediateExpression(
             block(
@@ -1913,7 +1966,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                 setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typeName)))),
               ternary(
                 comparison(
-                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), getLongAt(offset), loadField(f), NODE_CURSOR), load[Int](localDegreeInt)
+                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), nodeIdIr, loadField(f), NODE_CURSOR), load[Int](localDegreeInt)
                 ), trueValue, falseValue)
             ), maxDegree.fields :+ f, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }

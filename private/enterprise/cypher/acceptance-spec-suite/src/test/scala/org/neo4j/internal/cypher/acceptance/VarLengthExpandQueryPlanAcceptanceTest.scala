@@ -460,7 +460,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         |MATCH (etat:EtatElementHTA) -[:EST_ETAT_DE]-> (element)
         |RETURN element""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.PipelinedFused - Configs.SlottedWithCompiledExpressions, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList shouldBe empty
   }

@@ -5,13 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.lang.Math.PI
-import java.lang.Math.sin
-import java.time.Clock
-import java.time.Duration
-import java.util.UUID
-import java.util.concurrent.ThreadLocalRandom
-
 import org.neo4j.codegen.api.CodeGeneration.ByteCodeGeneration
 import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -23,11 +16,18 @@ import org.neo4j.cypher.internal.expressions.DesugaredMapProjection
 import org.neo4j.cypher.internal.expressions.EntityType
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.GetDegree
+import org.neo4j.cypher.internal.expressions.HasDegree
+import org.neo4j.cypher.internal.expressions.HasDegreeGreaterThan
+import org.neo4j.cypher.internal.expressions.HasDegreeGreaterThanOrEqual
+import org.neo4j.cypher.internal.expressions.HasDegreeLessThan
+import org.neo4j.cypher.internal.expressions.HasDegreeLessThanOrEqual
+import org.neo4j.cypher.internal.expressions.HasTypes
 import org.neo4j.cypher.internal.expressions.LiteralEntry
 import org.neo4j.cypher.internal.expressions.MultiRelationshipPathStep
 import org.neo4j.cypher.internal.expressions.NODE_TYPE
 import org.neo4j.cypher.internal.expressions.NilPathStep
 import org.neo4j.cypher.internal.expressions.NodePathStep
+import org.neo4j.cypher.internal.expressions.Null
 import org.neo4j.cypher.internal.expressions.PathExpression
 import org.neo4j.cypher.internal.expressions.PathStep
 import org.neo4j.cypher.internal.expressions.PropertyKeyName
@@ -111,6 +111,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
+import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.internal.util.symbols.CTAny
@@ -182,6 +183,12 @@ import org.neo4j.values.virtual.VirtualValues.list
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
 
+import java.lang.Math.PI
+import java.lang.Math.sin
+import java.time.Clock
+import java.time.Duration
+import java.util.UUID
+import java.util.concurrent.ThreadLocalRandom
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -1895,6 +1902,94 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     // Then
     context.setLongAt(offset, r.id)
     evaluate(compiled, context) should equal(Values.TRUE)
+  }
+
+  test("HasTypes on null relationship") {
+    // Given
+    val typeName = "A"
+    val relTypeName = RelTypeName(typeName)(InputPosition.NONE)
+
+    val expression = HasTypes(Null()(InputPosition.NONE), Seq(relTypeName))(InputPosition.NONE)
+    val slots = SlotConfiguration.empty
+    val context = SlottedRow(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    evaluate(compiled, context) should equal(Values.NO_VALUE)
+  }
+
+  test("HasTypes on no value expression variable") {
+    // Given
+    val typeName = "A"
+    val relTypeName = RelTypeName(typeName)(InputPosition.NONE)
+
+    val expressionVariables: Array[AnyValue] = Array(Values.NO_VALUE)
+
+    val expression = HasTypes(ExpressionVariable(0, "r"), Seq(relTypeName))(InputPosition.NONE)
+    val slots = SlotConfiguration.empty
+    val context = SlottedRow(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    evaluateWithExpressionVariables(compiled, expressionVariables, context) should equal(Values.NO_VALUE)
+  }
+
+  test("HasTypes with required null check") {
+    // Given
+    val typeName = "A"
+    val relTypeName = RelTypeName(typeName)(InputPosition.NONE)
+
+    val expression = HasTypes(function("sin", nullLiteral), Seq(relTypeName))(InputPosition.NONE)
+    val slots = SlotConfiguration.empty
+    val context = SlottedRow(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    evaluateWithExpressionVariables(compiled, expressionVariables, context) should equal(NO_VALUE)
+  }
+
+  test("HasTypes on expression variable - positive") {
+    // Given
+    val typeName = "A"
+    val relTypeName = RelTypeName(typeName)(InputPosition.NONE)
+
+    val r = ValueUtils.fromRelationshipEntity(relate(createNode(), createNode(), typeName))
+    val expressionVariables: Array[AnyValue] = Array(r)
+
+    val expression = HasTypes(ExpressionVariable(0, "r"), Seq(relTypeName))(InputPosition.NONE)
+    val slots = SlotConfiguration.empty
+    val context = SlottedRow(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    evaluateWithExpressionVariables(compiled, expressionVariables, context) should equal(Values.TRUE)
+  }
+
+  test("HasTypes on expression variable - negative") {
+    // Given
+    val typeName = "A"
+    val relTypeName = RelTypeName("NOT_A")(InputPosition.NONE)
+
+    val r = ValueUtils.fromRelationshipEntity(relate(createNode(), createNode(), typeName))
+    val expressionVariables: Array[AnyValue] = Array(r)
+
+    val expression = HasTypes(ExpressionVariable(0, "r"), Seq(relTypeName))(InputPosition.NONE)
+    val slots = SlotConfiguration.empty
+    val context = SlottedRow(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    evaluateWithExpressionVariables(compiled, expressionVariables, context) should equal(Values.FALSE)
   }
 
   test("HasTypesFromSlot - late - negative") {
@@ -4558,6 +4653,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //null
     evaluate(compile(HasDegreeGreaterThanPrimitive(0, None, OUTGOING, parameter(0)), slots), 0, Array(NO_VALUE), context) should equal(NO_VALUE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, None, OUTGOING, function("sin", nullLiteral)), slots), 0, Array(NO_VALUE), context) should equal(NO_VALUE)
 
     //greater than
     evaluate(compile(HasDegreeGreaterThanPrimitive(0, None, OUTGOING, literalInt(4)), slots), context) should equal(Values.FALSE)
@@ -4598,6 +4694,69 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, None, INCOMING, literalInt(3)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, None, INCOMING, literalInt(2)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, None, INCOMING, literalInt(1)), slots), context) should equal(Values.FALSE)
+  }
+
+  test("check Degree without type on expression variable") {
+    //given node with three outgoing and two incoming relationships
+    val n = createNode("prop" -> "hello")
+    val virtualNode: AnyValue = VirtualValues.node(n.getId)
+    val nExpression = ExpressionVariable(0, "n")
+    val expressions = Array(virtualNode)
+    relate(createNode(), n)
+    relate(createNode(), n)
+    relate(n, createNode())
+    relate(n, createNode())
+    relate(n, createNode())
+
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setLongAt(0, n.getId)
+
+    //null
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, None, OUTGOING, parameter(0))(InputPosition.NONE), slots), expressions, context, Array(NO_VALUE)) should equal(NO_VALUE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nullLiteral, None, OUTGOING, literalInt(4))(InputPosition.NONE), slots), expressions, context, Array(NO_VALUE)) should equal(NO_VALUE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, None, OUTGOING, function("sin", nullLiteral))(InputPosition.NONE), slots), expressions, context, Array(NO_VALUE)) should equal(NO_VALUE)
+    evaluateWithExpressionVariables(compile(function("sin", HasDegreeGreaterThan(nExpression, None, OUTGOING, parameter(0))(InputPosition.NONE))), expressions, context, Array(NO_VALUE)) should equal(NO_VALUE)
+
+    //greater than
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, None, OUTGOING, literalInt(4))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, None, OUTGOING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, None, OUTGOING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, None, INCOMING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, None, INCOMING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, None, INCOMING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+
+    //greater than or equal
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, None, OUTGOING, literalInt(4))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, None, OUTGOING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, None, OUTGOING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, None, INCOMING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, None, INCOMING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, None, INCOMING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+
+    // equal
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, None, OUTGOING, literalInt(4))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, None, OUTGOING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, None, OUTGOING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, None, INCOMING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, None, INCOMING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, None, INCOMING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+
+    // less than
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, None, OUTGOING, literalInt(4))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, None, OUTGOING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, None, OUTGOING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, None, INCOMING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, None, INCOMING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, None, INCOMING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+
+    // less than or equal
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, None, OUTGOING, literalInt(4))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, None, OUTGOING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, None, OUTGOING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, None, INCOMING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, None, INCOMING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, None, INCOMING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
   }
 
   test("check Degree with type") {
@@ -4656,6 +4815,69 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some(Left(relToken)), INCOMING, literalInt(2)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some(Left(relToken)), INCOMING, literalInt(1)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some(Left(relToken)), INCOMING, literalInt(0)), slots), context) should equal(Values.FALSE)
+  }
+
+  test("check Degree with type on expression variable") {
+    //given node with three outgoing and two incoming relationships
+    val n = createNode("prop" -> "hello")
+    val virtualNode: AnyValue = VirtualValues.node(n.getId)
+    val nExpression = ExpressionVariable(0, "n")
+    val expressions = Array(virtualNode)
+
+    val relType = "R"
+    val relTypeName = Some(RelTypeName(relType)(InputPosition.NONE))
+    relate(createNode(), n, relType)
+    relate(createNode(), n, "OTHER")
+    relate(n, createNode(), relType)
+    relate(n, createNode(), relType)
+    relate(n, createNode(), "OTHER")
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setLongAt(0, n.getId)
+    val relToken = tokenReader(tx, _.relationshipType("R"))
+
+    //null
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, relTypeName, OUTGOING, parameter(0))(InputPosition.NONE), slots), expressions, context, Array(NO_VALUE)) should equal(NO_VALUE)
+
+    //greater than
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, relTypeName, OUTGOING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, relTypeName, OUTGOING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, relTypeName, OUTGOING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, relTypeName, INCOMING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, relTypeName, INCOMING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThan(nExpression, relTypeName, INCOMING, literalInt(0))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+
+    //greater than or equal
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, relTypeName, OUTGOING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, relTypeName, OUTGOING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, relTypeName, OUTGOING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, relTypeName, INCOMING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, relTypeName, INCOMING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeGreaterThanOrEqual(nExpression, relTypeName, INCOMING, literalInt(0))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+
+    // equal
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, relTypeName, OUTGOING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, relTypeName, OUTGOING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, relTypeName, OUTGOING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, relTypeName, INCOMING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, relTypeName, INCOMING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegree(nExpression, relTypeName, INCOMING, literalInt(0))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+
+    // less than
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, relTypeName, OUTGOING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, relTypeName, OUTGOING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, relTypeName, OUTGOING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, relTypeName, INCOMING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, relTypeName, INCOMING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThan(nExpression, relTypeName, INCOMING, literalInt(0))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+
+    // less than or equal
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, relTypeName, OUTGOING, literalInt(3))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, relTypeName, OUTGOING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, relTypeName, OUTGOING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, relTypeName, INCOMING, literalInt(2))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, relTypeName, INCOMING, literalInt(1))(InputPosition.NONE), slots), expressions, context) should equal(Values.TRUE)
+    evaluateWithExpressionVariables(compile(HasDegreeLessThanOrEqual(nExpression, relTypeName, INCOMING, literalInt(0))(InputPosition.NONE), slots), expressions, context) should equal(Values.FALSE)
   }
 
   test("check Degree with type late") {
@@ -4950,6 +5172,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                        params: Array[AnyValue] = Array.empty,
                        context: CypherRow = ctx): AnyValue =
     compiled.evaluate(context, query, params, cursors, new Array(nExpressionSlots))
+
+  private def evaluateWithExpressionVariables(compiled: CompiledExpression,
+                                              expressionVariables: Array[AnyValue],
+                                              context: CypherRow = ctx,
+                                              params: Array[AnyValue] = Array.empty): AnyValue =
+    compiled.evaluate(context, query, params, cursors, expressionVariables)
 
   private def parameter(offset: Int): Expression = ParameterFromSlot(offset, s"a$offset", CTAny)
 
