@@ -288,7 +288,7 @@ class QueryLoggerIT
         databaseBuilder.setConfig( auth_enabled, true )
                        .setConfig( logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.log_queries_plan, true );
+                       .setConfig( GraphDatabaseSettings.log_queries_query_plan, true );
         buildDatabase();
 
         // run query
@@ -311,7 +311,7 @@ class QueryLoggerIT
                        .setConfig( logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( log_queries, LogQueryLevel.INFO )
                        .setConfig( GraphDatabaseInternalSettings.log_format, FormattedLogFormat.JSON_FORMAT )
-                       .setConfig( GraphDatabaseSettings.log_queries_plan, true );
+                       .setConfig( GraphDatabaseSettings.log_queries_query_plan, true );
         buildDatabase();
 
         // run query

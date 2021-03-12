@@ -55,7 +55,7 @@ class ConfiguredQueryLogger implements QueryLogger
         this.logRuntime = config.get( GraphDatabaseSettings.log_queries_runtime_logging_enabled );
         this.verboseLogging = config.get( GraphDatabaseSettings.log_queries ) == LogQueryLevel.VERBOSE;
         this.rawLogging = config.get( GraphDatabaseSettings.log_queries_early_raw_logging_enabled );
-        this.logPlan = config.get( GraphDatabaseSettings.log_queries_plan );
+        this.logPlan = config.get( GraphDatabaseSettings.log_queries_query_plan );
     }
 
     @Override
