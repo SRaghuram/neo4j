@@ -67,14 +67,15 @@ public class ActorSystemLifecycle
     private MinFormationMembers minFormationMembers;
 
     public ActorSystemLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, JoinMessageFactory joinMessageFactory,
-                                 Config config, LogProvider logProvider, MinFormationMembers minFormationMembers )
+                                 Config config, LogProvider logProvider, MinFormationMembers minFormationMembers,
+                                 AkkaActorSystemRestartStrategy akkaActorSystemRestartStrategy )
     {
         this.actorSystemFactory = actorSystemFactory;
         this.resolver = resolver;
         this.joinMessageFactory = joinMessageFactory;
         this.config = config;
         this.log = logProvider.getLog( getClass() );
-        this.actorSystemRestartStrategy = new AkkaActorSystemRestartStrategy.RestartWhenMajorityUnreachableOrSingletonFirstSeed( resolver );
+        this.actorSystemRestartStrategy = akkaActorSystemRestartStrategy;
         this.actorSystemShutdownTimeout = this.config.get( CausalClusteringInternalSettings.akka_shutdown_timeout );
         this.minFormationMembers = minFormationMembers;
     }

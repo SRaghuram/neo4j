@@ -38,75 +38,37 @@ import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
     @Override
-    public final AkkaCoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler,
-                                                              LogProvider logProvider, LogProvider userLogProvider,
-                                                              RemoteMembersResolver remoteMembersResolver,
-                                                              RetryStrategy catchupAddressRetryStrategy,
-                                                              SslPolicyLoader sslPolicyLoader, ServerSnapshotFactory serverSnapshotFactory,
-                                                              DiscoveryFirstStartupDetector firstStartupDetector,
-                                                              Monitors monitors, Clock clock, DatabaseStateService databaseStateService,
-                                                              Panicker panicker )
+    public final AkkaCoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler, LogProvider logProvider,
+                                                              LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
+                                                              RetryStrategy catchupAddressRetryStrategy, SslPolicyLoader sslPolicyLoader,
+                                                              ServerSnapshotFactory serverSnapshotFactory, DiscoveryFirstStartupDetector firstStartupDetector,
+                                                              Monitors monitors, Clock clock, DatabaseStateService databaseStateService, Panicker panicker )
     {
         ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forConfig( config );
         var minFormationMembers = MinFormationMembers.from( config );
-        var actorSystem = actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, firstStartupDetector,
-                                                minFormationMembers );
-        return new AkkaCoreTopologyService(
-                config,
-                myIdentity,
-                actorSystem,
-                logProvider,
-                userLogProvider,
-                catchupAddressRetryStrategy,
-                actorSystemRestarter,
-                serverSnapshotFactory,
-                jobScheduler,
-                clock,
-                monitors,
-                databaseStateService,
-                panicker
+        var akkaActorSystemRestartStrategy = new AkkaActorSystemRestartStrategy.RestartWhenMajorityUnreachableOrSingletonFirstSeed( remoteMembersResolver );
+
+        var actorSystem = actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, firstStartupDetector, minFormationMembers,
+                                                akkaActorSystemRestartStrategy );
+        return new AkkaCoreTopologyService( config, myIdentity, actorSystem, logProvider, userLogProvider, catchupAddressRetryStrategy, actorSystemRestarter,
+                                            serverSnapshotFactory, jobScheduler, clock, monitors, databaseStateService, panicker
         );
     }
 
     @Override
-    public final AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
-            ServerIdentity myIdentity, RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader,
-            ServerSnapshotFactory serverSnapshotFactory, Clock clock, DatabaseStateService databaseStateService )
+    public final AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, ServerIdentity myIdentity,
+                                                                RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader,
+                                                                ServerSnapshotFactory serverSnapshotFactory, Clock clock,
+                                                                DatabaseStateService databaseStateService )
     {
         var firstStartupDetector = new ReadReplicaDiscoveryFirstStartupDetector();
         var minFormationMembers = MinFormationMembers.from( config );
+        var akkaActorSystemRestartStrategy = new AkkaActorSystemRestartStrategy.NeverRestart();
 
-        return new AkkaTopologyClient(
-                config,
-                logProvider,
-                myIdentity,
-                actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, firstStartupDetector, minFormationMembers ),
-                DefaultServerSnapshot::rrSnapshot,
-                clock,
-                jobScheduler,
-                databaseStateService );
-    }
-
-    protected ActorSystemLifecycle actorSystemLifecycle( Config config, LogProvider logProvider, RemoteMembersResolver resolver,
-                                                         SslPolicyLoader sslPolicyLoader,
-                                                         DiscoveryFirstStartupDetector firstStartupDetector,
-                                                         MinFormationMembers minFormationMembers )
-    {
-        return new ActorSystemLifecycle(
-                actorSystemFactory( sslPolicyLoader, firstStartupDetector, config, logProvider, minFormationMembers ),
-                resolver,
-                new JoinMessageFactory( resolver ),
-                config,
-                logProvider,
-                minFormationMembers );
-    }
-
-    protected static ActorSystemFactory actorSystemFactory( SslPolicyLoader sslPolicyLoader, DiscoveryFirstStartupDetector firstStartupDetector,
-                                                            Config config, LogProvider logProvider, MinFormationMembers minFormationMembers )
-    {
-        SslPolicy sslPolicy = sslPolicyLoader.hasPolicyForSource( CLUSTER ) ? sslPolicyLoader.getPolicy( CLUSTER ) : null;
-        Optional<SSLEngineProvider> sslEngineProvider = Optional.ofNullable( sslPolicy ).map( AkkaDiscoverySSLEngineProvider::new );
-        return new ActorSystemFactory( sslEngineProvider, firstStartupDetector, config, logProvider, minFormationMembers );
+        var actorSystemLifecycle = actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, firstStartupDetector, minFormationMembers,
+                                                         akkaActorSystemRestartStrategy );
+        return new AkkaTopologyClient( config, logProvider, myIdentity, actorSystemLifecycle, DefaultServerSnapshot::rrSnapshot, clock, jobScheduler,
+                                       databaseStateService );
     }
 
     @Override
@@ -118,21 +80,29 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
     {
         ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forConfig( config );
         var minFormationMembers = new MinFormationMembers( 1 );
+        var akkaActorSystemRestartStrategy = new AkkaActorSystemRestartStrategy.NeverRestart();
 
-        return new AkkaStandaloneTopologyService(
-                config,
-                myIdentity,
-                actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, () -> true, minFormationMembers ),
-                logProvider,
-                userLogProvider,
-                topologyServiceRetryStrategy,
-                actorSystemRestarter,
-                serverSnapshotFactory,
-                jobScheduler,
-                clock,
-                monitors,
-                databaseStateService,
-                panicker
-        );
+        var actorSystemLifecycle = actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, () -> true, minFormationMembers,
+                                                         akkaActorSystemRestartStrategy );
+        return new AkkaStandaloneTopologyService( config, myIdentity, actorSystemLifecycle, logProvider, userLogProvider, topologyServiceRetryStrategy,
+                                                  actorSystemRestarter, serverSnapshotFactory, jobScheduler, clock, monitors, databaseStateService, panicker );
+    }
+
+    protected ActorSystemLifecycle actorSystemLifecycle( Config config, LogProvider logProvider, RemoteMembersResolver resolver,
+                                                         SslPolicyLoader sslPolicyLoader, DiscoveryFirstStartupDetector firstStartupDetector,
+                                                         MinFormationMembers minFormationMembers,
+                                                         AkkaActorSystemRestartStrategy akkaActorSystemRestartStrategy )
+    {
+        var actorSystemFactory = actorSystemFactory( sslPolicyLoader, firstStartupDetector, config, logProvider, minFormationMembers );
+        return new ActorSystemLifecycle( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider, minFormationMembers,
+                                         akkaActorSystemRestartStrategy );
+    }
+
+    protected static ActorSystemFactory actorSystemFactory( SslPolicyLoader sslPolicyLoader, DiscoveryFirstStartupDetector firstStartupDetector, Config config,
+                                                            LogProvider logProvider, MinFormationMembers minFormationMembers )
+    {
+        SslPolicy sslPolicy = sslPolicyLoader.hasPolicyForSource( CLUSTER ) ? sslPolicyLoader.getPolicy( CLUSTER ) : null;
+        Optional<SSLEngineProvider> sslEngineProvider = Optional.ofNullable( sslPolicy ).map( AkkaDiscoverySSLEngineProvider::new );
+        return new ActorSystemFactory( sslEngineProvider, firstStartupDetector, config, logProvider, minFormationMembers );
     }
 }

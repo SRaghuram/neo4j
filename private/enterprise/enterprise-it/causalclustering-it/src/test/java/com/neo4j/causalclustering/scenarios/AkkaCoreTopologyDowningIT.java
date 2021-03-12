@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.ActorSystemRestarter;
+import com.neo4j.causalclustering.discovery.akka.AkkaActorSystemRestartStrategy;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyService;
 import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
@@ -317,7 +318,8 @@ class AkkaCoreTopologyDowningIT
         private TestActorSystemLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, Config config, LogProvider logProvider,
                                           MinFormationMembers minFormationMembers )
         {
-            super( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider, minFormationMembers );
+            super( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider, minFormationMembers,
+                   new AkkaActorSystemRestartStrategy.RestartWhenMajorityUnreachableOrSingletonFirstSeed( resolver ) );
         }
 
         void down( int port )

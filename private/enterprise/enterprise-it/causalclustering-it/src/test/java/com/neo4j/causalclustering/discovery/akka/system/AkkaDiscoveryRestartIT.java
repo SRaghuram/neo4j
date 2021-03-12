@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.ActorSystemRestarter;
+import com.neo4j.causalclustering.discovery.akka.AkkaActorSystemRestartStrategy;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
@@ -184,7 +185,8 @@ public class AkkaDiscoveryRestartIT
                     resolver,
                     new JoinMessageFactory( resolver ),
                     config,
-                    logProvider, minFormationMembers );
+                    logProvider, minFormationMembers,
+                    new AkkaActorSystemRestartStrategy.RestartWhenMajorityUnreachableOrSingletonFirstSeed( resolver ) );
         }
 
         protected ActorSystemFactory actorSystemFactory( SslPolicyLoader ignored, Config config, LogProvider logProvider ,

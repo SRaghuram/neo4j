@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.ActorSystemRestarter;
+import com.neo4j.causalclustering.discovery.akka.AkkaActorSystemRestartStrategy;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyService;
 import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
@@ -88,8 +89,9 @@ class AkkaCoreTopologyMisConfiguredIT
         var firstStartupDetector = new TestFirstStartupDetector( true );
         var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider, minFormationMembers );
         var resolver = NoOpHostnameResolver.resolver( config );
-        var actorSystemLifecycle =
-                new ActorSystemLifecycle( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider, minFormationMembers );
+        var akkaActorSystemRestartStrategy = new AkkaActorSystemRestartStrategy.RestartWhenMajorityUnreachableOrSingletonFirstSeed( resolver );
+        var actorSystemLifecycle = new ActorSystemLifecycle( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider,
+                minFormationMembers, akkaActorSystemRestartStrategy );
         var databaseIdRepository = new TestDatabaseIdRepository();
         var panicker = DummyPanicService.PANICKER;
         Map<NamedDatabaseId,DatabaseState> states = Map.of( databaseIdRepository.defaultDatabase(),
