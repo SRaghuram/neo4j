@@ -12,6 +12,7 @@ import com.neo4j.bench.macro.execution.database.Schema.NodeExistsSchemaEntry;
 import com.neo4j.bench.macro.execution.database.Schema.NodeKeySchemaEntry;
 import com.neo4j.bench.macro.execution.database.Schema.NodeUniqueSchemaEntry;
 import com.neo4j.bench.macro.execution.database.Schema.RelationshipExistsSchemaEntry;
+import com.neo4j.bench.macro.execution.database.Schema.RelationshipIndexSchemaEntry;
 import com.neo4j.bench.macro.execution.database.Schema.SchemaEntry;
 import com.neo4j.bench.macro.workload.WorkloadConfigError;
 import com.neo4j.bench.macro.workload.WorkloadConfigException;
@@ -31,6 +32,7 @@ public class SchemaTest
     private static final String NODE_UNIQUE = "CONSTRAINT ON (n:Label) ASSERT p.prop1 IS UNIQUE";
     private static final String NODE_EXISTS = "CONSTRAINT ON (n:Label) ASSERT exists(p.prop1)";
     private static final String RELATIONSHIP_EXISTS = "CONSTRAINT ON ()-[r:TYPE]-() ASSERT exists(r.prop1)";
+    private static final String RELATIONSHIP_INDEX = "INDEX FOR ()-[n:TYPE]->() ON (r.prop1, r.prop2)";
     private static final String INDEX = "INDEX ON :Label(prop1)";
     private static final String COMPOSITE_INDEX = "INDEX ON :Label(prop1,prop2)";
 
@@ -156,6 +158,37 @@ public class SchemaTest
     }
 
     @Test
+    public void shouldParseRelationshipIndex()
+    {
+        assertThat( RelationshipIndexSchemaEntry.isIndex( INDEX ), is( false ) );
+        assertThat( RelationshipIndexSchemaEntry.isIndex( COMPOSITE_INDEX ), is( false ) );
+
+        assertThat( RelationshipIndexSchemaEntry.isIndex( RELATIONSHIP_EXISTS ), is( false ) );
+        assertThat( RelationshipIndexSchemaEntry.isIndex( NODE_EXISTS ), is( false ) );
+        assertThat( RelationshipIndexSchemaEntry.isIndex( NODE_UNIQUE ), is( false ) );
+        assertThat( RelationshipIndexSchemaEntry.isIndex( NODE_KEY ), is( false ) );
+        assertThat( RelationshipIndexSchemaEntry.isIndex( RELATIONSHIP_INDEX ), is( true ) );
+
+        SchemaEntry entry = RelationshipIndexSchemaEntry.parse( RELATIONSHIP_INDEX );
+        assertThat( entry, instanceOf( RelationshipIndexSchemaEntry.class ) );
+
+        assertThat( ((RelationshipIndexSchemaEntry) entry).relationshipType(), equalTo( TYPE ) );
+        assertThat( ((RelationshipIndexSchemaEntry) entry).properties(), equalTo( Lists.newArrayList( PROP1, PROP2 ) ) );
+
+        assertThat( RelationshipIndexSchemaEntry.isIndex( entry.description() ), is( true ) );
+        assertThat( RelationshipIndexSchemaEntry.parse( entry.description() ), instanceOf( RelationshipIndexSchemaEntry.class ) );
+
+        entry = RelationshipIndexSchemaEntry.parse( RELATIONSHIP_INDEX );
+        assertThat( entry, instanceOf( RelationshipIndexSchemaEntry.class ) );
+
+        assertThat( ((RelationshipIndexSchemaEntry) entry).relationshipType(), equalTo( TYPE ) );
+        assertThat( ((RelationshipIndexSchemaEntry) entry).properties(), equalTo( Lists.newArrayList( PROP1, PROP2 ) ) );
+
+        assertThat( RelationshipIndexSchemaEntry.isIndex( entry.description() ), is( true ) );
+        assertThat( RelationshipIndexSchemaEntry.parse( entry.description() ), instanceOf( RelationshipIndexSchemaEntry.class ) );
+    }
+
+    @Test
     public void shouldParseEntry()
     {
         assertThat( assertParseEntry( NODE_KEY ), instanceOf( NodeKeySchemaEntry.class ) );
@@ -164,6 +197,7 @@ public class SchemaTest
         assertThat( assertParseEntry( RELATIONSHIP_EXISTS ), instanceOf( RelationshipExistsSchemaEntry.class ) );
         assertThat( assertParseEntry( INDEX ), instanceOf( IndexSchemaEntry.class ) );
         assertThat( assertParseEntry( COMPOSITE_INDEX ), instanceOf( IndexSchemaEntry.class ) );
+        assertThat( assertParseEntry( RELATIONSHIP_INDEX ), instanceOf( RelationshipIndexSchemaEntry.class ) );
 
         WorkloadConfigException workloadConfigException = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                                          () -> SchemaEntry.parse( UNRECOGNIZED ) );

@@ -102,11 +102,10 @@ public class UpgradeStoreCommand implements Runnable
                                   .withSetting( record_format, recordFormat )
                                   .writeToFile( neo4jConfigPath );
             }
-
-            LOG.debug( "Checking schema..." );
-            EmbeddedDatabase.verifySchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
             LOG.debug( "Recreating schema..." );
             EmbeddedDatabase.recreateSchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
+            LOG.debug( "Checking schema..." );
+            EmbeddedDatabase.verifySchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
             LOG.debug( "Upgrade complete" );
         }
     }

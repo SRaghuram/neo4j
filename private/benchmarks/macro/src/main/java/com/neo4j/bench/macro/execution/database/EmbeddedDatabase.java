@@ -33,6 +33,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
@@ -59,9 +60,21 @@ public class EmbeddedDatabase implements Database
         recreateSchema( store, edition, neo4jConfig, schema );
     }
 
-    public static void recreateSchema( Store store, Edition edition, Neo4jConfig neo4jConfig, Schema schema )
+    private static void recreateSchema( Store store, Edition edition, Neo4jConfig neo4jConfig, Schema schema )
     {
         LOG.debug( "Dropping schema..." );
+        dropSchema( store, edition, neo4jConfig );
+
+        LOG.debug( "Deleting index directory and transaction logs..." );
+        store.removeIndexDir();
+        store.removeTxLogs();
+
+        LOG.debug( "Recreating schema..." );
+        createSchema( store,edition,neo4jConfig,schema );
+    }
+
+    private static void dropSchema( Store store, Edition edition, Neo4jConfig neo4jConfig )
+    {
         try ( EmbeddedDatabase db = EmbeddedDatabase.startWith( store, edition, neo4jConfig ) )
         {
             db.dropSchema();
@@ -73,12 +86,10 @@ public class EmbeddedDatabase implements Database
                                             droppedSchema.toString() );
             }
         }
+    }
 
-        LOG.debug( "Deleting index directory and transaction logs..." );
-        store.removeIndexDir();
-        store.removeTxLogs();
-
-        LOG.debug( "Recreating schema..." );
+    private static void createSchema( Store store, Edition edition, Neo4jConfig neo4jConfig, Schema schema )
+    {
         try ( EmbeddedDatabase db = EmbeddedDatabase.startWith( store, edition, neo4jConfig ) )
         {
             db.createSchema( schema );
@@ -258,11 +269,23 @@ public class EmbeddedDatabase implements Database
                     .getIndexes()
                     .forEach( index ->
                               {
-                                  for ( Label label : index.getLabels() )
+                                  if ( index.isNodeIndex() )
                                   {
-                                      if ( !index.isConstraintIndex() )
+                                      for ( Label label : index.getLabels() )
                                       {
-                                          entries.add( new Schema.IndexSchemaEntry( label, Lists.newArrayList( index.getPropertyKeys() ) ) );
+                                          if ( !index.isConstraintIndex() && !index.isRelationshipIndex() )
+                                          {
+                                              entries.add( new Schema.IndexSchemaEntry( label, Lists.newArrayList( index.getPropertyKeys() ) ) );
+                                          }
+                                      }
+                                  }
+                                  else if ( index.isRelationshipIndex() )
+                                  {
+                                      for ( RelationshipType relationshipType : index.getRelationshipTypes() )
+                                      {
+
+                                          entries.add( new Schema.RelationshipIndexSchemaEntry( relationshipType,
+                                                                                                Lists.newArrayList( index.getPropertyKeys() ) ) );
                                       }
                                   }
                               } );
@@ -309,6 +332,9 @@ public class EmbeddedDatabase implements Database
                   .forEach( tx::execute );
             schema.indexes()
                   .stream()
+                  .map( Schema.SchemaEntry::createStatement )
+                  .forEach( tx::execute );
+            schema.relationshipIndexes().stream()
                   .map( Schema.SchemaEntry::createStatement )
                   .forEach( tx::execute );
             tx.commit();

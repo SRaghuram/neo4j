@@ -5,18 +5,23 @@
  */
 package com.neo4j.bench.macro.execution.database;
 
-import com.google.common.collect.Sets;
 import com.neo4j.bench.macro.workload.WorkloadConfigError;
 import com.neo4j.bench.macro.workload.WorkloadConfigException;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.schema.IndexCreator;
 
+import static java.lang.String.format;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
@@ -79,12 +84,19 @@ public class Schema
 
     List<SchemaEntry> constraints()
     {
-        return entries.stream().filter( entry -> !(entry instanceof IndexSchemaEntry) ).collect( toList() );
+        return entries.stream().filter( entry -> !(entry instanceof IndexSchemaEntry || entry instanceof RelationshipIndexSchemaEntry) ).collect( toList() );
     }
 
     List<SchemaEntry> indexes()
     {
         return entries.stream().filter( entry -> entry instanceof IndexSchemaEntry ).collect( toList() );
+    }
+
+    List<RelationshipIndexSchemaEntry> relationshipIndexes()
+    {
+        return entries.stream().filter( entry -> entry instanceof RelationshipIndexSchemaEntry )
+                      .map( r -> (RelationshipIndexSchemaEntry) r )
+                      .collect( toList() );
     }
 
     private List<SchemaEntry> entriesNotIn( Schema schema )
@@ -133,7 +145,7 @@ public class Schema
     @Override
     public int hashCode()
     {
-        return Objects.hash( Sets.newHashSet( entries ) );
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 
     public interface SchemaEntry
@@ -163,6 +175,10 @@ public class Schema
             else if ( IndexSchemaEntry.isIndex( value ) )
             {
                 return IndexSchemaEntry.parse( value );
+            }
+            else if ( RelationshipIndexSchemaEntry.isIndex( value ) )
+            {
+                return RelationshipIndexSchemaEntry.parse( value );
             }
             else
             {
@@ -236,23 +252,13 @@ public class Schema
         @Override
         public boolean equals( Object o )
         {
-            if ( this == o )
-            {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() )
-            {
-                return false;
-            }
-            IndexSchemaEntry that = (IndexSchemaEntry) o;
-            return Objects.equals( label, that.label ) &&
-                   Objects.equals( properties, that.properties );
+            return EqualsBuilder.reflectionEquals( this, o );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( label, properties );
+            return HashCodeBuilder.reflectionHashCode( this );
         }
     }
 
@@ -322,23 +328,13 @@ public class Schema
         @Override
         public boolean equals( Object o )
         {
-            if ( this == o )
-            {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() )
-            {
-                return false;
-            }
-            NodeExistsSchemaEntry that = (NodeExistsSchemaEntry) o;
-            return Objects.equals( label, that.label ) &&
-                   Objects.equals( property, that.property );
+            return EqualsBuilder.reflectionEquals( this, o );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( label, property );
+            return HashCodeBuilder.reflectionHashCode( this );
         }
     }
 
@@ -411,23 +407,13 @@ public class Schema
         @Override
         public boolean equals( Object o )
         {
-            if ( this == o )
-            {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() )
-            {
-                return false;
-            }
-            RelationshipExistsSchemaEntry that = (RelationshipExistsSchemaEntry) o;
-            return Objects.equals( type, that.type ) &&
-                   Objects.equals( property, that.property );
+            return EqualsBuilder.reflectionEquals( this, o );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( type, property );
+            return HashCodeBuilder.reflectionHashCode( this );
         }
     }
 
@@ -497,23 +483,13 @@ public class Schema
         @Override
         public boolean equals( Object o )
         {
-            if ( this == o )
-            {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() )
-            {
-                return false;
-            }
-            NodeUniqueSchemaEntry that = (NodeUniqueSchemaEntry) o;
-            return Objects.equals( label, that.label ) &&
-                   Objects.equals( property, that.property );
+            return EqualsBuilder.reflectionEquals( this, o );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( label, property );
+            return HashCodeBuilder.reflectionHashCode( this );
         }
     }
 
@@ -585,23 +561,98 @@ public class Schema
         @Override
         public boolean equals( Object o )
         {
-            if ( this == o )
-            {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() )
-            {
-                return false;
-            }
-            NodeKeySchemaEntry that = (NodeKeySchemaEntry) o;
-            return Objects.equals( label, that.label ) &&
-                   Objects.equals( properties, that.properties );
+            return EqualsBuilder.reflectionEquals( this, o );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( label, properties );
+            return HashCodeBuilder.reflectionHashCode( this );
+        }
+    }
+
+    //INDEX FOR ()-[r:Foo]->() ON (r.prop1, r.prop2)
+    static class RelationshipIndexSchemaEntry implements SchemaEntry
+    {
+        private static final String regex = ".+\\[.+:(.+)].+ ON \\((.+)\\)";
+
+        static boolean isIndex( String value )
+        {
+            return matchIndex( value ).matches();
+        }
+
+        static SchemaEntry parse( String value )
+        {
+            if ( !isIndex( value ) )
+            {
+                throw new WorkloadConfigException( WorkloadConfigError.INVALID_SCHEMA_ENTRY );
+            }
+
+            final Matcher matcher = matchIndex( value );
+            if ( !matcher.matches() )
+            {
+                throw new RuntimeException( format( "Failed to parse index with value '%s'", value ) );
+            }
+            //Foo
+            String relationshipType = matcher.group( 1 );
+
+            // r.prop1, r.prop2 --> [ "r.prop1", "r.prop2" ]
+            List<String> relationshipProperties = Arrays.stream( matcher.group( 2 ).split( "," ) ).map( String::trim ).collect( toList() );
+            //[ "r.prop1", "r.prop2" ] -> [ "prop1", "prop2" ]
+            List<String> properties = relationshipProperties.stream().map( relProp -> relProp.split( "\\." )[1].trim() ).collect( toList() );
+
+            return new RelationshipIndexSchemaEntry( RelationshipType.withName( relationshipType ), properties );
+        }
+
+        private static Matcher matchIndex( String value )
+        {
+            final Pattern pattern = Pattern.compile( regex );
+            final Matcher matcher = pattern.matcher( value );
+            return matcher;
+        }
+
+        private final RelationshipType relationshipType;
+        private final List<String> properties;
+
+        RelationshipIndexSchemaEntry( RelationshipType RelationshipType, List<String> properties )
+        {
+            this.relationshipType = RelationshipType;
+            this.properties = properties;
+        }
+
+        @Override
+        public String createStatement()
+        {
+            return "CREATE " + description();
+        }
+
+        @Override
+        public String description()
+        {
+            String props = properties.stream().map( prop -> "r." + prop ).collect( joining( "," ) );
+            return "INDEX FOR ()-[r:" + relationshipType.name() + "]->() ON (" + props + ")";
+        }
+
+        RelationshipType relationshipType()
+        {
+            return relationshipType;
+        }
+
+        List<String> properties()
+        {
+            return properties;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            return EqualsBuilder.reflectionEquals( this, o );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return HashCodeBuilder.reflectionHashCode( this );
         }
     }
 }
