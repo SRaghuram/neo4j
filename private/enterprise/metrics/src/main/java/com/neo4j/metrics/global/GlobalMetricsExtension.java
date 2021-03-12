@@ -137,7 +137,7 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
                 if ( config.get( csv_enabled ) )
                 {
                     logger.warn( "Unable to remove database specific metric files because metric namespaces are not enabled. In order to remove this " +
-                            "warning you have set '" + metrics_namespaces_enabled.name() + "=true' in your configuration file." );
+                            "warning you have to set '" + metrics_namespaces_enabled.name() + "=true' in your configuration file." );
                 }
                 return;
             }
