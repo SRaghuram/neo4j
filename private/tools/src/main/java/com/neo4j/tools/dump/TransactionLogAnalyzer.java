@@ -115,9 +115,9 @@ public class TransactionLogAnalyzer
             bridge = new ReaderLogVersionBridge( logFile )
             {
                 @Override
-                public LogVersionedStoreChannel next( LogVersionedStoreChannel channel ) throws IOException
+                public LogVersionedStoreChannel next( LogVersionedStoreChannel channel, boolean raw ) throws IOException
                 {
-                    LogVersionedStoreChannel next = super.next( channel );
+                    LogVersionedStoreChannel next = super.next( channel, raw );
                     if ( next != channel )
                     {
                         monitor.endLogFile();
