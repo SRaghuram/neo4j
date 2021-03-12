@@ -24,18 +24,18 @@ class AuthCacheClearingDatabaseEventListener extends TransactionEventListenerAda
     @Override
     public void transactionCommitted( long txId )
     {
-        authManager.clearAuthCache();
+        authManager.clearNativeAuthCache();
     }
 
     @Override
     public void storeReplaced( long txId )
     {
-        authManager.clearAuthCache();
+        authManager.clearNativeAuthCache();
     }
 
     @Override
     public void afterCommit( TransactionData data, Object state, GraphDatabaseService databaseService )
     {
-        authManager.clearAuthCache();
+        authManager.clearNativeAuthCache();
     }
 }

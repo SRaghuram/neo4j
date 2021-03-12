@@ -77,6 +77,12 @@ public class FabricAuthManagerWrapper extends EnterpriseAuthManager
     }
 
     @Override
+    public void clearNativeAuthCache()
+    {
+        wrappedAuthManager.clearNativeAuthCache();
+    }
+
+    @Override
     public void log( String message, SecurityContext securityContext )
     {
         wrappedAuthManager.log( message, securityContext );

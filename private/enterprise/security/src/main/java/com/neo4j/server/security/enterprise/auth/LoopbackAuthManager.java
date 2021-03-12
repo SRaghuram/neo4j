@@ -113,6 +113,12 @@ public class LoopbackAuthManager extends EnterpriseAuthManager
     }
 
     @Override
+    public void clearNativeAuthCache()
+    {
+        // No cache used here
+    }
+
+    @Override
     public void log( String message, SecurityContext securityContext )
     {
         securityLog.info( securityContext.subject(), message );

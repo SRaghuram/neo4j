@@ -19,6 +19,11 @@ public abstract class EnterpriseAuthManager extends AuthManager
 {
     public abstract void clearAuthCache();
 
+    /**
+     * Clears auth cache for the native auth providers. The native auth provider is the only one that should be affected by changes in the system graph
+     */
+    public abstract void clearNativeAuthCache();
+
     @Override
     public abstract EnterpriseLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException;
 
@@ -51,6 +56,11 @@ public abstract class EnterpriseAuthManager extends AuthManager
 
         @Override
         public void clearAuthCache()
+        {
+        }
+
+        @Override
+        public void clearNativeAuthCache()
         {
         }
 

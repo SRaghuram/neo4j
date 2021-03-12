@@ -73,6 +73,11 @@ public class InClusterAuthManager extends EnterpriseAuthManager
     }
 
     @Override
+    public void clearNativeAuthCache()
+    {
+    }
+
+    @Override
     public void log( String message, SecurityContext securityContext )
     {
         securityLog.info( securityContext.subject(), message );

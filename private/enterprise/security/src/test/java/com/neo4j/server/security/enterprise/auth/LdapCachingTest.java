@@ -183,6 +183,29 @@ class LdapCachingTest
         assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm did not receive a call" ).isEqualTo( true );
     }
 
+    @Test
+    void shouldNotInvalidateAuthenticationCacheOnSystemUpdates() throws InvalidAuthTokenException
+    {
+        // Given
+        Map<String,Object> mike = authToken( "mike", "123" );
+        authManager.login( mike );
+        assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm did not receive a call" ).isEqualTo( true );
+
+        // When
+        fakeTicker.advance( 2, TimeUnit.MILLISECONDS );
+        authManager.login( mike );
+
+        // Then
+        assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm received a call" ).isEqualTo( false );
+
+        // When simulating system updates
+        authManager.clearNativeAuthCache();
+        authManager.login( mike );
+
+        // Then
+        assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm received a call" ).isEqualTo( false );
+    }
+
     private class TestRealm extends LdapRealm
     {
         private boolean authenticationFlag;

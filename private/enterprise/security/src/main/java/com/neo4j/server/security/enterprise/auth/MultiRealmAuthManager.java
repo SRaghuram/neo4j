@@ -293,6 +293,29 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
         defaultDatabaseResolver.clearCache();
     }
 
+    @Override
+    public void clearNativeAuthCache()
+    {
+        for ( Realm realm : realms )
+        {
+            if ( realm instanceof SystemGraphRealm )
+            {
+                final SystemGraphRealm systemGraphRealm = (SystemGraphRealm) realm;
+                Cache<Object,AuthenticationInfo> authenticationCache = systemGraphRealm.getAuthenticationCache();
+                if ( authenticationCache != null )
+                {
+                    authenticationCache.clear();
+                }
+                Cache<Object,AuthorizationInfo> authorizationCache = systemGraphRealm.getAuthorizationCache();
+                if ( authorizationCache != null )
+                {
+                    authorizationCache.clear();
+                }
+            }
+        }
+        privilegeResolver.clearCacheForRoles();
+    }
+
     Collection<AuthorizationInfo> getAuthorizationInfo( PrincipalCollection principalCollection )
     {
         List<AuthorizationInfo> infoList = new ArrayList<>( 1 );

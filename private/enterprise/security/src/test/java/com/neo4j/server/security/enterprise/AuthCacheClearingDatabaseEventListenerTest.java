@@ -21,34 +21,34 @@ class AuthCacheClearingDatabaseEventListenerTest
     void shouldClearCacheOnStandaloneAfterCommit()
     {
         databaseEventListener.afterCommit( null, null, null );
-        verify( authManager ).clearAuthCache();
+        verify( authManager ).clearNativeAuthCache();
     }
 
     @Test
     void shouldNotClearCacheOnStandaloneBeforeCommit() throws Exception
     {
         databaseEventListener.beforeCommit( null, null, null );
-        verify( authManager, never() ).clearAuthCache();
+        verify( authManager, never() ).clearNativeAuthCache();
     }
 
     @Test
     void shouldNotClearCacheOnStandaloneRollback()
     {
         databaseEventListener.afterRollback( null, null, null );
-        verify( authManager, never() ).clearAuthCache();
+        verify( authManager, never() ).clearNativeAuthCache();
     }
 
     @Test
     void shouldClearCacheOnClusterCommit()
     {
         databaseEventListener.transactionCommitted( 17 );
-        verify( authManager ).clearAuthCache();
+        verify( authManager ).clearNativeAuthCache();
     }
 
     @Test
     void shouldClearCacheOnClusterStoreCopy()
     {
         databaseEventListener.storeReplaced( 17 );
-        verify( authManager ).clearAuthCache();
+        verify( authManager ).clearNativeAuthCache();
     }
 }
