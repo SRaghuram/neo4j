@@ -30,7 +30,7 @@
         <!-- This is benchmark version, that is going to be used for internal release -->
         <!-- DO NOT REMOVE IT !!!, TOUCH IT ONLY WHEN YOU WANT TO DO INTERNAL RELEASE -->
         <benchmarks.version>1.1.8</benchmarks.version>
-        <jmh.version>1.24</jmh.version>
+        <jmh.version>1.28</jmh.version>
         <oshi.version>5.5.1</oshi.version>
     </properties>
 
