@@ -46,6 +46,7 @@ import static com.neo4j.bench.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.data.ValueGeneratorUtil.nonContendingStridingFor;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.io.ByteUnit.KibiByte;
+import static org.neo4j.io.pagecache.IOController.DISABLED;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
@@ -144,7 +145,7 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
                 EmptyVersionContextSupplier.EMPTY,
                 JobSchedulerFactory.createInitialisedScheduler(),
                 Clocks.nanoClock(),
-                new MemoryPools() );
+                new MemoryPools(), DISABLED );
         pageCache = factory.getOrCreatePageCache();
         pagedFile = pageCache.map( STORE_FILE, (int) ByteUnit.kibiBytes( 8 ), DEFAULT_DATABASE_NAME );
         if ( getPercentageCached() > 0.49 )

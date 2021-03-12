@@ -24,7 +24,6 @@ import org.neo4j.internal.helpers.progress.ProgressListener;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -41,6 +40,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_READER;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_WRITER;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_MONITOR;
+import static org.neo4j.io.pagecache.IOController.DISABLED;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
@@ -150,7 +150,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 }
             }
         }
-        gbpTree.checkpoint( IOController.DISABLED, NULL );
+        gbpTree.checkpoint( DISABLED, NULL );
     }
 
     static Random randomSequence( long pos )
@@ -177,7 +177,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 EmptyVersionContextSupplier.EMPTY,
                 JobSchedulerFactory.createInitialisedScheduler(),
                 Clocks.nanoClock(),
-                new MemoryPools() );
+                new MemoryPools(), DISABLED );
         return factory.getOrCreatePageCache();
     }
 
