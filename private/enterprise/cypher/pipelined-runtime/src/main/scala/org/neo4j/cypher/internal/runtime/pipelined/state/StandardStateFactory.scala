@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.MemoizingMeasurable
 import org.neo4j.cypher.internal.runtime.NoOpQueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -37,8 +38,13 @@ class StandardStateFactory extends StateFactory {
   override def newTracker(subscriber: QuerySubscriber,
                           queryContext: QueryContext,
                           tracer: QueryExecutionTracer,
-                          resources: QueryResources): QueryCompletionTracker =
-    new StandardQueryCompletionTracker(subscriber, queryContext, tracer, resources)
+                          resources: QueryResources): QueryCompletionTracker = {
+    if (DebugSupport.TRACKER.enabled) {
+      new StandardDebugQueryCompletionTracker(subscriber, tracer, resources)
+    } else {
+      new StandardQueryCompletionTracker(subscriber, tracer, resources)
+    }
+  }
 
   override def newIdAllocator(): IdAllocator = new StandardIdAllocator
 

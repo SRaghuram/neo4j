@@ -22,13 +22,25 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
 
 class StandardQueryCompletionTrackerTest extends QueryCompletionTrackerTest(false) {
   override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker(subscriber,
-    queryContext,
+    tracer,
+    resources)
+}
+
+class StandardDebugQueryCompletionTrackerTest extends QueryCompletionTrackerTest(false) {
+  override def newTracker(): QueryCompletionTracker = new StandardDebugQueryCompletionTracker(subscriber,
     tracer,
     resources)
 }
 
 class ConcurrentQueryCompletionTrackerTest extends QueryCompletionTrackerTest(true) {
   override def newTracker(): QueryCompletionTracker = new ConcurrentQueryCompletionTracker(subscriber,
+    queryContext,
+    tracer,
+    resources)
+}
+
+class ConcurrentDebugQueryCompletionTrackerTest extends QueryCompletionTrackerTest(true) {
+  override def newTracker(): QueryCompletionTracker = new ConcurrentDebugQueryCompletionTracker(subscriber,
     queryContext,
     tracer,
     resources)
@@ -58,12 +70,13 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     when(txContext.transaction).thenReturn(transaction)
   }
 
+  private val trackerKey = QueryTrackerKey("test")
   test("should behave correctly on query completion") {
     val x = newTracker()
 
     // when
-    x.increment()
-    x.decrement()
+    x.increment(trackerKey)
+    x.decrement(trackerKey)
 
     // then
     verify(subscriber).onResultCompleted(any[QueryStatistics])
@@ -79,8 +92,8 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     val x = newTracker()
 
     // when
-    x.increment()
-    x.decrement()
+    x.increment(trackerKey)
+    x.decrement(trackerKey)
     x.await()
     x.cancel()
 
@@ -93,7 +106,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     val x = newTracker()
 
     // when
-    x.increment()
+    x.increment(trackerKey)
     x.cancel()
 
     // then
@@ -104,7 +117,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     x.hasEnded shouldBe false
 
     // when
-    x.decrement() // The clean shutdown happens automatically when all tasks finished after a call to cancel
+    x.decrement(trackerKey) // The clean shutdown happens automatically when all tasks finished after a call to cancel
 
     // then
     verify(subscriber, never()).onResultCompleted(any())
@@ -120,7 +133,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     val x = newTracker()
 
     // when
-    x.increment()
+    x.increment(trackerKey)
     x.request(1)
     x.addServed(1)
 
@@ -139,7 +152,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     val exception = new IllegalArgumentException
 
     // when
-    x.increment()
+    x.increment(trackerKey)
     x.error(exception)
 
     // then
@@ -151,7 +164,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     x.hasSucceeded shouldBe false
 
     // when
-    x.decrement()
+    x.decrement(trackerKey)
 
     // then
     verify(subscriber).onError(exception)
@@ -169,8 +182,8 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     val x = newTracker()
 
     // when
-    x.increment()
-    x.decrementBy(2) // whoopsie
+    x.increment(trackerKey)
+    x.decrementBy(trackerKey, 2) // whoopsie
 
     // then
     val errorCaptor = argCaptor[Throwable]
@@ -190,7 +203,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     val x = newTracker()
 
     // when
-    x.increment()
+    x.increment(trackerKey)
 
     // then
     x.hasEnded shouldBe false

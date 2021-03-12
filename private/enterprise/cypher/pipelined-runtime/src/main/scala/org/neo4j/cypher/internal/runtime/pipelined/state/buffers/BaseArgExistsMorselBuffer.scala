@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.QueryTrackerKey
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
 
@@ -42,6 +43,8 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef, S <: ArgumentState]
   with ClosingSource[PRODUCES]
   with DataHolder {
 
+  protected val initiateTrackerKey = QueryTrackerKey(s"BaseArgExistsMorselBuffer($id) - initiate")
+
   protected val argumentStateMap: ArgumentStateMap[S] =
     argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[S]]
 
@@ -53,7 +56,7 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef, S <: ArgumentState]
     }
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
     argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
-    tracker.increment()
+    tracker.increment(initiateTrackerKey)
   }
 
   override final def increment(argumentRowId: Long): Unit = {

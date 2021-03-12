@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.QueryTrackerKey
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -41,6 +42,8 @@ class ArgumentStreamMorselBuffer(id: BufferId,
                           )
   extends BaseArgExistsMorselBuffer[MorselData, ArgumentStreamArgumentStateBuffer](id, tracker, downstreamArgumentReducers, argumentStateMaps, argumentStateMapId) {
 
+  private val trackerKey = QueryTrackerKey(s"ArgumentStreamMorselBuffer($id)")
+
   override def canPut: Boolean = argumentStateMap.exists(_.canPut)
 
   override def put(data: IndexedSeq[PerArgument[Morsel]], resources: QueryResources): Unit = {
@@ -54,7 +57,7 @@ class ArgumentStreamMorselBuffer(id: BufferId,
         // We increment for each morsel view, otherwise we can reach a count of zero too early, when all the data has arrived in this buffer, but has not been
         // streamed out yet.
         // We have to do the increments in this lambda function, because it can happen that we try to update argument row IDs that are concurrently cancelled and taken
-        tracker.increment()
+        tracker.increment(trackerKey)
         acc.update(data(i).value, resources)
         forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
       })
@@ -124,13 +127,13 @@ class ArgumentStreamMorselBuffer(id: BufferId,
     argumentStream match {
       case _: EndOfStream =>
         // Decrement that corresponds to the increment in initiate
-        tracker.decrement()
+        tracker.decrement(initiateTrackerKey)
         forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
       case _ =>
       // Do nothing
     }
 
-    tracker.decrementBy(numberOfDecrements)
+    tracker.decrementBy(trackerKey, numberOfDecrements)
 
     var i = 0
     while (i < numberOfDecrements) {

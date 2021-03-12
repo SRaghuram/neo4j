@@ -5,8 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
-import java.util
-
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
@@ -21,10 +19,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.QueryTrackerKey
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselBuffer.INVALID_ARG_ROW_ID
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselBuffer.INVALID_ARG_SLOT_OFFSET
+
+import java.util
 
 object MorselBuffer {
   private[buffers] val INVALID_ARG_ROW_ID = -1L
@@ -58,6 +59,7 @@ class MorselBuffer(id: BufferId,
     }
     x
   }
+  private val trackerKey = QueryTrackerKey(s"MorselBuffer($id)")
 
   override def put(morsel: Morsel, resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
@@ -65,7 +67,7 @@ class MorselBuffer(id: BufferId,
     }
     if (morsel.hasData) {
       incrementArgumentCounts(downstreamArgumentReducers, morsel)
-      tracker.increment()
+      tracker.increment(trackerKey)
       inner.put(morsel, resources)
     }
   }
@@ -82,7 +84,7 @@ class MorselBuffer(id: BufferId,
       DebugSupport.BUFFERS.log(s"[putInDelegate] $this <- $morsel")
     }
     if (morsel.hasData) {
-      tracker.increment()
+      tracker.increment(trackerKey)
       inner.put(morsel, resources)
     }
   }
@@ -227,7 +229,7 @@ class MorselBuffer(id: BufferId,
       DebugSupport.BUFFERS.log(s"[close] $this -X- $morsel")
     }
     decrementArgumentCounts(downstreamArgumentReducers, morsel)
-    tracker.decrement()
+    tracker.decrement(trackerKey)
   }
 
   override def toString: String = s"MorselBuffer($id, $inner)"
@@ -247,7 +249,7 @@ class MorselBuffer(id: BufferId,
       } else {
         val copy = original.shallowCopy()
         incrementArgumentCounts(downstreamArgumentReducers, copy)
-        tracker.increment()
+        tracker.increment(trackerKey)
         copy
       }
     }

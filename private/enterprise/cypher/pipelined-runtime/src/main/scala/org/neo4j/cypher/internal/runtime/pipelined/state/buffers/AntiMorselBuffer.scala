@@ -107,6 +107,7 @@ class AntiMorselBuffer(id: BufferId,
   }
 
   override def close(datas: Seq[MorselData]): Unit = {
+    var decrementCount = 0
     for (data <- datas) {
       if (DebugSupport.BUFFERS.enabled) {
         DebugSupport.BUFFERS.log(s"[closeOne] $this -X- ${data.argumentStream} , 0 , ${data.argumentRowIdsForReducers}")
@@ -115,12 +116,13 @@ class AntiMorselBuffer(id: BufferId,
       data.argumentStream match {
         case _: EndOfStream =>
           // Decrement that corresponds to the increment in initiate
-          tracker.decrement()
+          decrementCount += 1
           forAllArgumentReducers(downstreamArgumentReducers, data.argumentRowIdsForReducers, _.decrement(_))
         case _ =>
           // Do nothing
       }
     }
+    tracker.decrementBy(initiateTrackerKey, decrementCount)
   }
 
   override def toString: String =

@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.QueryTrackerKey
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -57,6 +58,8 @@ class EagerMorselBuffer(id: BufferId,
   private[this] var _hasCompleted: Boolean = false // This should only change once to true, when we take the completed state from the argument state map
   @volatile private[this] var _hasCompletedVolatile: Boolean = false // This should change only once at the same time as _hasCompleted, but provides visibility to other threads in parallel execution
 
+  private val trackerKey = QueryTrackerKey(s"EagerMorselBuffer($id)")
+
   //---------------------------------------------------------------------------
   // AccumulatingBuffer
   //---------------------------------------------------------------------------
@@ -70,7 +73,7 @@ class EagerMorselBuffer(id: BufferId,
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
     argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
 
-    tracker.increment()
+    tracker.increment(trackerKey)
   }
 
   override def increment(argumentRowId: Long): Unit = {
@@ -135,7 +138,7 @@ class EagerMorselBuffer(id: BufferId,
         // Release reference counts
         // Alternatively: do it by `completedStates.head.close()`, which has argumentRowIdsForReducers
         forAllArgumentReducers(downstreamArgumentReducers, completedStates.head.argumentRowIdsForReducers, _.decrement(_))
-        tracker.decrement() // Decrement the count from initiate /* Count Type: Accumulator Init */
+        tracker.decrement(trackerKey) // Decrement the count from initiate /* Count Type: Accumulator Init */
         true
       } else {
         _hasCompletedVolatile // This is to also support parallel

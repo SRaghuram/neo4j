@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.QueryTrackerKey
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
 
@@ -41,6 +42,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
    with DataHolder {
 
   private val argumentStateMap: ArgumentStateMap[ACC] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[ACC]]
+  private val trackerKey = QueryTrackerKey(s"MorselArgumentStateBuffer($argumentStateMapId)")
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
@@ -89,7 +91,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
     argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
 
-    tracker.increment()
+    tracker.increment(trackerKey)
   }
 
   override def increment(argumentRowId: Long): Unit = {
@@ -112,7 +114,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
       DebugSupport.BUFFERS.log(s"[close] $this -X- $accumulator")
     }
     forAllArgumentReducers(downstreamArgumentReducers, accumulator.argumentRowIdsForReducers, _.decrement(_))
-    tracker.decrement()
+    tracker.decrement(trackerKey)
   }
 
   /**

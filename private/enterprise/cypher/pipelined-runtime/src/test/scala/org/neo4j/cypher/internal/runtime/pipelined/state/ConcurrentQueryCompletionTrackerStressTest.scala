@@ -5,11 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.ThreadLocalRandom
-import java.util.concurrent.atomic.AtomicBoolean
-
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
@@ -19,9 +14,15 @@ import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.atomic.AtomicBoolean
+
 class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite with TimeLimitedCypherTest {
 
   private val THREAD_PAIRS = 6
+  val trackerKey = QueryTrackerKey("test")
 
   test("should handle concurrent QueryRunner and Worker") {
 
@@ -88,7 +89,7 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite with Tim
             executionTracer,
             mock[QueryResources](RETURNS_DEEP_STUBS))
 
-          newQuery.increment()
+          newQuery.increment(trackerKey)
           ongoingWork.put(newQuery)
           totalQueriesStarted += 1
 
@@ -137,24 +138,24 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite with Tim
 
       var i = queryWorkItems
       while (i > 0) {
-        query.increment()
+        query.increment(trackerKey)
         if (random.nextBoolean() && query.hasDemand) {
           query.addServed(1)
         }
-        query.decrement()
+        query.decrement(trackerKey)
         i -= 1
       }
-      query.decrement() // final decrement
+      query.decrement(trackerKey) // final decrement
     }
   }
 }
 
 object ConcurrentQueryCompletionTrackerStressTest {
   private val POISON_PILL: QueryCompletionTracker = new QueryCompletionTracker {
-    override def increment(): Unit = fail()
-    override def incrementBy(n: Long): Unit = fail()
-    override def decrement(): Unit = fail()
-    override def decrementBy(n: Long): Unit = fail()
+    override def increment(ref: QueryTrackerKey): Unit = fail()
+    override def incrementBy(ref: QueryTrackerKey, n: Long): Unit = fail()
+    override def decrement(ref: QueryTrackerKey): Unit = fail()
+    override def decrementBy(ref: QueryTrackerKey, n: Long): Unit = fail()
     override def error(throwable: Throwable): Unit = fail()
     override def hasEnded: Boolean = fail()
     override def hasSucceeded: Boolean = fail()

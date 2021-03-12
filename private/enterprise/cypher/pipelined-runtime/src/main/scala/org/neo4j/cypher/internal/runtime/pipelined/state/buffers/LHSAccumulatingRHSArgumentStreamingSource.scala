@@ -20,8 +20,16 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.QueryTrackerKey
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSArgumentStreamingSource.emptyRHSTrackerKey
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSArgumentStreamingSource.putMorselTrackerKey
+
+object LHSAccumulatingRHSArgumentStreamingSource {
+  val emptyRHSTrackerKey: QueryTrackerKey = QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - Empty RHS")
+  val putMorselTrackerKey: QueryTrackerKey = QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - RHS Morsel")
+}
 
 class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
                                                    LHS_ACC <: MorselAccumulator[ACC_DATA]]
@@ -110,22 +118,27 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
   }
 
   override def clearAll(): Unit = {
+    var decrementCount = 0
     lhsArgumentStateMap.clearAll((buffer: LHS_ACC) => {
       if (!rhsArgumentStateMap.peek(buffer.argumentRowId).hasData) {
         // If the RHS is empty, we need to decrement away the extra increment that came from LHSSink.decrement()
         // Count Type: Empty RHS
-        tracker.decrement()
+        decrementCount += 1
       }
     })
+    tracker.decrementBy(emptyRHSTrackerKey, decrementCount)
+
+    var i = 0
     rhsArgumentStateMap.clearAll(buffer => {
       var morsel = buffer.take()
       while (morsel != null) {
         forAllArgumentReducers(downstreamArgumentReducers, buffer.argumentRowIdsForReducers, _.decrement(_))
         // Count Type: RHS Put per Morsel
-        tracker.decrement()
         morsel = buffer.take()
+        i += 1
       }
     })
+    tracker.decrementBy(putMorselTrackerKey, i)
   }
 
   override def toString: String = s"${getClass.getSimpleName}(lhs:$lhsArgumentStateMapId, rhs:$rhsArgumentStateMapId)"
@@ -135,6 +148,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
     val argumentRowId = accumulator.argumentRowId
 
     val nbrOfMorsels = morselData.morsels.size
+    tracker.decrementBy(putMorselTrackerKey, nbrOfMorsels)
     val nbrOfTrackerDecrements = morselData.argumentStream match {
       case _: EndOfStream =>
         checkOnlyWhenAssertionsAreEnabled(rhsArgumentStateMap.peek(argumentRowId) == null, "RHS accumulator should have already been removed in take()")
@@ -142,6 +156,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
         val lhsAccumulator = lhsArgumentStateMap.remove(argumentRowId)
         lhsAccumulator.close()
         // We still need to decrement away the extra increment that came from LHSSink.decrement()
+        tracker.decrementBy(emptyRHSTrackerKey, 1)
         nbrOfMorsels /*Count Type: RHS Put per Morsel*/ + 1 /*Count Type: Empty RHS*/
       case _ =>
         // Count Type: RHS Put per Morsel
@@ -151,8 +166,6 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- ${morselData.argumentStream} , $nbrOfTrackerDecrements , $argumentRowIdsForReducers")
     }
-
-    tracker.decrementBy(nbrOfTrackerDecrements)
 
     forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers,
       (buffer, id) => {
@@ -211,7 +224,7 @@ class LeftOuterLhsAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[
     if (lhsArgumentStateMap.decrement(argumentRowId) != null) {
       // Increment tracker here, we need this for the empty RHS case
       // Count Type: Empty RHS
-      tracker.increment()
+      tracker.increment(emptyRHSTrackerKey)
     }
   }
 }
@@ -244,14 +257,16 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
         // Increment for a morsel in the RHS buffer
         forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
       })
-      // Count Type: RHS Put per Morsel
-      // Increment tracker by 1 for each buffered "argument morsel"
-      tracker.increment()
       i += 1
     }
+    // Count Type: RHS Put per Morsel
+    // Increment tracker by 1 for each buffered "argument morsel"
+    tracker.incrementBy(putMorselTrackerKey, i)
   }
 
   override def canPut: Boolean = true
+
+  private val initTrackerKey = QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - RHS Accumulator Init")
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
@@ -267,13 +282,12 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
                                                                                             })
     rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
     // Count Type: RHS Accumulator Init
-    tracker.increment()
+    tracker.increment(initTrackerKey)
   }
 
   override def increment(argumentRowId: Long): Unit = {
     rhsArgumentStateMap.increment(argumentRowId)
   }
-
 
   override def decrement(argumentRowId: Long): Unit = {
     val completedBuffer = rhsArgumentStateMap.decrement(argumentRowId)
@@ -283,7 +297,7 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
       val argumentRowIdsForReducers = completedBuffer.argumentRowIdsForReducers
       forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
       // Count Type: RHS Accumulator Init
-      tracker.decrement()
+      tracker.decrement(initTrackerKey)
     }
   }
 }
