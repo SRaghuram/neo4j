@@ -799,7 +799,7 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     createDefaultNodeExistsConstraint()
 
     // WHEN
-    val result = executeSingle("SHOW NODE EXISTENCE CONSTRAINTS VERBOSE OUTPUT")
+    val result = executeSingle("SHOW NODE EXIST CONSTRAINTS VERBOSE OUTPUT")
 
     val options: List[Object] = result.columnAs("options").toList
     options should be(List(null))
@@ -811,7 +811,7 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     createDefaultRelExistsConstraint()
 
     // WHEN
-    val result = executeSingle("SHOW RELATIONSHIP PROPERTY EXIST CONSTRAINTS VERBOSE OUTPUT")
+    val result = executeSingle("SHOW RELATIONSHIP EXIST CONSTRAINTS VERBOSE OUTPUT")
 
     val options: List[Object] = result.columnAs("options").toList
     options should be(List(null))
