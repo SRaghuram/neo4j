@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.dbms.ClusterDbmsRuntimeRepository;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
-import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOController;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
+import com.neo4j.kernel.impl.pagecache.iocontroller.ConfigurableIOController;
 
 import java.util.Set;
 import java.util.function.Predicate;
