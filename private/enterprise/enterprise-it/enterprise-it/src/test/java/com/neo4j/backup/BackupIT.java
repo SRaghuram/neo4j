@@ -77,7 +77,6 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
-import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -1622,7 +1621,7 @@ class BackupIT
     {
         DependencyResolver resolver = dependencyResolver( db );
         StorageEngine storageEngine = resolver.resolveDependency( StorageEngine.class );
-        storageEngine.flushAndForce( IOController.DISABLED, NULL );
+        storageEngine.flushAndForce( NULL );
     }
 
     private static SocketAddress backupAddress( GraphDatabaseService db )

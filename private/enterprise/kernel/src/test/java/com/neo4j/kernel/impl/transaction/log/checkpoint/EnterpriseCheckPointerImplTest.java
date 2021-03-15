@@ -125,7 +125,7 @@ class EnterpriseCheckPointerImplTest
             checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "Test trigger, this should trigger a checkpoint" ) );
 
             // then
-            verify( flusher ).flushAndForce( any(), any() );
+            verify( flusher ).flushAndForce( any() );
         }
         finally
         {

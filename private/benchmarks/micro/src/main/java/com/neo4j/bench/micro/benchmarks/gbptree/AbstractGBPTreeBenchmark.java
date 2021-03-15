@@ -150,7 +150,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 }
             }
         }
-        gbpTree.checkpoint( DISABLED, NULL );
+        gbpTree.checkpoint( NULL );
     }
 
     static Random randomSequence( long pos )

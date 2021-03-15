@@ -31,7 +31,6 @@ import static org.neo4j.internal.counts.GBPTreeCountsStore.NO_MONITOR;
 import static org.neo4j.internal.counts.GBPTreeCountsStore.keyToString;
 import static org.neo4j.internal.counts.GBPTreeCountsStore.nodeKey;
 import static org.neo4j.internal.counts.GBPTreeCountsStore.relationshipKey;
-import static org.neo4j.io.pagecache.IOController.DISABLED;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
@@ -63,7 +62,7 @@ class DumpCountsStoreTest
                 updater.incrementNodeCount( -1, 9 );
                 updater.incrementRelationshipCount( 0, 4, 1, 67 );
             }
-            store.checkpoint( DISABLED, NULL );
+            store.checkpoint( NULL );
         }
 
         // when
