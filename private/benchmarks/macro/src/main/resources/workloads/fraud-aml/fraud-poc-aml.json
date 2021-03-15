@@ -138,6 +138,11 @@
       "queryFile": "queries/custom-q2.cypher"
     },
     {
+      "name": "Custom Q2B",
+      "description": "Find top payment sender/receiver pairs by number of payments (with explicit IS NOT NULL)",
+      "queryFile": "queries/custom-q2b.cypher"
+    },
+    {
       "name": "Custom Q3",
       "description": "Find payment sender/receiver pairs that made exactly 300 payments with large average payment amount, ordered by average payment amount",
       "queryFile": "queries/custom-q3.cypher"
