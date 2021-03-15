@@ -780,50 +780,50 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     result.toList should be(List(defaultNodeExistsBriefConstraintOutput(5L), defaultRelExistsBriefConstraintOutput(6L)))
   }
 
-  test("should show unique constraint with verbose output") {
+  test("should show unique constraint with yield *") {
     // GIVEN
     createDefaultUniquenessConstraint()
     graph.awaitIndexesOnline()
 
     // WHEN
-    val result = executeSingle("SHOW UNIQUE CONSTRAINTS VERBOSE OUTPUT")
+    val result = executeSingle("SHOW UNIQUE CONSTRAINTS YIELD *")
 
     val options: List[Object] = result.columnAs("options").toList
     options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
     withoutColumns(result.toList, List("options")) should equal(List(defaultUniquenessVerboseConstraintOutput(2L)))
   }
 
-  test("should show node key constraint with verbose output") {
+  test("should show node key constraint with yield *") {
     // GIVEN
     createDefaultNodeKeyConstraint()
     graph.awaitIndexesOnline()
 
     // WHEN
-    val result = executeSingle("SHOW NODE KEY CONSTRAINTS VERBOSE OUTPUT")
+    val result = executeSingle("SHOW NODE KEY CONSTRAINTS YIELD *")
 
     val options: List[Object] = result.columnAs("options").toList
     options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
     withoutColumns(result.toList, List("options")) should equal(List(defaultNodeKeyVerboseConstraintOutput(2L)))
   }
 
-  test("should show node exists constraint with verbose output") {
+  test("should show node exists constraint with yield *") {
     // GIVEN
     createDefaultNodeExistsConstraint()
 
     // WHEN
-    val result = executeSingle("SHOW NODE EXIST CONSTRAINTS VERBOSE OUTPUT")
+    val result = executeSingle("SHOW NODE EXIST CONSTRAINTS YIELD *")
 
     val options: List[Object] = result.columnAs("options").toList
     options should be(List(null))
     withoutColumns(result.toList, List("options")) should equal(List(defaultNodeExistsVerboseConstraintOutput(1L)))
   }
 
-  test("should show rel exists constraint with verbose output") {
+  test("should show rel exists constraint with yield *") {
     // GIVEN
     createDefaultRelExistsConstraint()
 
     // WHEN
-    val result = executeSingle("SHOW RELATIONSHIP EXIST CONSTRAINTS VERBOSE OUTPUT")
+    val result = executeSingle("SHOW RELATIONSHIP EXIST CONSTRAINTS YIELD *")
 
     val options: List[Object] = result.columnAs("options").toList
     options should be(List(null))
@@ -873,7 +873,7 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     assertCorrectOptionsMap(indexOptions.head, randomOptions.get)
 
     // WHEN
-    val constraintResult = executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT")
+    val constraintResult = executeSingle("SHOW CONSTRAINTS YIELD *")
 
     // THEN
     val constraintOptions: List[Object] = constraintResult.columnAs("options").toList
@@ -898,7 +898,7 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     assertCorrectOptionsMap(indexOptions.head, randomOptions.get)
 
     // WHEN
-    val constraintResult = executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT")
+    val constraintResult = executeSingle("SHOW CONSTRAINTS YIELD *")
 
     // THEN
     val constraintOptions: List[Object] = constraintResult.columnAs("options").toList
@@ -952,6 +952,274 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
 
     graph.awaitIndexesOnline()
     verifyCanDropAndRecreateConstraintsUsingCreateStatement()
+  }
+
+  // Filtering
+
+  test("should show constraints with yield") {
+    // GIVEN
+    createDefaultUniquenessConstraint()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS YIELD name, type")
+
+    // THEN
+    result.toList should be(List(defaultUniquenessBriefConstraintOutput(2L).filterKeys(k => Seq("name", "type").contains(k))))
+  }
+
+  test("should show constraints with yield, where and return and brief columns") {
+    // GIVEN
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS YIELD name, type WHERE type = 'NODE_KEY' RETURN name, type")
+
+    // THEN
+    result.toList should be(List(defaultNodeKeyVerboseConstraintOutput(4L).filterKeys(k => Seq("name", "type").contains(k))))
+  }
+
+  test("should show constraints with yield, where and return and verbose columns") {
+    // GIVEN
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS YIELD name, type, createStatement WHERE type = 'UNIQUENESS' RETURN name, createStatement")
+
+    // THEN
+    result.toList should be(List(defaultUniquenessVerboseConstraintOutput(4L).filterKeys(k => Seq("name", "createStatement").contains(k))))
+  }
+
+  test("should show constraints with full yield") {
+    createConstraint(UniqueConstraints, "my_constraint", label, prop3) // to filter something in the WHERE
+    createDefaultConstraints()
+
+    // WHEN
+    val result = execute("SHOW CONSTRAINTS YIELD name AS nm ORDER BY nm SKIP 1 LIMIT 2 WHERE nm starts with 'c' RETURN *")
+
+    // THEN
+    result.toList should be(List(Map("nm" -> "constraint2"), Map("nm" -> "constraint3")))
+  }
+
+  test("should show constraints with yield, return and aggregations") {
+    // GIVEN
+    createConstraint(NodeExistsConstraints(), "my_constraint", label, prop3) // to get more than 1 constraint of one type
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW EXISTENCE CONSTRAINTS YIELD name, type RETURN collect(name) as names, type order by size(names)")
+
+    // THEN
+    result.toList should be(List(
+      Map("names" -> List("constraint4"), "type" -> "RELATIONSHIP_PROPERTY_EXISTENCE"),
+      Map("names" -> List("constraint3", "my_constraint"), "type" -> "NODE_PROPERTY_EXISTENCE"),
+    ))
+  }
+
+  test("should show constraints with yield, where, return and aliasing") {
+    // GIVEN
+    createDefaultUniquenessConstraint()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS YIELD name as options, options as name where size(options) > 0 RETURN options as name")
+
+    // THEN
+    result.toList should be(List(defaultUniquenessBriefConstraintOutput(2L).filterKeys(_ == "name")))
+  }
+
+  test("should show constraints with where") {
+    // GIVEN
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS WHERE type = 'UNIQUENESS'")
+
+    // THEN
+    result.toList should be(List(defaultUniquenessBriefConstraintOutput(2L)))
+  }
+
+  test("should show constraints with where in alphabetic order") {
+    // GIVEN
+    graph.createUniqueConstraintWithName("poppy", label, propWhitespace)
+    graph.createNodeKeyConstraintWithName("benny", label2, prop, prop2)
+    graph.createNodeExistenceConstraintWithName("albert", label2, prop2)
+    graph.createRelationshipExistenceConstraintWithName("charlie", label, prop2)
+    graph.createUniqueConstraintWithName("xavier", label, prop)
+    graph.createUniqueConstraintWithName("danny", label, prop3)
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS WHERE NOT name CONTAINS 'x'")
+
+    // THEN
+    result.columnAs("name").toList should equal(List("albert", "benny", "charlie", "danny", "poppy"))
+  }
+
+  test("should show constraints with where and exists sub-clause") {
+    // GIVEN
+    createLabeledNode(Map(prop -> "foo", prop2 -> "bar", prop3 -> "NODE_KEY"), label)
+    createDefaultNodeKeyConstraint()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle(
+      s"""SHOW CONSTRAINTS WHERE EXISTS {
+         | MATCH (n: $label {$prop3: type})
+         |}""".stripMargin)
+
+    // THEN
+    result.toList should be(List(defaultNodeKeyBriefConstraintOutput(2L)))
+  }
+
+  test("should show constraints with multiple order by") {
+    // GIVEN
+    createDefaultConstraints()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle(
+      s"""SHOW CONSTRAINTS YIELD * ORDER BY type DESC RETURN name, type ORDER BY name ASC""".stripMargin)
+
+    result.executionPlanDescription() should includeSomewhere.aPlan("Sort").containingArgument("name ASC")
+    result.executionPlanDescription() should includeSomewhere.aPlan("Sort").containingArgument("type DESC")
+
+    // THEN
+    result.toList should be(List(
+      Map("name" -> "constraint1", "type" -> "UNIQUENESS"),
+      Map("name" -> "constraint2", "type" -> "NODE_KEY"),
+      Map("name" -> "constraint3", "type" -> "NODE_PROPERTY_EXISTENCE"),
+      Map("name" -> "constraint4", "type" -> "RELATIONSHIP_PROPERTY_EXISTENCE")
+    ))
+  }
+
+  test("should fail to show constraints with yield, return with aggregation and illegal order by") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("SHOW CONSTRAINTS YIELD name, type RETURN collect(name) as names order by type")
+    }
+
+    // THEN
+    exception.getMessage should startWith("In a WITH/RETURN with DISTINCT or an aggregation, it is not possible to access variables declared before the WITH/RETURN: type")
+  }
+
+  test("should fail to show constraints with where on verbose column") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("SHOW CONSTRAINTS WHERE isEmpty(options)")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `options` not defined")
+  }
+
+  test("should fail to show constraints with where on non-existing columns") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("SHOW CONSTRAINTS WHERE foo = 'UNIQUENESS'")
+    }
+
+    // THEN
+    exception.getMessage should include("Variable `foo` not defined")
+  }
+
+  // Planner tests
+
+  test("show constraints plan SHOW CONSTRAINTS") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW CONSTRAINTS")
+
+    // THEN
+    result.executionPlanString() should include ("allConstraints, defaultColumns")
+  }
+
+  test("show constraints plan SHOW ALL CONSTRAINTS") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW ALL CONSTRAINTS")
+
+    // THEN
+    result.executionPlanString() should include ("allConstraints, defaultColumns")
+  }
+
+  test("show constraints plan SHOW NODE KEY CONSTRAINTS") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW NODE KEY CONSTRAINTS")
+
+    // THEN
+    result.executionPlanString() should include ("nodeKeyConstraints, defaultColumns")
+  }
+
+  test("show constraints plan SHOW UNIQUE CONSTRAINTS") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW UNIQUE CONSTRAINTS")
+
+    // THEN
+    result.executionPlanString() should include ("uniquenessConstraints, defaultColumns")
+  }
+
+  test("show constraints plan SHOW PROPERTY EXIST CONSTRAINTS") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW PROPERTY EXIST CONSTRAINTS")
+
+    // THEN
+    result.executionPlanString() should include ("existenceConstraints, defaultColumns")
+  }
+
+  test("show constraints plan SHOW NODE EXISTENCE CONSTRAINTS") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW NODE EXISTENCE CONSTRAINTS")
+
+    // THEN
+    result.executionPlanString() should include ("nodeExistenceConstraints, defaultColumns")
+  }
+
+  test("show constraints plan SHOW REL EXIST CONSTRAINTS") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW REL EXIST CONSTRAINTS")
+
+    // THEN
+    result.executionPlanString() should include ("relationshipExistenceConstraints, defaultColumns")
+  }
+
+  test("show constraints plan YIELD *") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW CONSTRAINTS YIELD *")
+
+    // THEN
+    result.executionPlanString() should include ("allConstraints, allColumns")
+  }
+
+  test("show constraints plan with WHERE") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW CONSTRAINTS WHERE name STARTS WITH 'my'")
+
+    // THEN
+    result.executionPlanString() should include ("allConstraints, defaultColumns")
+    result.executionPlanString() should include ("name STARTS WITH \"my\"")
+  }
+
+  test("show constraints plan BRIEF (deprecated)") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW CONSTRAINTS BRIEF")
+
+    // THEN
+    result.executionPlanString() should include ("allConstraints, defaultColumns")
+  }
+
+  test("show constraints plan VERBOSE (deprecated)") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW CONSTRAINTS VERBOSE")
+
+    // THEN
+    result.executionPlanString() should include ("allConstraints, allColumns")
+  }
+
+  test("show constraints plan SHOW EXISTS CONSTRAINTS (deprecated)") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW EXISTS CONSTRAINTS")
+
+    // THEN
+    result.executionPlanString() should include ("existenceConstraints, defaultColumns")
   }
 
   // general index help methods
@@ -1185,7 +1453,7 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
 
   private def verifyCanDropAndRecreateConstraintsUsingCreateStatement(): Unit = {
     // GIVEN
-    val allConstraints = executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT")
+    val allConstraints = executeSingle("SHOW CONSTRAINTS YIELD *")
     val createStatements = allConstraints.columnAs("createStatement").toList
     val names = allConstraints.columnAs("name").toList
     val options = allConstraints.columnAs("options").toList
@@ -1194,14 +1462,14 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     dropAllFromNames(names, "CONSTRAINT")
 
     // THEN
-    executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT").toList should be(empty)
+    executeSingle("SHOW CONSTRAINTS YIELD *").toList should be(empty)
 
     // WHEN
     recreateAllFromCreateStatements(createStatements)
     graph.awaitIndexesOnline()
 
     // THEN
-    val result = executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT")
+    val result = executeSingle("SHOW CONSTRAINTS YIELD *")
 
     // The ids will not be the same and options is not comparable using CCS
     val skipColumns = List("id", "ownedIndexId", "options")

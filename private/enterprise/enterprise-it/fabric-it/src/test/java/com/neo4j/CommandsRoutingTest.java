@@ -179,7 +179,7 @@ class CommandsRoutingTest
         {
             var query = joinAsLines(
                     "USE `my-db`",
-                    "SHOW CONSTRAINTS VERBOSE"
+                    "SHOW CONSTRAINTS YIELD *"
             );
             return tx.run( query ).list();
         } );
@@ -216,6 +216,45 @@ class CommandsRoutingTest
         } );
 
         assertThat( r.counters().constraintsRemoved() ).isEqualTo( 0 );
+    }
+
+    @ParameterizedTest
+    @ValueSource( strings = {"0", "49", "50", "101"} )
+    void testConstraintManagementManyConstraints( String numberOfConstraints )
+    {
+        // GIVEN
+        int constraints = Integer.parseInt( numberOfConstraints );
+        var expectedLabels = new String[constraints];
+        for ( int i = 1; i <= constraints; i++ )
+        {
+            expectedLabels[i - 1] = String.format( "ConstLabel%d", i );
+        }
+
+        inNeo4jTx( tx ->
+        {
+            for ( String label : expectedLabels )
+            {
+                tx.run( String.format( "CREATE CONSTRAINT %s IF NOT EXISTS ON (n:%s) ASSERT exists(n.id)", label, label ) );
+            }
+            return null;
+        } );
+
+        // WHEN
+        List<Record> r = inNeo4jTx( tx -> tx.run( "SHOW ALL CONSTRAINTS" ).list() );
+
+        // THEN
+        assertThat( r.size() ).isEqualTo( constraints );
+        List<String> constraintNames = r.stream().map( row -> row.get( "name" ).asString() ).collect( Collectors.toList() );
+        assertThat( constraintNames ).containsExactlyInAnyOrder( expectedLabels );
+
+        inNeo4jTx( tx ->
+        {
+            for ( String label : expectedLabels )
+            {
+                tx.run( String.format( "DROP CONSTRAINT %s IF EXISTS", label ) );
+            }
+            return null;
+        } );
     }
 
     @Test
