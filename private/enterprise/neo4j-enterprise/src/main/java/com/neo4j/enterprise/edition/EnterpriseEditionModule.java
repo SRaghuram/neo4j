@@ -41,6 +41,8 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import com.neo4j.kernel.impl.pagecache.iocontroller.ConfigurableIOController;
+import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
+import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
@@ -127,7 +129,6 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         this.dependencies = dependencies;
 
         satisfyEnterpriseOnlyDependencies( globalModule );
-        ioController = new ConfigurableIOController( globalModule.getGlobalConfig(), globalModule.getGlobalClock() );
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
         fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.Single( globalModule.getGlobalLife(), dependencies, globalModule.getLogService() );
         SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalModule.getGlobalConfig() );

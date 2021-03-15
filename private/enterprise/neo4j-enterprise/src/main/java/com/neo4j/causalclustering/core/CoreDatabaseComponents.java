@@ -14,7 +14,6 @@ import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponent
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.pagecache.IOController;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
@@ -53,12 +52,6 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     public Function<DatabaseLayout,DatabaseLayoutWatcher> getWatcherServiceFactory()
     {
         return editionModule.getWatcherServiceFactory();
-    }
-
-    @Override
-    public IOController getIoLimiter()
-    {
-        return editionModule.getIoLimiter();
     }
 
     @Override

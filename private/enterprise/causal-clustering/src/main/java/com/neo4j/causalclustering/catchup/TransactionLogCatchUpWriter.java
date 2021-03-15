@@ -19,6 +19,7 @@ import org.neo4j.dbms.database.DatabasePageCache;
 import org.neo4j.internal.helpers.collection.LongRange;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
@@ -78,7 +79,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         this.log = logProvider.getLog( getClass() );
         this.fullStoreCopy = fullStoreCopy;
         this.pageCacheTracer = pageCacheTracer;
-        this.databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY );
+        this.databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY, IOController.DISABLED );
 
         Config configWithoutSpecificStoreFormat = configWithoutSpecificStoreFormat( config );
         this.metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout,

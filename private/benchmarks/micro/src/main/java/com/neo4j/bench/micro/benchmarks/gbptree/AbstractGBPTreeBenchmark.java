@@ -40,7 +40,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_READER;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_WRITER;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_MONITOR;
-import static org.neo4j.io.pagecache.IOController.DISABLED;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
@@ -177,7 +176,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 EmptyVersionContextSupplier.EMPTY,
                 JobSchedulerFactory.createInitialisedScheduler(),
                 Clocks.nanoClock(),
-                new MemoryPools(), DISABLED );
+                new MemoryPools() );
         return factory.getOrCreatePageCache();
     }
 

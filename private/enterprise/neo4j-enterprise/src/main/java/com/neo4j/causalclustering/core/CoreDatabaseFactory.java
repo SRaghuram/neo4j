@@ -94,6 +94,7 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
@@ -379,7 +380,7 @@ class CoreDatabaseFactory
                                          DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph, MemoryTracker memoryTracker,
                                          CoreIdentityModule myIdentity )
     {
-        var pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY );
+        var pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY, IOController.DISABLED );
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, pageCache, fileSystem, debugLog,
                                                      storageEngineFactory, config, bootstrapSaver, pageCacheTracer, memoryTracker );
 

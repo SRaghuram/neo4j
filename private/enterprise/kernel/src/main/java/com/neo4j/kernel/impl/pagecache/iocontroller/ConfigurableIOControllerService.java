@@ -5,11 +5,13 @@
  */
 package com.neo4j.kernel.impl.pagecache.iocontroller;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.IOController;
 import org.neo4j.kernel.impl.pagecache.IOControllerService;
 import org.neo4j.time.SystemNanoClock;
 
+@ServiceProvider
 public class ConfigurableIOControllerService implements IOControllerService
 {
     @Override

@@ -27,6 +27,7 @@ import org.neo4j.dbms.database.DatabasePageCache;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
@@ -278,7 +279,7 @@ public class RaftBootstrapper
                                                        PageCursorTracer cursorTracer, boolean overWriteDatabaseId ) throws IOException
     {
         DatabaseLayout layout = bootstrapContext.databaseLayout();
-        try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY ) )
+        try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY, IOController.DISABLED ) )
         {
             StoreId storeId = storageEngineFactory.storeId( layout, pageCache, cursorTracer );
             TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( fs, layout, databasePageCache,

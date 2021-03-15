@@ -15,7 +15,6 @@ import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.pagecache.IOController;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
@@ -76,12 +75,6 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
     public Function<DatabaseLayout,DatabaseLayoutWatcher> getWatcherServiceFactory()
     {
         return editionModule.getWatcherServiceFactory();
-    }
-
-    @Override
-    public IOController getIoLimiter()
-    {
-        return editionModule.getIoLimiter();
     }
 
     @Override

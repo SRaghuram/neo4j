@@ -9,7 +9,6 @@ import com.neo4j.dbms.ClusterDbmsRuntimeRepository;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
-import com.neo4j.kernel.impl.pagecache.iocontroller.ConfigurableIOController;
 
 import java.util.Set;
 import java.util.function.Predicate;
@@ -64,8 +63,6 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
 
     protected void editionInvariants( GlobalModule globalModule, Dependencies dependencies )
     {
-        ioController = new ConfigurableIOController( globalModule.getGlobalConfig(), globalModule.getGlobalClock() );
-
         constraintSemantics = new EnterpriseConstraintSemantics();
 
         connectionTracker = dependencies.satisfyDependency( createConnectionTracker() );
