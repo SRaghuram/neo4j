@@ -24,7 +24,7 @@ import static java.lang.Math.min;
 public class ConfigurableIOController implements IOController
 {
     private static final AtomicLongFieldUpdater<ConfigurableIOController> stateUpdater =
-            AtomicLongFieldUpdater.newUpdater( ConfigurableIOController.class, "state" );
+            AtomicLongFieldUpdater.newUpdater( ConfigurableIOController.class, "controllerState" );
 
     private static final int NO_LIMIT = 0;
     private static final int QUANTUM_MILLIS = 100;
@@ -41,7 +41,8 @@ public class ConfigurableIOController implements IOController
      * the limiter disabled by configuration.
      */
     @SuppressWarnings( "unused" ) // Updated via stateUpdater
-    private volatile long state;
+    private volatile long controllerState;
+    private volatile long ioState;
 
     private final LongAdder externalIO = new LongAdder();
 
@@ -123,33 +124,37 @@ public class ConfigurableIOController implements IOController
     // their IOPS limit setting a bit more.
 
     @Override
-    public long maybeLimitIO( long previousStamp, int recentlyCompletedIOs, Flushable flushable, FlushEventOpportunity flushEvent )
+    public void maybeLimitIO( int recentlyCompletedIOs, Flushable flushable, FlushEventOpportunity flushEvent )
     {
         flushEvent.reportIO( recentlyCompletedIOs );
         long state = stateUpdater.get( this );
         if ( getDisabledCounter( state ) > 0 )
         {
-            return INITIAL_STAMP;
+            ioState = 0;
         }
 
         long now = clock.millis() & TIME_MASK;
-        long then = previousStamp & TIME_MASK;
+        long previousState = ioState;
+        long then = previousState & TIME_MASK;
 
         if ( now - then > QUANTUM_MILLIS )
         {
-            return now + (((long) recentlyCompletedIOs) << TIME_BITS);
+            ioState = now + (((long) recentlyCompletedIOs) << TIME_BITS);
+            externalIO.reset();
+            return;
         }
 
-        long ioSum = (previousStamp >> TIME_BITS) + recentlyCompletedIOs + externalIO.sumThenReset();
-        if ( ioSum >= getIOPQ( state ) )
+        long ioSum = (previousState >> TIME_BITS) + recentlyCompletedIOs + externalIO.sumThenReset();
+        if ( ioSum < getIOPQ( state ) )
         {
-            long millisLeftInQuantum = min( QUANTUM_MILLIS, QUANTUM_MILLIS - (now - then) );
-            pauseNanos.accept( this, TimeUnit.MILLISECONDS.toNanos( millisLeftInQuantum ) );
-            flushEvent.throttle( millisLeftInQuantum );
-            return currentTimeMillis() & TIME_MASK;
+            ioState = then + (ioSum << TIME_BITS);
+            return;
         }
+        long millisLeftInQuantum = min( QUANTUM_MILLIS, QUANTUM_MILLIS - (now - then) );
+        pauseNanos.accept( this, TimeUnit.MILLISECONDS.toNanos( millisLeftInQuantum ) );
+        flushEvent.throttle( millisLeftInQuantum );
+        ioState = currentTimeMillis() & TIME_MASK;
 
-        return then + (ioSum << TIME_BITS);
     }
 
     @Override
@@ -191,7 +196,7 @@ public class ConfigurableIOController implements IOController
     @Override
     public boolean isEnabled()
     {
-        return getDisabledCounter( state ) == 0;
+        return getDisabledCounter( controllerState ) == 0;
     }
 
     private static long currentTimeMillis()

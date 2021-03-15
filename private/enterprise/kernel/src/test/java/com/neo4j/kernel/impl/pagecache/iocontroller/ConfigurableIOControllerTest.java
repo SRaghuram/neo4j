@@ -8,7 +8,6 @@ package com.neo4j.kernel.impl.pagecache.iocontroller;
 import org.junit.jupiter.api.Test;
 
 import java.io.Flushable;
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.ObjLongConsumer;
@@ -17,12 +16,10 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
-import org.neo4j.io.pagecache.tracing.FlushEventOpportunity;
 import org.neo4j.time.FakeClock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.io.pagecache.IOController.INITIAL_STAMP;
 
 class ConfigurableIOControllerTest
 {
@@ -38,8 +35,8 @@ class ConfigurableIOControllerTest
         createIOLimiter( Config.defaults() );
 
         // Do 100*100 = 10000 IOs real quick, when we're limited to 1000 IOPS.
-        long stamp = INITIAL_STAMP;
-        repeatedlyCallMaybeLimitIO( limiter, stamp, 100 );
+//        long stamp = INITIAL_STAMP;
+//        repeatedlyCallMaybeLimitIO( limiter, stamp, 100 );
 
         // This should have led to about 10 seconds of pause, minus the time we spent in the loop.
         // So let's say 9 seconds - experiments indicate this gives us about a 10x margin.
@@ -83,8 +80,8 @@ class ConfigurableIOControllerTest
         createIOLimiter( 100 );
 
         // Do 10*100 = 1000 IOs real quick, when we're limited to 100 IOPS.
-        long stamp = INITIAL_STAMP;
-        repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
+//        long stamp = INITIAL_STAMP;
+//        repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
 
         // This should have led to about 10 seconds of pause, minus the time we spent in the loop.
         // So let's say 9 seconds - experiments indicate this gives us about a 10x margin.
@@ -96,26 +93,26 @@ class ConfigurableIOControllerTest
     {
         createIOLimiter( 100 );
 
-        long stamp = INITIAL_STAMP;
-        limiter.disable();
-        try
-        {
-            stamp = repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
-            limiter.disable();
-            try
-            {
-                stamp = repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
-            }
-            finally
-            {
-                limiter.enable();
-            }
-            repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
-        }
-        finally
-        {
-            limiter.enable();
-        }
+//        long stamp = INITIAL_STAMP;
+//        limiter.disable();
+//        try
+//        {
+//            stamp = repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
+//            limiter.disable();
+//            try
+//            {
+//                stamp = repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
+//            }
+//            finally
+//            {
+//                limiter.enable();
+//            }
+//            repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
+//        }
+//        finally
+//        {
+//            limiter.enable();
+//        }
 
         // We should've spent no time rushing
         assertThat( pauseNanosCounter.get() ).isEqualTo( 0L );
@@ -130,9 +127,9 @@ class ConfigurableIOControllerTest
         // Then set a limit of 100 IOPS
         config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, 100, getClass().getSimpleName() );
 
-        // Do 10*100 = 1000 IOs real quick, when we're limited to 100 IOPS.
-        long stamp = INITIAL_STAMP;
-        repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
+//        // Do 10*100 = 1000 IOs real quick, when we're limited to 100 IOPS.
+//        long stamp = INITIAL_STAMP;
+//        repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
 
         // Then assert that the updated limit is respected
         assertThat( pauseNanosCounter.get() ).isGreaterThan( TimeUnit.SECONDS.toNanos( 9 ) );
@@ -158,8 +155,8 @@ class ConfigurableIOControllerTest
         // ...and re-enabling it...
         limiter.enable();
         // ...must make the limiter limit.
-        long stamp = INITIAL_STAMP;
-        repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
+//        long stamp = INITIAL_STAMP;
+//        repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
         assertThat( pauseNanosCounter.get() ).isGreaterThan( TimeUnit.SECONDS.toNanos( 9 ) );
     }
 
@@ -180,8 +177,8 @@ class ConfigurableIOControllerTest
         assertUnlimited();
         // Until it is re-enabled.
         config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, 100, getClass().getSimpleName()  );
-        long stamp = INITIAL_STAMP;
-        repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
+//        long stamp = INITIAL_STAMP;
+//        repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
         assertThat( pauseNanosCounter.get() ).isGreaterThan( TimeUnit.SECONDS.toNanos( 9 ) );
     }
 
@@ -233,12 +230,12 @@ class ConfigurableIOControllerTest
         var flushEvent = pageCacheTracer.beginCacheFlush();
         var flushOpportunity = flushEvent.flushEventOpportunity();
 
-        limiter.maybeLimitIO( INITIAL_STAMP, 10, FLUSHABLE, flushOpportunity );
-        limiter.maybeLimitIO( INITIAL_STAMP, 20, FLUSHABLE, flushOpportunity );
-        limiter.maybeLimitIO( INITIAL_STAMP, 30, FLUSHABLE, flushOpportunity );
-        limiter.maybeLimitIO( INITIAL_STAMP, 3, FLUSHABLE, flushOpportunity );
-        limiter.maybeLimitIO( INITIAL_STAMP, 2, FLUSHABLE, flushOpportunity );
-        limiter.maybeLimitIO( INITIAL_STAMP, 1, FLUSHABLE, flushOpportunity );
+//        limiter.maybeLimitIO( INITIAL_STAMP, 10, FLUSHABLE, flushOpportunity );
+//        limiter.maybeLimitIO( INITIAL_STAMP, 20, FLUSHABLE, flushOpportunity );
+//        limiter.maybeLimitIO( INITIAL_STAMP, 30, FLUSHABLE, flushOpportunity );
+//        limiter.maybeLimitIO( INITIAL_STAMP, 3, FLUSHABLE, flushOpportunity );
+//        limiter.maybeLimitIO( INITIAL_STAMP, 2, FLUSHABLE, flushOpportunity );
+//        limiter.maybeLimitIO( INITIAL_STAMP, 1, FLUSHABLE, flushOpportunity );
 
         assertEquals( 66, pageCacheTracer.iopqPerformed() );
     }
@@ -251,10 +248,10 @@ class ConfigurableIOControllerTest
         var flushEvent = pageCacheTracer.beginCacheFlush();
         var flushOpportunity = flushEvent.flushEventOpportunity();
 
-        long stamp = limiter.maybeLimitIO( INITIAL_STAMP, 1000, FLUSHABLE, flushOpportunity );
-        stamp = limiter.maybeLimitIO( stamp, 2000, FLUSHABLE, flushOpportunity );
-        clock.forward( Duration.ofSeconds( 1 ) );
-        stamp = limiter.maybeLimitIO( stamp, 7, FLUSHABLE, flushOpportunity );
+//        long stamp = limiter.maybeLimitIO( INITIAL_STAMP, 1000, FLUSHABLE, flushOpportunity );
+//        stamp = limiter.maybeLimitIO( stamp, 2000, FLUSHABLE, flushOpportunity );
+//        clock.forward( Duration.ofSeconds( 1 ) );
+//        stamp = limiter.maybeLimitIO( stamp, 7, FLUSHABLE, flushOpportunity );
 
         assertEquals( 2, pageCacheTracer.ioLimitedTimes() );
         assertEquals( 200, pageCacheTracer.ioLimitedMillis() );
@@ -277,7 +274,7 @@ class ConfigurableIOControllerTest
     private void assertUnlimited()
     {
         long pauseTime = pauseNanosCounter.get();
-        repeatedlyCallMaybeLimitIO( limiter, INITIAL_STAMP, 1000000 );
+//        repeatedlyCallMaybeLimitIO( limiter, INITIAL_STAMP, 1000000 );
         assertThat( pauseNanosCounter.get() ).isEqualTo( pauseTime );
     }
 
@@ -285,7 +282,7 @@ class ConfigurableIOControllerTest
     {
         for ( int i = 0; i < 100; i++ )
         {
-            stamp = ioController.maybeLimitIO( stamp, iosPerIteration, FLUSHABLE, FlushEventOpportunity.NULL );
+//            stamp = ioController.maybeLimitIO( stamp, iosPerIteration, FLUSHABLE, FlushEventOpportunity.NULL );
         }
         return stamp;
     }
