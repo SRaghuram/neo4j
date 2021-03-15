@@ -331,7 +331,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val threads = (0 until updates).map { _ =>
       new Thread(new Runnable {
         override def run(): Unit = {
-          execute(query)
+          executeWithRetry(query)
         }
       })
     }
