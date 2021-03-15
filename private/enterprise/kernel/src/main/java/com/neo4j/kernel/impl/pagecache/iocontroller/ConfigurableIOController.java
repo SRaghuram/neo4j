@@ -8,6 +8,7 @@ package com.neo4j.kernel.impl.pagecache.iocontroller;
 import java.io.Flushable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.ObjLongConsumer;
 
@@ -41,6 +42,8 @@ public class ConfigurableIOController implements IOController
      */
     @SuppressWarnings( "unused" ) // Updated via stateUpdater
     private volatile long state;
+
+    private final LongAdder externalIO = new LongAdder();
 
     public ConfigurableIOController( Config config, SystemNanoClock clock )
     {
@@ -137,7 +140,7 @@ public class ConfigurableIOController implements IOController
             return now + (((long) recentlyCompletedIOs) << TIME_BITS);
         }
 
-        long ioSum = (previousStamp >> TIME_BITS) + recentlyCompletedIOs;
+        long ioSum = (previousStamp >> TIME_BITS) + recentlyCompletedIOs + externalIO.sumThenReset();
         if ( ioSum >= getIOPQ( state ) )
         {
             long millisLeftInQuantum = min( QUANTUM_MILLIS, QUANTUM_MILLIS - (now - then) );
@@ -162,6 +165,12 @@ public class ConfigurableIOController implements IOController
             newState = composeState( disabledCounter, getIOPQ( currentState ) );
         }
         while ( !stateUpdater.compareAndSet( this, currentState, newState ) );
+    }
+
+    @Override
+    public void reportIO( int completedIOs )
+    {
+        externalIO.add( completedIOs );
     }
 
     @Override
