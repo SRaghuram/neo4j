@@ -2,33 +2,32 @@
 set -eu
 # this script schedules run of benchmark in batch infrastructure
 
+batch_stack_prefix=benchmarking-batch-infrastructure
+env=production
+
 # required arguments
-job_queue=
-job_definition=
-batch_stack=
+infrastructure_capabilities=
 workspace_dir=
 branch_owner=
+workload=
+db_name=
 
 # optional arguments
-workload=accesscontrol
 profilers="GC"
-db_name=$workload
-dataset_base_uri=
+batch_stack=
+results_store_pass_secret_name=
 # get neo4j version from POM
 neo4j_version=
 neo4j_branch=
 
-recordings_base_uri=
-artifact_base_uri=
+recordings_base_uri=s3://storage.benchmarking.neo4j.today/recordings
+artifact_base_uri=s3://storage.benchmarking.neo4j.today/artifacts/macro/
+dataset_base_uri=s3://storage.benchmarking.neo4j.today/datasets/macro/
 
 while (("$#")); do
   case "$1" in
-  --job-queue)
-    job_queue=$2
-    shift 2
-    ;;
-  --job-definition)
-    job_definition=$2
+  --infrastructure-capabilities)
+    infrastructure_capabilities=$2
     shift 2
     ;;
   --batch-stack)
@@ -79,6 +78,10 @@ while (("$#")); do
     recordings_base_uri=$2
     shift 2
     ;;
+  --env)
+    env=$2
+    shift 2
+    ;;
   --) # end of argument parsing
     shift
     break
@@ -97,9 +100,17 @@ if [[ -z "$neo4j_branch" ]]; then
   neo4j_branch=$(git rev-parse --abbrev-ref HEAD)
 fi
 
-if [[ -z "$job_queue" || -z "$job_definition" || -z "$batch_stack" || -z "$workspace_dir" || -z "$branch_owner" ]]; then
-  echo -e "missing required arguments, call this script like this: \n\n $0 --job-queue [job queue] --job-definition [job definition] --batch-stack [batch stack] --results-db-password [results db password] --workspace-dir [workspace dir] --branch-owner [branch owner]"
+if [[ -z "$infrastructure_capabilities" || -z "$workspace_dir" || -z "$branch_owner" ]]; then
+  echo -e "missing required arguments, call this script like this: \n\n $0 --infrastructure-capabilities [infrastructure capabilities] --workspace-dir [workspace dir] --branch-owner [branch owner]"
   exit 1
+fi
+
+if [[ -z "$batch_stack" ]]; then
+  batch_stack="$batch_stack_prefix-$env"
+fi
+
+if [[ -z "$results_store_pass_secret_name" ]]; then
+  results_store_pass_secret_name="ResultStoreSecret-$env"
 fi
 
 if [[ -z "$JAVA_HOME" ]]; then
@@ -172,10 +183,8 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
   "$db_name" \
   --results-store-pass-secret-name \
   "$results_store_pass_secret_name" \
-  --job-queue \
-  "$job_queue" \
-  --job-definition \
-  "$job_definition" \
+  --infrastructure-capabilities \
+  "$infrastructure_capabilities" \
   --batch-stack \
   "$batch_stack" \
   ${dataset_base_uri:+--dataset-base-uri $dataset_base_uri} \
