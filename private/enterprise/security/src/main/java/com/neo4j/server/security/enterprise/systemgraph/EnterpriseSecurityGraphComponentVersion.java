@@ -55,7 +55,7 @@ public enum EnterpriseSecurityGraphComponentVersion implements ComponentVersion
      *
      * Version 10 (Neo4j 4.3.0-Drop04):
      *   - Added support for set user home database
-     *   - Added privilege for altering role names
+     *   - Added privilege for renaming role names
      */
     ENTERPRISE_SECURITY_35( 0, SECURITY_PRIVILEGE_COMPONENT, ComponentVersion.Neo4jVersions.VERSION_35 ),
     ENTERPRISE_SECURITY_36( 1, SECURITY_PRIVILEGE_COMPONENT, ComponentVersion.Neo4jVersions.VERSION_36 ),

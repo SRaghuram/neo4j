@@ -5,8 +5,6 @@
  */
 package org.neo4j.cypher.internal
 
-import java.util.UUID
-import java.util.concurrent.ThreadLocalRandom
 import com.neo4j.causalclustering.core.consensus.RaftMachine
 import com.neo4j.causalclustering.discovery.TopologyService
 import com.neo4j.configuration.EnterpriseEditionSettings
@@ -37,16 +35,12 @@ import org.neo4j.cypher.internal.ast.AllPropertyResource
 import org.neo4j.cypher.internal.ast.AllQualifier
 import org.neo4j.cypher.internal.ast.CreateDatabaseAction
 import org.neo4j.cypher.internal.ast.DatabaseResource
-import org.neo4j.cypher.internal.ast.DefaultDatabaseScope
-import org.neo4j.cypher.internal.ast.DefaultGraphScope
 import org.neo4j.cypher.internal.ast.DefaultScope
 import org.neo4j.cypher.internal.ast.DropDatabaseAction
 import org.neo4j.cypher.internal.ast.DumpData
 import org.neo4j.cypher.internal.ast.FunctionAllQualifier
 import org.neo4j.cypher.internal.ast.FunctionQualifier
 import org.neo4j.cypher.internal.ast.GraphOrDatabaseScope
-import org.neo4j.cypher.internal.ast.HomeDatabaseScope
-import org.neo4j.cypher.internal.ast.HomeGraphScope
 import org.neo4j.cypher.internal.ast.LabelAllQualifier
 import org.neo4j.cypher.internal.ast.LabelQualifier
 import org.neo4j.cypher.internal.ast.LabelResource
@@ -70,7 +64,6 @@ import org.neo4j.cypher.internal.ast.UserQualifier
 import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.expressions.Parameter
-import org.neo4j.cypher.internal.logical.plans.AlterRole
 import org.neo4j.cypher.internal.logical.plans.AlterUser
 import org.neo4j.cypher.internal.logical.plans.AssertNotBlocked
 import org.neo4j.cypher.internal.logical.plans.CopyRolePrivileges
@@ -91,6 +84,7 @@ import org.neo4j.cypher.internal.logical.plans.GrantRoleToUser
 import org.neo4j.cypher.internal.logical.plans.LogSystemCommand
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NameValidator
+import org.neo4j.cypher.internal.logical.plans.RenameRole
 import org.neo4j.cypher.internal.logical.plans.RequireRole
 import org.neo4j.cypher.internal.logical.plans.RevokeDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.RevokeDbmsAction
@@ -152,6 +146,8 @@ import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues
 
+import java.util.UUID
+import java.util.concurrent.ThreadLocalRandom
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.JavaConverters.asScalaSetConverter
@@ -379,8 +375,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         parameterConverter = mapValueConverter
       )
 
-    // ALTER ROLE foo SET NAME bar
-    case AlterRole(source, fromRoleName, toRoleName) => context =>
+    // RENAME ROLE foo TO bar
+    case RenameRole(source, fromRoleName, toRoleName) => context =>
       if (blockRename) {
         throw new UnsupportedOperationException("Changing role name is not supported when using an authentication or authentication provider apart from native.")
       }
@@ -399,7 +395,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             s"The role '${runtimeValue(fromRoleName, p)}' does not exist.")))
           .handleError((error, p) => (error, error.getCause) match {
             case (_, _: UniquePropertyValueValidationException) =>
-              new InvalidArgumentException(s"Failed to rename to the specified role '${runtimeValue(toRoleName, p)}': Role already exists.", error)
+              new InvalidArgumentException(s"Failed to rename the specified role '${runtimeValue(fromRoleName, p)}' to '${runtimeValue(toRoleName, p)}': " +
+                s"Role '${runtimeValue(toRoleName, p)}' already exists.", error)
             case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
               new DatabaseAdministrationOnFollowerException(s"Failed to rename the specified role '${runtimeValue(fromRoleName, p)}': $followerError", error)
             case _ => new IllegalStateException(s"Failed to rename the specified role '${runtimeValue(fromRoleName, p)}' to '${runtimeValue(toRoleName, p)}'.", error)
@@ -409,8 +406,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           val toName = runtimeValue(toRoleName, params)
           val fromName = runtimeValue(fromRoleName, params)
           NameValidator.assertValidRoleName(toName)
-          NameValidator.assertUnreservedRoleName("alter", toName)
-          NameValidator.assertUnreservedRoleName("alter", fromName)
+          NameValidator.assertUnreservedRoleName("rename", fromName, Some(toName))
         },
         parameterConverter = mapValueConverter
       )

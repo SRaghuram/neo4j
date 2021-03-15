@@ -210,7 +210,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    public void shouldNotAlterRoleNameWhenUsingLDAP()
+    public void shouldNotRenameRoleWhenUsingLDAP()
     {
         startDatabase();
         createRole( "agent" );
@@ -220,7 +220,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
             // when
             try
             {
-                session.run( "ALTER ROLE agent SET NAME bot" ).single();
+                session.run( "RENAME ROLE agent TO bot" ).single();
                 fail( "An exception was expected but not thrown here." );
             }
             catch ( DatabaseException e )

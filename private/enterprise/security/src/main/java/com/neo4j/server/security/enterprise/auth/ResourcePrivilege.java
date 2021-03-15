@@ -270,8 +270,8 @@ public class ResourcePrivilege
             return List.of( String.format( "%s%s SHOW ROLE ON DBMS %s %s", optionalRevoke, privilegeType.prefix, preposition, role ) );
         case CREATE_ROLE:
             return List.of( String.format( "%s%s CREATE ROLE ON DBMS %s %s", optionalRevoke, privilegeType.prefix, preposition, role ) );
-        case ALTER_ROLE:
-            return List.of( String.format( "%s%s ALTER ROLE ON DBMS %s %s", optionalRevoke, privilegeType.prefix, preposition, role ) );
+        case RENAME_ROLE:
+            return List.of( String.format( "%s%s RENAME ROLE ON DBMS %s %s", optionalRevoke, privilegeType.prefix, preposition, role ) );
         case DROP_ROLE:
             return List.of( String.format( "%s%s DROP ROLE ON DBMS %s %s", optionalRevoke, privilegeType.prefix, preposition, role ) );
         case ASSIGN_ROLE:

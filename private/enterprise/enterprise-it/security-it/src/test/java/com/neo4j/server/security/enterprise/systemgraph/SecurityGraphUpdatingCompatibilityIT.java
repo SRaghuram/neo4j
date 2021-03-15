@@ -126,7 +126,7 @@ class SecurityGraphUpdatingCompatibilityIT extends SecurityGraphCompatibilityTes
             ),
             EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D4, Set.of(
                     new PrivilegeCommand( "SET USER HOME DATABASE ON DBMS", GRANT_DENY_REVOKE ),
-                    new PrivilegeCommand( "ALTER ROLE ON DBMS", GRANT_DENY_REVOKE )
+                    new PrivilegeCommand( "RENAME ROLE ON DBMS", GRANT_DENY_REVOKE )
             )
     );
 

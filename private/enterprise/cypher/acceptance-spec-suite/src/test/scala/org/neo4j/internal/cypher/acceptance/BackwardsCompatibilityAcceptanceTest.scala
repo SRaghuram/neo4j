@@ -586,14 +586,14 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     graph.getMaybeRelIndex("RelType", Seq("prop")).isEmpty should be(true)
   }
 
-  test("ALTER ROLE should not work with 4.2") {
+  test("RENAME ROLE should not work with 4.2") {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     Seq("CYPHER 4.2").foreach(version => {
       withClue(version) {
         // WHEN
 
         val exception = the[SyntaxException] thrownBy {
-          executeSingle(s"$version ALTER ROLE reader SET NAME wtf")
+          executeSingle(s"$version RENAME ROLE reader TO wtf")
         }
 
         // THEN

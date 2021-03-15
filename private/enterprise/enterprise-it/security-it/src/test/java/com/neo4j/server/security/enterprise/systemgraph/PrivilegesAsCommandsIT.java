@@ -48,7 +48,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ALTER_ROLE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ALTER_USER;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ASSIGN_PRIVILEGE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ASSIGN_ROLE;
@@ -83,6 +82,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_PRIVILEGE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_ROLE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.RENAME_ROLE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ROLE_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_PASSWORDS;
@@ -157,7 +157,7 @@ class PrivilegesAsCommandsIT
                 DROP_USER == action ||
                 SHOW_ROLE == action ||
                 CREATE_ROLE == action ||
-                ALTER_ROLE == action ||
+                RENAME_ROLE == action ||
                 DROP_ROLE == action ||
                 ASSIGN_ROLE == action ||
                 REMOVE_ROLE == action ||

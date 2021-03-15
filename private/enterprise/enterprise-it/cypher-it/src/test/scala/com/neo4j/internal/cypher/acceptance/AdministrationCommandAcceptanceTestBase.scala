@@ -5,12 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import java.lang.Boolean.TRUE
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util
-import java.util.Collections
-
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import com.neo4j.dbms.EnterpriseSystemGraphComponent
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
@@ -44,6 +38,12 @@ import org.neo4j.server.security.auth.SecurityTestUtils
 import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent
 
+import java.lang.Boolean.TRUE
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util
+import java.util.Collections
+
 abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
   val DEFAULT: String = "DEFAULT"
   val FAIL_EXECUTE_ADMIN_PROC: String = "Executing admin procedure is not allowed"
@@ -65,7 +65,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val PERMISSION_DENIED_DROP_DATABASE: String = "Permission denied for DROP DATABASE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_CREATE_OR_DROP_DATABASE: String = "Permission denied for CREATE DATABASE and/or DROP DATABASE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_CREATE_ROLE: String = "Permission denied for CREATE ROLE." + helpfulCheckUserPrivilegeErrorText
-  val PERMISSION_DENIED_ALTER_ROLE: String = "Permission denied for ALTER ROLE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_RENAME_ROLE: String = "Permission denied for RENAME ROLE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_DROP_ROLE: String = "Permission denied for DROP ROLE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_CREATE_OR_DROP_ROLE: String = "Permission denied for CREATE ROLE and/or DROP ROLE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_CREATE_USER: String = "Permission denied for CREATE USER." + helpfulCheckUserPrivilegeErrorText
@@ -378,7 +378,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   val dbmsPrivileges: Map[String, Map[String, String]] = Map(
     "CREATE ROLE" -> adminAction("create_role"),
-    "ALTER ROLE" -> adminAction("alter_role"),
+    "RENAME ROLE" -> adminAction("rename_role"),
     "DROP ROLE" -> adminAction("drop_role"),
     "ASSIGN ROLE" -> adminAction("assign_role"),
     "REMOVE ROLE" -> adminAction("remove_role"),

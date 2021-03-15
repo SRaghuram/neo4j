@@ -137,7 +137,7 @@ class QueryLoggerIT
         executeSystemCommandSuperUser( "SHOW USERS" );
         executeSystemCommandSuperUser( "SHOW DATABASES" );
         executeSystemCommandSuperUser( "DROP USER foo" );
-        executeSystemCommandSuperUser( "ALTER ROLE role SET NAME tbd" );
+        executeSystemCommandSuperUser( "RENAME ROLE role TO tbd" );
         executeSystemCommandSuperUser( "DROP ROLE tbd" );
 
         databaseManagementService.shutdown();
@@ -159,7 +159,7 @@ class QueryLoggerIT
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "SHOW USERS" ) ),
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "SHOW DATABASES" ) ),
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "DROP USER foo" ) ),
-                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "ALTER ROLE role SET NAME tbd" ) ),
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "RENAME ROLE role TO tbd" ) ),
                 endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "DROP ROLE tbd" ) )
         ) );
     }

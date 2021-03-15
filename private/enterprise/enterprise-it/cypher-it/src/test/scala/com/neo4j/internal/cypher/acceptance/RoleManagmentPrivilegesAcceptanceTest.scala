@@ -17,7 +17,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // GIVEN
     execute("CREATE ROLE custom")
     execute("GRANT CREATE ROLE ON DBMS TO custom")
-    execute("GRANT ALTER ROLE ON DBMS TO custom")
+    execute("GRANT RENAME ROLE ON DBMS TO custom")
     execute("GRANT DROP ROLE ON DBMS TO custom")
     execute("GRANT ASSIGN ROLE ON DBMS TO custom")
     execute("GRANT REMOVE ROLE ON DBMS TO custom")
@@ -30,7 +30,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       granted(adminAction("create_role")).role("custom").map,
-      granted(adminAction("alter_role")).role("custom").map,
+      granted(adminAction("rename_role")).role("custom").map,
       granted(adminAction("drop_role")).role("custom").map,
       granted(adminAction("assign_role")).role("custom").map,
       granted(adminAction("remove_role")).role("custom").map,
@@ -42,7 +42,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // Given
     execute("CREATE ROLE custom")
     execute("GRANT CREATE ROLE ON DBMS TO custom")
-    execute("GRANT ALTER ROLE ON DBMS TO custom")
+    execute("GRANT RENAME ROLE ON DBMS TO custom")
     execute("GRANT DROP ROLE ON DBMS TO custom")
     execute("GRANT ASSIGN ROLE ON DBMS TO custom")
     execute("GRANT REMOVE ROLE ON DBMS TO custom")
@@ -53,7 +53,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // Now revoke each sub-privilege in turn
     Seq(
       "CREATE ROLE",
-      "ALTER ROLE",
+      "RENAME ROLE",
       "DROP ROLE",
       "SHOW ROLE",
       "ASSIGN ROLE",
@@ -156,39 +156,39 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     } should have message PERMISSION_DENIED_CREATE_OR_DROP_ROLE
   }
 
-  // ALTER ROLE
+  // RENAME ROLE
 
-  test("should enforce alter role privilege") {
+  test("should enforce rename role privilege") {
     // GIVEN
     setupUserWithCustomRole("foo", "bar")
 
     // WHEN
-    execute("GRANT ALTER ROLE ON DBMS TO custom")
+    execute("GRANT RENAME ROLE ON DBMS TO custom")
 
     // THEN
-    executeOnSystem("foo", "bar", "ALTER ROLE custom SET NAME role")
+    executeOnSystem("foo", "bar", "RENAME ROLE custom TO role")
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("role").map))
 
     // WHEN
-    execute("REVOKE ALTER ROLE ON DBMS FROM role")
+    execute("REVOKE RENAME ROLE ON DBMS FROM role")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "ALTER ROLE role SET NAME custom")
-    } should have message PERMISSION_DENIED_ALTER_ROLE
+      executeOnSystem("foo", "bar", "RENAME ROLE role TO custom")
+    } should have message PERMISSION_DENIED_RENAME_ROLE
   }
 
-  test("should fail when alter role when denied alter role privilege") {
+  test("should fail when renaming role when denied rename role privilege") {
     // GIVEN
     setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
-    execute("DENY ALTER ROLE ON DBMS TO custom")
+    execute("DENY RENAME ROLE ON DBMS TO custom")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "ALTER ROLE custom SET NAME role")
-    } should have message PERMISSION_DENIED_ALTER_ROLE
+      executeOnSystem("foo", "bar", "RENAME ROLE custom TO role")
+    } should have message PERMISSION_DENIED_RENAME_ROLE
   }
 
   // DROP ROLE
@@ -478,7 +478,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     executeOnSystem("foo", "bar", "CREATE ROLE role")
   }
 
-  test("should deny create role when denied role management privilege") {
+  test("should not be able to create role when denied role management privilege") {
     // GIVEN
     setupUserWithCustomAdminRole("foo", "bar")
 
@@ -492,7 +492,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     } should have message PERMISSION_DENIED_CREATE_ROLE
   }
 
-  test("should be able to alter role with role management privilege") {
+  test("should be able to rename role with role management privilege") {
     // GIVEN
     setupUserWithCustomAdminRole("foo", "bar", "custom")
 
@@ -500,34 +500,34 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     execute("GRANT ROLE MANAGEMENT ON DBMS TO custom")
 
     // THEN
-    executeOnSystem("foo", "bar", "ALTER ROLE custom SET NAME role")
+    executeOnSystem("foo", "bar", "RENAME ROLE custom TO role")
   }
 
-  test("should deny alter role when denied role management privilege") {
+  test("should not be able to rename role when denied role management privilege") {
     // GIVEN
     setupUserWithCustomAdminRole("foo", "bar", "custom")
 
     // WHEN
-    execute("GRANT ALTER ROLE ON DBMS TO custom")
+    execute("GRANT RENAME ROLE ON DBMS TO custom")
     execute("DENY ROLE MANAGEMENT ON DBMS TO custom")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "ALTER ROLE custom SET NAME role")
-    } should have message PERMISSION_DENIED_ALTER_ROLE
+      executeOnSystem("foo", "bar", "RENAME ROLE custom TO role")
+    } should have message PERMISSION_DENIED_RENAME_ROLE
   }
 
-  test("should deny alter role when granted role management privilege and denied alter role") {
+  test("should not be able to rename role when granted role management privilege and denied rename role") {
     // GIVEN
     setupUserWithCustomAdminRole("foo", "bar", "custom")
 
     // WHEN
-    execute("DENY ALTER ROLE ON DBMS TO custom")
+    execute("DENY RENAME ROLE ON DBMS TO custom")
     execute("GRANT ROLE MANAGEMENT ON DBMS TO custom")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "ALTER ROLE custom SET NAME role")
-    } should have message PERMISSION_DENIED_ALTER_ROLE
+      executeOnSystem("foo", "bar", "RENAME ROLE custom TO role")
+    } should have message PERMISSION_DENIED_RENAME_ROLE
   }
 }

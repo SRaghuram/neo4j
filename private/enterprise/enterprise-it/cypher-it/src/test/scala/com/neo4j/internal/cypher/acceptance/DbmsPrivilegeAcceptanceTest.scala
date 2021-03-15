@@ -113,7 +113,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     // THEN
     execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
       granted(adminAction("create_role")).role(roleName).map,
-      granted(adminAction("alter_role")).role(roleName).map,
+      granted(adminAction("rename_role")).role(roleName).map,
       granted(adminAction("drop_role")).role(roleName).map,
       granted(adminAction("assign_role")).role(roleName).map,
       granted(adminAction("remove_role")).role(roleName).map,
