@@ -5,17 +5,21 @@
  */
 package com.neo4j.bench.micro;
 
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.data.Stores;
 import com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils;
 import com.neo4j.bench.jmh.api.Executor;
 import com.neo4j.bench.jmh.api.Runner;
 import com.neo4j.bench.jmh.api.RunnerParams;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
-import com.neo4j.bench.data.Stores;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.Neo4jConfig;
@@ -30,13 +34,14 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 
-import static com.neo4j.bench.common.profiling.ProfilerType.NO_OP;
 import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
+import static java.lang.String.format;
 
 class BenchmarksRunner extends Runner
 {
     private static final Logger LOG = LoggerFactory.getLogger( BenchmarksRunner.class );
     private static final String PARAM_NEO4J_CONFIG = "baseNeo4jConfig";
+    private static final ProfilerType PREPARE_PROFILER_TYPE = ProfilerType.NO_OP;
 
     private final Neo4jConfig baseNeo4jConfig;
     private final int forkCount;
@@ -84,7 +89,7 @@ class BenchmarksRunner extends Runner
         Stores stores = new Stores( runnerParams.workDir() );
 
         // necessary for robust fork directory creation
-        List<ParameterizedProfiler> profilers = Collections.singletonList( ParameterizedProfiler.defaultProfiler( NO_OP ) );
+        List<ParameterizedProfiler> profilers = Collections.singletonList( ParameterizedProfiler.defaultProfiler( PREPARE_PROFILER_TYPE ) );
         Executor executor = new Executor( jvm, jvmArgs, errorReporter, runnerParams, threadCounts );
         Executor.ExecutionResult executionResult = executor.runWithProfilers(
                 benchmarks,
@@ -143,7 +148,27 @@ class BenchmarksRunner extends Runner
     @Override
     protected Neo4jConfig systemConfigFor( BenchmarkGroup group, Benchmark benchmark, RunnerParams runnerParams )
     {
-        return new Stores( runnerParams.workDir() ).neo4jConfigFor( group, benchmark );
+        BenchmarkDirectory benchmarkDirectory = BenchmarkGroupDirectory.findOrFailAt( runnerParams.workDir(), group )
+                                                                       .findOrFail( benchmark );
+        ForkDirectory forkDirectory = benchmarkDirectory.forks()
+                                                        .stream()
+                                                        .filter( this::isPrepareFork )
+                                                        .findFirst()
+                                                        .orElseThrow( () -> new RuntimeException( format( "No prepare forks found for '%s' in : %s",
+                                                                                                          benchmark.name(),
+                                                                                                          benchmarkDirectory.toAbsolutePath() ) ) );
+        return Neo4jConfigBuilder.fromFile( forkDirectory.findOrFail( "neo4j.conf" ) ).build();
+    }
+
+    /**
+     * Measurement runs will also use {@link ProfilerType#NO_OP}, but configs should be the same.
+     */
+    private boolean isPrepareFork( ForkDirectory forkDirectory )
+    {
+        return forkDirectory.recordings()
+                            .keySet()
+                            .stream()
+                            .allMatch( descriptor -> descriptor.recordingType() == PREPARE_PROFILER_TYPE.recordingType() );
     }
 
     @Override

@@ -6,7 +6,6 @@
 package com.neo4j.bench.macro.execution.measurement;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.model.model.Metrics;
@@ -201,13 +200,13 @@ public class Results
         }
     }
 
-    public static Results loadFrom( BenchmarkDirectory benchmarkDirectory )
+    public static Results loadFrom( List<ForkDirectory> measurementForks )
     {
-        MeasurementUnit measurementUnit = measurementUnitFor( benchmarkDirectory );
+        MeasurementUnit measurementUnit = measurementUnitFor( measurementForks );
         List<Double> measurements = new ArrayList<>();
         List<Long> rows = new ArrayList<>();
-        benchmarkDirectory.measurementForks()
-                          .forEach( f -> visitResults( f, RunPhase.MEASUREMENT, aggregateMeasurements( measurements, rows ) ) );
+        measurementForks
+                .forEach( f -> visitResults( f, RunPhase.MEASUREMENT, aggregateMeasurements( measurements, rows ) ) );
         return new Results(
                 AggregateMeasurement.calculateFrom( measurements.stream().mapToDouble( Double::doubleValue ).toArray() ),
                 AggregateMeasurement.calculateFrom( rows.stream().mapToDouble( Long::doubleValue ).toArray() ),
@@ -232,12 +231,12 @@ public class Results
                 measurementUnit );
     }
 
-    private static MeasurementUnit measurementUnitFor( BenchmarkDirectory benchmarkDirectory )
+    private static MeasurementUnit measurementUnitFor( List<ForkDirectory> measurementForks )
     {
-        List<MeasurementUnit> measurementUnits = benchmarkDirectory.measurementForks().stream()
-                                                                   .map( forkDirectory -> forkDirectory.findOrFail( phaseFilename( RunPhase.MEASUREMENT ) ) )
-                                                                   .map( Results::extractUnit )
-                                                                   .collect( toList() );
+        List<MeasurementUnit> measurementUnits = measurementForks.stream()
+                                                                 .map( forkDirectory -> forkDirectory.findOrFail( phaseFilename( RunPhase.MEASUREMENT ) ) )
+                                                                 .map( Results::extractUnit )
+                                                                 .collect( toList() );
         if ( DurationUnit.isDurationUnit( measurementUnits.get( 0 ) ) )
         {
             /* -- time unit manipulation -- */

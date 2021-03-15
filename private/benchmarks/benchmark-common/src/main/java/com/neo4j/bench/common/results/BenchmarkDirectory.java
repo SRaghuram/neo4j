@@ -143,13 +143,6 @@ public class BenchmarkDirectory
         return ForkDirectory.createAt( dir, forkName );
     }
 
-    public List<ForkDirectory> measurementForks()
-    {
-        return forks().stream()
-                      .filter( ForkDirectory::isMeasurementFork )
-                      .collect( toList() );
-    }
-
     public List<Path> plans()
     {
         return forks().stream()

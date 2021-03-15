@@ -210,22 +210,21 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             {
                 try
                 {
-                    BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor( neo4jDeployment,
-                                                                              groupDir,
-                                                                              query,
-                                                                              originalStore,
-                                                                              params.neo4jEdition(),
-                                                                              neo4jConfig,
-                                                                              params.profilers(),
-                                                                              jvm,
-                                                                              params.measurementForkCount(),
-                                                                              params.unit(),
-                                                                              conciseMetricsPrinter,
-                                                                              params.jvmArgs(),
-                                                                              resources );
+                    Results results = ForkRunner.runForksFor( neo4jDeployment,
+                                                                   groupDir,
+                                                                   query,
+                                                                   originalStore,
+                                                                   params.neo4jEdition(),
+                                                                   neo4jConfig,
+                                                                   params.profilers(),
+                                                                   jvm,
+                                                                   params.measurementForkCount(),
+                                                                   params.unit(),
+                                                                   conciseMetricsPrinter,
+                                                                   params.jvmArgs(),
+                                                                   resources );
 
                     BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();
-                    Results results = Results.loadFrom( benchmarkDir );
                     queryResults.add( query.benchmarkGroup(),
                                       query.benchmark(),
                                       results.metrics(),
@@ -233,7 +232,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                                       neo4jConfig );
                     allResults.addAll( queryResults );
 
-                    List<Path> planFiles = benchmarkDir.plans();
+                    List<Path> planFiles = ForkRunner.benchmarkDirFor( groupDir, query ).plans();
                     // Just sanity check to avoid unnecessary/redundant plan creation
                     if ( planFiles.size() != 1 )
                     {

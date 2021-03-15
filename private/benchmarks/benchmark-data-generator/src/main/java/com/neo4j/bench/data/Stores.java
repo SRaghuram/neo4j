@@ -81,18 +81,6 @@ public class Stores
         this.storesDir = storesDir;
     }
 
-    public Neo4jConfig neo4jConfigFor( BenchmarkGroup benchmarkGroup, Benchmark benchmark )
-    {
-        BenchmarkGroupDirectory benchmarkGroupDirectory = BenchmarkGroupDirectory.findOrFailAt( storesDir, benchmarkGroup );
-        BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrFail( benchmark );
-        ForkDirectory forkDirectory = benchmarkDirectory.measurementForks().stream()
-                                                        .findFirst()
-                                                        .orElseThrow( () -> new RuntimeException( format( "No measurement forks found for '%s' in : %s",
-                                                                                                          benchmark.name(),
-                                                                                                          benchmarkDirectory.toAbsolutePath() ) ) );
-        return Neo4jConfigBuilder.fromFile( forkDirectory.findOrFail( "neo4j.conf" ) ).build();
-    }
-
     public StoreAndConfig prepareDb(
             DataGeneratorConfig config,
             BenchmarkGroup group,

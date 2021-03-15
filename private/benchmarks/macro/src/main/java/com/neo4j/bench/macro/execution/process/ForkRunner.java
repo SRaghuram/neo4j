@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -47,21 +48,21 @@ public class ForkRunner
 
     private static final Neo4jConfig NO_NEO4J_CONFIG = Neo4jConfig.empty();
 
-    public static BenchmarkDirectory runForksFor( Neo4jDeployment neo4jDeployment,
-                                                  BenchmarkGroupDirectory groupDir,
-                                                  Query query,
-                                                  Store store,
-                                                  Edition edition,
-                                                  Neo4jConfig neo4jConfig,
-                                                  List<ParameterizedProfiler> profilers,
-                                                  Jvm jvm,
-                                                  int measurementForkCount,
-                                                  TimeUnit unit,
-                                                  BenchmarkGroupBenchmarkMetricsPrinter metricsPrinter,
-                                                  JvmArgs jvmArgs,
-                                                  Resources resources ) throws ForkFailureException
+    public static Results runForksFor( Neo4jDeployment neo4jDeployment,
+                                       BenchmarkGroupDirectory groupDir,
+                                       Query query,
+                                       Store store,
+                                       Edition edition,
+                                       Neo4jConfig neo4jConfig,
+                                       List<ParameterizedProfiler> profilers,
+                                       Jvm jvm,
+                                       int measurementForkCount,
+                                       TimeUnit unit,
+                                       BenchmarkGroupBenchmarkMetricsPrinter metricsPrinter,
+                                       JvmArgs jvmArgs,
+                                       Resources resources ) throws ForkFailureException
     {
-        BenchmarkDirectory benchmarkDir = groupDir.findOrCreate( query.benchmark() );
+        BenchmarkDirectory benchmarkDir = benchmarkDirFor( groupDir, query );
         boolean doFork = measurementForkCount != 0;
         try
         {
@@ -85,6 +86,7 @@ public class ForkRunner
                 runFork( query, unit, metricsPrinter, profilerFork );
             }
 
+            List<ForkDirectory> measurementForks = new ArrayList<>();
             // always run at least one fork. value 0 means run 1 in-process 'fork'
             for ( int forkNumber = 0; forkNumber < Math.max( measurementForkCount, 1 ); forkNumber++ )
             {
@@ -117,14 +119,20 @@ public class ForkRunner
                 }
                 LOG.debug( measurementFork.toString() );
                 runFork( query, unit, metricsPrinter, measurementFork );
+                measurementForks.add( forkDirectory );
             }
 
-            return benchmarkDir;
+            return Results.loadFrom( measurementForks );
         }
         catch ( Exception exception )
         {
             throw new ForkFailureException( query, benchmarkDir, exception );
         }
+    }
+
+    public static BenchmarkDirectory benchmarkDirFor( BenchmarkGroupDirectory groupDir, Query query )
+    {
+        return groupDir.findOrCreate( query.benchmark() );
     }
 
     private static void runFork( Query query,

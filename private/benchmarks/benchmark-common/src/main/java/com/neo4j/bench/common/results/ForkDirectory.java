@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.neo4j.bench.common.profiling.RecordingDescriptor;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
-import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -155,7 +154,7 @@ public class ForkDirectory
             if ( recordingDescriptor.isDuplicatesAllowed() )
             {
                 // Some recording types are produced by every fork, there will be duplicates (in different forks) with the same name
-                 Files.copy( source, target, StandardCopyOption.REPLACE_EXISTING );
+                Files.copy( source, target, StandardCopyOption.REPLACE_EXISTING );
             }
             else
             {
@@ -260,20 +259,6 @@ public class ForkDirectory
     public Map<RecordingDescriptor,Path> recordings()
     {
         return ForkDescription.load( dir ).recordings;
-    }
-
-    boolean isMeasurementFork()
-    {
-        return !isProfiledFork();
-    }
-
-    private boolean isProfiledFork()
-    {
-        ForkDescription forkDescription = ForkDescription.load( dir );
-        return forkDescription.recordings.keySet().stream()
-                                         .anyMatch( recordingDescriptor -> !recordingDescriptor.recordingType().equals( RecordingType.NONE ) &&
-                                                                           !recordingDescriptor.recordingType().equals( RecordingType.HEAP_DUMP ) &&
-                                                                           !recordingDescriptor.recordingType().equals( RecordingType.ASCII_PLAN ) );
     }
 
     private static Path create( Path dir, String filename )

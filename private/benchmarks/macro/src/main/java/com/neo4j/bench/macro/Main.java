@@ -9,7 +9,6 @@ import com.github.rvesse.airline.Cli;
 import com.github.rvesse.airline.builder.CliBuilder;
 import com.github.rvesse.airline.help.Help;
 import com.neo4j.bench.common.database.Neo4jStore;
-import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.Resources;
@@ -72,22 +71,21 @@ public class Main
             BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.createAt( options.outputDir(), query.benchmarkGroup() );
 
             Neo4jDeployment neo4jDeployment = options.neo4jDeployment();
-            BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor( neo4jDeployment,
-                                                                      benchmarkGroupDir,
-                                                                      query,
-                                                                      Neo4jStore.createFrom( options.storeDir() ),
-                                                                      options.edition(),
-                                                                      options.neo4jConfig(),
-                                                                      options.profilers(),
-                                                                      options.jvm(),
-                                                                      options.forks(),
-                                                                      options.unit(),
-                                                                      verboseMetricsPrinter,
-                                                                      JvmArgs.from( options.jvmArgs() ),
-                                                                      resources );
+            Results results = ForkRunner.runForksFor( neo4jDeployment,
+                                                      benchmarkGroupDir,
+                                                      query,
+                                                      Neo4jStore.createFrom( options.storeDir() ),
+                                                      options.edition(),
+                                                      options.neo4jConfig(),
+                                                      options.profilers(),
+                                                      options.jvm(),
+                                                      options.forks(),
+                                                      options.unit(),
+                                                      verboseMetricsPrinter,
+                                                      JvmArgs.from( options.jvmArgs() ),
+                                                      resources );
 
             BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();
-            Results results = Results.loadFrom( benchmarkDir );
             queryResults.add( query.benchmarkGroup(),
                               query.benchmark(),
                               results.metrics(),
