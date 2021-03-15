@@ -23,6 +23,6 @@ public class ConfigurableIOControllerService implements IOControllerService
     @Override
     public int getPriority()
     {
-        return 2;
+        return 10;
     }
 }

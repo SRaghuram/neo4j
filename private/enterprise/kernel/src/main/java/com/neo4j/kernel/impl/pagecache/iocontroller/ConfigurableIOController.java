@@ -131,6 +131,7 @@ public class ConfigurableIOController implements IOController
         if ( getDisabledCounter( state ) > 0 )
         {
             ioState = 0;
+            return;
         }
 
         long now = clock.millis() & TIME_MASK;
@@ -154,7 +155,6 @@ public class ConfigurableIOController implements IOController
         pauseNanos.accept( this, TimeUnit.MILLISECONDS.toNanos( millisLeftInQuantum ) );
         flushEvent.throttle( millisLeftInQuantum );
         ioState = currentTimeMillis() & TIME_MASK;
-
     }
 
     @Override
@@ -191,6 +191,7 @@ public class ConfigurableIOController implements IOController
             newState = composeState( disabledCounter, getIOPQ( currentState ) );
         }
         while ( !stateUpdater.compareAndSet( this, currentState, newState ) );
+        externalIO.reset();
     }
 
     @Override
@@ -199,8 +200,14 @@ public class ConfigurableIOController implements IOController
         return getDisabledCounter( controllerState ) == 0;
     }
 
-    private static long currentTimeMillis()
+    private long currentTimeMillis()
     {
-        return TimeUnit.NANOSECONDS.toMillis( System.nanoTime() );
+        return TimeUnit.NANOSECONDS.toMillis( clock.nanos() );
+    }
+
+    @VisibleForTesting
+    long getExternalIO()
+    {
+        return externalIO.sum();
     }
 }
