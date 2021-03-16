@@ -29,10 +29,10 @@ import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.METADATA;
 
-public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,CoreServerInfoForServerId>>
+public class MetadataActor extends BaseReplicatedDataActor.LastWriterWinsMap<UniqueAddress,CoreServerInfoForServerId>
 {
     static Props props( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ActorRef databaseStateActor, ActorRef raftMappingActor,
-            Config config, ReplicatedDataMonitor monitor, ServerId myself )
+                        Config config, ReplicatedDataMonitor monitor, ServerId myself )
     {
         return Props.create( MetadataActor.class, () -> new MetadataActor( cluster, replicator, topologyActor, databaseStateActor, raftMappingActor,
                                                                            config, monitor, myself ) );
@@ -46,7 +46,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     private final Set<DatabaseId> startedDatabases = new HashSet<>();
 
     private MetadataActor( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ActorRef databaseStateActor, ActorRef raftMappingActor,
-            Config config, ReplicatedDataMonitor monitor, ServerId myself )
+                           Config config, ReplicatedDataMonitor monitor, ServerId myself )
     {
         super( cluster, replicator, LWWMapKey::create, LWWMap::empty, METADATA, monitor );
         this.topologyActor = topologyActor;

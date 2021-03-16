@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.discovery.akka.database.state
 
+import akka.actor.ActorRef
+import akka.actor.Props
 import akka.cluster.ddata.LWWMap
 import akka.cluster.ddata.LWWMapKey
 import akka.cluster.ddata.Replicator
@@ -12,6 +14,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.OverflowStrategy
 import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
+import akka.testkit.TestActorRef
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
@@ -19,7 +22,6 @@ import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DatabaseStateUpdateSink
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-
 import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot
 import com.neo4j.causalclustering.identity.IdFactory.randomServerId
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
@@ -156,8 +158,10 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
       .to(Sink.foreach(updateSink.onDbStateUpdate))
       .run(ActorMaterializer())
 
-    val replicatedDataActorRef = system.actorOf(
-      DatabaseStateActor.props(cluster, replicator.ref, discoverySink, rrTopologyProbe.ref, monitor, myself))
+
+    private val props: Props = DatabaseStateActor.props(cluster, replicator.ref, discoverySink, rrTopologyProbe.ref, monitor, myself)
+    override val replicatedDataActorRef: ActorRef = system.actorOf(props)
+    override val replicatedDataActorInstance: DatabaseStateActor = TestActorRef[DatabaseStateActor](props).underlyingActor
     val dataKey = LWWMapKey.create[DatabaseServer, DiscoveryDatabaseState](ReplicatedDataIdentifier.DATABASE_STATE.keyName())
     val data: LWWMap[DatabaseServer, DiscoveryDatabaseState] = LWWMap.empty[DatabaseServer, DiscoveryDatabaseState]
   }

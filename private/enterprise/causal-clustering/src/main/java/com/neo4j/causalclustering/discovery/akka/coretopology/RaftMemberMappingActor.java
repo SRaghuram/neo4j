@@ -30,10 +30,10 @@ import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDat
 /**
  * Keeps track of raft member IDs for every database/server pair.
  */
-public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<DatabaseServer,RaftMemberId>>
+public class RaftMemberMappingActor extends BaseReplicatedDataActor.LastWriterWinsMap<DatabaseServer,RaftMemberId>
 {
     static Props props( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ServerId myIdentity,
-            ReplicatedDataMonitor monitor )
+                        ReplicatedDataMonitor monitor )
     {
         return Props.create(
                 RaftMemberMappingActor.class, () -> new RaftMemberMappingActor( cluster, replicator, topologyActor, myIdentity, monitor ) );
@@ -43,7 +43,7 @@ public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<Datab
     private final ServerId myIdentity;
 
     private RaftMemberMappingActor( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ServerId myIdentity,
-            ReplicatedDataMonitor monitor )
+                                    ReplicatedDataMonitor monitor )
     {
         super( cluster, replicator, LWWMapKey::create, LWWMap::empty, RAFT_MEMBER_MAPPING, monitor );
         this.topologyActor = topologyActor;

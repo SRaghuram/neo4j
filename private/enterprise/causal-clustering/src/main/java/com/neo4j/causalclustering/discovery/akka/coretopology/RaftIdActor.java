@@ -39,7 +39,7 @@ import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
  * @see RaftBinder
  * @see RaftBootstrapper
  */
-public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftGroupId,RaftMemberId>>
+public class RaftIdActor extends BaseReplicatedDataActor.LastWriterWinsMap<RaftGroupId,RaftMemberId>
 {
     private final ActorRef coreTopologyActor;
     //We use a reverse clock because we want the RaftId map to observe first-write-wins semantics, not the standard last-write-wins

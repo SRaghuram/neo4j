@@ -10,6 +10,7 @@ import akka.cluster.ddata.Key
 import akka.cluster.ddata.LWWMap
 import akka.cluster.ddata.LWWMapKey
 import akka.cluster.ddata.Replicator
+import akka.testkit.TestActorRef
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
@@ -83,5 +84,6 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
     val db1 = randomNamedDatabaseId
     val props = RaftIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, monitor, 3)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
+    override val replicatedDataActorInstance: RaftIdActor = TestActorRef[RaftIdActor](props).underlyingActor
   }
 }

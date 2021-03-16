@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.discovery.akka.directory
 
 import java.util
 import java.util.Collections
-
 import akka.actor.ActorRef
+import akka.actor.Props
 import akka.cluster.ddata.Key
 import akka.cluster.ddata.ORMap
 import akka.cluster.ddata.ORMapKey
@@ -17,6 +17,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.OverflowStrategy
 import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
+import akka.testkit.TestActorRef
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
@@ -141,8 +142,9 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     val rrActor = TestProbe("ReadReplicaActor")
 
-    val props = DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref, monitor)
+    private val props: Props = DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref, monitor)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
+    override val replicatedDataActorInstance: DirectoryActor = TestActorRef[DirectoryActor](props).underlyingActor
     override val dataKey: Key[ORMap[DatabaseId,ReplicatedLeaderInfo]] = ORMapKey(ReplicatedDataIdentifier.DIRECTORY.keyName())
     override val data = ORMap.create[DatabaseId,ReplicatedLeaderInfo]()
   }

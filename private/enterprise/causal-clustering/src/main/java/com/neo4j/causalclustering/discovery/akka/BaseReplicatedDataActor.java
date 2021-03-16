@@ -36,7 +36,7 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     private final ReplicatedDataMonitor monitor;
 
     protected BaseReplicatedDataActor( Cluster cluster, ActorRef replicator, Function<String,Key<T>> keyFunction, Supplier<T> emptyData,
-            ReplicatedDataIdentifier identifier, ReplicatedDataMonitor monitor )
+                                       ReplicatedDataIdentifier identifier, ReplicatedDataMonitor monitor )
     {
         this.cluster = cluster;
         this.replicator = replicator;
@@ -75,16 +75,33 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     private void handleReplicationEvents( ReceiveBuilder builder )
     {
         builder.match( Replicator.Changed.class, c -> c.key().equals( key ), message ->
+        {
+            T newData = (T) message.dataValue();
+            if ( isDataChanged( newData ) )
             {
-                T newData = (T) message.dataValue();
                 handleIncomingData( newData );
-                logDataMetric();
-            } ).match( Replicator.UpdateResponse.class, updated -> log().debug( "Update: {}", updated ) )
+            }
+            else
+            {
+                data = newData;
+            }
+            // data metric can change because the internal version vector changes
+            logDataMetric();
+        } ).match( Replicator.UpdateResponse.class, updated -> log().debug( "Update: {}", updated ) )
                .match( MetricsRefresh.class, ignored -> logDataMetric() )
                .match( PublishInitialData.class, message -> sendInitialDataToReplicator( message.getSnapshot() ) );
     }
 
     protected abstract void handleCustomEvents( ReceiveBuilder builder );
+
+    /**
+     * Akka Distributed Data sends us Changed events even when the data that we see has not changed but because the Akka internals have changed e.g. because of
+     * Garbage Collection of vector clocks. This checks if the data that we can see has changed and allows us to skip doing work if there are no changes.
+     *
+     * @param newData provided by akka
+     * @return true if newData does not match our existing data.
+     */
+    protected abstract boolean isDataChanged( T newData );
 
     protected abstract void handleIncomingData( T newData );
 
@@ -131,6 +148,21 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
         public static MetricsRefresh getInstance()
         {
             return instance;
+        }
+    }
+
+    public abstract static class LastWriterWinsMap<K, V> extends BaseReplicatedDataActor<akka.cluster.ddata.LWWMap<K,V>>
+    {
+        protected LastWriterWinsMap( Cluster cluster, ActorRef replicator, Function<String,Key<akka.cluster.ddata.LWWMap<K,V>>> stringKeyFunction,
+                                     Supplier<akka.cluster.ddata.LWWMap<K,V>> emptyData, ReplicatedDataIdentifier identifier, ReplicatedDataMonitor monitor )
+        {
+            super( cluster, replicator, stringKeyFunction, emptyData, identifier, monitor );
+        }
+
+        @Override
+        protected final boolean isDataChanged( akka.cluster.ddata.LWWMap<K,V> newData )
+        {
+            return data.size() != newData.size() || !data.getEntries().equals( newData.getEntries() );
         }
     }
 }

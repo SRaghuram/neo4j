@@ -140,6 +140,12 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
         case Replicator.Unsubscribe(fixture.dataKey, fixture.replicatedDataActorRef) => ()
       }
     }
+    "handle unchanged data" in {
+      val fixture = newFixture
+      fixture.replicatedDataActorRef ! Replicator.Changed(fixture.dataKey)(fixture.data)
+      assertEventually(fixture.monitor.visSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      fixture.replicatedDataActorInstance.isDataChanged(fixture.data) shouldBe false
+    }
     "update metrics on changed data" in {
       val fixture = newFixture
       fixture.replicatedDataActorRef ! Replicator.Changed(fixture.dataKey)(fixture.data)
@@ -173,6 +179,7 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
       override def setInvisibleDataSize(key: ReplicatedDataIdentifier, size: Int): Unit = hasSetInvisible = true
     }
 
+    val replicatedDataActorInstance: BaseReplicatedDataActor[A]
     val replicatedDataActorRef: ActorRef
     val dataKey: Key[A]
     val data: A

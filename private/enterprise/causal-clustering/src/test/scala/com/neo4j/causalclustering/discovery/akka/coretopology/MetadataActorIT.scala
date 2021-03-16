@@ -5,11 +5,14 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology
 
+import akka.actor.ActorRef
 import akka.actor.Address
+import akka.actor.Props
 import akka.cluster.UniqueAddress
 import akka.cluster.ddata.LWWMap
 import akka.cluster.ddata.LWWMapKey
 import akka.cluster.ddata.Replicator
+import akka.testkit.TestActorRef
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.TestTopology
@@ -168,8 +171,10 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       conf
     }
 
-    val replicatedDataActorRef = system.actorOf(MetadataActor.props(cluster, replicator.ref, coreTopologyProbe.ref, databaseStateProbe.ref, mappingProbe.ref, config, monitor,
-      identityModule.serverId()))
+    private val props: Props = MetadataActor.props(cluster, replicator.ref, coreTopologyProbe.ref, databaseStateProbe.ref, mappingProbe.ref, config, monitor,
+      identityModule.serverId())
+    override val replicatedDataActorRef: ActorRef = system.actorOf(props)
+    override val replicatedDataActorInstance: MetadataActor = TestActorRef[MetadataActor](props).underlyingActor
 
     def expectUpdateWithDatabases(namedDatabaseIds: Set[NamedDatabaseId]): Unit = {
       val update = expectReplicatorUpdates(replicator, dataKey)

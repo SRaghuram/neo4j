@@ -73,6 +73,12 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<DatabaseId,Rep
         builder.match( LeaderInfoSettingMessage.class, this::handleLeaderInfoSet );
     }
 
+    @Override
+    protected boolean isDataChanged( ORMap<DatabaseId,ReplicatedLeaderInfo> newData )
+    {
+        return data.size() != newData.size() || !data.getEntries().equals( newData.getEntries() );
+    }
+
     private void handleLeaderInfoSet( LeaderInfoSettingMessage message )
     {
         if ( isPublishableLeaderInfo( message.leaderInfo() ) )

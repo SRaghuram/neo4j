@@ -37,17 +37,21 @@ public class ActorSystemFactory
         this.sslEngineProvider = sslEngineProvider;
         TypesafeConfigService.ArteryTransport arteryTransport =
                 sslEngineProvider.isPresent() ? TypesafeConfigService.ArteryTransport.TLS_TCP : TypesafeConfigService.ArteryTransport.TCP;
-        this.configService = new TypesafeConfigService( arteryTransport, firstStartupDetector, config , minFormationMembers );
+        this.configService = new TypesafeConfigService( arteryTransport, firstStartupDetector, config, minFormationMembers );
         this.log = logProvider.getLog( getClass() );
     }
 
     ActorSystem createActorSystem( ProviderSelection providerSelection )
     {
         com.typesafe.config.Config tsConfig = configService.generate();
-        log.debug( "Akka config: " + tsConfig.root().render( ConfigRenderOptions.concise() ) );
+
+        if ( log.isDebugEnabled() )
+        {
+            log.debug( "Akka config: %s", tsConfig.root().render( ConfigRenderOptions.concise() ) );
+        }
 
         BootstrapSetup bootstrapSetup = BootstrapSetup.create( tsConfig )
-                .withActorRefProvider( providerSelection );
+                                                      .withActorRefProvider( providerSelection );
 
         ActorSystemSetup actorSystemSetup = ActorSystemSetup.create( bootstrapSetup );
 

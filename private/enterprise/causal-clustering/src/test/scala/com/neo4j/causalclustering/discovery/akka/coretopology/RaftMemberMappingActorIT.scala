@@ -5,9 +5,12 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology
 
+import akka.actor.ActorRef
+import akka.actor.Props
 import akka.cluster.ddata.LWWMap
 import akka.cluster.ddata.LWWMapKey
 import akka.cluster.ddata.Replicator
+import akka.testkit.TestActorRef
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
@@ -148,8 +151,9 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
     val databaseMemberships = namedDatabaseIds.map(namedDatabaseId => (namedDatabaseId.databaseId(), stateService.stateOfDatabase(namedDatabaseId))).toMap
     val snapshot = new TestCoreServerSnapshot(identityModule, stateService, Map.empty[DatabaseId, LeaderInfo].asJava)
 
-    val replicatedDataActorRef = system.actorOf(RaftMemberMappingActor.props(
-      cluster, replicator.ref, coreTopologyProbe.ref, identityModule.serverId(), monitor))
+    private val props: Props = RaftMemberMappingActor.props(cluster, replicator.ref, coreTopologyProbe.ref, identityModule.serverId(), monitor)
+    override val replicatedDataActorRef: ActorRef = system.actorOf(props)
+    override val replicatedDataActorInstance: RaftMemberMappingActor = TestActorRef[RaftMemberMappingActor](props).underlyingActor
 
     def collectReplicatorUpdates(original: LWWMap[DatabaseServer, RaftMemberId], count: Int): LWWMap[DatabaseServer, RaftMemberId] = {
       val update = expectReplicatorUpdates(replicator, dataKey)

@@ -28,10 +28,10 @@ import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.DATABASE_STATE;
 
-public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseServer,DiscoveryDatabaseState>>
+public class DatabaseStateActor extends BaseReplicatedDataActor.LastWriterWinsMap<DatabaseServer,DiscoveryDatabaseState>
 {
     public static Props props( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> discoveryUpdateSink,
-            ActorRef rrTopologyActor, ReplicatedDataMonitor monitor, ServerId myself )
+                               ActorRef rrTopologyActor, ReplicatedDataMonitor monitor, ServerId myself )
     {
         return Props.create(
                 DatabaseStateActor.class, () -> new DatabaseStateActor( cluster, replicator, discoveryUpdateSink, rrTopologyActor, monitor, myself ) );
@@ -44,8 +44,8 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseS
     private final ServerId myself;
 
     private DatabaseStateActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> stateUpdateSink,
-            ActorRef rrTopologyActor, ReplicatedDataMonitor monitor,
-            ServerId myself )
+                                ActorRef rrTopologyActor, ReplicatedDataMonitor monitor,
+                                ServerId myself )
     {
         super( cluster, replicator, LWWMapKey::create, LWWMap::create, DATABASE_STATE, monitor );
         this.stateUpdateSink = stateUpdateSink;
