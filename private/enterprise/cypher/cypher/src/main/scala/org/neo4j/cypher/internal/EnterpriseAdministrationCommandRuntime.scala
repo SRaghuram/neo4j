@@ -375,7 +375,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         parameterConverter = mapValueConverter
       )
 
-    // RENAME ROLE foo TO bar
+    // RENAME ROLE foo [IF EXISTS] TO bar
     case RenameRole(source, fromRoleName, toRoleName) => context =>
       if (blockRename) {
         throw new UnsupportedOperationException("Changing role name is not supported when using an authentication or authentication provider apart from native.")

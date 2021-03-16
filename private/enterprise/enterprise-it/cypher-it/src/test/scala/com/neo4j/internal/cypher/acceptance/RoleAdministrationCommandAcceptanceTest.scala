@@ -808,10 +808,38 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("bar").map))
   }
 
-  test("should not rename role if role does not exists") {
+  test("should rename built-in role") {
+    // WHEN
+    execute("RENAME ROLE reader TO bookworm")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles - reader ++ Set(role("bookworm").map))
+  }
+
+  test("should rename existing role using if exists") {
+    // GIVEN
+    execute("CREATE ROLE foo")
+
+    // WHEN
+    execute("RENAME ROLE foo IF EXISTS TO bar")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("bar").map))
+  }
+
+  test("should fail when renaming non-existing role") {
     // WHEN
     val exception = the[IllegalStateException] thrownBy execute("RENAME ROLE foo TO bar")
     exception.getMessage should startWith("Failed to rename the specified role 'foo' to 'bar': The role 'foo' does not exist.")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles)
+  }
+
+  test("should do nothing when renaming non-existing role using if exists") {
+    // WHEN
+    execute("RENAME ROLE foo IF EXISTS TO bar")
 
     // THEN
     val result = execute("SHOW ROLES")
@@ -829,9 +857,30 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
+  test("should not rename to existing name using if exists") {
+    // WHEN
+    execute("CREATE ROLE foo")
+    val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE foo IF EXISTS TO reader")
+    exception.getMessage should startWith("Failed to rename the specified role 'foo' to 'reader': Role 'reader' already exists.")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles ++ Set(role("foo").map))
+  }
+
   test("should not rename from reserved name") {
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE PUBLIC TO PRIVATE")
+    exception.getMessage should startWith("Failed to rename the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles)
+  }
+
+    test("should not rename from reserved name using if exists") {
+    // WHEN
+    val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE PUBLIC IF EXISTS TO PRIVATE")
     exception.getMessage should startWith("Failed to rename the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
 
     // THEN
@@ -843,6 +892,16 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // WHEN
     execute("CREATE ROLE foo")
     val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE foo TO PUBLIC")
+    exception.getMessage should startWith("Failed to rename the specified role 'foo' to 'PUBLIC': 'PUBLIC' is a reserved role.")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
+  }
+
+  test("should not rename to reserved name using if exists") {
+    // WHEN
+    execute("CREATE ROLE foo")
+    val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE foo IF EXISTS TO PUBLIC")
     exception.getMessage should startWith("Failed to rename the specified role 'foo' to 'PUBLIC': 'PUBLIC' is a reserved role.")
 
     // THEN

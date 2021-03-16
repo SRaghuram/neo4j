@@ -237,6 +237,27 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
+    public void shouldFailRenameRoleIfExistsWhenUsingLDAP()
+    {
+        startDatabase();
+        try ( Driver driver = connectDriver( boltUri, "smith", "abc123" );
+              Session session = driver.session() )
+        {
+            // when
+            try
+            {
+                session.run( "RENAME ROLE doesNotExist IF EXISTS TO bot" ).single();
+                fail( "An exception was expected but not thrown here." );
+            }
+            catch ( DatabaseException e )
+            {
+                assertThat( e.getMessage(),
+                            equalTo( "Changing role name is not supported when using an authentication or authentication provider apart from native." ) );
+            }
+        }
+    }
+
+    @Test
     public void shouldShowCurrentUserPrivileges()
     {
         startDatabase();
