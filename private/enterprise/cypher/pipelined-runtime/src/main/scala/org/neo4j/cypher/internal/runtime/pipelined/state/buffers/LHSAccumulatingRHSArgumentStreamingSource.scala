@@ -16,7 +16,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
@@ -73,7 +72,6 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
   }
 
   private def tryTakeRhs(lhsAcc: LHS_ACC): MorselData = {
-
     if (rhsArgumentStateMap.hasCompleted(lhsAcc.argumentRowId)) {
       val completedArgumentState = rhsArgumentStateMap.takeCompletedExclusive(lhsAcc.argumentRowId)
       if (completedArgumentState != null) {

@@ -108,7 +108,6 @@ object ConcurrentArgumentStateMap {
     checkOnlyWhenAssertionsAreEnabled(state != null)
 
     private val count = new AtomicLong(initialCount)
-
     private val peekerCount = new AtomicLong(0)
 
     override def increment(): Long = count.incrementAndGet()
@@ -197,6 +196,9 @@ object ConcurrentArgumentStateMap {
    */
   private[state] class ConcurrentCompletedStateController[STATE <: ArgumentState] private (private val atomicState: AtomicReference[STATE])
     extends AbstractArgumentStateMap.StateController[STATE] {
+    checkOnlyWhenAssertionsAreEnabled(atomicState.get() != null)
+
+    private val peekerCount = new AtomicLong(0)
 
     override def increment(): Long = throw new IllegalStateException(s"Cannot increment ${this.getClass.getSimpleName}")
 
@@ -223,15 +225,32 @@ object ConcurrentArgumentStateMap {
     override def shallowSize: Long = ConcurrentCompletedStateController.SHALLOW_SIZE
 
     override def trackedPeek: STATE = {
-      throw new UnsupportedOperationException("")
+      peekerCount.incrementAndGet() // Increment here in order to protect against race with takeCompletedExclusive
+      val state = atomicState.get()
+      if (state != null) {
+        state
+      } else {
+        peekerCount.decrementAndGet()
+        null.asInstanceOf[STATE]
+      }
     }
 
     override def unTrackPeek: Unit = {
-      throw new UnsupportedOperationException("")
+      peekerCount.decrementAndGet()
     }
 
     override def takeCompletedExclusive: STATE = {
-      throw new UnsupportedOperationException("")
+      val state = atomicState.getAndSet(null.asInstanceOf[STATE])
+      if (state != null) {
+        if (peekerCount.get() == 0) {
+          state
+        } else {
+          atomicState.set(state)
+          null.asInstanceOf[STATE]
+        }
+      } else {
+        null.asInstanceOf[STATE]
+      }
     }
   }
 

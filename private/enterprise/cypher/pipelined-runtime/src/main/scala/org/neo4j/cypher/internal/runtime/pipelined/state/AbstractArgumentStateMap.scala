@@ -169,15 +169,36 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def trackedPeek(argumentId: Long): STATE = {
-    throw new UnsupportedOperationException("")
+    val controller = getController(argumentId)
+    if (controller != null) {
+      controller.trackedPeek
+    } else {
+      null.asInstanceOf[STATE]
+    }
   }
 
   override def unTrackPeek(argumentId: Long): Unit = {
-    throw new UnsupportedOperationException("")
+    val controller = getController(argumentId)
+    if (controller != null) {
+      controller.unTrackPeek
+    }
   }
 
   override def takeCompletedExclusive(argumentId: Long): STATE = {
-    throw new UnsupportedOperationException("")
+    val controller = getController(argumentId)
+    if (controller != null) {
+      val completedState = controller.takeCompletedExclusive
+      if (completedState != null) {
+        removeController(completedState.argumentRowId)
+        memoryTracker.releaseHeap(controller.shallowSize + completedState.shallowSize)
+        DebugSupport.ASM.log("ASM %s take exclusive %03d", argumentStateMapId, completedState.argumentRowId)
+        completedState
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    } else {
+      null.asInstanceOf[STATE]
+    }
   }
 
   override def hasCompleted: Boolean = {

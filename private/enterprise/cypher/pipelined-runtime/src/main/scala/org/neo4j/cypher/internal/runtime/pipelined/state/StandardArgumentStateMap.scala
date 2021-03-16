@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.Controllers
@@ -85,8 +86,10 @@ object StandardArgumentStateMap {
    */
   private[state] class StandardStateController[STATE <: ArgumentState](private var state: STATE, initialCount: Int)
     extends AbstractArgumentStateMap.StateController[STATE] {
+    checkOnlyWhenAssertionsAreEnabled(state != null)
 
     private var _count: Long = initialCount
+    private var _peekerCount: Long = 0
 
     override def increment(): Long = {
       _count += 1
@@ -135,15 +138,22 @@ object StandardArgumentStateMap {
     override final def shallowSize: Long = StandardStateController.SHALLOW_SIZE
 
     override def trackedPeek: STATE = {
-      throw new UnsupportedOperationException("")
+      if (state != null) {
+        _peekerCount += 1
+      }
+      state
     }
 
     override def unTrackPeek: Unit = {
-      throw new UnsupportedOperationException("")
+      _peekerCount -= 1
     }
 
     override def takeCompletedExclusive: STATE = {
-      throw new UnsupportedOperationException("")
+      if (_peekerCount == 0) {
+        take()
+      } else {
+        null.asInstanceOf[STATE]
+      }
     }
   }
 
@@ -159,6 +169,9 @@ object StandardArgumentStateMap {
    */
   private[state] class StandardCompletedStateController[STATE <: ArgumentState](private var state: STATE)
     extends AbstractArgumentStateMap.StateController[STATE] {
+    checkOnlyWhenAssertionsAreEnabled(state != null)
+
+    private var _peekerCount: Long = 0
 
     override def increment(): Long = throw new IllegalStateException(s"Cannot increment ${this.getClass.getSimpleName}")
 
@@ -189,15 +202,22 @@ object StandardArgumentStateMap {
     override def shallowSize: Long = StandardCompletedStateController.SHALLOW_SIZE
 
     override def trackedPeek: STATE = {
-      throw new UnsupportedOperationException("")
+      if (state != null) {
+        _peekerCount += 1
+      }
+      state
     }
 
     override def unTrackPeek: Unit = {
-      throw new UnsupportedOperationException("")
+      _peekerCount -= 1
     }
 
     override def takeCompletedExclusive: STATE = {
-      throw new UnsupportedOperationException("")
+      if (_peekerCount == 0) {
+        take()
+      } else {
+        null.asInstanceOf[STATE]
+      }
     }
   }
 
