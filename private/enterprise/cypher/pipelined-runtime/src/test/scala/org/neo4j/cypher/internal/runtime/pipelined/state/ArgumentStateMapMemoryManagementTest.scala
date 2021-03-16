@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.HeapEstimator.SCOPED_MEMORY_TRACKER_SHALLOW_SIZE
 import org.neo4j.memory.LocalMemoryTracker
@@ -317,7 +318,9 @@ object TestArgumentStateFactory extends ArgumentStateFactory[TestArgumentState] 
     scopedMemoryTracker.allocateHeap(SCOPED_MEMORY_TRACKER_SHALLOW_SIZE)
     new TestArgumentState(argumentRowId, scopedMemoryTracker)
   }
-  override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): TestArgumentState = ???
+  override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): TestArgumentState = {
+    new TestArgumentState(argumentRowId, EmptyMemoryTracker.INSTANCE)
+  }
 }
 
 class TestArgumentState(val argumentRowId: Long, val scopedMemoryTracker: MemoryTracker) extends ArgumentState {
