@@ -100,7 +100,7 @@ class PageCacheWarmerTest
     private PageCacheConfig cfg;
     private Path file;
     private Tracers tracers;
-    private Log log = NullLog.getInstance();
+    private final Log log = NullLog.getInstance();
 
     @BeforeEach
     void setUp() throws IOException
