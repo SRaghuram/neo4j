@@ -5,11 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
-import java.util
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.atomic.AtomicReference
-
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
@@ -20,6 +16,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentState
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
+
+import java.util
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Concurrent and quite naive implementation of ArgumentStateMap. Also JustGetItWorking(tm)
@@ -104,8 +105,11 @@ object ConcurrentArgumentStateMap {
    */
   private[state] class ConcurrentStateController[STATE <: ArgumentState](private var state: STATE, initialCount: Int)
     extends AbstractArgumentStateMap.StateController[STATE] {
+    checkOnlyWhenAssertionsAreEnabled(state != null)
 
     private val count = new AtomicLong(initialCount)
+
+    private val peekerCount = new AtomicLong(0)
 
     override def increment(): Long = count.incrementAndGet()
 
@@ -134,6 +138,35 @@ object ConcurrentArgumentStateMap {
     override def hasCompleted: Boolean = count.get() == 0
 
     override def peek: STATE = state
+
+    override def trackedPeek: STATE = {
+      peekerCount.incrementAndGet() // Increment here in order to protect against race with takeCompletedExclusive
+      if (count.get() >= 0) {
+        state
+      } else {
+        peekerCount.decrementAndGet()
+        null.asInstanceOf[STATE]
+      }
+    }
+
+    override def unTrackPeek: Unit = {
+      peekerCount.decrementAndGet()
+    }
+
+    override def takeCompletedExclusive: STATE = {
+      if (count.compareAndSet(0, TAKEN)) {
+        if (peekerCount.get() == 0) {
+          val returnState = state
+          state = null.asInstanceOf[STATE]
+          returnState
+        } else {
+          count.set(0)
+          null.asInstanceOf[STATE]
+        }
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    }
 
     override def peekCompleted: STATE = {
       if (count.get() == 0) {
@@ -188,6 +221,18 @@ object ConcurrentArgumentStateMap {
     }
 
     override def shallowSize: Long = ConcurrentCompletedStateController.SHALLOW_SIZE
+
+    override def trackedPeek: STATE = {
+      throw new UnsupportedOperationException("")
+    }
+
+    override def unTrackPeek: Unit = {
+      throw new UnsupportedOperationException("")
+    }
+
+    override def takeCompletedExclusive: STATE = {
+      throw new UnsupportedOperationException("")
+    }
   }
 
   object ConcurrentCompletedStateController {

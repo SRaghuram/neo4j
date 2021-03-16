@@ -5,8 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.pipelined
 
-import java.lang.System.lineSeparator
-
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
@@ -77,7 +75,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTest
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MiscTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MultiNodeIndexSeekTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.NestedLeftOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NestedPlanDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NestedPlanExpressionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeByIdSeekTestBase
@@ -152,6 +149,8 @@ import org.neo4j.cypher.internal.runtime.spec.tests.WriteOperatorsDbHitsTestBase
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.result.OperatorProfile
 import org.scalatest.Outcome
+
+import java.lang.System.lineSeparator
 
 object PipelinedSpecSuite {
   val SIZE_HINT = 1000
@@ -386,10 +385,8 @@ class PipelinedNodeRightOuterHashJoinNoFusingTest extends RightOuterHashJoinTest
 
 // NODE LEFT OUTER HASH JOIN
 class PipelinedNodeLeftOuterHashJoinTest extends LeftOuterHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT)
-                                         with NestedLeftOuterHashJoinTestBase[EnterpriseRuntimeContext]
                                          with PipelinedSpecSuite
 class PipelinedNodeLeftOuterHashJoinNoFusingTest extends LeftOuterHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
-                                                 with NestedLeftOuterHashJoinTestBase[EnterpriseRuntimeContext]
                                                  with PipelinedSpecSuite
 
 // VALUE HASH JOIN

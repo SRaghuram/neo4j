@@ -37,7 +37,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
                                          downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                                          override val argumentStateMaps: ArgumentStateMaps,
                                          val lhsArgumentStateMapId: ArgumentStateMapId,
-                                         val rhsArgumentStateMapId: ArgumentStateMapId,
+                                         val rhsArgumentStateMapId: ArgumentStateMapId
                                        ) extends JoinBuffer[ACC_DATA, LHS_ACC, MorselData] {
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
@@ -73,34 +73,42 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
   }
 
   private def tryTakeRhs(lhsAcc: LHS_ACC): MorselData = {
-    val rhsBuffer = rhsArgumentStateMap.takeIfCompletedOrElsePeek(lhsAcc.argumentRowId)
-    if (rhsBuffer != null) {
-      rhsBuffer match {
-        case ArgumentStateWithCompleted(completedArgumentState, true) =>
-          if (!completedArgumentState.didReceiveData) {
-            MorselData(IndexedSeq.empty, EndOfEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
-          } else {
-            val morsels = completedArgumentState.takeAll()
-            if (morsels != null) {
-              MorselData(morsels, EndOfNonEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
-            } else {
-              // We need to return this message to signal that the end of the stream was reached (even if some other Thread got the morsels
-              // before us), to close and decrement correctly.
-              MorselData(IndexedSeq.empty, EndOfNonEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
-            }
-          }
 
-        case ArgumentStateWithCompleted(incompleteArgumentState, false) =>
-          val morsels = incompleteArgumentState.takeAll()
+    if (rhsArgumentStateMap.hasCompleted(lhsAcc.argumentRowId)) {
+      val completedArgumentState = rhsArgumentStateMap.takeCompletedExclusive(lhsAcc.argumentRowId)
+      if (completedArgumentState != null) {
+        if (!completedArgumentState.didReceiveData) {
+          MorselData(IndexedSeq.empty, EndOfEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
+        } else {
+          val morsels = completedArgumentState.takeAll()
           if (morsels != null) {
-            MorselData(morsels, NotTheEnd, incompleteArgumentState.argumentRowIdsForReducers, incompleteArgumentState.argumentRow)
+            MorselData(morsels, EndOfNonEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
           } else {
-            // In this case we can simply not return anything, there will arrive more data for this argument row id.
-            null.asInstanceOf[MorselData]
+            // We need to return this message to signal that the end of the stream was reached (even if some other Thread got the morsels
+            // before us), to close and decrement correctly.
+            MorselData(IndexedSeq.empty, EndOfNonEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
           }
+        }
+      }
+      else {
+        // either lost race or there are peekers still running
+        null.asInstanceOf[MorselData]
       }
     } else {
-      null.asInstanceOf[MorselData]
+      val incompleteArgumentState = rhsArgumentStateMap.trackedPeek(lhsAcc.argumentRowId)
+      if (incompleteArgumentState != null) {
+        val morsels = incompleteArgumentState.takeAll()
+        if (morsels != null) {
+          MorselData(morsels, NotTheEnd, incompleteArgumentState.argumentRowIdsForReducers, incompleteArgumentState.argumentRow)
+        } else {
+          // In this case we can simply not return anything, there will arrive more data for this argument row id.
+          rhsArgumentStateMap.unTrackPeek(lhsAcc.argumentRowId)
+          null.asInstanceOf[MorselData]
+        }
+      } else {
+        // we lost a race, no problem
+        null.asInstanceOf[MorselData]
+      }
     }
   }
 
@@ -159,6 +167,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
         tracker.decrementBy(emptyRHSTrackerKey, 1)
         nbrOfMorsels /*Count Type: RHS Put per Morsel*/ + 1 /*Count Type: Empty RHS*/
       case _ =>
+        rhsArgumentStateMap.unTrackPeek(argumentRowId)
         // Count Type: RHS Put per Morsel
         nbrOfMorsels
     }

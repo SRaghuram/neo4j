@@ -181,6 +181,28 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def peek(argumentId: Long): S
 
   /**
+   * Returns the [[ArgumentState]] for the specified argumentId, but does not remove it from the [[ArgumentStateMap]].
+   * If the state is not null, peeker count is incremented.
+   *
+   * @return the state if successful, otherwise null
+   */
+  def trackedPeek(argumentId: Long): S
+
+  /**
+   * Decrement peeker count for the specified argumentId.
+   */
+  def unTrackPeek(argumentId: Long): Unit
+
+  /**
+   * Atomically tries to take the [[ArgumentState]] for the specified argumentId.
+   * Takes the state if the count is zero _and_ the peeker count is zero _and_ the state has not already been taken, otherwise null.
+   * The implementation must guarantee that taking can only happen once. This call must be used together with trackedPeek and unTrackPeek.
+   *
+   * @return the state if it was successfully taken, otherwise null.
+   */
+  def takeCompletedExclusive(argumentId: Long): S
+
+  /**
    * Returns `true` iff there is a completed argument.
    * @return
    */

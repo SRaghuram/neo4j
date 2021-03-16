@@ -168,6 +168,18 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     }
   }
 
+  override def trackedPeek(argumentId: Long): STATE = {
+    throw new UnsupportedOperationException("")
+  }
+
+  override def unTrackPeek(argumentId: Long): Unit = {
+    throw new UnsupportedOperationException("")
+  }
+
+  override def takeCompletedExclusive(argumentId: Long): STATE = {
+    throw new UnsupportedOperationException("")
+  }
+
   override def hasCompleted: Boolean = {
     val iterator = controllersIterator()
 
@@ -293,6 +305,26 @@ object AbstractArgumentStateMap {
      * @return the state if successful, otherwise null
      */
     def peek: STATE
+
+    /**
+     * Peeks the controller and returns the state it is holding, or null if the state has been taken.
+     * If the state is returned, peeker count is incremented.
+     * @return the state if successful, otherwise null
+     */
+    def trackedPeek: STATE
+
+    /**
+     * Decrement peeker count.
+     */
+    def unTrackPeek: Unit
+
+    /**
+     * Atomically tries to take the controller and returns the state if the count is zero _and_ the peeker count is zero _and_ the state has not already been taken.
+     * The implementation must guarantee that taking can only happen once. This call must be used together with trackedPeek and unTrackPeek.
+     *
+     * @return the state if successful, otherwise null
+     */
+    def takeCompletedExclusive: STATE
 
     /**
      * Peeks the controller and returns the state if the count is zero _and_ the state has not already been taken.

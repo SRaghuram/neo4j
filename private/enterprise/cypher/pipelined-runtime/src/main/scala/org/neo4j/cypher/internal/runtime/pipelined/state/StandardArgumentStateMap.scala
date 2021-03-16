@@ -5,8 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
-import java.util
-
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.Controllers
@@ -18,6 +16,8 @@ import org.neo4j.internal.helpers.Numbers
 import org.neo4j.kernel.impl.util.collection.HeapTrackingLongEnumerationList
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
+
+import java.util
 
 /**
  * Not thread-safe and quite naive implementation of ArgumentStateMap. JustGetItWorking(tm)
@@ -133,6 +133,18 @@ object StandardArgumentStateMap {
     }
 
     override final def shallowSize: Long = StandardStateController.SHALLOW_SIZE
+
+    override def trackedPeek: STATE = {
+      throw new UnsupportedOperationException("")
+    }
+
+    override def unTrackPeek: Unit = {
+      throw new UnsupportedOperationException("")
+    }
+
+    override def takeCompletedExclusive: STATE = {
+      throw new UnsupportedOperationException("")
+    }
   }
 
   object StandardStateController {
@@ -175,6 +187,18 @@ object StandardArgumentStateMap {
     }
 
     override def shallowSize: Long = StandardCompletedStateController.SHALLOW_SIZE
+
+    override def trackedPeek: STATE = {
+      throw new UnsupportedOperationException("")
+    }
+
+    override def unTrackPeek: Unit = {
+      throw new UnsupportedOperationException("")
+    }
+
+    override def takeCompletedExclusive: STATE = {
+      throw new UnsupportedOperationException("")
+    }
   }
 
   object StandardCompletedStateController {

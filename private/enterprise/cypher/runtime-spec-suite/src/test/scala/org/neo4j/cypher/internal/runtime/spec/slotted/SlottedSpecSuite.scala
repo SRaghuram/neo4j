@@ -38,7 +38,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.EagerTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EitherTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EmptyResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseNodeIndexSeekTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.UniqueIndexDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EsotericAssertSameNodeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExhaustiveLimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
@@ -66,7 +65,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.MemoryDeallocationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MiscTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.NestedLeftOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NestedPlanDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NestedPlanExpressionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeByIdSeekTestBase
@@ -131,6 +129,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.TriadicSelectionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.UniqueIndexDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnwindTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UpdatingProfilePageCacheStatsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UserDefinedAggregationSupport
@@ -192,7 +191,6 @@ class SlottedNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.DEFAULT, S
 class SlottedValueHashJoinTest extends ValueHashJoinTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedRightOuterHashJoinTest extends RightOuterHashJoinTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLeftOuterHashJoinTest extends LeftOuterHashJoinTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
-                                   with NestedLeftOuterHashJoinTestBase[EnterpriseRuntimeContext]
 class SlottedReactiveResultsTest extends ReactiveResultTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedReactiveResultsStressTest extends ReactiveResultStressTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedMiscTest extends MiscTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)

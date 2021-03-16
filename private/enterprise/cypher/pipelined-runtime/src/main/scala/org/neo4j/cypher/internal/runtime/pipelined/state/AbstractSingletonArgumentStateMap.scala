@@ -154,6 +154,37 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     }
   }
 
+  override def trackedPeek(argumentId: Long): STATE = {
+    TopLevelArgument.assertTopLevelArgument(argumentId)
+    if (hasController) {
+      controller.trackedPeek
+    } else {
+      null.asInstanceOf[STATE]
+    }
+  }
+
+  override def unTrackPeek(argumentId: Long): Unit = {
+    TopLevelArgument.assertTopLevelArgument(argumentId)
+    if (hasController) {
+      controller.unTrackPeek
+    }
+  }
+
+  override def takeCompletedExclusive(argumentId: Long): STATE = {
+    if (hasController) {
+      val completedState = controller.takeCompletedExclusive
+      if (completedState != null) {
+        hasController = false
+        DebugSupport.ASM.log("ASM %s take exclusive %03d", argumentStateMapId, completedState.argumentRowId)
+        completedState
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    } else {
+      null.asInstanceOf[STATE]
+    }
+  }
+
   override def hasCompleted: Boolean = {
     hasController && controller.hasCompleted
   }
