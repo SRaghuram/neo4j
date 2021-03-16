@@ -89,7 +89,6 @@ object StandardArgumentStateMap {
     checkOnlyWhenAssertionsAreEnabled(state != null)
 
     private var _count: Long = initialCount
-    private var _peekerCount: Long = 0
 
     override def increment(): Long = {
       _count += 1
@@ -137,24 +136,16 @@ object StandardArgumentStateMap {
 
     override final def shallowSize: Long = StandardStateController.SHALLOW_SIZE
 
-    override def trackedPeek: STATE = {
-      if (state != null) {
-        _peekerCount += 1
-      }
-      state
-    }
+    // TODO reviewer: should we keep a peek count here in order to have the same behaviour as the docs describe?
+    //      Since this implementation is single threaded we know there won't be any other threads peeking if we try to take,
+    //      but then you could take with `takeCompletedExclusive` after `trackedPeek` without calling `unTrackPeek`.
+    override def trackedPeek: STATE = peek // No need to track peekers in single threaded version
 
     override def unTrackPeek: Unit = {
-      _peekerCount -= 1
+      // No need to track peekers in single threaded version
     }
 
-    override def takeCompletedExclusive: STATE = {
-      if (_peekerCount == 0) {
-        take()
-      } else {
-        null.asInstanceOf[STATE]
-      }
-    }
+    override def takeCompletedExclusive: STATE = takeCompleted // No need to track peekers in single threaded version
   }
 
   object StandardStateController {
@@ -170,8 +161,6 @@ object StandardArgumentStateMap {
   private[state] class StandardCompletedStateController[STATE <: ArgumentState](private var state: STATE)
     extends AbstractArgumentStateMap.StateController[STATE] {
     checkOnlyWhenAssertionsAreEnabled(state != null)
-
-    private var _peekerCount: Long = 0
 
     override def increment(): Long = throw new IllegalStateException(s"Cannot increment ${this.getClass.getSimpleName}")
 
@@ -201,24 +190,16 @@ object StandardArgumentStateMap {
 
     override def shallowSize: Long = StandardCompletedStateController.SHALLOW_SIZE
 
-    override def trackedPeek: STATE = {
-      if (state != null) {
-        _peekerCount += 1
-      }
-      state
-    }
+    // TODO reviewer: should we keep a peek count here in order to have the same behaviour as the docs describe?
+    //      Since this implementation is single threaded we know there won't be any other threads peeking if we try to take,
+    //      but then you could take with `takeCompletedExclusive` after `trackedPeek` without calling `unTrackPeek`.
+    override def trackedPeek: STATE = peek // No need to track peekers in single threaded version
 
     override def unTrackPeek: Unit = {
-      _peekerCount -= 1
+      // No need to track peekers in single threaded version
     }
 
-    override def takeCompletedExclusive: STATE = {
-      if (_peekerCount == 0) {
-        take()
-      } else {
-        null.asInstanceOf[STATE]
-      }
-    }
+    override def takeCompletedExclusive: STATE = takeCompleted() // No need to track peekers in single threaded version
   }
 
   object StandardCompletedStateController {
