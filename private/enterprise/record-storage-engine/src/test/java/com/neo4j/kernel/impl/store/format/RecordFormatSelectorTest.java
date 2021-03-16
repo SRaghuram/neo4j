@@ -184,9 +184,9 @@ class RecordFormatSelectorTest
         createNeoStoreFile( databaseLayout );
         PageCache pageCache = mock( PageCache.class );
         when( pageCache.pageSize() ).thenReturn( PageCache.PAGE_SIZE );
-        when( pageCache.map( any(), anyInt(), any() ) ).thenThrow( new IOException( "No reading..." ) );
+        when( pageCache.map( any(), any(), anyInt(), any(), any(), any() ) ).thenThrow( new IOException( "No reading..." ) );
         assertNull( selectForStore( databaseLayout, fs, pageCache, LOG, NULL ) );
-        verify( pageCache ).map( any(), anyInt(), any() );
+        verify( pageCache ).map( any(), any(), anyInt(), any(), any(), any() );
     }
 
     @Test
