@@ -21,7 +21,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     // Given
     val person = createLabeledNode(Map("name" -> "Smith"), "Person")
     1 to 100 foreach (_ => createLabeledNode("Person"))
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -39,7 +39,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     // Given
     val person = createLabeledNode(Map("name" -> "Smith"), "Person")
     1 to 100 foreach (_ => createLabeledNode("Person"))
-    graph.createIndexWithName("name_index", "Person", "name")
+    graph.createNodeIndexWithName("name_index", "Person", "name")
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -57,7 +57,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     // Given
     val person = createLabeledNode(Map("name" -> "Smith"), "Person")
     1 to 100 foreach (_ => createLabeledNode("Person"))
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -73,7 +73,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("Regexp filter on top of NodeIndexScan (GH #7059)") {
     // Given
-    graph.createIndex("phone_type", "label")
+    graph.createNodeIndex("phone_type", "label")
     createLabeledNode(Map("id" -> "8bbee2f14a493fa08bef918eaac0c57caa4f9799", "label" -> "ay"), "phone_type", "timed")
     createLabeledNode(Map("id" -> "5fe613811746aa2a1c29d04c6e107974c3a92486", "label" -> "aa"), "phone_type", "timed")
     createLabeledNode(Map("id" -> "a573480b0f13ca9f33d82df91392f9397031a687", "label" -> "g"), "phone_type", "timed")
@@ -100,7 +100,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   test("should work just fine and use an index scan") {
-    graph.createIndex("Method", "arg0")
+    graph.createNodeIndex("Method", "arg0")
     val query =
       """
         |match (f:XMLElement:Function)<-[r:Use]-
@@ -122,7 +122,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     as.zipWithIndex.foreach { case(aNode, i) => relate(cs(i % cs.size), aNode) }
 
     // Empty index so that plan with NodeIndexScan becomes very cheap
-    graph.createIndex("A", "id")
+    graph.createNodeIndex("A", "id")
 
     val q =
       """
@@ -148,7 +148,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     as.zipWithIndex.foreach { case(aNode, i) => relate(cs(i % cs.size), aNode, ("id", i)) }
 
     // Empty index so that plan with NodeIndexScan becomes very cheap
-    graph.createIndex("A", "id")
+    graph.createNodeIndex("A", "id")
 
     val q =
       """
@@ -168,7 +168,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   test("Should handle OR between labels when one index is available") {
-    graph.createIndex("Continent", "prop")
+    graph.createNodeIndex("Continent", "prop")
     val query =
       """MATCH (n)
         |WHERE exists(n.prop) AND (n: GeneratingUnit OR n: Continent)

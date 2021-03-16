@@ -48,7 +48,7 @@ class StartsWithImplementationAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   test("Should handle prefix search with existing transaction state") {
-    graph.createIndex("User", "name")
+    graph.createNodeIndex("User", "name")
     createLabeledNode(Map("name" -> "Stefan"), "User")
     createLabeledNode(Map("name" -> "Stephan"), "User")
     createLabeledNode(Map("name" -> "Stefanie"), "User")

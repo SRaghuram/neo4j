@@ -39,7 +39,7 @@ class NaNAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSup
   test("should handle NaN index predicates correctly") {
     // Given
     createLabeledNode(Map("x" -> Double.NaN), "L")
-    graph.createIndex("L", "x")
+    graph.createNodeIndex("L", "x")
 
     // When & Then
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L) WHERE n.x > 0 RETURN n.x").toList should be(empty)

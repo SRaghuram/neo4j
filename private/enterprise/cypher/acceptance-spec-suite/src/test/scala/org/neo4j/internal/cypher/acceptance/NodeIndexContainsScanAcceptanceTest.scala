@@ -27,8 +27,8 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
       createLabeledNode(Map("name" -> i.toString, "country" -> "UK"), "Location")
     }
 
-    graph.createIndex("Location", "name")
-    graph.createIndex("Location", "country")
+    graph.createNodeIndex("Location", "name")
+    graph.createNodeIndex("Location", "country")
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
@@ -48,8 +48,8 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
       createLabeledNode(Map("name" -> i.toString, "country" -> "UK"), "Location")
     }
 
-    graph.createIndexWithName("name_index", "Location", "name")
-    graph.createIndexWithName("country_index", "Location", "country")
+    graph.createNodeIndexWithName("name_index", "Location", "name")
+    graph.createNodeIndexWithName("country_index", "Location", "country")
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
@@ -69,8 +69,8 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
       createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
-    graph.createIndex("Location", "name")
-    graph.createIndex("Location", "country")
+    graph.createNodeIndex("Location", "name")
+    graph.createNodeIndex("Location", "country")
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
@@ -90,8 +90,8 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
       createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
-    graph.createIndex("Location", "name")
-    graph.createIndex("Location", "country")
+    graph.createNodeIndex("Location", "name")
+    graph.createNodeIndex("Location", "country")
 
     val query = "MATCH (l:Location) USING INDEX l:Location(name) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 

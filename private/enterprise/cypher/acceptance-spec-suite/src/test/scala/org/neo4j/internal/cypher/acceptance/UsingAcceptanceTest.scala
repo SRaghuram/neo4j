@@ -24,7 +24,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("should use index on literal value") {
     val node = createLabeledNode(Map("id" -> 123), "Foo")
-    graph.createIndex("Foo", "id")
+    graph.createNodeIndex("Foo", "id")
     val query =
       """
         |PROFILE
@@ -42,7 +42,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("should use named index on literal value") {
     val node = createLabeledNode(Map("id" -> 123), "Foo")
-    graph.createIndexWithName("my_index", "Foo", "id")
+    graph.createNodeIndexWithName("my_index", "Foo", "id")
     val query =
       """
         |PROFILE
@@ -61,7 +61,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("should use index on literal map expression") {
     val nodes = Range(0,125).map(i => createLabeledNode(Map("id" -> i), "Foo"))
-    graph.createIndex("Foo", "id")
+    graph.createNodeIndex("Foo", "id")
     val query =
       """
         |PROFILE
@@ -79,7 +79,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("should use index on variable defined from literal value") {
     val node = createLabeledNode(Map("id" -> 123), "Foo")
-    graph.createIndex("Foo", "id")
+    graph.createNodeIndex("Foo", "id")
     val query =
       """
         |PROFILE
@@ -98,7 +98,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("fail if using a variable with label not used in match") {
     // GIVEN
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     // WHEN
     failWithError(Configs.All, "match (n)-->() using index n:Person(name) where n.name = 'kabam' return n",
@@ -107,7 +107,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("fail if using a variable with label not used in match (named index)") {
     // GIVEN
-    graph.createIndexWithName("my_index", "Person", "name")
+    graph.createNodeIndexWithName("my_index", "Person", "name")
 
     // WHEN
     failWithError(Configs.All, "match (n)-->() using index n:Person(name) where n.name = 'kabam' return n",
@@ -123,7 +123,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("fail if using hints with unusable equality predicate") {
     // GIVEN
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     // WHEN
     failWithError(Configs.All, "match (n:Person)-->() using index n:Person(name) where n.name <> 'kabam' return n","Cannot use index hint in this context")
@@ -131,7 +131,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("fail if using hints with unusable equality predicate (named index)") {
     // GIVEN
-    graph.createIndexWithName("my_index", "Person", "name")
+    graph.createNodeIndexWithName("my_index", "Person", "name")
 
     // WHEN
     failWithError(Configs.All, "match (n:Person)-->() using index n:Person(name) where n.name <> 'kabam' return n", "Cannot use index hint in this context")
@@ -139,8 +139,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("fail if joining index hints in equality predicates") {
     // GIVEN
-    graph.createIndex("Person", "name")
-    graph.createIndex("Food", "name")
+    graph.createNodeIndex("Person", "name")
+    graph.createNodeIndex("Food", "name")
 
     // WHEN
     failWithError(Configs.All,
@@ -154,7 +154,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("fail when equality checks are done with OR") {
     // GIVEN
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     // WHEN
     failWithError(Configs.All, "match (n)-->() using index n:Person(name) where n.name = 'kabam' OR n.name = 'kaboom' return n",
@@ -268,7 +268,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     relate(andres, createNode())
     relate(jake, createNode())
 
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     //WHEN
     val result = executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN ['Jacob'] RETURN n")
@@ -284,7 +284,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     relate(andres, createNode())
     relate(jake, createNode())
 
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     //WHEN
     val result = executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN ['Jacob','Jacob'] RETURN n")
@@ -300,7 +300,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     relate(andres, createNode())
     relate(jake, createNode())
 
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     //WHEN
     val result = executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN null RETURN n")
@@ -316,7 +316,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     relate(andres, createNode())
     relate(jake, createNode())
 
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     //WHEN
     val result = executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN $coll RETURN n",
@@ -328,8 +328,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("does not accept multiple index hints for the same variable") {
     // GIVEN
-    graph.createIndex("Entity", "source")
-    graph.createIndex("Person", "first_name")
+    graph.createNodeIndex("Entity", "source")
+    graph.createNodeIndex("Person", "first_name")
     createNode("source" -> "form1")
     createNode("first_name" -> "John")
 
@@ -346,8 +346,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("does not accept multiple index hints for the same variable (named indexes)") {
     // GIVEN
-    graph.createIndexWithName("index1", "Entity", "source")
-    graph.createIndexWithName("index2", "Person", "first_name")
+    graph.createNodeIndexWithName("index1", "Entity", "source")
+    graph.createNodeIndexWithName("index2", "Person", "first_name")
     createNode("source" -> "form1")
     createNode("first_name" -> "John")
 
@@ -624,7 +624,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where a and b can use an index") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
     val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
@@ -690,7 +690,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where using index hints on a and b") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
     val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
@@ -728,7 +728,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where using index hints on a and b (named index)") {
-    graph.createIndexWithName("my_index", "Person", "name")
+    graph.createNodeIndexWithName("my_index", "Person", "name")
 
     val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
     val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
@@ -766,7 +766,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where x can use an index") {
-    graph.createIndex("Movie", "title")
+    graph.createNodeIndex("Movie", "title")
 
     val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
     val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
@@ -802,7 +802,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   }
 
   test("should handle using index hint on both ends of pattern") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
     val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
@@ -841,7 +841,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     val startNode = createLabeledNode(Map("name" -> "Neo"), "Person")
     val endNode = createLabeledNode(Map("name" -> "Trinity"), "Person")
     relate(startNode, endNode, "knows")
-    graph.createIndex("Person","name")
+    graph.createNodeIndex("Person","name")
 
     val query =
       """MATCH (k:Person {name: 'Neo'}), (t:Person {name: 'Trinity'})
@@ -864,7 +864,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     val startNode = createLabeledNode(Map("name" -> "Neo"), "Person")
     val endNode = createLabeledNode(Map("name" -> "Trinity"), "Person")
     relate(startNode, endNode, "knows")
-    graph.createIndexWithName("my_index", "Person","name")
+    graph.createNodeIndexWithName("my_index", "Person","name")
 
     val query =
       """MATCH (k:Person {name: 'Neo'}), (t:Person {name: 'Trinity'})
@@ -885,7 +885,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   }
 
   test("USING INDEX hint should not clash with used variables") {
-    graph.createIndex("PERSON", "id")
+    graph.createNodeIndex("PERSON", "id")
 
     val result = executeWith(Configs.All,
       """MATCH (actor:PERSON {id: 1})
@@ -900,7 +900,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     val startNode = createLabeledNode(Map("prop" -> 1), "PERSON")
     val endNode = createLabeledNode(Map("prop" -> 2), "PERSON")
     relate(startNode, endNode)
-    graph.createIndex("PERSON", "prop")
+    graph.createNodeIndex("PERSON", "prop")
 
     val query =
       """MATCH (a:PERSON {prop: 1})-->(b:PERSON {prop: 2})
@@ -920,7 +920,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   test("should handle multiple hints on longer pattern") {
     val initQuery = "CREATE (a:Node {prop: 'foo'})-[:R]->(b:Node {prop: 'bar'})-[:R]->(c:Node {prop: 'baz'})"
     graph.withTx( tx => tx.execute(initQuery))
-    graph.createIndex("Node", "prop")
+    graph.createNodeIndex("Node", "prop")
 
     val query =
       s"""MATCH (a:Node)-->(b:Node)-->(c:Node)
@@ -944,7 +944,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("should accept hint on composite index") {
     val node = createLabeledNode(Map("bar" -> 5, "baz" -> 3), "Foo")
-    graph.createIndex("Foo", "bar", "baz")
+    graph.createNodeIndex("Foo", "bar", "baz")
 
     val query =
       """ MATCH (f:Foo)
@@ -962,7 +962,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("should accept hint on named composite index") {
     val node = createLabeledNode(Map("bar" -> 5, "baz" -> 3), "Foo")
-    graph.createIndexWithName("my_index", "Foo", "bar", "baz")
+    graph.createNodeIndexWithName("my_index", "Foo", "bar", "baz")
 
     val query =
       """ MATCH (f:Foo)
@@ -981,7 +981,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("should accept hint and use index on correct node") {
     // Given
-    graph.createIndex("Object", "name")
+    graph.createNodeIndex("Object", "name")
     createLabeledNode(Map("name" -> "a"), "Object")
 
     val query =

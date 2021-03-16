@@ -34,8 +34,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should succeed in creating and deleting composite index") {
     // When
-    graph.createIndex("Person", "name")
-    graph.createIndex("Person", "name", "surname")
+    graph.createNodeIndex("Person", "name")
+    graph.createNodeIndex("Person", "name", "surname")
 
     // Then
     graph should haveIndexes(":Person(name)")
@@ -51,7 +51,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index when all predicates are present") {
     // Given
-    graph.createIndex("User", "name", "surname")
+    graph.createNodeIndex("User", "name", "surname")
     val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
     createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
     createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
@@ -69,7 +69,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use named composite index when all predicates are present") {
     // Given
-    graph.createIndexWithName("user_index", "User", "name", "surname")
+    graph.createNodeIndexWithName("user_index", "User", "name", "surname")
     val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
     createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
     createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
@@ -88,7 +88,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should not use composite index when not all predicates are present") {
     // Given
-    graph.createIndex("User", "name", "surname")
+    graph.createNodeIndex("User", "name", "surname")
     createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
     createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
     val n3 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
@@ -110,9 +110,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index when all predicates are present even in competition with other single property indexes with similar cardinality") {
     // Given
-    graph.createIndex("User", "name")
-    graph.createIndex("User", "surname")
-    graph.createIndex("User", "name", "surname")
+    graph.createNodeIndex("User", "name")
+    graph.createNodeIndex("User", "surname")
+    graph.createNodeIndex("User", "name", "surname")
     val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
     createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
     createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
@@ -141,9 +141,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use named composite index when all predicates are present even in competition with other named single property indexes with similar cardinality") {
     // Given
-    graph.createIndexWithName("name_index", "User", "name")
-    graph.createIndexWithName("surname_index", "User", "surname")
-    graph.createIndexWithName("composite_index", "User", "name", "surname")
+    graph.createNodeIndexWithName("name_index", "User", "name")
+    graph.createNodeIndexWithName("surname_index", "User", "surname")
+    graph.createNodeIndexWithName("composite_index", "User", "name", "surname")
     val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
     createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
     createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
@@ -172,9 +172,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should not use composite index when index hint for alternative index is present") {
     // Given
-    graph.createIndex("User", "name")
-    graph.createIndex("User", "surname")
-    graph.createIndex("User", "name", "surname")
+    graph.createNodeIndex("User", "name")
+    graph.createNodeIndex("User", "surname")
+    graph.createNodeIndex("User", "name", "surname")
     val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
     createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
     createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
@@ -572,7 +572,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should be able to update composite index when only one property has changed") {
-    graph.createIndex("Person", "name", "surname")
+    graph.createNodeIndex("Person", "name", "surname")
     var n: Node = null
     graph.withTx( tx => {
       n = tx.execute("CREATE (n:Person {name:'Joe', surname:'Soap'}) RETURN n").columnAs("n").next().asInstanceOf[Node]
@@ -589,8 +589,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   test("should plan a composite index seek for a multiple property predicate expression when index is created after data") {
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "WITH RANGE(0,10) AS num CREATE (:Person {id:num})") // ensure label cardinality favors index
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "CREATE (n:Person {name:'Joe', surname:'Soap'})")
-    graph.createIndex("Person", "name")
-    graph.createIndex("Person", "name", "surname")
+    graph.createNodeIndex("Person", "name")
+    graph.createNodeIndex("Person", "name", "surname")
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:Person) WHERE n.name = 'Joe' AND n.surname = 'Soap' RETURN n",
                 planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
@@ -600,7 +600,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index correctly given two IN predicates") {
     // Given
-    graph.createIndex("Foo", "bar", "baz")
+    graph.createNodeIndex("Foo", "bar", "baz")
 
     (0 to 9) foreach { bar =>
       (0 to 9) foreach { baz =>
@@ -626,7 +626,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index correctly with a single exact together with a List of seeks") {
     // Given
-    graph.createIndex("Foo", "bar", "baz")
+    graph.createNodeIndex("Foo", "bar", "baz")
 
     (0 to 9) foreach { baz =>
       createLabeledNode(Map("bar" -> 1, "baz" -> baz), "Foo")
@@ -650,7 +650,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index correctly with a single exact together with a List of seeks, with the exact seek not being first") {
     // Given
-    graph.createIndex("Foo", "bar", "baz")
+    graph.createNodeIndex("Foo", "bar", "baz")
 
     (0 to 9) foreach { baz =>
       createLabeledNode(Map("baz" -> (baz % 2), "bar" -> baz), "Foo")
@@ -678,7 +678,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("foo" -> 42, "bar" -> 1337, "baz" -> 1980), "L")
 
     // When
-    graph.createIndex("L", "foo", "bar", "baz")
+    graph.createNodeIndex("L", "foo", "bar", "baz")
 
     // Then
     graph should haveIndexes(":L(foo,bar,baz)")
@@ -695,7 +695,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("foo" -> 42), "PROFILES")
 
     // When
-    graph.createIndex("L", "foo", "bar", "baz")
+    graph.createNodeIndex("L", "foo", "bar", "baz")
     createLabeledNode(Map("foo" -> 42, "bar" -> 1337, "baz" -> 1980), "L")
 
     // Then
@@ -766,7 +766,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use range queries against a composite index") {
     // Given
-    graph.createIndex("X", "p1", "p2")
+    graph.createNodeIndex("X", "p1", "p2")
     val n = createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
 
     // When
@@ -782,7 +782,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use range queries against a named composite index") {
     // Given
-    graph.createIndexWithName("x_index", "X", "p1", "p2")
+    graph.createNodeIndexWithName("x_index", "X", "p1", "p2")
     val n = createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
 
     // When
@@ -798,7 +798,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index for index scan") {
     // Given
-    graph.createIndex("X", "p1", "p2")
+    graph.createNodeIndex("X", "p1", "p2")
     createLabeledNode(Map("p1" -> 1, "p2" -> 2), "X")
     createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
     createLabeledNode(Map("p1" -> 1, "p2" -> 3), "X")
@@ -817,7 +817,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use named composite index for index scan") {
     // Given
-    graph.createIndexWithName("x_index", "X", "p1", "p2")
+    graph.createNodeIndexWithName("x_index", "X", "p1", "p2")
     createLabeledNode(Map("p1" -> 1, "p2" -> 2), "X")
     createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
     createLabeledNode(Map("p1" -> 1, "p2" -> 3), "X")
@@ -836,11 +836,11 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index for ranges") {
     // Given
-    graph.createIndex("User", "name", "age")
-    graph.createIndex("User", "name", "active")
-    graph.createIndex("User", "age", "name")
-    graph.createIndex("User", "age", "active")
-    graph.createIndex("User", "active", "age")
+    graph.createNodeIndex("User", "name", "age")
+    graph.createNodeIndex("User", "name", "active")
+    graph.createNodeIndex("User", "age", "name")
+    graph.createNodeIndex("User", "age", "active")
+    graph.createNodeIndex("User", "active", "age")
     val n1 = createLabeledNode(Map("name" -> "Joe", "age" -> 25, "active" -> true), "User")
     val n2 = createLabeledNode(Map("name" -> "Bob", "age" -> 60, "active" -> false), "User")
     val n3 = createLabeledNode(Map("name" -> "Alice", "age" -> 6, "active" -> false), "User")
@@ -890,7 +890,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index for range, prefix, suffix, contains and exists predicates") {
     // Given
-    graph.createIndex("User", "name", "surname", "age", "active")
+    graph.createNodeIndex("User", "name", "surname", "age", "active")
     val n = createLabeledNode(Map("name" -> "joe", "surname" -> "soap", "age" -> 25, "active" -> true), "User")
 
     // For all combinations
@@ -981,7 +981,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     // Given
-    graph.createIndex("Person", "highScore", "name")
+    graph.createNodeIndex("Person", "highScore", "name")
     resampleIndexes()
 
     // When
@@ -996,7 +996,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // Given
     executeSingle("DROP INDEX ON :Person(highScore,name)")
-    graph.createIndex("Person", "name", "highScore")
+    graph.createNodeIndex("Person", "name", "highScore")
 
     // More nodes not in index to ensure index is chosen
     for (i <- 100 to 200) {
@@ -1025,7 +1025,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index for is not null and regex") {
     // Given
-    graph.createIndex("User", "name", "surname")
+    graph.createNodeIndex("User", "name", "surname")
     createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
     createLabeledNode(Map("name" -> "Ivan", "surname" -> "Soap"), "User")
     createLabeledNode(Map("name" -> "Ivan", "surname" -> "Smoke"), "User")
@@ -1087,7 +1087,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
     val a = createNode("p1" -> 1, "p2" -> 1)
     val b = createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
-    graph.createIndex("X", "p1", "p2")
+    graph.createNodeIndex("X", "p1", "p2")
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a), (b:X) where id(a) = $id AND b.p1 = a.p1 AND b.p2 = 1 return b",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1109,7 +1109,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     val resultNoIndex = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-    graph.createIndex("User", "name", "city")
+    graph.createNodeIndex("User", "name", "city")
     resampleIndexes()
 
     val resultIndex = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
@@ -1137,7 +1137,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     val resultNoIndex = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-    graph.createIndex("User", "name", "city", "age")
+    graph.createNodeIndex("User", "name", "city", "age")
     resampleIndexes()
 
     val resultIndex = executeWith(Configs.Spatial, query,
@@ -1169,7 +1169,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     val resultNoIndex = executeWith(Configs.UDF, query)
 
-    graph.createIndex("Label", "date", "time")
+    graph.createNodeIndex("Label", "date", "time")
     resampleIndexes()
 
     val resultIndex = executeWith(Configs.UDF, query,
@@ -1199,7 +1199,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     val resultNoIndex = executeWith(Configs.UDF, query)
 
-    graph.createIndex("Runner", "name", "result")
+    graph.createNodeIndex("Runner", "name", "result")
     resampleIndexes()
 
     val resultIndex = executeWith(Configs.UDF, query,
@@ -1229,7 +1229,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     val resultNoIndex = executeWith(Configs.UDF, query)
 
-    graph.createIndexWithName("runner_index", "Runner", "name", "result")
+    graph.createNodeIndexWithName("runner_index", "Runner", "name", "result")
     resampleIndexes()
 
     val resultIndex = executeWith(Configs.UDF, query,
@@ -1245,7 +1245,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   // Test when having nodes in txState
   test("should use composite index and get correct value for only equality") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -1263,7 +1263,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index and get correct value for equality followed by range") {
-    graph.createIndex("Awesome", "prop1", "prop2", "prop5")
+    graph.createNodeIndex("Awesome", "prop1", "prop2", "prop5")
     createNodes()
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -1285,7 +1285,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index and get correct value for equality followed by STARTS WITH") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     def createMe(tx: InternalTransaction): Unit = {
@@ -1318,7 +1318,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index and get correct value for equality followed by exists") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -1342,7 +1342,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index and get correct value for range followed by equality") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -1369,7 +1369,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index and get correct value for only ranges") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -1394,7 +1394,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index and get correct value for range followed by exists") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -1421,7 +1421,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index and get correct value for only exists") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -1464,7 +1464,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index and get correct value for STARTS WITH") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -1488,7 +1488,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index and get correct value for STARTS WITH when all string values match") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
 
     def createMe(tx: InternalTransaction): Unit = {
       tx.execute(
@@ -1534,7 +1534,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index for ENDS WITH") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     // Add nodes not in index
@@ -1573,7 +1573,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use named composite index for ENDS WITH") {
-    graph.createIndexWithName("ends_with_index", "Awesome", "prop1", "prop2")
+    graph.createNodeIndexWithName("ends_with_index", "Awesome", "prop1", "prop2")
     createNodes()
 
     // Add nodes not in index
@@ -1612,7 +1612,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index for CONTAINS") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     // Add nodes not in index
@@ -1652,7 +1652,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index and get correct value for range on spatial - first property") {
     // Given
-    graph.createIndex("User", "city", "name")
+    graph.createNodeIndex("User", "city", "name")
     val point1 = Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 5.6).asObjectCopy()
     val point2 = Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 4.5).asObjectCopy()
 
@@ -1694,7 +1694,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should use composite index and get correct value for range on spatial - later property") {
     // Given
-    graph.createIndex("User", "name", "city")
+    graph.createNodeIndex("User", "name", "city")
     val point1 = Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 5.6).asObjectCopy()
     val point2 = Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 4.5).asObjectCopy()
     val point3 = Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 5.55).asObjectCopy()
@@ -1737,7 +1737,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index and get correct answers when not returning values for range") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     var nodes = Set.empty[Node]
@@ -1765,7 +1765,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index and get correct answers when not returning values for equality") {
-    graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
     createNodes()
 
     var nodes = Set.empty[Node]
@@ -1845,9 +1845,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     )
 
   private def setUpMultipleIndexesAndSmallGraph() = {
-    graph.createIndex("User", "name")
-    graph.createIndex("User", "surname")
-    graph.createIndex("User", "name", "surname")
+    graph.createNodeIndex("User", "name")
+    graph.createNodeIndex("User", "surname")
+    graph.createNodeIndex("User", "name", "surname")
     val n0 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
     val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
     val n2 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
@@ -1861,9 +1861,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   private def setUpMultipleNamedIndexesAndSmallGraph() = {
-    graph.createIndexWithName("name_index", "User", "name")
-    graph.createIndexWithName("surname_index", "User", "surname")
-    graph.createIndexWithName("composite_index", "User", "name", "surname")
+    graph.createNodeIndexWithName("name_index", "User", "name")
+    graph.createNodeIndexWithName("surname_index", "User", "surname")
+    graph.createNodeIndexWithName("composite_index", "User", "name", "surname")
     val n0 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
     val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
     val n2 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")

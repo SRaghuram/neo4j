@@ -94,8 +94,8 @@ class HintAcceptanceTest
   }
 
   test("should do index seek instead of index scan with explicit index seek hint") {
-    graph.createIndex("A", "prop")
-    graph.createIndex("B", "prop")
+    graph.createNodeIndex("A", "prop")
+    graph.createNodeIndex("B", "prop")
 
     createLabeledNode(Map("prop" -> 42), "A")
     createLabeledNode(Map("prop" -> 1337), "B")
@@ -120,8 +120,8 @@ class HintAcceptanceTest
 
   test("should accept hint on spatial index with distance function") {
     // Given
-    graph.createIndex("Business", "location")
-    graph.createIndex("Review", "date")
+    graph.createNodeIndex("Business", "location")
+    graph.createNodeIndex("Review", "date")
 
     val business = createLabeledNode(Map("location" -> Values.pointValue(CoordinateReferenceSystem.WGS84, -111.977, 33.3288)), "Business")
     val review = createLabeledNode(Map("date" -> LocalDate.parse("2017-03-01")), "Review")
@@ -146,8 +146,8 @@ class HintAcceptanceTest
   test("Index hints solved on RHS of OR should not be lost when forming UNION") {
 
     createLabeledNode(Map("name"->"foo", "job"->"janitor"), "Person")
-    graph.createIndex("Person", "name")
-    graph.createIndex("Person", "job")
+    graph.createNodeIndex("Person", "name")
+    graph.createNodeIndex("Person", "job")
 
     val query =
       """MATCH(p:Person)
@@ -164,8 +164,8 @@ class HintAcceptanceTest
   test("Index hints solved on LHS of OR should not be lost when forming UNION") {
 
     createLabeledNode(Map("name"->"foo", "job"->"janitor"), "Person")
-    graph.createIndex("Person", "name")
-    graph.createIndex("Person", "job")
+    graph.createNodeIndex("Person", "name")
+    graph.createNodeIndex("Person", "job")
 
     val query =
       """MATCH(p:Person)
@@ -191,9 +191,9 @@ class HintAcceptanceTest
     relate(c, d, "R3")
     relate(d, e, "R4")
 
-    graph.createIndex("A", "prop")
-    graph.createIndex("C", "prop")
-    graph.createIndex("E", "prop")
+    graph.createNodeIndex("A", "prop")
+    graph.createNodeIndex("C", "prop")
+    graph.createNodeIndex("E", "prop")
 
     val query = """
                   |MATCH (a:A {prop:1})-[:R1]->(b:B)-[:R2]->(c:C)-[:R3]->(d:D)-[:R4]->(e:E {prop:1})
@@ -222,9 +222,9 @@ class HintAcceptanceTest
     relate(c, d, "R3")
     relate(d, e, "R4")
 
-    graph.createIndex("A", "prop")
-    graph.createIndex("C", "prop")
-    graph.createIndex("E", "prop")
+    graph.createNodeIndex("A", "prop")
+    graph.createNodeIndex("C", "prop")
+    graph.createNodeIndex("E", "prop")
 
     val query = """
         |MATCH (a:A {prop:1})-[:R1]->(b:B)-[:R2]->(c:C)-[:R3]->(d:D)-[:R4]->(e:E {prop:1})

@@ -217,12 +217,12 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     exception.getMessage should include("Creating index using this syntax is not supported in this Cypher version.")
 
     // THEN
-    graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
+    graph.getMaybeNodeIndex("Label", Seq("prop")).isEmpty should be(true)
   }
 
   test("new drop index syntax should not work with CYPHER 3.5") {
     // GIVEN
-    graph.createIndexWithName("my_index", "Label", "prop")
+    graph.createNodeIndexWithName("my_index", "Label", "prop")
 
     // WHEN
     val exception = the[SyntaxException] thrownBy {
@@ -231,7 +231,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     exception.getMessage should include("Dropping index by name is not supported in this Cypher version.")
 
     // THEN
-    graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(true)
+    graph.getMaybeNodeIndex("Label", Seq("prop")).isDefined should be(true)
   }
 
   test("create named node key constraint should not work with CYPHER 3.5") {
@@ -567,5 +567,22 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
         exception.getMessage should include("`SHOW HOME DATABASE` is not supported in this Cypher version.")
       }
     })
+  }
+
+  test("Relationship property index should not work with CYPHER 3.5 and 4.2") {
+    Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+      withClue(version) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"$version CREATE INDEX FOR ()-[r:RelType]-() ON (r.prop)")
+        }
+
+        // THEN
+        exception.getMessage should include("Relationship property indexes are not supported in this Cypher version.")
+      }
+    })
+
+    // THEN
+    graph.getMaybeRelIndex("RelType", Seq("prop")).isEmpty should be(true)
   }
 }

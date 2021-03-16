@@ -26,14 +26,14 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   override def beforeEach(): Unit = {
     super.beforeEach()
     graph.withTx(tx => createSomeNodes(tx))
-    graph.createIndex("Awesome", "prop1")
-    graph.createIndex("Awesome", "prop2")
-    graph.createIndex("Awesome", "prop1", "prop2")
-    graph.createIndex("Awesome", "prop3")
-    graph.createIndex("Awesome", "prop4")
-    graph.createIndex("Awesome", "emptyProp")
-    graph.createIndex("DateString", "ds")
-    graph.createIndex("DateDate", "d")
+    graph.createNodeIndex("Awesome", "prop1")
+    graph.createNodeIndex("Awesome", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop3")
+    graph.createNodeIndex("Awesome", "prop4")
+    graph.createNodeIndex("Awesome", "emptyProp")
+    graph.createNodeIndex("DateString", "ds")
+    graph.createNodeIndex("DateDate", "d")
   }
 
   // Invoked once before the Tx and once in the same Tx
@@ -73,7 +73,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("should plan index seek with GetValue when the property is projected (named index)") {
     graph.withTx(tx => createMoreNodes(tx))
-    graph.createIndexWithName("my_index", "Label", "prop")
+    graph.createNodeIndexWithName("my_index", "Label", "prop")
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Label) WHERE n.prop = 42 RETURN n.prop", executeBefore = createMoreNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
@@ -175,7 +175,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("should plan projection and index seek with DoNotGetValue when the property is only used in ORDER BY (named index)") {
     graph.withTx(tx => createMoreNodes(tx))
-    graph.createIndexWithName("my_index", "Label", "prop")
+    graph.createNodeIndexWithName("my_index", "Label", "prop")
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Label) WHERE n.prop > 41 RETURN 1 AS ignore ORDER BY n.prop",
       executeBefore = createMoreNodes,
@@ -269,7 +269,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("should access the correct cached property after distinct") {
     for (i <- 41 to 100) createLabeledNode(Map("prop1" -> i), "Super")
-    graph.createIndex("Super", "prop1")
+    graph.createNodeIndex("Super", "prop1")
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH DISTINCT n.prop1 as y MATCH (n:Super) WHERE n.prop1 < y RETURN n.prop1", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should {
@@ -568,7 +568,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("should not get confused by variable named as index-backed property II (named index)") {
     graph.withTx(tx => createMoreNodes(tx))
-    graph.createIndexWithName("my_index", "Label", "prop")
+    graph.createNodeIndexWithName("my_index", "Label", "prop")
 
     val query =
       """WITH 'Whoops!' AS `n.prop`
@@ -672,7 +672,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("should handle multiple index seek when there are changes in the transaction state") {
     //given
-    graph.createIndex("NODE", "id")
+    graph.createNodeIndex("NODE", "id")
 
     //when
     val result = executeWith(Configs.All, "MATCH (n:NODE) WHERE n.id = '1' OR n.id = '2' RETURN n.id",

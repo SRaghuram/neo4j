@@ -82,7 +82,7 @@ class TemporalIndexAcceptanceTest extends IndexingTestSupport {
 
     val resultNoIndex = executeWith(Configs.UDF, query)
 
-    graph.createIndex("Runner", "results")
+    graph.createNodeIndex("Runner", "results")
     resampleIndexes()
 
     val resultIndex = executeWith(Configs.UDF, query,

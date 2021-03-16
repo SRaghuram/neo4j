@@ -639,7 +639,7 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
           case Seq(a, b) => relate(a, b)
         }
       }
-      graph.createIndex("Person", "name")
+      graph.createNodeIndex("Person", "name")
     }
 
     val gridQuery =
@@ -716,7 +716,7 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
       }
     }
 
-    graph.createIndex("From", "prop")
+    graph.createNodeIndex("From", "prop")
     graph.createNodeExistenceConstraint("From", "prop")
 
     val q =
@@ -746,7 +746,7 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
       relate(a, b)
     }
 
-    graph.createIndex("From", "prop")
+    graph.createNodeIndex("From", "prop")
 
     val q =
       """MATCH (n:From) WHERE n.prop = 1

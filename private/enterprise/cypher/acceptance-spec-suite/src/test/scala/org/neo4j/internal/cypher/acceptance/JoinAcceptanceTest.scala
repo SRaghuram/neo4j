@@ -357,7 +357,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
       }
     }
 
-    graph.createIndex("B", "prop")
+    graph.createNodeIndex("B", "prop")
 
     val query =
       """MATCH (a:A)
@@ -391,7 +391,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
       relate(as(0), b)
     }
 
-    graph.createIndex("A", "prop")
+    graph.createNodeIndex("A", "prop")
 
     val baseQuery =
       """

@@ -877,7 +877,7 @@ class EagerizationAcceptanceTest
 
   test("should not need eagerness for match create with labels and property with index") {
     createLabeledNode(Map("id" -> 0), "L")
-    graph.createIndex("L", "id")
+    graph.createNodeIndex("L", "id")
 
     val query = "MATCH (n:L {id: 0}) USING INDEX n:L(id) CREATE (:L {id:0}) RETURN count(*)"
 
@@ -2072,7 +2072,7 @@ class EagerizationAcceptanceTest
   }
 
   test("matching property via index (stable iterator) and writing same property should not be eager") {
-    graph.createIndex("Book", "isbn")
+    graph.createNodeIndex("Book", "isbn")
     createLabeledNode("Book")
     createLabeledNode("Book")
     createLabeledNode(Map("isbn" -> "123"), "Book")
@@ -2726,7 +2726,7 @@ class EagerizationAcceptanceTest
   test("should not be eager if setting property from left-most node that is found by an IndexSeek") {
     createLabeledNode(Map("prop" -> 1), "Label")
     createNode()
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (m:Label {prop: 1}), (n) SET n.prop = 1 RETURN count(*)"
 
@@ -3474,7 +3474,7 @@ class EagerizationAcceptanceTest
     createLabeledNode(Map("prop" -> 1, "foo" -> 2), "Lol")
     createLabeledNode(Map("prop" -> 2, "foo" -> 0), "Lol")
     createNode()
-    graph.createIndex("Lol", "prop")
+    graph.createNodeIndex("Lol", "prop")
 
     val query = "MATCH (m:Lol), (n) WHERE m.prop > 0 AND m.foo > 0 SET n.foo = 10 RETURN count(*)"
 
@@ -3490,7 +3490,7 @@ class EagerizationAcceptanceTest
     createLabeledNode(Map("prop" -> 1, "foo" -> 2), "Lol")
     createLabeledNode(Map("prop" -> 2, "foo" -> 0), "Lol")
     createNode()
-    graph.createIndex("Lol", "prop", "foo")
+    graph.createNodeIndex("Lol", "prop", "foo")
 
     val query = "MATCH (m:Lol), (n) WHERE m.prop IS NOT NULL AND m.foo > 0 SET n.foo = 10 RETURN count(*)"
 
@@ -3506,7 +3506,7 @@ class EagerizationAcceptanceTest
     createLabeledNode(Map("prop" -> 1, "foo" -> 2), "Lol")
     createLabeledNode(Map("prop" -> 2, "foo" -> 0), "Lol")
     createNode()
-    graph.createIndex("Lol", "foo", "prop")
+    graph.createNodeIndex("Lol", "foo", "prop")
 
     val query = "MATCH (m:Lol), (n) WHERE m.prop IS NOT NULL AND m.foo > 0 SET n.foo = 10 RETURN count(*)"
 
@@ -3522,7 +3522,7 @@ class EagerizationAcceptanceTest
     createLabeledNode(Map("prop" -> 4), "Lol")
     createLabeledNode(Map("prop" -> 9), "Lol")
     createNode()
-    graph.createIndex("Lol", "prop")
+    graph.createNodeIndex("Lol", "prop")
 
     val query = "MATCH (m:Lol), (n) WHERE m.prop > 0 AND m.prop % 2 = 0 SET n.prop = 8 RETURN count(*)"
 
@@ -3538,7 +3538,7 @@ class EagerizationAcceptanceTest
     createLabeledNode(Map("prop" -> 2), "Lol")
     createLabeledNode(Map("prop" -> 5), "Lol")
     createNode()
-    graph.createIndex("Lol", "prop")
+    graph.createNodeIndex("Lol", "prop")
 
     val query = "MATCH (m:Lol), (n) WHERE m.prop IN [1,2,3] SET n.prop = 3 RETURN count(*)"
 
@@ -3554,7 +3554,7 @@ class EagerizationAcceptanceTest
     createLabeledNode(Map("prop" -> 2), "Lol")
     createLabeledNode(Map("prop" -> 5), "Lol")
     createNode()
-    graph.createIndex("Lol", "prop")
+    graph.createNodeIndex("Lol", "prop")
 
     val query = "MATCH (m:Lol), (n) WHERE m.prop >= 1 AND m.prop <= 3 SET n.prop = 3 RETURN count(*)"
 

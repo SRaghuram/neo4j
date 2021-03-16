@@ -131,7 +131,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
 
   test("very long pattern expressions should be solvable with multiple planners giving identical results using index lookups, expands and joins") {
 
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val planners = Seq("IDP")
     val minPathLength = 8

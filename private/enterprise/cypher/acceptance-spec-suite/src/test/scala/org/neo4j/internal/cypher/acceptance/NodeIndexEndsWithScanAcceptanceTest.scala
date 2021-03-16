@@ -26,7 +26,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
       createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
-    graph.createIndex("Location", "name")
+    graph.createNodeIndex("Location", "name")
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' RETURN l"
 
@@ -46,7 +46,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
       createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
-    graph.createIndexWithName("name_index", "Location", "name")
+    graph.createNodeIndexWithName("name_index", "Location", "name")
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' RETURN l"
 
@@ -86,8 +86,8 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
       createLabeledNode(Map("name" -> i.toString, "country" -> "UK"), "Location")
     }
 
-    graph.createIndex("Location", "name")
-    graph.createIndex("Location", "country")
+    graph.createNodeIndex("Location", "name")
+    graph.createNodeIndex("Location", "country")
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' AND l.country = 'UK' RETURN l"
 
@@ -107,8 +107,8 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
       createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
-    graph.createIndex("Location", "name")
-    graph.createIndex("Location", "country")
+    graph.createNodeIndex("Location", "name")
+    graph.createNodeIndex("Location", "country")
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' AND l.country = 'UK' RETURN l"
 
@@ -128,8 +128,8 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
       createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
-    graph.createIndex("Location", "name")
-    graph.createIndex("Location", "country")
+    graph.createNodeIndex("Location", "name")
+    graph.createNodeIndex("Location", "country")
 
     val query = "MATCH (l:Location) USING INDEX l:Location(name) WHERE l.name ENDS WITH 'ondon' AND l.country = 'UK' RETURN l"
 

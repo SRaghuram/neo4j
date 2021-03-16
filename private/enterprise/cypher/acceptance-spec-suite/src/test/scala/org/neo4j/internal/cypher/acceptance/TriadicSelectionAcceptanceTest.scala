@@ -79,7 +79,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("triadic should not handle complex incoming predicates for now") {
     // given
-    graph.createIndex( "Person", "name")
+    graph.createNodeIndex( "Person", "name")
 
     execute("CALL db.awaitIndexes(300)") // wait for max 5 min.
     execute( """CREATE (a:Person{name:"a"}), (b:Person{name:"b"}), (c:Person{name:"c",age:39}), (d:Person{name:"d"}), (e:Person{name:"e"})

@@ -30,15 +30,15 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
   override def beforeEach(): Unit = {
     super.beforeEach()
     graph.withTx(tx => createSomeNodes(tx))
-    graph.createIndex("Awesome", "prop1")
-    graph.createIndex("Awesome", "prop2")
-    graph.createIndex("Awesome", "prop1", "prop2")
-    graph.createIndex("Awesome", "prop2", "prop2Copy")
-    graph.createIndex("Awesome", "prop3")
-    graph.createIndex("Awesome", "prop4")
-    graph.createIndex("DateString", "ds")
-    graph.createIndex("DateDate", "d")
-    graph.createIndex("Amazing", "prop2")
+    graph.createNodeIndex("Awesome", "prop1")
+    graph.createNodeIndex("Awesome", "prop2")
+    graph.createNodeIndex("Awesome", "prop1", "prop2")
+    graph.createNodeIndex("Awesome", "prop2", "prop2Copy")
+    graph.createNodeIndex("Awesome", "prop3")
+    graph.createNodeIndex("Awesome", "prop4")
+    graph.createNodeIndex("DateString", "ds")
+    graph.createNodeIndex("DateDate", "d")
+    graph.createNodeIndex("Amazing", "prop2")
     graph.createNodeExistenceConstraint("Amazing", "prop2")
   }
 
@@ -292,7 +292,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     test(s"$cypherToken: Order by index backed property renamed in an earlier WITH (named index)") {
       graph.withTx(tx => createNodesForNamedIndex(tx))
-      graph.createIndexWithName("my_index", "Label", "prop")
+      graph.createNodeIndexWithName("my_index", "Label", "prop")
 
       val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"""MATCH (n:Label) WHERE n.prop > 42
@@ -514,7 +514,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("Order by index backed for composite index for ranges on two properties") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     createNodesForComposite()
 
     val expectedAscAsc = List(
@@ -591,7 +591,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should handle exists and ORDER BY on two columns of composite index") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     createNodesForComposite()
 
     val expectedResult = List(
@@ -628,7 +628,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should handle exists and ORDER BY on one column of composite index") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     createNodesForComposite()
 
     val expectedResult = List(
@@ -665,7 +665,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("Order by partially indexed backed for composite index on part of the order by") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     createNodesForComposite()
 
     val propAsc = ProvidedOrder.asc(prop("n", "prop1")).asc(prop("n", "prop2"))
@@ -785,7 +785,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("Order by index backed for composite index on more properties") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2", "prop3", "prop5")
+    graph.createNodeIndex("Label", "prop1", "prop2", "prop3", "prop5")
     createNodesForComposite()
 
     val propAsc = ProvidedOrder
@@ -958,7 +958,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("Order by index backed for composite index when not returning same as order on") {
     // Given
-    graph.createIndex("Label", "prop3", "prop5")
+    graph.createNodeIndex("Label", "prop3", "prop5")
     createNodesForComposite()
 
     val prop3 = prop("n", "prop3")
@@ -1033,7 +1033,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should ignore order for property with equality predicate and use order from property with range predicate") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     createNodesForComposite()
 
     val expected = Seq(Map("n.prop1" -> 42, "n.prop2" -> 3), Map("n.prop1" -> 42, "n.prop2" -> 1), Map("n.prop1" -> 42, "n.prop2" -> 0))
@@ -1071,7 +1071,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should ignore order for properties with equality predicate") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     createNodesForComposite()
     createLabeledNode(Map("prop1" -> 42, "prop2" -> 3), "Label")
 
@@ -1106,7 +1106,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should ignore order for properties with equality predicates with multiple properties (equality predicates only)") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2", "prop3")
+    graph.createNodeIndex("Label", "prop1", "prop2", "prop3")
     createLabeledNode(Map("prop1" -> 41, "prop2" -> 2, "prop3" -> 1.67), "Label")
     createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 1.67), "Label")
     createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 2.72), "Label")
@@ -1157,7 +1157,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should ignore order for properties with equality predicates with multiple properties") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2", "prop3")
+    graph.createNodeIndex("Label", "prop1", "prop2", "prop3")
     createLabeledNode(Map("prop1" -> 41, "prop2" -> 2, "prop3" -> 1.67), "Label")
     createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 1.67), "Label")
     createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 2.72), "Label")
@@ -1224,7 +1224,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should ignore order for property with equality predicate and projections") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     val n0 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 3), "Label")
     val n1 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 1), "Label")
     val n2 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 0), "Label")
@@ -1259,7 +1259,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should ignore order for properties with equality predicates in WITH") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     val n0 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 3), "Label")
     val n1 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 1), "Label")
     val n2 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 0), "Label")
@@ -1298,7 +1298,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should ignore order for properties with equality predicates when renamed multiple times") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     createNodesForComposite()
 
     val expected = Seq(Map("prop1" -> 42, "prop2" -> 0), Map("prop1" -> 42, "prop2" -> 1), Map("prop1" -> 42, "prop2" -> 3))
@@ -1330,7 +1330,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should ignore order for property with equality predicate when its the second property") {
     // Given
-    graph.createIndex("Label", "prop2", "prop3")
+    graph.createNodeIndex("Label", "prop2", "prop3")
     createNodesForComposite()
     createLabeledNode(Map("prop2" -> 2, "prop3" -> "f"), "Label")
 
@@ -1365,7 +1365,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should use partial sort when there is a list in predicate") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     createNodesForComposite()
 
     val expectedEquals = Seq(Map("n.prop1" -> 44, "n.prop2" -> 3))
@@ -1416,7 +1416,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should use index order when we have one list predicate and one exact predicate") {
     // Given
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     createNodesForComposite()
 
     val expectedEquals = Seq(Map("n.prop1" -> 44, "n.prop2" -> 3))
@@ -1450,7 +1450,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should ignore order for property with equality predicate in index even when order by expression, still needs to sort on expression") {
     // Given
-    graph.createIndex("Label", "prop1", "prop3")
+    graph.createNodeIndex("Label", "prop1", "prop3")
     createNodesForComposite()
 
     def orderAscDesc(sort: String) = ProvidedOrder.asc(varFor(sort)).desc(varFor("n.prop3")).fromLeft
@@ -1498,7 +1498,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should ignore order for property with multiple predicates, when rewritten away or using additional filter") {
     // Given
-    graph.createIndex("Label", "prop2", "prop3")
+    graph.createNodeIndex("Label", "prop2", "prop3")
     createNodesForComposite()
 
     val expected = Seq(Map("n.prop2" -> 2, "n.prop3" -> "b"), Map("n.prop2" -> 2, "n.prop3" -> "d"), Map("n.prop2" -> 2, "n.prop3" -> "g"))
@@ -1548,7 +1548,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should not ignore order for property with multiple equalities") {
     // Given
-    graph.createIndex("Label", "prop2", "prop3")
+    graph.createNodeIndex("Label", "prop2", "prop3")
     createNodesForComposite()
 
     val expectedDescAsc = Seq(Map("n.prop2" -> 2, "n.prop3" -> "b"), Map("n.prop2" -> 2, "n.prop3" -> "d"), Map("n.prop2" -> 2, "n.prop3" -> "g"), Map("n.prop2" -> 1, "n.prop3" -> "f"))
@@ -1702,7 +1702,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     test(s"$cypherToken-$functionName: should use provided index order with renamed property (named index)") {
       graph.withTx(tx => createNodesForNamedIndex(tx))
-      graph.createIndexWithName("my_index", "Label", "prop")
+      graph.createNodeIndexWithName("my_index", "Label", "prop")
 
       val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Label) WHERE n.prop > 0 WITH n.prop AS prop RETURN $functionName(prop) AS extreme", executeBefore = createNodesForNamedIndex)
@@ -1769,7 +1769,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order for empty index"){
-      graph.createIndex("B", "prop")
+      graph.createNodeIndex("B", "prop")
 
       val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n: B) WHERE n.prop > 0 RETURN $functionName(n.prop)", executeBefore = createSomeNodes)
@@ -2065,7 +2065,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       name
     }
 
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
     val query =
       """MATCH (p:Person) WHERE p.name STARTS WITH ''
         |CALL {

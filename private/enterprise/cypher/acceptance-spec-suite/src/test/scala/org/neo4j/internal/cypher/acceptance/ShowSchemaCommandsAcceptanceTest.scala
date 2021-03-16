@@ -107,37 +107,61 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     result.toList should be(empty)
   }
 
-  test("should show index") {
+  test("should show node index") {
     // GIVEN
-    createDefaultBtreeIndex()
+    createDefaultBtreeNodeIndex()
     graph.awaitIndexesOnline()
 
     // WHEN
     val result = executeSingle("SHOW INDEXES")
 
     // THEN
-    result.toList should be(List(defaultBtreeBriefOutput(1L)))
+    result.toList should be(List(defaultBtreeNodeBriefOutput(1L)))
   }
 
-  test("should show index with brief output (deprecated)") {
+  test("should show relationship property index") {
     // GIVEN
-    createDefaultBtreeIndex()
+    createDefaultBtreeRelIndex()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES")
+
+    // THEN
+    result.toList should be(List(defaultBtreeRelBriefOutput(1L)))
+  }
+
+  test("should show node index with brief output (deprecated)") {
+    // GIVEN
+    createDefaultBtreeNodeIndex()
     graph.awaitIndexesOnline()
 
     // WHEN
     val result = executeSingle("SHOW INDEXES BRIEF")
 
     // THEN
-    result.toList should be(List(defaultBtreeBriefOutput(1L)))
+    result.toList should be(List(defaultBtreeNodeBriefOutput(1L)))
+  }
+
+  test("should show relationship property index with brief output (deprecated)") {
+    // GIVEN
+    createDefaultBtreeRelIndex()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES BRIEF")
+
+    // THEN
+    result.toList should be(List(defaultBtreeRelBriefOutput(1L)))
   }
 
   test("should show indexes in alphabetic order") {
     // GIVEN
-    graph.createIndexWithName("poppy", label, propWhitespace)
-    graph.createIndexWithName("benny", label2, prop, prop2)
-    graph.createIndexWithName("albert", label2, prop2)
-    graph.createIndexWithName("charlie", label, prop2)
-    graph.createIndexWithName("xavier", label, prop)
+    graph.createNodeIndexWithName("poppy", label, propWhitespace)
+    graph.createNodeIndexWithName("benny", label2, prop, prop2)
+    graph.createRelationshipIndexWithName("albert", label2, prop2)
+    graph.createNodeIndexWithName("charlie", label, prop2)
+    graph.createRelationshipIndexWithName("xavier", label, prop)
     graph.awaitIndexesOnline()
 
     // WHEN
@@ -168,7 +192,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val result = executeSingle("SHOW INDEXES")
 
     // THEN
-    result.toList should be(List(defaultFulltextNodeBriefOutput(2L), defaultFulltextRelBriefOutput(3L), defaultBtreeBriefOutput(1L)))
+    result.toList should be(List(defaultFulltextNodeBriefOutput(3L), defaultFulltextRelBriefOutput(4L), defaultBtreeNodeBriefOutput(1L), defaultBtreeRelBriefOutput(2L)))
   }
 
   test("show all indexes should show both btree and fulltext indexes") {
@@ -179,7 +203,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val result = executeSingle("SHOW ALL INDEXES")
 
     // THEN
-    result.toList should be(List(defaultFulltextNodeBriefOutput(2L), defaultFulltextRelBriefOutput(3L), defaultBtreeBriefOutput(1L)))
+    result.toList should be(List(defaultFulltextNodeBriefOutput(3L), defaultFulltextRelBriefOutput(4L), defaultBtreeNodeBriefOutput(1L), defaultBtreeRelBriefOutput(2L)))
   }
 
   test("show btree indexes should show only btree indexes") {
@@ -190,12 +214,12 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val result = executeSingle("SHOW BTREE INDEXES")
 
     // THEN
-    result.toList should be(List(defaultBtreeBriefOutput(1L)))
+    result.toList should be(List(defaultBtreeNodeBriefOutput(1L), defaultBtreeRelBriefOutput(2L)))
   }
 
-  test("should show btree index with yield *") {
+  test("should show btree node index with yield *") {
     // GIVEN
-    createDefaultBtreeIndex()
+    createDefaultBtreeNodeIndex()
     graph.awaitIndexesOnline()
 
     // WHEN
@@ -203,7 +227,20 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     val options: List[Object] = result.columnAs("options").toList
     options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
-    withoutColumns(result.toList, List("options")) should equal(List(defaultBtreeVerboseOutput(1L)))
+    withoutColumns(result.toList, List("options")) should equal(List(defaultBtreeNodeVerboseOutput(1L)))
+  }
+
+  test("should show btree relationship property index with yield *") {
+    // GIVEN
+    createDefaultBtreeRelIndex()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES YIELD *")
+
+    val options: List[Object] = result.columnAs("options").toList
+    options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
+    withoutColumns(result.toList, List("options")) should equal(List(defaultBtreeRelVerboseOutput(1L)))
   }
 
   test("should show fulltext indexes with yield *") {
@@ -238,7 +275,8 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should show all indexes with verbose output (deprecated)") {
     // GIVEN
-    createDefaultBtreeIndex()
+    createDefaultBtreeNodeIndex()
+    createDefaultBtreeRelIndex()
     createDefaultFullTextNodeIndex()
     createDefaultFullTextRelIndex()
     createDefaultUniquenessConstraint()
@@ -254,20 +292,36 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     assertCorrectOptionsMap(options(1), defaultBtreeOptionsMap) // constraint2
     assertCorrectOptionsMap(options(2), defaultFulltextOptionsMap) // fulltext_node
     assertCorrectOptionsMap(options(3), defaultFulltextOptionsMap) // fulltext_rel
-    assertCorrectOptionsMap(options(4), defaultBtreeOptionsMap) // my_index
+    assertCorrectOptionsMap(options(4), defaultBtreeOptionsMap) // my_node_index
+    assertCorrectOptionsMap(options(5), defaultBtreeOptionsMap) // my_rel_index
 
     withoutColumns(result.toList, List("options")) should equal(List(
-      defaultUniquenessVerboseIndexOutput(4L), // constraint1
-      defaultNodeKeyVerboseIndexOutput(6L), // constraint2
-      defaultFulltextNodeVerboseOutput(2L), // fulltext_node
-      defaultFulltextRelVerboseOutput(3L), // fulltext_rel
-      defaultBtreeVerboseOutput(1L), // my_index
+      defaultUniquenessVerboseIndexOutput(5L), // constraint1
+      defaultNodeKeyVerboseIndexOutput(7L), // constraint2
+      defaultFulltextNodeVerboseOutput(3L), // fulltext_node
+      defaultFulltextRelVerboseOutput(4L), // fulltext_rel
+      defaultBtreeNodeVerboseOutput(1L), // my_node_index
+      defaultBtreeRelVerboseOutput(2L), // my_rel_index
     ))
   }
 
-  test("should show correct options for btree index with random options") {
+  test("should show correct options for btree node index with random options") {
     // GIVEN
-    val randomOptions = createBtreeIndexWithRandomOptions("btree", label, List(prop2))
+    val randomOptions = createBtreeNodeIndexWithRandomOptions("btree", label, List(prop2))
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES YIELD *")
+
+    // THEN
+    val options: List[Object] = result.columnAs("options").toList
+    options.size should be(1)
+    assertCorrectOptionsMap(options.head, randomOptions)
+  }
+
+  test("should show correct options for btree relationship property index with random options") {
+    // GIVEN
+    val randomOptions = createBtreeRelIndexWithRandomOptions("btree", label, List(prop2))
     graph.awaitIndexesOnline()
 
     // WHEN
@@ -311,12 +365,19 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("show indexes should show valid create index statements") {
 
-    // Btree indexes
-    createBtreeIndexWithRandomOptions("btree", label, List(prop))
-    createBtreeIndexWithRandomOptions("btree composite", label, List(prop, prop2))
-    createBtreeIndexWithRandomOptions("btree whitespace", labelWhitespace, List(propWhitespace))
-    createBtreeIndexWithRandomOptions("btree backticks", labelBackticks, List(propBackticks))
-    createBtreeIndexWithRandomOptions("``horrible `index`name```", label, List(prop2))
+    // Btree node indexes
+    createBtreeNodeIndexWithRandomOptions("btree", label, List(prop))
+    createBtreeNodeIndexWithRandomOptions("btree composite", label, List(prop, prop2))
+    createBtreeNodeIndexWithRandomOptions("btree whitespace", labelWhitespace, List(propWhitespace))
+    createBtreeNodeIndexWithRandomOptions("btree backticks", labelBackticks, List(propBackticks))
+    createBtreeNodeIndexWithRandomOptions("``horrible `index`name```", label, List(prop2))
+
+    // Btree relationship property indexes
+    createBtreeRelIndexWithRandomOptions("relType btree", relType, List(prop))
+    createBtreeRelIndexWithRandomOptions("relType btree composite", relType, List(prop, prop2))
+    createBtreeRelIndexWithRandomOptions("relType btree whitespace", relTypeWhitespace, List(propWhitespace))
+    createBtreeRelIndexWithRandomOptions("relType btree backticks", relTypeBackticks, List(propBackticks))
+    createBtreeRelIndexWithRandomOptions("``horrible `index`name``1`", relType, List(prop2))
 
     // Fulltext node indexes
     createFulltextNodeIndexWithRandomOptions("full-text", List(label), List(prop))
@@ -361,14 +422,14 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should show index with yield") {
     // GIVEN
-    createDefaultBtreeIndex()
+    createDefaultBtreeNodeIndex()
     graph.awaitIndexesOnline()
 
     // WHEN
     val result = executeSingle("SHOW INDEXES YIELD name, type")
 
     // THEN
-    result.toList should be(List(defaultBtreeVerboseOutput(1L).filterKeys(k => Seq("name", "type").contains(k))))
+    result.toList should be(List(defaultBtreeNodeVerboseOutput(1L).filterKeys(k => Seq("name", "type").contains(k))))
   }
 
   test("should show index with yield, where and return and brief columns") {
@@ -379,7 +440,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val result = executeSingle("SHOW INDEXES YIELD name, type WHERE type = 'BTREE' RETURN name, type")
 
     // THEN
-    result.toList should be(List(defaultBtreeVerboseOutput(1L).filterKeys(k => Seq("name", "type").contains(k))))
+    result.toList should be(List(defaultBtreeNodeVerboseOutput(1L).filterKeys(k => Seq("name", "type").contains(k)), defaultBtreeRelVerboseOutput(2L).filterKeys(k => Seq("name", "type").contains(k))))
   }
 
   test("should show index with yield, where and return and verbose columns") {
@@ -390,11 +451,22 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val result = executeSingle("SHOW INDEXES YIELD name, type, createStatement WHERE type = 'BTREE' RETURN name, createStatement")
 
     // THEN
-    result.toList should be(List(defaultBtreeVerboseOutput(1L).filterKeys(k => Seq("name", "createStatement").contains(k))))
+    result.toList should be(List(defaultBtreeNodeVerboseOutput(1L).filterKeys(k => Seq("name", "createStatement").contains(k)), defaultBtreeRelVerboseOutput(2L).filterKeys(k => Seq("name", "createStatement").contains(k))))
+  }
+
+  test("should show index with yield, where and return for relationship property index") {
+    // GIVEN
+    createDefaultIndexes()
+
+    // WHEN
+    val result = executeSingle("SHOW BTREE INDEXES YIELD name, entityType WHERE entityType = 'RELATIONSHIP' RETURN name")
+
+    // THEN
+    result.toList should be(List(defaultBtreeRelVerboseOutput(2L).filterKeys(k => Seq("name").contains(k))))
   }
 
   test("should show index with full yield") {
-    createDefaultBtreeIndex()
+    createDefaultBtreeNodeIndex()
     createDefaultConstraints()
     graph.awaitIndexesOnline()
 
@@ -423,19 +495,19 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should show index with yield, where, return and aliasing") {
     // GIVEN
-    createDefaultBtreeIndex()
+    createDefaultBtreeNodeIndex()
     graph.awaitIndexesOnline()
 
     // WHEN
     val result = executeSingle("SHOW INDEXES YIELD name as options, options as name where size(options) > 0 RETURN options as name")
 
     // THEN
-    result.toList should be(List(defaultBtreeBriefOutput(1L).filterKeys(_ == "name")))
+    result.toList should be(List(defaultBtreeNodeBriefOutput(1L).filterKeys(_ == "name")))
   }
 
-  test("should show index with where") {
+  test("should show index with where on type") {
     // GIVEN
-    createDefaultBtreeIndex()
+    createDefaultBtreeNodeIndex()
     createDefaultFullTextNodeIndex()
     createDefaultFullTextRelIndex()
     graph.awaitIndexesOnline()
@@ -444,16 +516,29 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val result = executeSingle("SHOW INDEXES WHERE type = 'BTREE'")
 
     // THEN
-    result.toList should be(List(defaultBtreeBriefOutput(1L)))
+    result.toList should be(List(defaultBtreeNodeBriefOutput(1L)))
+  }
+
+  test("should show index with where on entity") {
+    // GIVEN
+    createDefaultBtreeNodeIndex()
+    createDefaultBtreeRelIndex()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES WHERE entityType = 'RELATIONSHIP'")
+
+    // THEN
+    result.toList should be(List(defaultBtreeRelBriefOutput(2L)))
   }
 
   test("should show indexes with where in alphabetic order") {
     // GIVEN
-    graph.createIndexWithName("poppy", label, propWhitespace)
-    graph.createIndexWithName("benny", label2, prop, prop2)
-    graph.createIndexWithName("albert", label2, prop2)
-    graph.createIndexWithName("charlie", label, prop2)
-    graph.createIndexWithName("xavier", label, prop)
+    graph.createNodeIndexWithName("poppy", label, propWhitespace)
+    graph.createNodeIndexWithName("benny", label2, prop, prop2)
+    graph.createNodeIndexWithName("albert", label2, prop2)
+    graph.createNodeIndexWithName("charlie", label, prop2)
+    graph.createNodeIndexWithName("xavier", label, prop)
     graph.awaitIndexesOnline()
 
     // WHEN
@@ -466,7 +551,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should show index with where and exists sub-clause") {
     // GIVEN
     createLabeledNode(Map(prop -> "foo", prop2 -> "bar", prop3 -> "BTREE"), label)
-    createDefaultBtreeIndex()
+    createDefaultBtreeNodeIndex()
     graph.awaitIndexesOnline()
 
     // WHEN
@@ -476,7 +561,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
         |}""".stripMargin)
 
     // THEN
-    result.toList should be(List(defaultBtreeBriefOutput(1L)))
+    result.toList should be(List(defaultBtreeNodeBriefOutput(1L)))
   }
 
   test("should show index with multiple order by") {
@@ -495,7 +580,8 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     result.toList should be(List(
       Map("name" -> "fulltext_node", "type" -> "FULLTEXT"),
       Map("name" -> "fulltext_rel", "type" -> "FULLTEXT"),
-      Map("name" -> "my_index", "type" -> "BTREE")
+      Map("name" -> "my_node_index", "type" -> "BTREE"),
+      Map("name" -> "my_rel_index", "type" -> "BTREE")
     ))
 
   }
@@ -844,7 +930,8 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   // general index help methods
 
   private def createDefaultIndexes(): Unit = {
-    createDefaultBtreeIndex()
+    createDefaultBtreeNodeIndex()
+    createDefaultBtreeRelIndex()
     createDefaultFullTextNodeIndex()
     createDefaultFullTextRelIndex()
     graph.awaitIndexesOnline()
@@ -868,22 +955,41 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   // Btree index help methods
 
-  private def createBtreeIndexWithRandomOptions(name: String, label: String, properties: List[String]): Map[String, Object] = {
+  private def escapeVariablesAndGenerateRandomOptions(name: String, entity: String, properties: List[String]) = {
     val escapedName = s"`${escapeBackticks(name)}`"
-    val escapedLabel = s"`${escapeBackticks(label)}`"
-    val escapedProperties = properties.map(p => s"n.`${escapeBackticks(p)}`").mkString(",")
+    val escapedEntity = s"`${escapeBackticks(entity)}`"
+    val escapedProperties = properties.map(p => s"e.`${escapeBackticks(p)}`").mkString(",")
     val randomOptions = randomBtreeOptions()
-    executeSingle(s"CREATE INDEX $escapedName FOR (n:$escapedLabel) ON ($escapedProperties) OPTIONS ${randomOptions._1}")
+    (escapedName, escapedEntity, escapedProperties, randomOptions)
+  }
+
+  private def createBtreeNodeIndexWithRandomOptions(name: String, label: String, properties: List[String]): Map[String, Object] = {
+    val (escapedName, escapedLabel, escapedProperties, randomOptions) = escapeVariablesAndGenerateRandomOptions(name, label, properties)
+    executeSingle(s"CREATE INDEX $escapedName FOR (e:$escapedLabel) ON ($escapedProperties) OPTIONS ${randomOptions._1}")
     randomOptions._2
   }
 
-  private def createDefaultBtreeIndex(): Unit = graph.createIndexWithName("my_index", label, prop2, prop)
+  private def createDefaultBtreeNodeIndex(): Unit = graph.createNodeIndexWithName("my_node_index", label, prop2, prop)
 
-  private def defaultBtreeBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "my_index", "NONUNIQUE", "BTREE", "NODE", List(label), List(prop2, prop), "native-btree-1.0")
+  private def defaultBtreeNodeBriefOutput(id: Long): Map[String, Any] =
+    indexOutputBrief(id, "my_node_index", "NONUNIQUE", "BTREE", "NODE", List(label), List(prop2, prop), "native-btree-1.0")
 
-  private def defaultBtreeVerboseOutput(id: Long): Map[String, Any] = defaultBtreeBriefOutput(id) ++
-    indexOutputVerbose(s"CREATE INDEX `my_index` FOR (n:`$label`) ON (n.`$prop2`, n.`$prop`) OPTIONS $defaultBtreeOptionsString")
+  private def defaultBtreeNodeVerboseOutput(id: Long): Map[String, Any] = defaultBtreeNodeBriefOutput(id) ++
+    indexOutputVerbose(s"CREATE INDEX `my_node_index` FOR (n:`$label`) ON (n.`$prop2`, n.`$prop`) OPTIONS $defaultBtreeOptionsString")
+
+  private def createBtreeRelIndexWithRandomOptions(name: String, relType: String, properties: List[String]): Map[String, Object] = {
+    val (escapedName, escapedType, escapedProperties, randomOptions) = escapeVariablesAndGenerateRandomOptions(name, relType, properties)
+    executeSingle(s"CREATE INDEX $escapedName FOR ()-[e:$escapedType]-() ON ($escapedProperties) OPTIONS ${randomOptions._1}")
+    randomOptions._2
+  }
+
+  private def createDefaultBtreeRelIndex(): Unit = graph.createRelationshipIndexWithName("my_rel_index", relType, prop2)
+
+  private def defaultBtreeRelBriefOutput(id: Long): Map[String, Any] =
+    indexOutputBrief(id, "my_rel_index", "NONUNIQUE", "BTREE", "RELATIONSHIP", List(relType), List(prop2), "native-btree-1.0")
+
+  private def defaultBtreeRelVerboseOutput(id: Long): Map[String, Any] = defaultBtreeRelBriefOutput(id) ++
+    indexOutputVerbose(s"CREATE INDEX `my_rel_index` FOR ()-[r:`$relType`]-() ON (r.`$prop2`) OPTIONS $defaultBtreeOptionsString")
 
   // Fulltext index help methods
 

@@ -26,7 +26,7 @@ trait IndexingTestSupport extends ExecutionEngineFunSuite with CypherComparisonS
   def cypherComparisonSupport: Boolean
 
   protected def createIndex(): Unit = {
-    graph.createIndex(LABEL, PROPERTY)
+    graph.createNodeIndex(LABEL, PROPERTY)
   }
 
   protected def dropIndex(): Unit = {

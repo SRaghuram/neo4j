@@ -259,7 +259,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("indexed points with distance query and points within bbox") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     setupPointsBothCRS()
 
     // <= cartesian
@@ -334,7 +334,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("should use index for distance query of points with maxDistance in horizon") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     setupPointsBothCRS()
 
     // <= cartesian
@@ -361,7 +361,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("should not use index for distance query of points with maxDistance in horizon") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     setupPointsBothCRS()
 
     executeSingle(
@@ -394,7 +394,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("indexed points at date line") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: -180})")
     executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: 180})")
     executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: -170})")
@@ -439,7 +439,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("indexed 3D points with distance query and points within bbox") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     setupPointsBothCRS(Seq(-10, 0, 10))
 
     // <= cartesian
@@ -520,7 +520,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("doughnut shape query uses the index") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     setupPointsBothCRS()
 
     // <= cartesian
@@ -590,7 +590,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("doughnut shape query uses the index in 3D") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     setupPointsBothCRS(Seq(0))
 
     // <= cartesian
@@ -689,7 +689,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   ignore("projecting distance into variable still uses index") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     setupPointsBothCRS()
 
     val query =
@@ -713,7 +713,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("invalid location with index") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = 5")
     Range(11, 100).foreach(i => executeSingle(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i, crs: 'cartesian'})"))
 
@@ -750,7 +750,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("no error for distance with no point when using parameters") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({y: 0, x: 0, crs: 'cartesian'})")
     Range(11, 100).foreach(i => executeSingle(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i, crs: 'cartesian'})"))
 
@@ -776,7 +776,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("no error for distance with no point when using no parameters") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({y: 0, x: 0, crs: 'cartesian'})")
     Range(11, 100).foreach(i => executeSingle(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i, crs: 'cartesian'})"))
 

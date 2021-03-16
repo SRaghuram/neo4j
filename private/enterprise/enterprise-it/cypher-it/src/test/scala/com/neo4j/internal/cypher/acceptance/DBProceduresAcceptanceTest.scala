@@ -289,7 +289,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     // GIVEN
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndex("A","foo")
+    graph.createNodeIndex("A","foo")
 
     // WHEN & THEN
     executeOnDBMSDefault(username, password, callLabelsQuery) should be(0)
@@ -299,7 +299,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     // GIVEN
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndex("A","foo")
+    graph.createNodeIndex("A","foo")
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -779,8 +779,8 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:B)-[:B]->(:A)-[:A]->(:A)-[:A]->(:C)")
-    graph.createIndex("A", "prop1")
-    graph.createIndex("C", "prop2")
+    graph.createNodeIndex("A", "prop1")
+    graph.createNodeIndex("C", "prop2")
     graph.createUniqueConstraint("B", "prop3")
 
     // WHEN & THEN

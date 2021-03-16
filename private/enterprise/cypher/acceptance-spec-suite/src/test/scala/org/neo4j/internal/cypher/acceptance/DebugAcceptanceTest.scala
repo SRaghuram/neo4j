@@ -15,7 +15,7 @@ class DebugAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonS
   implicit val windowsSafe: WindowsStringSafe.type = WindowsStringSafe
 
   test("CYPHER DEBUG=rawCardinalities should output estimated rows with float precision") {
-    graph.createIndex("Node", "prop")
+    graph.createNodeIndex("Node", "prop")
     for (i <- 0 until 20) {
       createLabeledNode(Map("prop" -> i), "Node")
     }

@@ -62,8 +62,8 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     val e1 = createLabeledNode("Employee")
     relate(e1, d1, "WORKS_AT", "Hallo")
     relate(d1, neo, "PART_OF", "Hallo")
-    graph.createIndex("Neo", "prop1", "prop2")
-    graph.createIndex("Neo", "prop3")
+    graph.createNodeIndex("Neo", "prop1", "prop2")
+    graph.createNodeIndex("Neo", "prop3")
     graph.createUniqueConstraint("Department", "prop")
 
     // When
@@ -380,7 +380,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("should be able to find indexes from built-in-procedure") {
     // Given
-    val index = graph.createIndex("A", "prop")
+    val index = graph.createNodeIndex("A", "prop")
 
     //When
     val result = executeWith(Configs.ProcedureCallRead, "CALL db.indexes")
@@ -517,11 +517,11 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("should list indexes in alphabetical order") {
     // Given
-    graph.createIndexWithName("poppy", "A", "prop")
-    graph.createIndexWithName("benny", "C", "foo")
-    graph.createIndexWithName("albert", "B", "foo")
-    graph.createIndexWithName("charlie", "A", "foo")
-    graph.createIndexWithName("xavier", "A", "bar")
+    graph.createNodeIndexWithName("poppy", "A", "prop")
+    graph.createNodeIndexWithName("benny", "C", "foo")
+    graph.createNodeIndexWithName("albert", "B", "foo")
+    graph.createNodeIndexWithName("charlie", "A", "foo")
+    graph.createNodeIndexWithName("xavier", "A", "bar")
 
     //When
     val result = executeWith(Configs.ProcedureCallRead, "CALL db.indexes() YIELD name RETURN name")

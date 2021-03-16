@@ -130,7 +130,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
   test("should handle temporal array of size 1 as indexed property with array parameter") {
     // Given
-    graph.createIndex("Occasion", "timeSpan")
+    graph.createNodeIndex("Occasion", "timeSpan")
     createLabeledNode("Occasion")
     executeSingle(
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01")]
@@ -153,7 +153,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   }
   test("should handle temporal array of size 1 as indexed property with list parameter") {
     // Given
-    graph.createIndex("Occasion", "timeSpan")
+    graph.createNodeIndex("Occasion", "timeSpan")
     createLabeledNode("Occasion")
     executeSingle(
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01")]
@@ -177,7 +177,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
   test("should handle temporal array as indexed property with array parameter") {
     // Given
-    graph.createIndex("Occasion", "timeSpan")
+    graph.createNodeIndex("Occasion", "timeSpan")
     createLabeledNode("Occasion")
     executeSingle(
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01"), date("2018-04-02")]
@@ -202,7 +202,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
   test("should handle temporal array as indexed property with list parameter") {
     // Given
-    graph.createIndex("Occasion", "timeSpan")
+    graph.createNodeIndex("Occasion", "timeSpan")
     createLabeledNode("Occasion")
     executeSingle(
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01"), date("2018-04-02")]
@@ -227,7 +227,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
   test("should handle temporal values in literal lists") {
     // Given
-    graph.createIndex("Occasion", "timeSpan")
+    graph.createNodeIndex("Occasion", "timeSpan")
     createLabeledNode("Occasion")
 
     executeSingle(

@@ -1739,7 +1739,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     }
 
     // with index
-    graph.createIndex("A", "foo")
+    graph.createNodeIndex("A", "foo")
 
     // WHEN .. THEN
     Seq(
@@ -1787,7 +1787,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     }
 
     // with index
-    graph.createIndex("A", "foo", "prop")
+    graph.createNodeIndex("A", "foo", "prop")
 
     // WHEN .. THEN
     Seq(
@@ -1833,7 +1833,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     }
 
     // with index
-    graph.createIndex("A", "foo", "prop")
+    graph.createNodeIndex("A", "foo", "prop")
 
     // WHEN .. THEN
     Seq(
@@ -1869,7 +1869,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
   test("should support whitelist and blacklist traversal in index seeks") {
     setupMultiLabelData
-    graph.createIndex("A", "foo")
+    graph.createNodeIndex("A", "foo")
     setupUserWithCustomRole("user1", "secret", "role1")
     setupUserWithCustomRole("user2", "secret", "role2")
     setupUserWithCustomRole("user3", "secret", "role3")

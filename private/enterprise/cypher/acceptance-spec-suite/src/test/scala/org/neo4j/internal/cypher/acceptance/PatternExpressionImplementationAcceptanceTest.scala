@@ -378,7 +378,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
 
   test("use getDegree for pattern expression predicate on var-length pattern") {
     // given
-    graph.createIndex("MYNODE", "name")
+    graph.createNodeIndex("MYNODE", "name")
     graph.withTx( tx => {
       tx.execute("CREATE (:MYNODE {name:'a'})-[:CONNECTED]->(:MYNODE {name:'b'})-[:CONNECTED]->(cut:MYNODE {name:'c'})-[:CONNECTED]->(:MYNODE {name:'d'})-[:CONNECTED]->(:MYNODE {name:'e'})-[:CONNECTED]->(:MYNODE {name:'z0'})").close()
 

@@ -76,7 +76,7 @@ class LoadCsvAcceptanceTest
 
     resourceMonitor.assertClosedAndClear(1)
 
-    graph.createIndex("User", "userID")
+    graph.createNodeIndex("User", "userID")
 
     // when & then
     for (url <- urls) {
@@ -148,8 +148,8 @@ class LoadCsvAcceptanceTest
         writer.println("3,4")
     })
 
-    graph.createIndex("Permission", "platformId")
-    graph.createIndex("Login", "loginId")
+    graph.createNodeIndex("Permission", "platformId")
+    graph.createNodeIndex("Login", "loginId")
 
     val query =
       s"""

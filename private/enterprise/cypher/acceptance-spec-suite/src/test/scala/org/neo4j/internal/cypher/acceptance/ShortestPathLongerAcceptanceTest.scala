@@ -536,7 +536,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("GH #5803 query should work with shortest path") {
     def createTestGraph() = {
-      graph.createIndex("WP", "id")
+      graph.createNodeIndex("WP", "id")
       execute("""create (_31801:`WP` {`id`:1})
                 |create (_31802:`WP` {`id`:2})
                 |create (_31803:`WP` {`id`:3})

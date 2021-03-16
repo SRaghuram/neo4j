@@ -148,7 +148,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   private def testPlanNodeIndexSeek(query: String, indexedLabels: List[String], assertNumberOfIndexSeeks: Int): Unit = {
-    indexedLabels.foreach(graph.createIndex(_, "prop"))
+    indexedLabels.foreach(graph.createNodeIndex(_, "prop"))
 
     val explainAndAssertNodeIndexSeekIsUsed = () => {
       val result = execute(s"EXPLAIN $query")

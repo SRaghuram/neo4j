@@ -19,7 +19,7 @@ class ShortestPathEdgeCasesAcceptanceTest extends ExecutionEngineFunSuite with C
         case Seq(n1, n2) => relate(n1, n2)
       }
       // Now create the specific subgraph used for the test
-      graph.createIndex("WP", "id")
+      graph.createNodeIndex("WP", "id")
       val query = """create (_31801:`WP` {`id`:1})
                     |create (_31802:`WP` {`id`:2})
                     |create (_31803:`WP` {`id`:3})

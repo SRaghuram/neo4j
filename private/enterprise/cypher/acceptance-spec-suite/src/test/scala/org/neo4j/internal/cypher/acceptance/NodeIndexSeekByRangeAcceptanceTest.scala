@@ -28,7 +28,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     val person = createLabeledNode(Map("age" -> 5987523281782486379L), "Person")
 
 
-    graph.createIndex("Person", "age")
+    graph.createNodeIndex("Person", "age")
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -47,7 +47,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     createLabeledNode(Map("age" -> 5987523281782486379L), "Person")
 
 
-    graph.createIndex("Person", "age")
+    graph.createNodeIndex("Person", "age")
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -71,7 +71,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
       createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
-    graph.createIndex("Location", "name")
+    graph.createNodeIndex("Location", "name")
 
     val query = "MATCH (l:Location) WHERE l.name STARTS WITH 'Lon' RETURN l"
 
@@ -88,7 +88,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     createLabeledNode(Map("name" -> "London"), "Location")
     createLabeledNode(Map("name" -> "london"), "Location")
     for (i <- 1 to 100) createLabeledNode(Map("name" -> ("City" + i)), "Location")
-    graph.createIndex("Location", "name")
+    graph.createNodeIndex("Location", "name")
 
     val query =
       """MATCH (l:Location) WHERE l.name STARTS WITH 'Lon'
@@ -114,7 +114,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 300).map { i =>
       createLabeledNode(Map("name" -> i.toString), "Location")
     }
-    graph.createIndex("Location", "name")
+    graph.createNodeIndex("Location", "name")
 
     val query = "MATCH (l:Location) WHERE l.name STARTS WITH 'Lon' RETURN l"
 
@@ -139,7 +139,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     val a2 = createLabeledNode(Map("prop" -> "www"), "Address")
     createLabeledNode(Map("prop" -> "ww"), "Address")
 
-    graph.createIndex("Address", "prop")
+    graph.createNodeIndex("Address", "prop")
 
     // Add an uninteresting predicate using a parameter to stop autoparameterization from happening
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, """MATCH (a:Address)
@@ -168,7 +168,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     val a2 = createLabeledNode(Map("prop" -> "www"), "Address")
     createLabeledNode(Map("prop" -> "ww"), "Address")
 
-    graph.createIndex("Address", "prop")
+    graph.createNodeIndex("Address", "prop")
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:Address) WHERE a.prop STARTS WITH 'www' RETURN a",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -220,7 +220,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop < 10 RETURN n.prop AS prop"
 
@@ -258,7 +258,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndexWithName("prop_index", "Label", "prop")
+    graph.createNodeIndexWithName("prop_index", "Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop < 10 RETURN n.prop AS prop"
 
@@ -296,7 +296,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE NOT n.prop >= 10 RETURN n.prop AS prop"
 
@@ -336,7 +336,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop <= 10 RETURN n.prop AS prop"
 
@@ -378,7 +378,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE NOT n.prop > 10 RETURN n.prop AS prop"
 
@@ -419,7 +419,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop > 5 RETURN n.prop AS prop"
 
@@ -456,7 +456,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE NOT n.prop <= 5 RETURN n.prop AS prop"
 
@@ -493,7 +493,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= 5 RETURN n.prop AS prop"
 
@@ -530,7 +530,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE NOT n.prop < 5 RETURN n.prop AS prop"
 
@@ -565,7 +565,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop < '15' RETURN n.prop AS prop"
 
@@ -597,7 +597,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop <= '15' RETURN n.prop AS prop"
 
@@ -631,7 +631,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop > '15' RETURN n.prop AS prop"
 
@@ -665,7 +665,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= '15' RETURN n.prop AS prop"
 
@@ -698,7 +698,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= '15' AND n.prop2 > 5 RETURN n.prop AS prop"
 
@@ -727,7 +727,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop <= 10 AND n.prop > 10 RETURN n.prop AS prop"
 
@@ -755,7 +755,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop <= null RETURN n.prop AS prop"
 
@@ -789,7 +789,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >=5 AND n.prop < 10 RETURN n.prop AS prop"
 
@@ -828,7 +828,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= 0 AND n.prop >=5 AND n.prop < 10 AND n.prop < 100 RETURN n.prop AS prop"
 
@@ -867,7 +867,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndexWithName("prop_index", "Label", "prop")
+    graph.createNodeIndexWithName("prop_index", "Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= 0 AND n.prop >=5 AND n.prop < 10 AND n.prop < 100 RETURN n.prop AS prop"
 
@@ -903,7 +903,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop < '15' AND n.prop >= '15' RETURN n.prop AS prop"
 
@@ -935,7 +935,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop < null RETURN n.prop AS prop"
 
@@ -969,7 +969,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= '10' AND n.prop < '15' RETURN n.prop AS prop"
 
@@ -1006,7 +1006,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop > '1' AND n.prop >= '10' AND n.prop < '15' AND n.prop <= '14whatever' RETURN n.prop AS prop"
 
@@ -1032,7 +1032,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop > '1' AND n.prop > 10 RETURN n.prop AS prop"
 
@@ -1055,7 +1055,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop > '1' AND n.prop > 10 RETURN n.prop AS prop"
 
@@ -1076,7 +1076,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= '1' AND n.prop > 10 RETURN n.prop AS prop"
 
@@ -1096,7 +1096,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 405).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= duration('P1Y1M') RETURN n.prop AS prop"
 
@@ -1113,7 +1113,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     (1 to 400).foreach { _ =>
       createLabeledNode("Label")
     }
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= $param AND n.prop < null RETURN n.prop AS prop"
 
@@ -1137,7 +1137,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     createLabeledNode(Map("prop" -> matchingChar), "Label")
     createLabeledNode(Map("prop" -> matchingChar.toString), "Label")
     createLabeledNode(Map("prop" -> nonMatchingChar), "Label")
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= $param RETURN n.prop AS prop"
 
@@ -1161,7 +1161,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     createLabeledNode(Map("prop" -> matchingChar), "Label")
     createLabeledNode(Map("prop" -> matchingChar.toString), "Label")
     createLabeledNode(Map("prop" -> nonMatchingChar), "Label")
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= $param RETURN n.prop AS prop"
 
@@ -1175,7 +1175,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
   }
 
   test("rule planner should plan index seek for inequality match") {
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
     createLabeledNode(Map("prop" -> 1), "Label")
     createLabeledNode(Map("prop" -> 5), "Label")
     createLabeledNode(Map("prop" -> 10), "Label")
@@ -1298,7 +1298,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
       createLabeledNode("Person")
     }
 
-    graph.createIndex("Person", "gender")
+    graph.createNodeIndex("Person", "gender")
 
     graph.withTx( tx => {
       val result = tx.execute("CYPHER PROFILE MATCH (a:Person) WHERE a.gender > 'female' RETURN count(a) as c")
@@ -1321,8 +1321,8 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     }
 
     // When
-    graph.createIndex("L", "prop1")
-    graph.createIndex("L", "prop2")
+    graph.createNodeIndex("L", "prop1")
+    graph.createNodeIndex("L", "prop2")
     Thread.sleep(1000)
 
     // Then
@@ -1343,8 +1343,8 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
         |CREATE (k:Keyword {value: i*10+j})
         |CREATE (t)-[:CONTAINS_KEYWORD]->(k)""".stripMargin))
 
-    graph.createIndex("Tweet", "created_date")
-    graph.createIndex("Keyword", "value")
+    graph.createNodeIndex("Tweet", "created_date")
+    graph.createNodeIndex("Keyword", "value")
 
     val query =
       s"""EXPLAIN
@@ -1366,7 +1366,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     }
 
     // Create index _after_ nodes, so that when it comes online it is fully populated.
-    graph.createIndex("Label", "prop")
+    graph.createNodeIndex("Label", "prop")
 
     size
   }

@@ -1152,7 +1152,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       selectDatabase(DEFAULT_DATABASE_NAME)
       execute("CREATE (n:A {name:'a'})")
       execute("CALL db.createLabel('B')")
-      graph.createIndex("A", "name")
+      graph.createNodeIndex("A", "name")
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1183,7 +1183,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
       execute("CREATE (n:A:B {name:'a'})")
-      graph.createIndex("A", "name")
+      graph.createNodeIndex("A", "name")
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)

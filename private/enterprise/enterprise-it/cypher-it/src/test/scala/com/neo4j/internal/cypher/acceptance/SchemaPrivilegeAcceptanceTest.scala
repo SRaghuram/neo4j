@@ -511,22 +511,33 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     setupUserWithCustomRole()
     execute("GRANT CREATE INDEX ON DATABASE * TO custom")
 
-    // WHEN & THEN
+    // WHEN & THEN: node index
     the[AuthorizationViolationException] thrownBy {
       executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
     } should have message "Creating new node label is not allowed for user 'joe' with roles [PUBLIC, custom]. See GRANT CREATE NEW NODE LABEL ON DATABASE..."
 
+    // WHEN & THEN: relationship index
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR ()-[k:KNOWS]-() ON (k.since)")
+    } should have message "Creating new relationship type is not allowed for user 'joe' with roles [PUBLIC, custom]. See GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE..."
+
     // THEN
-    assert(graph.getMaybeIndex("User", Seq("name")).isEmpty)
+    assert(graph.getMaybeNodeIndex("User", Seq("name")).isEmpty)
+    assert(graph.getMaybeRelIndex("KNOWS", Seq("since")).isEmpty)
   }
 
   test("Should not allow index creation for normal user without index create privilege") {
     setupUserWithCustomRole()
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
 
-    // WHEN & THEN
+    // WHEN & THEN: node index
     the[AuthorizationViolationException] thrownBy {
       executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
+    } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // WHEN & THEN: relationship index
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR ()-[k:KNOWS]-() ON (k.since)")
     } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -536,9 +547,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT DROP INDEX ON DATABASE * TO custom")
 
-    // WHEN & THEN
+    // WHEN & THEN: node index
     the[AuthorizationViolationException] thrownBy {
       executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
+    } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // WHEN & THEN: relationship index
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR ()-[k:KNOWS]-() ON (k.since)")
     } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -557,7 +573,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   withAllSystemGraphVersions(allSupported) {
 
-    test("Should allow index creation on already existing tokens for normal user without token create privilege") {
+    test("Should allow node index creation on already existing tokens for normal user without token create privilege") {
       setupUserWithCustomRole()
       execute("GRANT CREATE INDEX ON DATABASE * TO custom")
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -567,7 +583,20 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)") should be(0)
 
       // THEN
-      assert(graph.getMaybeIndex("User", Seq("name")).isDefined)
+      assert(graph.getMaybeNodeIndex("User", Seq("name")).isDefined)
+    }
+
+    test("Should allow relationship index creation on already existing tokens for normal user without token create privilege") {
+      setupUserWithCustomRole()
+      execute("GRANT CREATE INDEX ON DATABASE * TO custom")
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE ()-[:REL {prop: 1}]->()")
+
+      // WHEN
+      executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR ()-[r:REL]-() ON (r.prop)") should be(0)
+
+      // THEN
+      assert(graph.getMaybeRelIndex("REL", Seq("prop")).isDefined)
     }
 
     test("Should allow index creation for normal user with index create privilege") {
@@ -584,11 +613,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
       // WHEN & THEN
       executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)") should be(0)
+      executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR ()-[r:REL]-() ON (r.prop)") should be(0)
     }
 
-    test("Should allow index dropping for normal user with index drop privilege") {
+    test("Should allow node index dropping for normal user with index drop privilege") {
       selectDatabase(DEFAULT_DATABASE_NAME)
-      graph.createIndexWithName(indexName, labelString, propString)
+      graph.createNodeIndexWithName(indexName, labelString, propString)
       setupUserWithCustomRole()
       execute("GRANT DROP INDEX ON DATABASE * TO custom")
 
@@ -602,10 +632,30 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       executeOnDBMSDefault("joe", "soap", s"DROP INDEX $indexName") should be(0)
 
       // THEN
-      graph.getMaybeIndex(labelString, Seq(propString)) should be(None)
+      graph.getMaybeNodeIndex(labelString, Seq(propString)) should be(None)
     }
 
-    test("Should allow index creation and dropping for normal user with index management privilege") {
+    test("Should allow relationship index dropping for normal user with index drop privilege") {
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      val typeString = "REL"
+      graph.createRelationshipIndexWithName(indexName, typeString, propString)
+      setupUserWithCustomRole()
+      execute("GRANT DROP INDEX ON DATABASE * TO custom")
+
+      // THEN
+      execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+        granted(access).role("custom").map,
+        granted(dropIndex).role("custom").map
+      ))
+
+      // WHEN
+      executeOnDBMSDefault("joe", "soap", s"DROP INDEX $indexName") should be(0)
+
+      // THEN
+      graph.getMaybeRelIndex(typeString, Seq(propString)) should be(None)
+    }
+
+    test("Should allow node index creation and dropping for normal user with index management privilege") {
       setupUserWithCustomRole()
       execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
       execute("GRANT INDEX ON DATABASE * TO custom")
@@ -621,13 +671,38 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       executeOnDBMSDefault("joe", "soap", s"CREATE INDEX $indexName FOR (u:User) ON (u.name)") should be(0)
 
       // THEN
-      graph.getMaybeIndex("User", Seq("name")).isDefined should be(true)
+      graph.getMaybeNodeIndex("User", Seq("name")).isDefined should be(true)
 
       // WHEN
       executeOnDBMSDefault("joe", "soap", s"DROP INDEX $indexName") should be(0)
 
       // THEN
-      graph.getMaybeIndex("User", Seq("name")).isDefined should be(false)
+      graph.getMaybeNodeIndex("User", Seq("name")).isDefined should be(false)
+    }
+
+    test("Should allow relationship index creation and dropping for normal user with index management privilege") {
+      setupUserWithCustomRole()
+      execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+      execute("GRANT INDEX ON DATABASE * TO custom")
+
+      // THEN
+      execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+        granted(access).role("custom").map,
+        granted(nameManagement).role("custom").map,
+        granted(indexManagement).role("custom").map
+      ))
+
+      // WHEN
+      executeOnDBMSDefault("joe", "soap", s"CREATE INDEX $indexName FOR ()-[r:REL]-() ON (r.prop)") should be(0)
+
+      // THEN
+      graph.getMaybeRelIndex("REL", Seq("prop")).isDefined should be(true)
+
+      // WHEN
+      executeOnDBMSDefault("joe", "soap", s"DROP INDEX $indexName") should be(0)
+
+      // THEN
+      graph.getMaybeRelIndex("REL", Seq("prop")).isDefined should be(false)
     }
 
     test("Should allow index creation for normal user with all database privileges") {
@@ -637,6 +712,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
       // WHEN & THEN
       executeOn("foo", "joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)") should be(0)
+      executeOn("foo", "joe", "soap", "CREATE INDEX FOR ()-[r:REL]-() ON (r.prop)") should be(0)
     }
 
     test("Should not allow index creation for normal user with all database privileges and explicit deny") {
@@ -645,9 +721,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("GRANT ALL PRIVILEGES ON DATABASE * TO custom")
       execute("DENY CREATE INDEX ON DATABASE foo TO custom")
 
-      // WHEN & THEN
+      // WHEN & THEN: node index
       the[AuthorizationViolationException] thrownBy {
         executeOn("foo", "joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
+      } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+      // WHEN & THEN: relationship index
+      the[AuthorizationViolationException] thrownBy {
+        executeOn("foo", "joe", "soap", "CREATE INDEX FOR ()-[r:REL]-() ON (r.prop)")
       } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [PUBLIC, custom]."
     }
   }
@@ -655,7 +736,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should not allow showing indexes without show privilege") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     setupUserWithCustomRole()
 
     // WHEN & THEN
@@ -667,7 +748,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should allow showing indexes using procedure without show privilege") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     setupUserWithCustomRole()
     execute("GRANT EXECUTE PROCEDURES * ON DBMS TO custom")
 
@@ -685,7 +766,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should allow showing indexes using procedure with deny show privilege") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     setupUserWithCustomRole()
     execute("GRANT EXECUTE PROCEDURES * ON DBMS TO custom")
     execute("DENY SHOW INDEX ON DATABASE * TO custom")
@@ -704,7 +785,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should allow showing indexes with show privilege") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     graph.createUniqueConstraintWithName(constraintName, labelString, "prop2")
     setupUserWithCustomRole()
     execute(s"GRANT SHOW INDEX ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
@@ -719,7 +800,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should allow showing indexes with index management privilege") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createRelationshipIndexWithName(indexName, "REL", propString)
     setupUserWithCustomRole()
     execute("GRANT INDEX ON DATABASE * TO custom")
 
@@ -730,7 +811,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should allow showing indexes with all database privilege") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     setupUserWithCustomRole()
     execute("GRANT ALL ON DATABASE * TO custom")
 
@@ -741,7 +822,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should allow showing indexes with built in roles architect and admin") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
 
@@ -767,7 +848,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should not allow showing indexes with built in roles reader, editor, and publisher") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
 
@@ -809,7 +890,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should not allow showing indexes when privileges on other database") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     setupUserWithCustomRole()
     execute("CREATE DATABASE foo")
     execute("GRANT SHOW INDEX ON HOME DATABASE TO custom")
@@ -823,7 +904,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should not allow showing indexes with deny show privilege") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     setupUserWithCustomRole()
     execute("GRANT SHOW INDEX ON DATABASE * TO custom")
     execute(s"DENY SHOW INDEX ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
@@ -837,7 +918,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should not allow showing indexes with index management privilege and explicit deny") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     setupUserWithCustomRole()
     execute("GRANT INDEX ON DATABASE * TO custom")
     execute("DENY SHOW INDEX ON DATABASE * TO custom")
@@ -851,7 +932,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should not allow showing indexes with all database privileges and explicit deny") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     setupUserWithCustomRole()
     execute("GRANT ALL ON DATABASE * TO custom")
     execute("DENY SHOW INDEX ON DATABASE * TO custom")
@@ -865,7 +946,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should not allow showing indexes with only create and drop privilege") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     setupUserWithCustomRole()
     execute("GRANT CREATE INDEX ON DATABASE * TO custom")
     execute("GRANT DROP INDEX ON DATABASE * TO custom")
@@ -879,7 +960,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should not allow showing indexes with only show constraint privilege") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     graph.createUniqueConstraintWithName(constraintName, labelString, "prop2")
     setupUserWithCustomRole()
     execute("GRANT SHOW CONSTRAINT ON DATABASE * TO custom")
@@ -896,13 +977,18 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT SHOW INDEX ON DATABASE * TO custom")
 
-    // WHEN & THEN
+    // WHEN & THEN: node index
     the[AuthorizationViolationException] thrownBy {
       executeOnDBMSDefault("joe", "soap", s"CREATE INDEX FOR (n:$labelString) ON (n.$propString)")
     } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
 
+    // WHEN & THEN: relationship index
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDBMSDefault("joe", "soap", s"CREATE INDEX FOR ()-[r:REL]-() ON (r.$propString)")
+    } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+
     // WHEN & THEN
-    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createNodeIndexWithName(indexName, labelString, propString)
     the[AuthorizationViolationException] thrownBy {
       executeOnDBMSDefault("joe", "soap", s"DROP INDEX $indexName")
     } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
@@ -930,7 +1016,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", s"CREATE INDEX neo_index FOR (n:$labelString) ON (n.$propString)") should be(0)
 
     // THEN
-    graph.getMaybeIndex(labelString, Seq(propString)).isDefined should be(true)
+    graph.getMaybeNodeIndex(labelString, Seq(propString)).isDefined should be(true)
 
     // WHEN: creating index on foo
     the[AuthorizationViolationException] thrownBy {
@@ -938,12 +1024,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     } should have message "Schema operations are not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // THEN
-    graph.getMaybeIndex(labelString, Seq(propString)).isDefined should be(false)
+    graph.getMaybeNodeIndex(labelString, Seq(propString)).isDefined should be(false)
 
     // WHEN: switch default database and create index on foo
     restartWithDefault(newDefaultDatabase)
     selectDatabase(newDefaultDatabase)
-    graph.createIndexWithName("foo_index", labelString, propString)
+    graph.createNodeIndexWithName("foo_index", labelString, propString)
 
     // Confirm default database
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -962,13 +1048,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     } should have message "Schema operations are not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // THEN
-    graph.getMaybeIndex(labelString, Seq(propString)).isEmpty should be(false)
+    graph.getMaybeNodeIndex(labelString, Seq(propString)).isEmpty should be(false)
 
     // WHEN: dropping index on foo
     executeOn(newDefaultDatabase, "alice", "abc", "DROP INDEX foo_index") should be(0)
 
     // THEN
-    graph.getMaybeIndex(labelString, Seq(propString)).isEmpty should be(true)
+    graph.getMaybeNodeIndex(labelString, Seq(propString)).isEmpty should be(true)
   }
 
   // Constraint Management

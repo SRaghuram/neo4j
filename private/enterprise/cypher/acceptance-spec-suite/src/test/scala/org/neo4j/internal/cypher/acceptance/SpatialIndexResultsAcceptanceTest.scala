@@ -40,7 +40,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed point should be readable from node property") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     createLabeledNode("Place")
     executeSingle("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
@@ -61,7 +61,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed point should be readable from parameterized node property") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     createLabeledNode("Place")
     executeSingle("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
@@ -84,7 +84,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed point array of size 1 should be readable from parameterized node property") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     createLabeledNode("Place")
     executeSingle("MATCH (p:Place) SET p.location = [point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})] RETURN p.location as point")
 
@@ -106,7 +106,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed point array should be readable from parameterized node property") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     createLabeledNode("Place")
     executeSingle(
       """MATCH (p:Place) SET p.location =
@@ -138,7 +138,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed point array should be readable from parameterized (as list) node property") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     createLabeledNode("Place")
     executeSingle(
       """MATCH (p:Place) SET p.location =
@@ -187,7 +187,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("with multiple indexed points only exact match should be returned") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     createLabeledNode("Place")
     executeSingle("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 40.7, longitude: -35.78, crs: 'WGS-84'})")
@@ -208,7 +208,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("3D indexed point should be readable from node property") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     createLabeledNode("Place")
     executeSingle("MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point")
 
@@ -230,7 +230,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("with multiple 3D indexed points only exact match should be returned") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     createLabeledNode("Place")
     executeSingle("MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point")
     executeSingle("CREATE (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.601})")
@@ -250,7 +250,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed points far apart in cartesian space - range query greaterThan") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: 100000})")
     executeSingle("CREATE (p:Place) SET p.location = point({x: -100000, y: 100000})")
     executeSingle("CREATE (p:Place) SET p.location = point({x: -100000, y: -100000})")
@@ -269,7 +269,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed points far apart in cartesian space - range query lessThan") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: 100000})")
     executeSingle("CREATE (p:Place) SET p.location = point({x: -100000, y: 100000})")
     executeSingle("CREATE (p:Place) SET p.location = point({x: -100000, y: -100000})")
@@ -288,7 +288,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed points far apart in cartesian space - range query within") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({x: 500000, y: 500000})")
     executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: 100000})")
     executeSingle("CREATE (p:Place) SET p.location = point({x: -100000, y: 100000})")
@@ -308,7 +308,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed points far apart in WGS84 - range query greaterThan") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 5.7, longitude: 116.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: -50.7, longitude: 12.78, crs: 'WGS-84'})")
@@ -328,7 +328,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed points close together in WGS84 - equality query") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.700001, longitude: 12.7800001, crs: 'WGS-84'})")
 
@@ -343,7 +343,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("Index query with MERGE") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.700001, longitude: 12.7800001, crs: 'WGS-84'})")
 
@@ -366,7 +366,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed points close together in WGS84 - range query greaterThan") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
@@ -386,7 +386,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed points close together in WGS84 - range query greaterThanOrEqualTo") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
@@ -406,7 +406,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed points close together in WGS84 - range query greaterThan with no results") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
@@ -425,7 +425,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed points close together in WGS84 - range query greaterThan with multiple CRS") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({y: 56.7, x: 12.78, crs: 'cartesian'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
@@ -445,7 +445,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
   test("indexed points close together in WGS84 - range query within") {
     // Given
-    graph.createIndex("Place", "location")
+    graph.createNodeIndex("Place", "location")
     executeSingle("CREATE (p:Place) SET p.location = point({y: 55.7, x: 11.78, crs: 'cartesian'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
     executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")

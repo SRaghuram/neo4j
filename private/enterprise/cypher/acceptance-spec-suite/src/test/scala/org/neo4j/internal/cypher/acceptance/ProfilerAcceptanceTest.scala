@@ -517,7 +517,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(o, createLabeledNode(Map("name" -> "Franny"), "Glass"), "R2")
     relate(o, createNode(), "R2")
     relate(o, createNode(), "R2")
-    graph.createIndex("Glass", "name")
+    graph.createNodeIndex("Glass", "name")
 
     // then
     profile(Configs.All,
@@ -536,7 +536,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(o, createLabeledNode(Map("name" -> "Franny"), "Glass"), "R2")
     relate(o, createNode(), "R2")
     relate(o, createNode(), "R2")
-    graph.createIndex("Glass", "name")
+    graph.createNodeIndex("Glass", "name")
 
     // then
     profile(Configs.All,
@@ -555,7 +555,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(o, createLabeledNode(Map("name" -> "Franny"), "Glass"), "R2")
     relate(o, createNode(), "R2")
     relate(o, createNode(), "R2")
-    graph.createIndex("Glass", "name")
+    graph.createNodeIndex("Glass", "name")
 
     // when
     profile(Configs.All,

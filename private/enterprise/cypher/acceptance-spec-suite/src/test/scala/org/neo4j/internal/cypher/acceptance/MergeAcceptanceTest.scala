@@ -152,7 +152,7 @@ class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("should not choke on cached properties followed by distinct and properties set") {
     // Given
-    graph.createIndex("L", "prop")
+    graph.createNodeIndex("L", "prop")
     createLabeledNode(Map("prop" -> 42, "other" -> 43), "L")
 
     // When

@@ -198,9 +198,9 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   private val standardResult = List(Map("n.prop1" -> 40), Map("n.prop1" -> 41), Map("n.prop1" -> 42), Map("n.prop1" -> 43), Map("n.prop1" -> 44))
 
   private def createSingleIndexes(): Unit = {
-    graph.createIndex("Awesome", "prop1")
-    graph.createIndex("Awesome", "prop2")
-    graph.createIndex("Label", "prop1")
+    graph.createNodeIndex("Awesome", "prop1")
+    graph.createNodeIndex("Awesome", "prop2")
+    graph.createNodeIndex("Label", "prop1")
   }
 
   private def createSomeNodes(): Unit = {

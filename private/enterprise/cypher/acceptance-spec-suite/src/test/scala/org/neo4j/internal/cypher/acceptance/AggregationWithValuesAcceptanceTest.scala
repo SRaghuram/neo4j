@@ -20,9 +20,9 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   override def beforeEach(): Unit = {
     super.beforeEach()
     graph.withTx( tx => createSomeNodes(tx))
-    graph.createIndex("Awesome", "prop1")
-    graph.createIndex("Awesome", "prop2")
-    graph.createIndex("Awesome", "prop3")
+    graph.createNodeIndex("Awesome", "prop1")
+    graph.createNodeIndex("Awesome", "prop2")
+    graph.createNodeIndex("Awesome", "prop3")
   }
 
   // Invoked once before the Tx and once in the same Tx
@@ -236,7 +236,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   }
 
   test("cannot use composite index for aggregation") {
-    graph.createIndex("Label", "prop1", "prop2")
+    graph.createNodeIndex("Label", "prop1", "prop2")
     createLabeledNode(Map("prop1" -> 123, "prop2" -> "abc"), "Label")
     createLabeledNode(Map("prop1" -> 12), "Label")
     resampleIndexes()
@@ -257,7 +257,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("cannot use index provided values for multiple aggregations on different properties") {
 
-    graph.createIndex("Awesome", "prop3", "prop4")
+    graph.createNodeIndex("Awesome", "prop3", "prop4")
     createLabeledNode(Map("prop3" -> 123, "prop4" -> "abc"), "Awesome")
     resampleIndexes()
 
@@ -279,7 +279,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     createLabeledNode(Map("prop1" -> 1, "prop2" -> 4), "Label")
     createLabeledNode(Map("prop1" -> 2), "Label")
-    graph.createIndex("Label", "prop2")
+    graph.createNodeIndex("Label", "prop2")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN count(m.prop2) AS count"
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
@@ -316,7 +316,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     createLabeledNode(Map("prop1" -> 1, "prop2" -> 4), "Label")
     createLabeledNode(Map("prop1" -> 2), "Label")
-    graph.createIndex("Label", "prop1")
+    graph.createNodeIndex("Label", "prop1")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN min(n.prop1) AS min, count(m.prop1) AS count"
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
@@ -343,7 +343,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     relate(n, m2)
     relate(n, m3)
     relate(n, m4)
-    graph.createIndex("LabelN", "prop2")
+    graph.createNodeIndex("LabelN", "prop2")
 
     val query = "MATCH (n:LabelN)-[]->(m:Label) RETURN count(n.prop2) AS count"
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
@@ -365,7 +365,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     relate(n, m2)
     relate(n, m3)
     relate(n, m4)
-    graph.createIndex("LabelN", "prop2")
+    graph.createNodeIndex("LabelN", "prop2")
 
     val query = "MATCH (n:LabelN)-[]->(m:Label) RETURN count(n.prop2) AS count, avg(m.prop1) AS avg"
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)

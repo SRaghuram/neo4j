@@ -19,7 +19,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should handle OR when using index") {
     // Given
-    graph.createIndex("L", "prop")
+    graph.createNodeIndex("L", "prop")
     val node1 = createLabeledNode(Map("prop" -> 1), "L")
     val node2 = createLabeledNode(Map("prop" -> 2), "L")
     createLabeledNode(Map("prop" -> 3), "L")
@@ -34,7 +34,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should handle AND when using index") {
     // Given
-    graph.createIndex("L", "prop")
+    graph.createNodeIndex("L", "prop")
     createLabeledNode(Map("prop" -> 1), "L")
     createLabeledNode(Map("prop" -> 2), "L")
     createLabeledNode(Map("prop" -> 3), "L")
@@ -48,8 +48,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   test("Should allow AND and OR with index and equality predicates") {
-    graph.createIndex("User", "prop1")
-    graph.createIndex("User", "prop2")
+    graph.createNodeIndex("User", "prop1")
+    graph.createNodeIndex("User", "prop2")
     val nodes = Range(0, 100).map(i => createLabeledNode(Map("prop1" -> i, "prop2" -> i), "User"))
     createLabeledNode(Map("prop1" -> 1, "prop2" -> 11), "User")
     createLabeledNode(Map("prop1" -> 11, "prop2" -> 1), "User")
@@ -71,8 +71,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   test("Should allow AND and OR with named index and equality predicates") {
-    graph.createIndexWithName("prop1_index", "User", "prop1")
-    graph.createIndexWithName("prop2_index", "User", "prop2")
+    graph.createNodeIndexWithName("prop1_index", "User", "prop1")
+    graph.createNodeIndexWithName("prop2_index", "User", "prop2")
     val nodes = Range(0, 100).map(i => createLabeledNode(Map("prop1" -> i, "prop2" -> i), "User"))
     createLabeledNode(Map("prop1" -> 1, "prop2" -> 11), "User")
     createLabeledNode(Map("prop1" -> 11, "prop2" -> 1), "User")
@@ -94,8 +94,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   test("Should allow AND and OR with index and inequality predicates") {
-    graph.createIndex("User", "prop1")
-    graph.createIndex("User", "prop2")
+    graph.createNodeIndex("User", "prop1")
+    graph.createNodeIndex("User", "prop2")
     val nodes = Range(0, 100).map(i => createLabeledNode(Map("prop1" -> i, "prop2" -> i), "User"))
 
     val query =
@@ -114,8 +114,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   test("Should allow AND and OR with index seek and STARTS WITH predicates") {
-    graph.createIndex("User", "prop1")
-    graph.createIndex("User", "prop2")
+    graph.createNodeIndex("User", "prop1")
+    graph.createNodeIndex("User", "prop2")
     val nodes = Range(0, 100).map(i => createLabeledNode(Map("prop1" -> s"${i}_val", "prop2" -> s"${i}_val"), "User"))
 
     val query =
@@ -134,8 +134,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   test("Should allow AND and OR with index scan and regex predicates") {
-    graph.createIndex("User", "prop1")
-    graph.createIndex("User", "prop2")
+    graph.createNodeIndex("User", "prop1")
+    graph.createNodeIndex("User", "prop2")
     val nodes = Range(0, 100).map(i => createLabeledNode(Map("prop1" -> s"${i}_val", "prop2" -> s"${i}_val"), "User"))
 
     val query =
@@ -154,7 +154,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   test("Should allow OR with index scan and regex predicates") {
-    graph.createIndex("User", "prop")
+    graph.createNodeIndex("User", "prop")
     val nodes = Range(0, 100).map(i => createLabeledNode(Map("prop" -> s"${i}_val"), "User"))
     Range(0, 100).map(_ => createLabeledNode("User"))
     resampleIndexes()
@@ -187,7 +187,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should be able to use value coming from UNWIND for index seek") {
     // Given
-    graph.createIndex("Prop", "id")
+    graph.createNodeIndex("Prop", "id")
     val n1 = createLabeledNode(Map("id" -> 1), "Prop")
     val n2 = createLabeledNode(Map("id" -> 2), "Prop")
     val n3 = createLabeledNode(Map("id" -> 3), "Prop")
@@ -219,8 +219,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     }
 
     // note: creating index after the nodes makes sure that we have statistics when the indexes come online
-    graph.createIndex("L", "l")
-    graph.createIndex("R", "r")
+    graph.createNodeIndex("L", "l")
+    graph.createNodeIndex("R", "r")
 
     val result = executeWith(Configs.All, "MATCH (l:L {l: 9})-[:REL]->(r:R {r: 23}) RETURN l, r",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
@@ -236,7 +236,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     // create many nodes with label 'Place' to make sure index seek is planned
     (1 to 100).foreach(i => createLabeledNode(Map("name" -> s"Area $i"), "Place"))
 
-    graph.createIndex("Place", "name")
+    graph.createNodeIndex("Place", "name")
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -260,7 +260,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     val n3 = createLabeledNode(Map("a" -> 1, "b" -> 1), "MyNodes")
     createLabeledNode(Map("a" -> 1, "b" -> 5), "MyNodes")
 
-    graph.createIndex("MyNodes", "a")
+    graph.createNodeIndex("MyNodes", "a")
 
     val query =
       """|MATCH (m:MyNodes)
@@ -287,7 +287,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     createLabeledNode(Map("a" -> 1, "b" -> 1), "MyNodes")
     val n4 = createLabeledNode(Map("a" -> 5, "b" -> 1), "MyNodes")
 
-    graph.createIndex("MyNodes", "a")
+    graph.createNodeIndex("MyNodes", "a")
 
     val query =
       """|MATCH (m:MyNodes)
@@ -309,7 +309,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should handle array as parameter when using index") {
     // Given
-    graph.createIndex("Company", "uuid")
+    graph.createNodeIndex("Company", "uuid")
     val root1 = createLabeledNode(Map("uuid" -> "b"), "Company")
     val root2 = createLabeledNode(Map("uuid" -> "a"), "Company")
     val root3 = createLabeledNode(Map("uuid" -> "c"), "Company")
@@ -327,7 +327,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should handle primitive array as parameter when using index") {
     // Given
-    graph.createIndex("Company", "uuid")
+    graph.createNodeIndex("Company", "uuid")
     val root1 = createLabeledNode(Map("uuid" -> 1), "Company")
     val root2 = createLabeledNode(Map("uuid" -> 2), "Company")
     val root3 = createLabeledNode(Map("uuid" -> 3), "Company")
@@ -345,7 +345,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should handle list properties in index") {
     // Given
-    graph.createIndex("L", "prop")
+    graph.createNodeIndex("L", "prop")
     val node1 = createLabeledNode(Map("prop" -> Array(1,2,3)), "L")
     createLabeledNode(Map("prop" -> Array(3,2,1)), "L")
 
@@ -373,8 +373,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should not return any rows for OR predicates with different labels gh#12017") {
     // Given
-    graph.createIndex("Label1", "prop1")
-    graph.createIndex("Label2", "prop2")
+    graph.createNodeIndex("Label1", "prop1")
+    graph.createNodeIndex("Label2", "prop2")
     graph.withTx( tx => tx.execute("CREATE(:Label1 {prop1: 'val'})" ).close())
 
     // When
@@ -387,8 +387,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should be able to solve OR predicates with same label") {
     // Given
-    graph.createIndex("Label1", "prop1")
-    graph.createIndex("Label1", "prop2")
+    graph.createNodeIndex("Label1", "prop1")
+    graph.createNodeIndex("Label1", "prop2")
     val node1 = createLabeledNode(Map("prop1" -> "val"), "Label1")
     createLabeledNode(Map("prop2" -> "anotherVal"), "Label1")
 
@@ -402,10 +402,10 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should not return any rows for OR predicates with four indexes") {
     // Given
-    graph.createIndex("Label1", "prop1")
-    graph.createIndex("Label1", "prop2")
-    graph.createIndex("Label2", "prop1")
-    graph.createIndex("Label2", "prop2")
+    graph.createNodeIndex("Label1", "prop1")
+    graph.createNodeIndex("Label1", "prop2")
+    graph.createNodeIndex("Label2", "prop1")
+    graph.createNodeIndex("Label2", "prop2")
 
     inTx( tx =>
       for (_ <- 1 to 10) {
@@ -423,9 +423,9 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   test("should solve nested index join with apply and index seek") {
-    graph.createIndex("L1", "prop1")
-    graph.createIndex("L2", "prop2")
-    graph.createIndex("L1", "prop3")
+    graph.createNodeIndex("L1", "prop1")
+    graph.createNodeIndex("L2", "prop2")
+    graph.createNodeIndex("L1", "prop3")
 
     val node1 = createLabeledNode(Map("prop1" -> 13, "prop3" -> 1), "L1")
     val node2 = createLabeledNode(Map("prop1" -> 23, "prop3" -> 1), "L1")
@@ -461,9 +461,9 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     val query = "MATCH(n:L1), (m:L2) WHERE n.prop1 < 42 AND m.prop2 < 42 AND n.prop3 < m.prop4 RETURN n"
 
-    graph.createIndex("L1", "prop1")
-    graph.createIndex("L2", "prop2")
-    graph.createIndex("L1", "prop3")
+    graph.createNodeIndex("L1", "prop1")
+    graph.createNodeIndex("L2", "prop2")
+    graph.createNodeIndex("L1", "prop3")
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
@@ -477,14 +477,14 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   test("index seek with expression that needs to access slots") {
     createLabeledNode(Map("Name" -> "Piece of Mind", "lc_name" -> "piece of mind"), "Album")
     createLabeledNode(Map("Name" -> "Somewhere in Time", "lc_name" -> "somewhere in time"), "Album")
-    graph.createIndex("Album", "lc_name")
+    graph.createNodeIndex("Album", "lc_name")
     // Not using executeWith single the order of collect is not deterministic
     val result = executeSingle( "CYPHER runtime=slotted MATCH (a:Album) WHERE a.lc_name IN [ id IN ['Somewhere in Time','Piece of Mind','Killers'] | toLower(id) ] WITH a {ref: a.Name,id:a.lc_name} RETURN COLLECT(a) AS Map")
     result.toList should not be empty // Slotted used to crash here
   }
 
   test("should handle seek for multiple boolean properties") {
-    graph.createIndex("RULE", "disabled")
+    graph.createNodeIndex("RULE", "disabled")
     (1 to 100).foreach(_ => createLabeledNode(Map("disabled" -> false), "RULE"))
     (1 to 100).foreach(_ => createLabeledNode(Map("disabled" -> true), "RULE"))
     (1 to 100).foreach(_ => createLabeledNode("RULE"))
@@ -538,7 +538,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should specialize cartesian product of multiple (2) node index seeks") {
     // Given
-    graph.createIndex("L", "prop")
+    graph.createNodeIndex("L", "prop")
     createLabeledNode(Map("prop" -> 1), "L")
     createLabeledNode(Map("prop" -> 1), "L")
     createLabeledNode(Map("prop" -> 10), "L")
@@ -559,7 +559,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should specialize cartesian product of multiple (3) node index seeks") {
     // Given
-    graph.createIndex("L", "prop")
+    graph.createNodeIndex("L", "prop")
     createLabeledNode(Map("prop" -> 1), "L")
     createLabeledNode(Map("prop" -> 1), "L")
     createLabeledNode(Map("prop" -> 10), "L")
@@ -582,7 +582,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should specialize cartesian product of multiple (3) node index seeks with multiple input rows") {
     // Given
-    graph.createIndex("L", "prop")
+    graph.createNodeIndex("L", "prop")
     createLabeledNode(Map("prop" -> 1), "L")
     createLabeledNode(Map("prop" -> 1), "L")
     createLabeledNode(Map("prop" -> 10), "L")
@@ -606,7 +606,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   test("should handle cartesian product of seeks where one seek is empty") {
     // given
     graph.createNodeKeyConstraint("Person", "name")
-    graph.createIndex("Person", "age")
+    graph.createNodeIndex("Person", "age")
     createLabeledNode(Map("name" -> "Bob", "age" -> 47), "Person")
     createLabeledNode(Map("name" -> "Alice", "age" -> 42), "Person")
     graph.awaitIndexesOnline()
@@ -643,12 +643,12 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     for (i <- 1 to 10) createLabeledNode(Map("name" -> ("Smith" + i)), "Matrix")
 
-    graph.createIndex("Crew", "name")
+    graph.createNodeIndex("Crew", "name")
   }
 
   test("Should handle OR between labels when using index") {
-    graph.createIndex("GeneratingUnit", "id")
-    graph.createIndex("Continent", "id")
+    graph.createNodeIndex("GeneratingUnit", "id")
+    graph.createNodeIndex("Continent", "id")
     val query =
       """MATCH (n {id: '656ba4d4-09a2-42e6-a5ae-4dbf1603d5df'})
         |WHERE n: GeneratingUnit OR n: Continent
@@ -660,7 +660,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   test("Should handle OR between labels when one index is available") {
-    graph.createIndex("GeneratingUnit", "id")
+    graph.createNodeIndex("GeneratingUnit", "id")
     val query =
       """MATCH (n {id: '656ba4d4-09a2-42e6-a5ae-4dbf1603d5df'})
         |WHERE n: GeneratingUnit OR n: Continent

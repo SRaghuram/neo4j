@@ -25,8 +25,8 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
     (0 to 100) foreach (i => relateToThreeNodes(createLabeledNode(Map("id" -> i), "A")))
     (0 to 100) foreach (i => createLabeledNode(Map("id" -> i), "C"))
 
-    graph.createIndex("A", "id")
-    graph.createIndex("C", "id")
+    graph.createNodeIndex("A", "id")
+    graph.createNodeIndex("C", "id")
 
     // when
     val result = executeWith(
@@ -55,8 +55,8 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
     (0 to 100) foreach (i => relateToThreeNodes(createLabeledNode(Map("id" -> i), "A")))
     (0 to 100) foreach (i => createLabeledNode(Map("id" -> i), "C"))
 
-    graph.createIndex("A", "id")
-    graph.createIndex("C", "id")
+    graph.createNodeIndex("A", "id")
+    graph.createNodeIndex("C", "id")
 
     // when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -74,7 +74,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
 
   test("should use index on variable defined from literal map") {
     val nodes = Range(0,125).map(i => createLabeledNode(Map("id" -> i), "Foo"))
-    graph.createIndex("Foo", "id")
+    graph.createNodeIndex("Foo", "id")
     val query =
       """
         | WITH [{id: 123}, {id: 122}] AS rows
@@ -95,7 +95,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
     val nodes = Range(0,125).map(i => createLabeledNode(Map("id" -> i), "Foo"))
     createLabeledNode(Map("id"->122),"Bar")
     createLabeledNode(Map("id"->123),"Bar")
-    graph.createIndex("Foo", "id")
+    graph.createNodeIndex("Foo", "id")
     val query =
       """
         | MATCH (b:Bar) WHERE b.id = 123
@@ -111,7 +111,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
     val nodes = Range(0,125).map(i => createLabeledNode(Map("id" -> i), "Foo"))
     createLabeledNode(Map("id"->122),"Bar")
     createLabeledNode(Map("id"->123),"Bar")
-    graph.createIndex("Foo", "id")
+    graph.createNodeIndex("Foo", "id")
     val query =
       """
         | WITH [122, 123] AS rows
@@ -128,7 +128,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
   test("should be able to plan index use for inequality") {
     val aNodes = (0 to 125).map(i => createLabeledNode(Map("prop" -> i), "Foo"))
     createLabeledNode(Map("prop2" -> 122), "Bar")
-    graph.createIndex("Foo", "prop")
+    graph.createNodeIndex("Foo", "prop")
     val query =
       """ MATCH (a:Foo), (b:Bar) WHERE a.prop > b.prop2
         | RETURN a
@@ -144,7 +144,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
   test("should be able to plan index use for starts with") {
     val aNodes = (0 to 125).map(i => createLabeledNode(Map("prop" -> s"${i}string"), "Foo"))
     createLabeledNode(Map("prop2" -> "12"), "Bar")
-    graph.createIndex("Foo", "prop")
+    graph.createNodeIndex("Foo", "prop")
     val query =
       """ MATCH (a:Foo), (b:Bar) WHERE a.prop STARTS WITH b.prop2
         | RETURN a
@@ -161,7 +161,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
   ignore("should be able to plan index use for CONTAINS") {
     val aNodes = (0 to 1250).map(i => createLabeledNode(Map("prop" -> s"prefix${i}suffix"), "Foo"))
     createLabeledNode(Map("prop2" -> "12"), "Bar")
-    graph.createIndex("Foo", "prop")
+    graph.createNodeIndex("Foo", "prop")
     val query =
       """ MATCH (a:Foo), (b:Bar) WHERE a.prop CONTAINS b.prop2
         | RETURN a
@@ -176,7 +176,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
   ignore("should be able to plan index use for ENDS WITH") {
     val aNodes = (0 to 1250).map(i => createLabeledNode(Map("prop" -> s"prefix$i"), "Foo"))
     createLabeledNode(Map("prop2" -> "12"), "Bar")
-    graph.createIndex("Foo", "prop")
+    graph.createNodeIndex("Foo", "prop")
     val query =
       """ MATCH (a:Foo), (b:Bar) WHERE a.prop ENDS WITH b.prop2
         | RETURN a
@@ -197,7 +197,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
           |UNWIND range(1,200) AS y
           |CREATE (:Foo {location: point({ x:0, y:y })})
         """.stripMargin))
-    graph.createIndex("Foo", "location")
+    graph.createNodeIndex("Foo", "location")
     val query =
       """ MATCH (a:Foo), (b:Bar) WHERE distance(a.location, b.location) < 2
         | RETURN id(a)

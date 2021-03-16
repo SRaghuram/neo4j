@@ -1030,7 +1030,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // index management
     executeOnDBMSDefault("Alice", "secret", "CREATE INDEX FOR (n:Label) ON (n.prop)") should be(0)
-    graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(true)
+    graph.getMaybeNodeIndex("Label", Seq("prop")).isDefined should be(true)
 
     // constraint management
     execute("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT n.prop IS NOT NULL")

@@ -425,7 +425,7 @@ class EffectiveCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSui
     val nodeCount = 100
     val limit = 5
     (0 until nodeCount).foreach(i => createLabeledNode(Map("idx" -> i), "Person"))
-    graph.createIndex("Person", "idx")
+    graph.createNodeIndex("Person", "idx")
 
     val result = executeSingle(s"EXPLAIN MATCH (n:Person) WHERE exists(n.idx) RETURN n.idx, n.b ORDER BY n.idx, n.b LIMIT $limit")
 
@@ -442,7 +442,7 @@ class EffectiveCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSui
     val highLimit = 10
     val lowLimit = 5
     (0 until nodeCount).foreach(i => createLabeledNode(Map("idx" -> 1), "Person"))
-    graph.createIndex("Person", "idx")
+    graph.createNodeIndex("Person", "idx")
 
     val result = executeSingle(s"EXPLAIN MATCH (n:Person) WHERE exists(n.idx) WITH n ORDER BY n.idx, n.b LIMIT $highLimit RETURN * LIMIT $lowLimit")
 
@@ -913,7 +913,7 @@ class EffectiveCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSui
       }
     }
 
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val query =
       """CYPHER runtime=pipelined

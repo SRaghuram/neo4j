@@ -159,7 +159,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with a single label") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] = 'value' RETURN n", Map.empty)
 
@@ -169,7 +169,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with explicit label check") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle("EXPLAIN MATCH (n) WHERE n['key-' + n.name] = 'value' AND (n:Person) RETURN n", Map.empty)
 
@@ -181,7 +181,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
   test(
     "warn for unfulfillable index seek when using dynamic property lookup with a single label and negative predicate") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] <> 'value' RETURN n", Map.empty)
 
@@ -189,7 +189,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with range seek") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] > 10 RETURN n", Map.empty)
 
@@ -199,7 +199,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with range seek (reverse)") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE 10 > n['key-' + n.name] RETURN n", Map.empty)
 
@@ -211,7 +211,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   test(
     "warn for unfulfillable index seek when using dynamic property lookup with a single label and property existence check with exists")
   {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE exists(n['na' + 'me']) RETURN n", Map.empty)
 
@@ -221,7 +221,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with a single label and starts with") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] STARTS WITH 'Foo' RETURN n", Map.empty)
 
@@ -231,7 +231,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with a single label and regex") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] =~ 'Foo*' RETURN n", Map.empty)
 
@@ -241,7 +241,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with a single label and IN") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] IN ['Foo', 'Bar'] RETURN n", Map.empty)
 
@@ -251,7 +251,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with multiple labels") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle("EXPLAIN MATCH (n:Person:Foo) WHERE n['key-' + n.name] = 'value' RETURN n", Map.empty)
 
@@ -261,8 +261,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with multiple indexed labels") {
-    graph.createIndex("Person", "name")
-    graph.createIndex("Jedi", "weapon")
+    graph.createNodeIndex("Person", "name")
+    graph.createNodeIndex("Jedi", "weapon")
 
     val result = executeSingle("EXPLAIN MATCH (n:Person:Jedi) WHERE n['key-' + n.name] = 'value' RETURN n", Map.empty)
 
@@ -272,7 +272,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("should not warn when using dynamic property lookup with no labels") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle("EXPLAIN MATCH (n) WHERE n['key-' + n.name] = 'value' RETURN n", Map.empty)
 
@@ -280,7 +280,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("should warn when using dynamic property lookup with both a static and a dynamic property") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     val result = executeSingle(
       "EXPLAIN MATCH (n:Person) WHERE n.name = 'Tobias' AND n['key-' + n.name] = 'value' RETURN n", Map.empty)
@@ -291,7 +291,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("should not warn when using dynamic property lookup with a label having no index") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
     createLabeledNode("Foo")
 
     val result = executeSingle("EXPLAIN MATCH (n:Foo) WHERE n['key-' + n.name] = 'value' RETURN n", Map.empty)
@@ -612,14 +612,14 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("should warn when using contains on an index with SLOW_CONTAINS limitation") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
     val query = "EXPLAIN MATCH (a:Person) WHERE a.name CONTAINS 'er' RETURN a"
     val result = executeSingle(query, Map.empty)
     result.notifications should contain(SUBOPTIMAL_INDEX_FOR_CONTAINS_QUERY.notification(graphdb.InputPosition.empty, suboptimalIndex("Person", "name")))
   }
 
   test("should warn when using ends with on an index with SLOW_CONTAINS limitation") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
     val query = "EXPLAIN MATCH (a:Person) WHERE a.name ENDS WITH 'son' RETURN a"
     val result = executeSingle(query, Map.empty)
     result.notifications should contain(SUBOPTIMAL_INDEX_FOR_ENDS_WITH_QUERY.notification(graphdb.InputPosition.empty, suboptimalIndex("Person", "name")))
@@ -640,7 +640,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("should not warn when using starts with on an index with SLOW_CONTAINS limitation") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
     val query = "EXPLAIN MATCH (a:Person) WHERE a.name STARTS WITH 'er' RETURN a"
     val result = executeSingle(query, Map.empty)
     result.notifications should not contain SUBOPTIMAL_INDEX_FOR_CONTAINS_QUERY.notification(graphdb.InputPosition.empty, suboptimalIndex("Person", "name"))
@@ -718,14 +718,14 @@ class LuceneIndexNotificationAcceptanceTest extends ExecutionEngineFunSuite with
   )
 
   test("should not warn when using contains on an index with no special behaviours") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
     val query = "EXPLAIN MATCH (a:Person) WHERE a.name CONTAINS 'er' RETURN a"
     val result = executeSingle(query, Map.empty)
     result.notifications should not contain SUBOPTIMAL_INDEX_FOR_CONTAINS_QUERY.notification(graphdb.InputPosition.empty, suboptimalIndex("Person", "name"))
   }
 
   test("should not warn when using ends with on an index with no special behaviours") {
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
     val query = "EXPLAIN MATCH (a:Person) WHERE a.name ENDS WITH 'son' RETURN a"
     val result = executeSingle(query, Map.empty)
     result.notifications should not contain SUBOPTIMAL_INDEX_FOR_ENDS_WITH_QUERY.notification(graphdb.InputPosition.empty, suboptimalIndex("Person", "name"))

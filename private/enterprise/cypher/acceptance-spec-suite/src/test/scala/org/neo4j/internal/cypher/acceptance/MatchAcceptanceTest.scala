@@ -38,8 +38,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("Optional Match over or-union-index query should retain incoming arguments") {
-    graph.createIndex("Person", "name")
-    graph.createIndex("Person", "number")
+    graph.createNodeIndex("Person", "name")
+    graph.createNodeIndex("Person", "number")
     createLabeledNode(Map("name" -> "x", "number" -> 0), "Person")
     createLabeledNode(Map("name" -> "y", "number" -> 1), "Person")
     createLabeledNode(Map("name" -> "z", "number" -> 2), "Person")
@@ -378,7 +378,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate(andres, createNode())
     relate(jake, createNode())
 
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     // when
     val result = executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name = 'Jacob' RETURN n")
@@ -396,7 +396,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate(andres, createNode())
     relate(jake, createNode())
 
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     // when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
@@ -414,7 +414,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate(andres, createNode())
     relate(jake, createNode())
 
-    graph.createIndex("Person", "name")
+    graph.createNodeIndex("Person", "name")
 
     // when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name > 'Jac' RETURN n")
@@ -478,7 +478,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val e = createLabeledNode(Map("property" -> 1), "Label")
     relate(a, b)
     relate(a, e)
-    graph.createIndex("Label", "property")
+    graph.createNodeIndex("Label", "property")
 
     // when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a:Label)-->(b:Label) where a.property = b.property return a, b")
@@ -492,7 +492,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val a = createLabeledNode(Map("property" -> 42), "Label")
     val b = createLabeledNode(Map("property" -> 42), "Label")
     val e = createLabeledNode(Map("property" -> 1), "Label")
-    graph.createIndex("Label", "property")
+    graph.createNodeIndex("Label", "property")
 
     // when
     val result = executeWith(Configs.All, "MATCH (a:Label), (b:Label) WHERE a.property = b.property RETURN *")
@@ -512,7 +512,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n = createLabeledNode(Map("email" -> "me@mine"), "User")
     val m = createLabeledNode(Map("email" -> "you@yours"), "User")
     createLabeledNode(Map("emailx" -> "youtoo@yours"), "User")
-    graph.createIndex("User", "email")
+    graph.createNodeIndex("User", "email")
 
     // when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) USING INDEX n:User(email) WHERE exists(n.email) RETURN n")
@@ -527,7 +527,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n = createLabeledNode(Map("email" -> "me@mine"), "User")
     val m = createLabeledNode(Map("email" -> "you@yours"), "User")
     createLabeledNode(Map("emailx" -> "youtoo@yours"), "User")
-    graph.createIndex("User", "email")
+    graph.createNodeIndex("User", "email")
 
     // when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE exists(n.email) RETURN n")
@@ -539,7 +539,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("should use index for property existence queries (with Exists & OPTIONAL MATCH) when asked for it, on empty store") {
     // given
-    graph.createIndex("User", "email")
+    graph.createNodeIndex("User", "email")
 
     // when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE exists(n.email) RETURN n")
@@ -554,7 +554,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n = createLabeledNode(Map("email" -> "me@mine"), "User")
     val m = createLabeledNode(Map("email" -> "you@yours"), "User")
     createLabeledNode(Map("emailx" -> "youtoo@yours"), "User")
-    graph.createIndex("User", "email")
+    graph.createNodeIndex("User", "email")
 
     // when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) USING INDEX n:User(email) WHERE n.email IS NOT NULL RETURN n")
@@ -567,7 +567,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   test("should use index for property existence queries (with IS NOT NULL & OPTIONAL MATCH) when asked for it") {
     // given
     val n = createLabeledNode(Map("email" -> "me@mine"), "User")
-    graph.createIndex("User", "email")
+    graph.createNodeIndex("User", "email")
 
     // when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE n.email IS NOT NULL RETURN n")
@@ -579,7 +579,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("should use index for property existence queries (with IS NOT NULL & OPTIONAL MATCH) when asked for it, on empty store") {
     // given
-    graph.createIndex("User", "email")
+    graph.createNodeIndex("User", "email")
 
     // when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE n.email IS NOT NULL RETURN n")
@@ -597,8 +597,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n = createLabeledNode(Map("email" -> "me@mine"), "User")
     val m = createLabeledNode(Map("email" -> "you@yours"), "User")
     val p = createLabeledNode(Map("emailx" -> "youtoo@yours"), "User")
-    graph.createIndex("User", "email")
-    graph.createIndex("User", "name")
+    graph.createNodeIndex("User", "email")
+    graph.createNodeIndex("User", "name")
     Seq(n, m, p)
   }
 
@@ -636,7 +636,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     relate(subnet, host)
 
-    graph.createIndex("Host", "name")
+    graph.createNodeIndex("Host", "name")
 
     val query =
       """MATCH (subnet: Subnet)
@@ -1049,8 +1049,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("Problem with index seek gh #10387") {
-    graph.createIndex("ROLE", "id")
-    graph.createIndex("REALM", "id")
+    graph.createNodeIndex("ROLE", "id")
+    graph.createNodeIndex("REALM", "id")
 
     createLabeledNode(Map("id" -> "abc"), "ROLE")
     val realm = createLabeledNode(Map("id" -> "def"), "REALM")

@@ -725,7 +725,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN zfoo ORDER BY zfoo DESC
       """.stripMargin
 
-    graph.createIndex("A", "foo")
+    graph.createNodeIndex("A", "foo")
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Sort")) and
@@ -914,7 +914,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN a.age ORDER BY a.age
         |""".stripMargin
 
-    graph.createIndex("A", "age")
+    graph.createNodeIndex("A", "age")
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.executionPlanDescription() should includeSomewhere.aPlan("Sort")
