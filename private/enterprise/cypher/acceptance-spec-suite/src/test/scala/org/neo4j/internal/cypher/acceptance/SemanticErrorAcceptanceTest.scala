@@ -100,6 +100,13 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     )
   }
 
+  test("cant use toFloatList() on string") {
+    executeAndEnsureError(
+      "RETURN toFloatList('foo')",
+      "Type mismatch: expected List<T> but was String (line 1, column 20 (offset: 19))"
+    )
+  }
+
   test("cant use toString() on nodes") {
     executeAndEnsureError(
       "MATCH (n) RETURN toString(n)",

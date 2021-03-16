@@ -943,6 +943,35 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
   }
 
+  test("toFloatOrNull function") {
+    val compiled = compile(function("toFloatOrNull", parameter(0)))
+    evaluate(compiled, params(doubleValue(3.2))) should equal(doubleValue(3.2))
+    evaluate(compiled, params(intValue(3))) should equal(doubleValue(3))
+    evaluate(compiled, params(stringValue("3.1"))) should equal(doubleValue(3.1))
+    evaluate(compiled, params(booleanValue(true))) should equal(NO_VALUE)
+    evaluate(compiled, params(stringValue("three"))) should equal(NO_VALUE)
+    evaluate(compiled, params(VirtualValues.EMPTY_MAP)) should equal(NO_VALUE)
+    evaluate(compiled, params(VirtualValues.EMPTY_LIST)) should equal(NO_VALUE)
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled, params(evaluate(compiled, params(DateValue.MIN_VALUE)))) should equal(NO_VALUE)
+  }
+
+  test("toFloatList function") {
+    val compiled = compile(function("toFloatList", parameter(0)))
+
+    evaluate(compiled, params(list(doubleValue(3.2)))) should equal(list(doubleValue(3.2)))
+    evaluate(compiled, params(list(intValue(3)))) should equal(list(doubleValue(3)))
+    evaluate(compiled, params(list(stringValue("3.1"), intValue(2), doubleValue(1.2)))) should equal(
+      list(doubleValue(3.1), doubleValue(2), doubleValue(1.2)))
+    evaluate(compiled, params(list(stringValue("three")))) should equal(list(NO_VALUE))
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled, params(list(booleanValue(true)))) should equal(list(NO_VALUE))
+    evaluate(compiled, params(list(stringValue("1"), stringValue("2wo"), stringValue("three")))) should
+      equal(list(doubleValue(1), NO_VALUE, NO_VALUE))
+    evaluate(compiled, params(list(doubleValue(3.2), VirtualValues.EMPTY_MAP))) should equal(list(doubleValue(3.2), NO_VALUE))
+    evaluate(compiled, params(list(NO_VALUE))) should equal(list(NO_VALUE))
+  }
+
   test("toInteger function") {
     val compiled = compile(function("toInteger", parameter(0)))
 
