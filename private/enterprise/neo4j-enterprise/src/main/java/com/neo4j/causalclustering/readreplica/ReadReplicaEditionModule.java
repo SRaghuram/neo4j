@@ -283,7 +283,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         readReplicaDatabaseFactory =
                 new ReadReplicaDatabaseFactory( globalConfig, jobScheduler, topologyService, identityModule.serverId(), catchupComponentsRepository,
                         databaseEventService, storageFactory, panicService, databaseStartAborter, globalModule.getTracers().getPageCacheTracer(),
-                        asyncTxApplier );
+                        asyncTxApplier, dbmsModel );
     }
 
     @Override

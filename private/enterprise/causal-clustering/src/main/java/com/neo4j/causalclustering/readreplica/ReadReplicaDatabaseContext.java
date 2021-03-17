@@ -9,10 +9,12 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
@@ -22,6 +24,7 @@ import org.neo4j.storageengine.api.StoreId;
 public class ReadReplicaDatabaseContext
 {
     private static final String READ_REPLICA_STORE_ID_READER_TAG = "readReplicaStoreIdReader";
+    private static final String READ_REPLICA_DATABASE_ID_READER_TAG = "readReplicaDatabaseIdReader";
     private final Database kernelDatabase;
     private final Monitors monitors;
     private final Dependencies dependencies;
@@ -44,7 +47,7 @@ public class ReadReplicaDatabaseContext
         this.pageCacheTracer = pageCacheTracer;
     }
 
-    public NamedDatabaseId databaseId()
+    public NamedDatabaseId namedDatabaseId()
     {
         return kernelDatabase.getNamedDatabaseId();
     }
@@ -52,6 +55,14 @@ public class ReadReplicaDatabaseContext
     public StoreId storeId()
     {
         return readStoreIdFromDisk();
+    }
+
+    public Optional<DatabaseId> readDatabaseIdFromDisk()
+    {
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( READ_REPLICA_DATABASE_ID_READER_TAG ) )
+        {
+            return storeFiles.readDatabaseIdFromDisk( kernelDatabase.getDatabaseLayout().metadataStore(), cursorTracer );
+        }
     }
 
     private StoreId readStoreIdFromDisk()

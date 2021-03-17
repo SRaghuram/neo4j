@@ -90,32 +90,6 @@ public class RaftBinder implements Supplier<Optional<RaftGroupId>>
     }
 
     /**
-     * This method verifies if the local topology being returned by the discovery service is a viable cluster
-     * and should be bootstrapped by this host.
-     *
-     * If true, then a) the topology is sufficiently large to form a cluster; & b) this host can bootstrap for
-     * its configured database.
-     *
-     * @param coreTopology the present state of the local topology, as reported by the discovery service.
-     * @return Whether or not coreTopology, in its current state, can form a viable cluster
-     */
-    private boolean hostShouldBootstrapRaft( DatabaseCoreTopology coreTopology )
-    {
-        var serverCount = coreTopology.servers().size();
-        if ( serverCount < minCoreHosts )
-        {
-            monitor.waitingForCoreMembers( namedDatabaseId, minCoreHosts );
-            return false;
-        }
-        else if ( !topologyService.canBootstrapDatabase( namedDatabaseId ) )
-        {
-            monitor.waitingForBootstrap( namedDatabaseId );
-            return false;
-        }
-        return true;
-    }
-
-    /**
      * The raft binding process tries to establish a common raft ID. If there is no common raft ID
      * then a single instance will eventually create one and publish it through the underlying topology service.
      *
@@ -128,32 +102,16 @@ public class RaftBinder implements Supplier<Optional<RaftGroupId>>
     {
         var bindingConditions = new BindingConditions( databaseStartAborter, clock, timeout );
 
+        BoundState boundState;
         if ( raftGroupIdStorage.exists() )
         {
-            return bindToExistingRaft( bindingConditions );
+            boundState = bindToExistingRaft( bindingConditions );
         }
         else
         {
-            return bindToNewRaft( bindingConditions );
+            boundState = bindToNewRaft( bindingConditions );
         }
-    }
-
-    private BoundState bindToNewRaft( BindingConditions bindingConditions ) throws Exception
-    {
-        /* The binding protocol towards other servers has to be re-written if we are to support random RaftMemberIDs. */
-        var raftMemberId = new RaftMemberId( myIdentity.serverId().uuid() );
-        myIdentity.createMemberId( namedDatabaseId, raftMemberId );
-        topologyService.onRaftMemberKnown( namedDatabaseId, raftMemberId );
-
-        if ( isInitialDatabase() )
-        {
-            return bindToInitialRaftGroup( bindingConditions, raftMemberId );
-        }
-        else
-        {
-            var initialServers = systemGraph.getInitialServers( namedDatabaseId ).stream().map( ServerId::new ).collect( toSet() );
-            return bindToRaftGroupNotPartOfInitialDatabases( bindingConditions, initialServers, raftMemberId );
-        }
+        return boundState;
     }
 
     private BoundState bindToExistingRaft( BindingConditions bindingConditions ) throws Exception
@@ -170,17 +128,27 @@ public class RaftBinder implements Supplier<Optional<RaftGroupId>>
         return new BoundState( raftGroupId );
     }
 
-    private static void validateRaftId( RaftGroupId raftGroupId, NamedDatabaseId namedDatabaseId )
+    private BoundState bindToNewRaft( BindingConditions bindingConditions ) throws Exception
     {
-        if ( !Objects.equals( raftGroupId.uuid(), namedDatabaseId.databaseId().uuid() ) )
+        /* The binding protocol towards other servers has to be re-written if we are to support random RaftMemberIDs. */
+        var raftMemberId = initializeNewRaftMemberId();
+
+        if ( shouldUseDiscoveryServiceMethod() )
         {
-            throw new IllegalStateException( format( "Pre-existing cluster state found with an unexpected id %s. The id for this database is %s. " +
-                            "This may indicate a previous DROP operation for %s did not complete.",
-                    raftGroupId.uuid(), namedDatabaseId.databaseId().uuid(), namedDatabaseId ) );
+            return bindUsingDiscoveryService( bindingConditions, raftMemberId );
+        }
+        else
+        {
+            return bindUsingSystemDatabase( bindingConditions, raftMemberId );
         }
     }
 
-    private BoundState bindToInitialRaftGroup( BindingConditions bindingConditions, RaftMemberId raftMemberId ) throws Exception
+    private boolean shouldUseDiscoveryServiceMethod()
+    {
+        return namedDatabaseId.isSystemDatabase() || systemGraph.getInitialServers( namedDatabaseId ).isEmpty();
+    }
+
+    private BoundState bindUsingDiscoveryService( BindingConditions bindingConditions, RaftMemberId raftMemberId ) throws Exception
     {
         DatabaseCoreTopology topology;
         CoreSnapshot snapshot;
@@ -190,11 +158,11 @@ public class RaftBinder implements Supplier<Optional<RaftGroupId>>
             topology = topologyService.coreTopologyForDatabase( namedDatabaseId );
             if ( bootstrappedByOther( topology ) )
             {
-                validateRaftId( topology.raftGroupId(), namedDatabaseId );
-                // Someone else bootstrapped, we're done!
-                return handleBootstrapByOther( topology, raftMemberId );
+                var boundState = handleBootstrapByOther( topology );
+                monitor.boundToRaftThroughTopology( namedDatabaseId, raftMemberId );
+                return boundState;
             }
-            if ( hostShouldBootstrapRaft( topology ) )
+            if ( hostShouldBootstrapRaftUsingDiscovery( topology ) )
             {
                 var raftGroupId = RaftGroupId.from( namedDatabaseId.databaseId() );
 
@@ -220,7 +188,72 @@ public class RaftBinder implements Supplier<Optional<RaftGroupId>>
         }
     }
 
-    private BoundState awaitBootstrapByOther( BindingConditions bindingConditions, RaftMemberId raftMemberId ) throws Exception
+    private BoundState bindUsingSystemDatabase( BindingConditions bindingConditions, RaftMemberId raftMemberId ) throws Exception
+    {
+        BoundState boundState;
+        var designatedSeeder = systemGraph.designatedSeeder( namedDatabaseId );
+        var initialServers = systemGraph.getInitialServers( namedDatabaseId );
+        var storeId = systemGraph.getStoreId( namedDatabaseId );
+
+        if ( designatedSeeder.isPresent() )
+        {
+            var iAmDesignatedSeeder = designatedSeeder.get().equals( myIdentity.serverId() );
+            if ( iAmDesignatedSeeder )
+            {
+                validateStoreExists();
+                boundState = bootstrap( bindingConditions, initialServers, raftMemberId, storeId, true );
+                monitor.bootstrapped( boundState.snapshot().get(), namedDatabaseId, myIdentity.raftMemberId( namedDatabaseId ) );
+            }
+            else
+            {
+                boundState = awaitBootstrapByOther( bindingConditions );
+                monitor.boundToRaftThroughTopology( namedDatabaseId, raftMemberId );
+                if ( !raftBootstrapper.isEqualToStoreFileDatabaseId( namedDatabaseId.databaseId() ) )
+                {
+                    raftBootstrapper.deleteLocalStore();
+                }
+            }
+        }
+        else
+        {
+            var hostCanBootstrap = initialServers.contains( myIdentity.serverId() );
+            if ( hostCanBootstrap )
+            {
+                boundState = bootstrap( bindingConditions, initialServers, raftMemberId, storeId, false );
+                monitor.bootstrapped( boundState.snapshot().get(), namedDatabaseId, myIdentity.raftMemberId( namedDatabaseId ) );
+            }
+            else
+            {
+                boundState = awaitBootstrapByOther( bindingConditions );
+                monitor.boundToRaftThroughTopology( namedDatabaseId, raftMemberId );
+            }
+        }
+        return boundState;
+    }
+
+    private RaftMemberId initializeNewRaftMemberId()
+    {
+        var raftMemberId = new RaftMemberId( myIdentity.serverId().uuid() );
+        myIdentity.createMemberId( namedDatabaseId, raftMemberId );
+        topologyService.onRaftMemberKnown( namedDatabaseId, raftMemberId );
+        return raftMemberId;
+    }
+
+    private BoundState bootstrap( BindingConditions bindingConditions, Set<ServerId> initialServers, RaftMemberId raftMemberId, StoreId storeId,
+                                  boolean overWriteDatabaseId )
+            throws Exception
+    {
+        var raftGroupId = RaftGroupId.from( namedDatabaseId.databaseId() );
+        monitor.bootstrapAttempt( initialServers, storeId );
+        awaitPublishRaftId( bindingConditions, raftGroupId, raftMemberId );
+        this.raftGroupId = raftGroupId;
+
+        var initialMemberIds = initialServers.stream().map( serverId -> new RaftMemberId( serverId.uuid() ) ).collect( toSet() );
+        var snapshot = raftBootstrapper.bootstrap( initialMemberIds, storeId, overWriteDatabaseId );
+        return new BoundState( raftGroupId, snapshot );
+    }
+
+    private BoundState awaitBootstrapByOther( BindingConditions bindingConditions ) throws Exception
     {
         DatabaseCoreTopology topology;
         while ( true )
@@ -228,53 +261,67 @@ public class RaftBinder implements Supplier<Optional<RaftGroupId>>
             topology = topologyService.coreTopologyForDatabase( namedDatabaseId );
             if ( bootstrappedByOther( topology ) )
             {
-                validateRaftId( topology.raftGroupId(), namedDatabaseId );
-                // Someone else bootstrapped, we're done!
-                return handleBootstrapByOther( topology, raftMemberId );
+                return handleBootstrapByOther( topology );
             }
             bindingConditions.allowContinueBindingWaitForOthers( namedDatabaseId, topology );
         }
     }
 
-    private BoundState bindToRaftGroupNotPartOfInitialDatabases( BindingConditions bindingConditions, Set<ServerId> initialServers, RaftMemberId raftMemberId )
-            throws Exception
+    private BoundState handleBootstrapByOther( DatabaseCoreTopology topology ) throws IOException
     {
-        if ( !initialServers.contains( myIdentity.serverId() ) )
-        {
-            return awaitBootstrapByOther( bindingConditions, raftMemberId );
-        }
-        else
-        {
-            // Used for databases created during runtime in response to operator commands.
-            StoreId storeId = systemGraph.getStoreId( namedDatabaseId );
-            var raftGroupId = RaftGroupId.from( namedDatabaseId.databaseId() );
-            monitor.bootstrapAttempt( initialServers, storeId );
-            awaitPublishRaftId( bindingConditions, raftGroupId, raftMemberId );
-            this.raftGroupId = raftGroupId;
+        validateRaftId( topology.raftGroupId(), namedDatabaseId );
+        saveSystemDatabase();
+        raftGroupId = topology.raftGroupId();
+        return new BoundState( raftGroupId );
+    }
 
-            var initialMemberIds = initialServers.stream().map( serverId -> new RaftMemberId( serverId.uuid() ) ).collect( toSet() );
-            var snapshot = raftBootstrapper.bootstrap( initialMemberIds, storeId );
-            monitor.bootstrapped( snapshot, namedDatabaseId, myIdentity.raftMemberId( namedDatabaseId ) );
-            return new BoundState( raftGroupId, snapshot );
+    /**
+     * This method verifies if the local topology being returned by the discovery service is a viable cluster
+     * and should be bootstrapped by this host.
+     *
+     * If true, then a) the topology is sufficiently large to form a cluster; & b) this host can bootstrap for
+     * its configured database.
+     *
+     * @param coreTopology the present state of the local topology, as reported by the discovery service.
+     * @return Whether or not coreTopology, in its current state, can form a viable cluster
+     */
+    private boolean hostShouldBootstrapRaftUsingDiscovery( DatabaseCoreTopology coreTopology )
+    {
+        var serverCount = coreTopology.servers().size();
+        if ( serverCount < minCoreHosts )
+        {
+            monitor.waitingForCoreMembers( namedDatabaseId, minCoreHosts );
+            return false;
+        }
+        if ( !topologyService.canBootstrapDatabase( namedDatabaseId ) )
+        {
+            monitor.waitingForBootstrap( namedDatabaseId );
+            return false;
+        }
+        return true;
+    }
+
+    private void validateStoreExists()
+    {
+        if ( !raftBootstrapper.isStorePresent() )
+        {
+            throw new IllegalStateException( format( "Designated seeder doesn't have store for %s to bootstrap", namedDatabaseId.name() ) );
         }
     }
 
-    private boolean isInitialDatabase()
+    private static void validateRaftId( RaftGroupId raftGroupId, NamedDatabaseId namedDatabaseId )
     {
-        return namedDatabaseId.isSystemDatabase() || systemGraph.getInitialServers( namedDatabaseId ).isEmpty();
+        if ( !Objects.equals( raftGroupId.uuid(), namedDatabaseId.databaseId().uuid() ) )
+        {
+            throw new IllegalStateException( format( "Pre-existing cluster state found with an unexpected id %s. The id for this database is %s. " +
+                            "This may indicate a previous DROP operation for %s did not complete.",
+                    raftGroupId.uuid(), namedDatabaseId.databaseId().uuid(), namedDatabaseId ) );
+        }
     }
 
     private boolean bootstrappedByOther( DatabaseCoreTopology topology )
     {
         return topology.raftGroupId() != null && !topologyService.didBootstrapDatabase( namedDatabaseId );
-    }
-
-    private BoundState handleBootstrapByOther( DatabaseCoreTopology topology, RaftMemberId raftMemberId ) throws IOException
-    {
-        saveSystemDatabase();
-        monitor.boundToRaftThroughTopology( namedDatabaseId, raftMemberId );
-        raftGroupId = topology.raftGroupId();
-        return new BoundState( raftGroupId );
     }
 
     /**

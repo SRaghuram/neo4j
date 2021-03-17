@@ -5,10 +5,10 @@
  */
 package com.neo4j.causalclustering.identity;
 
+import com.neo4j.causalclustering.core.state.BootstrapContext;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.InMemorySimpleStorage;
-import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
@@ -21,7 +21,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.Duration;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -36,8 +35,10 @@ import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.io.state.SimpleStorage;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.time.Clocks;
@@ -48,7 +49,7 @@ import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 import static java.util.UUID.randomUUID;
-import static java.util.stream.Collectors.toSet;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -56,12 +57,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
@@ -80,51 +81,6 @@ class RaftBinderTest
     private final Config config = Config.defaults();
     private final int minCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
     private final CoreServerIdentity me = new InMemoryCoreServerIdentity();
-
-    private Set<UUID> extractServerUUIDs( Map<ServerId,CoreServerInfo> servers )
-    {
-        return servers.keySet().stream().map( ServerId::uuid ).collect( toSet() );
-    }
-
-    private ClusterSystemGraphDbmsModel systemGraphFor( NamedDatabaseId namedDatabaseId, Set<UUID> initialServers )
-    {
-        ClusterSystemGraphDbmsModel systemGraph = mock( ClusterSystemGraphDbmsModel.class );
-        when( systemGraph.getStoreId( namedDatabaseId ) ).thenReturn( SOME_STORE_ID );
-        when( systemGraph.getInitialServers( namedDatabaseId ) ).thenReturn( initialServers );
-        return systemGraph;
-    }
-
-    private DatabaseStartAborter neverAbort()
-    {
-        var aborter = mock( DatabaseStartAborter.class );
-        when( aborter.shouldAbort( any( NamedDatabaseId.class ) ) ).thenReturn( false );
-        return aborter;
-    }
-
-    private DatabaseStartAborter abortAfter( int n )
-    {
-        var falsesS = Stream.generate( () -> false ).limit( n );
-        var answers = Stream.concat( falsesS, Stream.of( true ) ).collect( Collectors.toList() );
-        var head = answers.get( 0 );
-        var tail = answers.subList( 1, answers.size() ).toArray(Boolean[]::new);
-        var aborter = mock( DatabaseStartAborter.class );
-        when( aborter.shouldAbort( any( NamedDatabaseId.class ) ) ).thenReturn( head, tail );
-        return aborter;
-    }
-
-    private RaftBinder raftBinder( SimpleStorage<RaftGroupId> raftIdStorage, CoreTopologyService topologyService )
-    {
-        ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, emptySet() );
-        return new RaftBinder( SOME_NAMED_DATABASE_ID, me, raftIdStorage, topologyService, systemGraph, clock,
-                               () -> clock.forward( 1, TimeUnit.SECONDS ), Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors() );
-    }
-
-    private RaftBinder raftBinder( SimpleStorage<RaftGroupId> raftIdStorage, CoreTopologyService topologyService, NamedDatabaseId namedDatabaseId,
-            ClusterSystemGraphDbmsModel systemGraph )
-    {
-        return new RaftBinder( namedDatabaseId, me, raftIdStorage, topologyService, systemGraph, clock,
-                               () -> clock.forward( 1, TimeUnit.SECONDS ), Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors() );
-    }
 
     @Test
     void shouldThrowOnAbort()
@@ -406,16 +362,16 @@ class RaftBinderTest
                 .thenReturn( new RaftMemberId( serverId.uuid() ) ) );
 
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
-        when( raftBootstrapper.bootstrap( raftMembers, SOME_STORE_ID ) ).thenReturn( snapshot );
+        when( raftBootstrapper.bootstrap( raftMembers, SOME_STORE_ID, false ) ).thenReturn( snapshot );
 
-        ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, extractServerUUIDs( servers ) );
+        ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, servers.keySet() );
         RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_NAMED_DATABASE_ID, systemGraph );
 
         // when
         BoundState boundState = binder.bindToRaft( neverAbort() );
 
         // then
-        verify( raftBootstrapper ).bootstrap( raftMembers, SOME_STORE_ID );
+        verify( raftBootstrapper ).bootstrap( raftMembers, SOME_STORE_ID, false );
         Optional<RaftGroupId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( raftId.get().uuid(), SOME_NAMED_DATABASE_ID.databaseId().uuid() );
@@ -442,7 +398,6 @@ class RaftBinderTest
 
         // then
         verify( topologyService ).coreTopologyForDatabase( SOME_NAMED_DATABASE_ID );
-        verifyNoInteractions( raftBootstrapper );
 
         Optional<RaftGroupId> raftId = binder.get();
         assertEquals( Optional.of( publishedRaftGroupId ), raftId );
@@ -468,7 +423,6 @@ class RaftBinderTest
         // then
         verify( topologyService ).coreTopologyForDatabase( NAMED_SYSTEM_DATABASE_ID );
         verify( raftBootstrapper ).saveStore();
-        verifyNoMoreInteractions( raftBootstrapper );
 
         Optional<RaftGroupId> raftId = binder.get();
         assertNoSnapshot( boundState );
@@ -509,6 +463,199 @@ class RaftBinderTest
         // then
         verify( topologyService, atLeast( 2 ) ).publishRaftId( eq( raftId ), any( RaftMemberId.class ) );
         assertHasSnapshot( boundState );
+    }
+
+    @Test
+    void shouldTrowIfDesignatedSeederDoesntHaveStore()
+    {
+        // given
+        var systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, Set.of( me.serverId() ), me.serverId() );
+        var raftBootstrapper = new StubBootstrapper( false, false );
+        var topologyService = mock( CoreTopologyService.class );
+        var raftBinder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_NAMED_DATABASE_ID, systemGraph, raftBootstrapper );
+        var expectedMessage = String.format( "Designated seeder doesn't have store for %s to bootstrap", SOME_NAMED_DATABASE_ID.name() );
+
+        // when / then
+        var exception = assertThrows( IllegalStateException.class, () -> raftBinder.bindToRaft( neverAbort() ) );
+        assertThat( exception.getMessage() ).isEqualTo( expectedMessage );
+    }
+
+    @Test
+    void shouldBootstrapIfIAmDesignatedSeederAndHaveStore() throws Exception
+    {
+        // given
+        var systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, Set.of( me.serverId() ), me.serverId() );
+        var raftGroupId = RaftGroupId.from( SOME_NAMED_DATABASE_ID.databaseId() );
+        var raftBootstrapper = new StubBootstrapper( false, true );
+        var topologyService = createTopologyService();
+
+        var raftBinder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_NAMED_DATABASE_ID, systemGraph, raftBootstrapper );
+
+        // when
+        var boundState = raftBinder.bindToRaft( neverAbort() );
+
+        // then
+        assertThat( boundState.raftGroupId() ).isEqualTo( raftGroupId );
+        assertThat( boundState.snapshot() ).isNotEmpty();
+        verify( topologyService, times( 1 ) ).publishRaftId( raftGroupId, me.raftMemberId( SOME_NAMED_DATABASE_ID ) );
+    }
+
+    @Test
+    void shouldNotBootstrapIfDesignatedSeederExistsAndIsSomeoneElse() throws Exception
+    {
+        // given
+        var designatedSeederServerId = new ServerId( UUID.randomUUID() );
+        var systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, Set.of( me.serverId(), designatedSeederServerId ), designatedSeederServerId );
+        var topologyService = createTopologyService();
+
+        var raftBinder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_NAMED_DATABASE_ID, systemGraph );
+
+        // when
+        var boundState = raftBinder.bindToRaft( neverAbort() );
+
+        // then
+        assertThat( boundState.raftGroupId() ).isEqualTo( RaftGroupId.from( SOME_NAMED_DATABASE_ID.databaseId() ) );
+        assertThat( boundState.snapshot() ).isEmpty();
+    }
+
+    @Test
+    void shouldDeleteLocalStoreFilesIfDatabaseIdMismatch() throws Exception
+    {
+        // given
+        var designatedSeederServerId = new ServerId( randomUUID() );
+        var initialServers = Set.of( me.serverId(), designatedSeederServerId );
+        var systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, initialServers, designatedSeederServerId );
+        var raftBootstrapper = spy( new StubBootstrapper( false, true ) );
+        var topologyService = createTopologyService();
+
+        var raftBinder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_NAMED_DATABASE_ID, systemGraph, raftBootstrapper );
+
+        // when/then
+        raftBinder.bindToRaft( neverAbort() );
+        verify( raftBootstrapper, atLeastOnce() ).deleteLocalStore();
+    }
+
+    @Test
+    void shouldNotDeleteLocalStoreFilesIfDatabaseIdDoMatch() throws Exception
+    {
+        // given
+        var designatedSeederServerId = new ServerId( randomUUID() );
+        var initialServers = Set.of( me.serverId(), designatedSeederServerId );
+        var systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, initialServers, designatedSeederServerId );
+        var raftBootstrapper = spy( new StubBootstrapper( true, true ) );
+        var topologyService = createTopologyService();
+
+        var raftBinder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_NAMED_DATABASE_ID, systemGraph, raftBootstrapper );
+
+        // when/then
+        raftBinder.bindToRaft( neverAbort() );
+        verify( raftBootstrapper, never() ).deleteLocalStore();
+    }
+
+    private ClusterSystemGraphDbmsModel systemGraphFor( NamedDatabaseId namedDatabaseId, Set<ServerId> initialServers )
+    {
+        ClusterSystemGraphDbmsModel systemGraph = mock( ClusterSystemGraphDbmsModel.class );
+        when( systemGraph.getStoreId( namedDatabaseId ) ).thenReturn( SOME_STORE_ID );
+        when( systemGraph.getInitialServers( namedDatabaseId ) ).thenReturn( initialServers );
+        return systemGraph;
+    }
+
+    private ClusterSystemGraphDbmsModel systemGraphFor( NamedDatabaseId namedDatabaseId, Set<ServerId> initialServers, ServerId designatedSeeder )
+    {
+        var systemGraph = systemGraphFor( namedDatabaseId, initialServers );
+        when( systemGraph.designatedSeeder( namedDatabaseId ) ).thenReturn( Optional.ofNullable( designatedSeeder ) );
+        return systemGraph;
+    }
+
+    private DatabaseStartAborter neverAbort()
+    {
+        var aborter = mock( DatabaseStartAborter.class );
+        when( aborter.shouldAbort( any( NamedDatabaseId.class ) ) ).thenReturn( false );
+        return aborter;
+    }
+
+    private DatabaseStartAborter abortAfter( int n )
+    {
+        var falsesS = Stream.generate( () -> false ).limit( n );
+        var answers = Stream.concat( falsesS, Stream.of( true ) ).collect( Collectors.toList() );
+        var head = answers.get( 0 );
+        var tail = answers.subList( 1, answers.size() ).toArray(Boolean[]::new);
+        var aborter = mock( DatabaseStartAborter.class );
+        when( aborter.shouldAbort( any( NamedDatabaseId.class ) ) ).thenReturn( head, tail );
+        return aborter;
+    }
+
+    private RaftBinder raftBinder( SimpleStorage<RaftGroupId> raftIdStorage, CoreTopologyService topologyService )
+    {
+        ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, emptySet() );
+        return new RaftBinder( SOME_NAMED_DATABASE_ID, me, raftIdStorage, topologyService, systemGraph, clock,
+                               () -> clock.forward( 1, TimeUnit.SECONDS ), Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors() );
+    }
+
+    private RaftBinder raftBinder( SimpleStorage<RaftGroupId> raftIdStorage, CoreTopologyService topologyService, NamedDatabaseId namedDatabaseId,
+                                   ClusterSystemGraphDbmsModel systemGraph )
+    {
+        return new RaftBinder( namedDatabaseId, me, raftIdStorage, topologyService, systemGraph, clock,
+                               () -> clock.forward( 1, TimeUnit.SECONDS ), Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors() );
+    }
+
+    private RaftBinder raftBinder( SimpleStorage<RaftGroupId> raftIdStorage, CoreTopologyService topologyService, NamedDatabaseId namedDatabaseId,
+                                   ClusterSystemGraphDbmsModel systemGraph, RaftBootstrapper raftBootstrapper )
+    {
+        return new RaftBinder( namedDatabaseId, me, raftIdStorage, topologyService, systemGraph, clock,
+                               () -> clock.forward( 1, TimeUnit.SECONDS ), Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors() );
+    }
+
+    private CoreTopologyService createTopologyService() throws TimeoutException
+    {
+        var coreTopology = mock( DatabaseCoreTopology.class );
+        var raftGroupId = RaftGroupId.from( SOME_NAMED_DATABASE_ID.databaseId() );
+        when( coreTopology.raftGroupId() ).thenReturn( raftGroupId );
+
+        var topologyService = mock( CoreTopologyService.class );
+        when( topologyService.didBootstrapDatabase( SOME_NAMED_DATABASE_ID ) ).thenReturn( false );
+        when( topologyService.coreTopologyForDatabase( SOME_NAMED_DATABASE_ID ) ).thenReturn( coreTopology );
+        when( topologyService.publishRaftId( any(), any() ) ).thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_ME );
+        return topologyService;
+    }
+
+    private class StubBootstrapper extends RaftBootstrapper
+    {
+        private final boolean databaseIdMatch;
+        private final boolean storeFilesExist;
+        private final CoreSnapshot snapshot;
+
+        StubBootstrapper( boolean databaseIdMatch, boolean storeFilesExist )
+        {
+            super( mock( BootstrapContext.class ), null, null, null, NullLogProvider.getInstance(), null, config, null, null, null );
+            this.databaseIdMatch = databaseIdMatch;
+            this.storeFilesExist = storeFilesExist;
+            this.snapshot = new CoreSnapshot( 1337, 42 );
+        }
+
+        @Override
+        public CoreSnapshot bootstrap( Set<RaftMemberId> raftMembers, StoreId storeId )
+        {
+            return snapshot;
+        }
+
+        @Override
+        public CoreSnapshot bootstrap( Set<RaftMemberId> raftMembers, StoreId storeId, boolean overWriteDatabaseId )
+        {
+            return snapshot;
+        }
+
+        @Override
+        public boolean isStorePresent()
+        {
+            return storeFilesExist;
+        }
+
+        @Override
+        public boolean isEqualToStoreFileDatabaseId( DatabaseId databaseId )
+        {
+            return databaseIdMatch;
+        }
     }
 
     private void assertNoSnapshot( BoundState boundState )

@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
@@ -29,6 +30,7 @@ public class ClusterSystemGraphDbmsModel extends EnterpriseSystemGraphDbmsModel
     static final String STORE_CREATION_TIME = "store_creation_time";
     static final String STORE_RANDOM_ID = "store_random_id";
     static final String STORE_VERSION = "store_version";
+    public static final String DESIGNATED_SEEDER = "designated_seeder";
 
     public ClusterSystemGraphDbmsModel( Supplier<GraphDatabaseService> systemDatabase )
     {
@@ -38,7 +40,7 @@ public class ClusterSystemGraphDbmsModel extends EnterpriseSystemGraphDbmsModel
     /**
      * Initial servers are not written for databases created during cluster formation.
      */
-    public Set<UUID> getInitialServers( NamedDatabaseId namedDatabaseId )
+    public Set<ServerId> getInitialServers( NamedDatabaseId namedDatabaseId )
     {
         try ( var tx = systemDatabase.get().beginTx() )
         {
@@ -47,6 +49,7 @@ public class ClusterSystemGraphDbmsModel extends EnterpriseSystemGraphDbmsModel
             String[] initialServers = (String[]) node.getProperty( INITIAL_SERVERS );
             return Arrays.stream( initialServers )
                          .map( UUID::fromString )
+                         .map( ServerId::new )
                          .collect( toSet() );
         }
         catch ( NotFoundException e )
@@ -64,6 +67,18 @@ public class ClusterSystemGraphDbmsModel extends EnterpriseSystemGraphDbmsModel
             long randomId = (long) node.getProperty( STORE_RANDOM_ID );
             String storeVersion = (String) node.getProperty( STORE_VERSION );
             return new StoreId( creationTime, randomId, MetaDataStore.versionStringToLong( storeVersion ) );
+        }
+    }
+
+    public Optional<ServerId> designatedSeeder( NamedDatabaseId namedDatabaseId )
+    {
+        try ( var tx = systemDatabase.get().beginTx() )
+        {
+            var node = databaseNode( namedDatabaseId, tx );
+            var designatedSeederUuid = (String) node.getProperty( DESIGNATED_SEEDER, null );
+            return Optional.ofNullable( designatedSeederUuid )
+                           .map( UUID::fromString )
+                           .map( ServerId::new );
         }
     }
 
@@ -87,6 +102,7 @@ public class ClusterSystemGraphDbmsModel extends EnterpriseSystemGraphDbmsModel
                     database.removeProperty( STORE_CREATION_TIME );
                     database.removeProperty( STORE_RANDOM_ID );
                     database.removeProperty( STORE_VERSION );
+                    database.removeProperty( DESIGNATED_SEEDER );
                 }
             }
             tx.commit();

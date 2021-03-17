@@ -6,9 +6,9 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
@@ -18,14 +18,15 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.DatabaseStartAborter;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.TimeoutStrategy;
@@ -48,11 +49,12 @@ class ReadReplicaBootstrap
     private final Supplier<CatchupComponents> catchupComponentsSupplier;
     private final ReadReplicaDatabaseContext databaseContext;
     private final LastTxMonitor lastTxIdMonitor;
+    private final ClusterSystemGraphDbmsModel systemDbmsModel;
 
     ReadReplicaBootstrap( ReadReplicaDatabaseContext databaseContext, UpstreamDatabaseStrategySelector selectionStrategy, LogProvider debugLogProvider,
                           LogProvider userLogProvider, TopologyService topologyService, Supplier<CatchupComponents> catchupComponentsSupplier,
                           ClusterInternalDbmsOperator internalOperator, DatabaseStartAborter databaseStartAborter, TimeoutStrategy syncRetryStrategy,
-                          CommandIndexTracker commandIndexTracker )
+                          CommandIndexTracker commandIndexTracker, ClusterSystemGraphDbmsModel systemDbmsModel )
     {
         this.databaseContext = databaseContext;
         this.catchupComponentsSupplier = catchupComponentsSupplier;
@@ -64,11 +66,12 @@ class ReadReplicaBootstrap
         this.topologyService = topologyService;
         this.internalOperator = internalOperator;
         this.lastTxIdMonitor = new LastTxMonitor( commandIndexTracker );
+        this.systemDbmsModel = systemDbmsModel;
     }
 
     public void perform() throws Exception
     {
-        var bootstrapHandle = internalOperator.bootstrap( databaseContext.databaseId() );
+        var bootstrapHandle = internalOperator.bootstrap( databaseContext.namedDatabaseId() );
         boolean shouldAbort = false;
         try
         {
@@ -94,7 +97,7 @@ class ReadReplicaBootstrap
                         Thread.sleep( syncRetryWaitPeriod.getMillis() );
                         syncRetryWaitPeriod.increment();
                     }
-                    shouldAbort = databaseStartAborter.shouldAbort( databaseContext.databaseId() );
+                    shouldAbort = databaseStartAborter.shouldAbort( databaseContext.namedDatabaseId() );
                 }
                 catch ( InterruptedException e )
                 {
@@ -111,13 +114,13 @@ class ReadReplicaBootstrap
         }
         finally
         {
-            databaseStartAborter.started( databaseContext.databaseId() );
+            databaseStartAborter.started( databaseContext.namedDatabaseId() );
             bootstrapHandle.release();
         }
 
         if ( shouldAbort )
         {
-            throw new DatabaseStartAbortedException( databaseContext.databaseId() );
+            throw new DatabaseStartAbortedException( databaseContext.namedDatabaseId() );
         }
     }
 
@@ -125,11 +128,11 @@ class ReadReplicaBootstrap
     {
         try
         {
-            return selectionStrategy.bestUpstreamServersForDatabase( databaseContext.databaseId() );
+            return selectionStrategy.bestUpstreamServersForDatabase( databaseContext.namedDatabaseId() );
         }
         catch ( UpstreamDatabaseSelectionException e )
         {
-            debugLog.warn( "Unable to find upstream member for " + databaseContext.databaseId() );
+            debugLog.warn( "Unable to find upstream member for " + databaseContext.namedDatabaseId() );
         }
         return List.of();
     }
@@ -138,7 +141,7 @@ class ReadReplicaBootstrap
     {
         try
         {
-            debugLog.info( "Syncing db: %s", databaseContext.databaseId() );
+            debugLog.info( "Syncing db: %s", databaseContext.namedDatabaseId() );
             syncStoreWithUpstream( databaseContext, source );
             return true;
         }
@@ -154,56 +157,95 @@ class ReadReplicaBootstrap
         }
         catch ( StoreCopyFailedException e )
         {
-            debugLog.warn( "Unable to copy store files from %s", source );
+            debugLog.warn( "Unable to copy store files" );
             return false;
         }
         catch ( DatabaseShutdownException | IOException e )
         {
-            debugLog.warn( format( "Syncing of stores failed unexpectedly from %s", source ), e );
+            debugLog.warn( "Syncing of stores failed unexpectedly", e );
             return false;
         }
     }
 
-    private void syncStoreWithUpstream( ReadReplicaDatabaseContext databaseContext, ServerId source )
-            throws IOException, StoreIdDownloadFailedException, StoreCopyFailedException, TopologyLookupException, DatabaseShutdownException
+    private void syncStoreWithUpstream( ReadReplicaDatabaseContext databaseContext, ServerId sourceServer )
+            throws IOException, StoreIdDownloadFailedException, StoreCopyFailedException, DatabaseShutdownException, CatchupAddressResolutionException
     {
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponentsSupplier.get();
 
+        debugLog.info( "Finding store ID of upstream server %s", sourceServer );
+        var sourceAddress = topologyService.lookupCatchupAddress( sourceServer );
+        var remoteStoreId = catchupComponents.remoteStore().getStoreId( sourceAddress );
+
         if ( databaseContext.isEmpty() )
         {
-            debugLog.info( "Local database is empty, attempting to replace with copy from upstream server %s", source );
-
-            debugLog.info( "Finding store ID of upstream server %s", source );
-            SocketAddress fromAddress = topologyService.lookupCatchupAddress( source );
-            StoreId storeId = catchupComponents.remoteStore().getStoreId( fromAddress );
-
-            debugLog.info( "Copying store from upstream server %s", source );
-            databaseContext.delete();
-            databaseContext.monitors().addMonitorListener( lastTxIdMonitor );
-            final var provider = new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategy );
-            catchupComponents.storeCopyProcess().replaceWithStoreFrom( provider, storeId );
-            databaseContext.monitors().removeMonitorListener( lastTxIdMonitor );
-
-            debugLog.info( "Restarting local database after copy.", source );
+            syncEmptyStore( catchupComponents, remoteStoreId );
         }
         else
         {
-            ensureStoreIsPresentAt( databaseContext, catchupComponents.remoteStore(), source );
+            syncExistingStore( databaseContext, catchupComponents, remoteStoreId );
         }
     }
 
-    private void ensureStoreIsPresentAt( ReadReplicaDatabaseContext databaseContext, RemoteStore remoteStore, ServerId upstream )
-            throws StoreIdDownloadFailedException, TopologyLookupException
+    private void syncEmptyStore( CatchupComponents catchupComponents, StoreId remoteStoreId )
+            throws IOException, StoreCopyFailedException, DatabaseShutdownException
     {
-        StoreId localStoreId = databaseContext.storeId();
-        SocketAddress advertisedSocketAddress = topologyService.lookupCatchupAddress( upstream );
-        StoreId remoteStoreId = remoteStore.getStoreId( advertisedSocketAddress );
-        if ( !localStoreId.equals( remoteStoreId ) )
+        debugLog.info( "Local database is empty, attempting to replace with copy from upstream servers" );
+        replaceStore( remoteStoreId, catchupComponents );
+    }
+
+    private void syncExistingStore( ReadReplicaDatabaseContext databaseContext, CatchupComponents catchupComponents, StoreId remoteStoreId )
+            throws IOException, StoreCopyFailedException, DatabaseShutdownException
+    {
+        var localAndRemoteStoreIdMatch = Objects.equals( databaseContext.storeId(), remoteStoreId );
+        var databaseIdMatch = databaseIdMatch();
+
+        if ( localAndRemoteStoreIdMatch && databaseIdMatch )
         {
-            throw new IllegalStateException(
-                    format( "This read replica cannot join the cluster. " + "The local version of %s is not empty and has a mismatching storeId: " +
-                            "expected %s actual %s.", databaseContext.databaseId(), remoteStoreId, localStoreId ) );
+            debugLog.info( "Local store has same store id and database id as upstream. No store copy required." );
         }
+        else if ( designatedSeederExists() )
+        {
+            debugLog.info( "Deleting local store to replace replace with copy from upstream servers. Reason is designates seeder exists, StoreId match: %s, " +
+                           "DatabaseId match: %s", localAndRemoteStoreIdMatch, databaseIdMatch );
+            replaceStore( remoteStoreId, catchupComponents );
+        }
+        else if ( !localAndRemoteStoreIdMatch )
+        {
+            throw new IllegalStateException( format( "This read replica cannot join the cluster. The local version of %s is not empty, it has a mismatching " +
+                                                     "storeId and no designated seeder exists: expected %s actual %s.",
+                                                     databaseContext.namedDatabaseId(), remoteStoreId, databaseContext.storeId() ) );
+        }
+        else
+        {
+            debugLog.info( "Local store has same store id as upstream. No store copy required." );
+        }
+    }
+
+    private void replaceStore( StoreId expectedStoreId, CatchupComponents catchupComponents )
+            throws IOException, StoreCopyFailedException, DatabaseShutdownException
+    {
+        debugLog.info( "Copying store from upstream servers" );
+        databaseContext.delete();
+        databaseContext.monitors().addMonitorListener( lastTxIdMonitor );
+        var provider = new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategy );
+        catchupComponents.storeCopyProcess().replaceWithStoreFrom( provider, expectedStoreId );
+        databaseContext.monitors().removeMonitorListener( lastTxIdMonitor );
+
+        debugLog.info( "Restarting local database after copy." );
+    }
+
+    private boolean designatedSeederExists()
+    {
+        var database = databaseContext.namedDatabaseId();
+        return !database.isSystemDatabase() && systemDbmsModel.designatedSeeder( database ).isPresent();
+    }
+
+    private boolean databaseIdMatch()
+    {
+        var databaseIdReadFromSystemDatabase = databaseContext.namedDatabaseId().databaseId();
+        var storeFilesDatabaseId = databaseContext.readDatabaseIdFromDisk();
+        return storeFilesDatabaseId.map( databaseId -> databaseId.equals( databaseIdReadFromSystemDatabase ) )
+                                   .orElse( false );
     }
 
     private static final class LastTxMonitor extends StoreCopyClientMonitor.Adapter

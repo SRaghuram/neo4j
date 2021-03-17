@@ -8,12 +8,16 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -120,5 +124,10 @@ public class StoreFiles
     public StoreId readStoreId( DatabaseLayout databaseLayout, PageCursorTracer cursorTracer ) throws IOException
     {
         return selectStorageEngine().storeId( databaseLayout, pageCache, cursorTracer );
+    }
+
+    public Optional<DatabaseId> readDatabaseIdFromDisk( Path neoStore, PageCursorTracer cursorTracer )
+    {
+        return MetaDataStore.getDatabaseId( pageCache, neoStore, cursorTracer ).map( DatabaseIdFactory::from );
     }
 }

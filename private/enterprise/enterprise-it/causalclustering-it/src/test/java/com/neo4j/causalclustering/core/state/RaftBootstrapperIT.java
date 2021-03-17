@@ -13,17 +13,21 @@ import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState
 import com.neo4j.causalclustering.core.state.machines.tx.LastCommittedIndexFinder;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
-import com.neo4j.causalclustering.test_helpers.ClassicNeo4jDatabase;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.RaftMemberId;
+import com.neo4j.causalclustering.test_helpers.ClassicNeo4jDatabase;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
@@ -35,6 +39,8 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.MetaDataStore;
@@ -128,12 +134,12 @@ class RaftBootstrapperIT
         RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
-        CoreSnapshot snapshot = bootstrapper.bootstrap( raftMembers, storeId );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( raftMembers, storeId, true );
         verifySnapshot( snapshot, raftMembers, defaultConfig );
 
-        assertEquals( 21, pageCacheTracer.pins() );
-        assertEquals( 21, pageCacheTracer.unpins() );
-        assertEquals( 5, pageCacheTracer.hits() );
+        assertEquals( 23, pageCacheTracer.pins() );
+        assertEquals( 23, pageCacheTracer.unpins() );
+        assertEquals( 7, pageCacheTracer.hits() );
         assertEquals( 16, pageCacheTracer.faults() );
     }
 
@@ -350,6 +356,74 @@ class RaftBootstrapperIT
         BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( raftMembers, storeId ) );
         assertThat( assertableLogProvider ).forClass( RaftBootstrapper.class ).forLevel( ERROR )
                 .containsMessages( exception.getCause().getMessage() );
+    }
+
+    @ParameterizedTest
+    @ValueSource( booleans = { true, false } )
+    void overWriteDatabaseIdDuringBootstrapTest( boolean overWriteDatabaseId ) throws IOException
+    {
+        // given
+        int nodeCount = 100;
+        var customTransactionLogsRootDirectory = testDirectory.directory( "custom-tx-logs-location" );
+        var database = ClassicNeo4jDatabase
+                .builder( dataDirectory, fileSystem )
+                .databaseId( DATABASE_ID )
+                .amountOfNodes( nodeCount )
+                .transactionLogsRootDirectory( customTransactionLogsRootDirectory )
+                .build();
+
+        var storeFiles = new StoreFiles( fileSystem, pageCache );
+        var transactionLogs = buildLogFiles( database.layout() );
+        var bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
+        var config = Config.defaults();
+        var logProvider = NullLogProvider.getInstance();
+        var bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
+                                                 pageCache, fileSystem, logProvider, storageEngineFactory, config, bootstrapSaver, pageCacheTracer, INSTANCE );
+        var firstDatabaseIdAnswer = readDatabaseIdFromStoreFiles( database, storeFiles );
+
+        // when
+        bootstrapper.bootstrap( Set.of(), null, overWriteDatabaseId );
+        var laterDatabaseIdAnswer = readDatabaseIdFromStoreFiles( database, storeFiles );
+
+        // then
+        assertThat( Objects.equals( firstDatabaseIdAnswer, laterDatabaseIdAnswer) ).isEqualTo( !overWriteDatabaseId );
+    }
+
+    @Test
+    void isEqualToStoreFileDatabaseIdTest() throws IOException
+    {
+        // given
+        int nodeCount = 100;
+        var customTransactionLogsRootDirectory = testDirectory.directory( "custom-tx-logs-location" );
+        var database = ClassicNeo4jDatabase
+                .builder( dataDirectory, fileSystem )
+                .databaseId( DATABASE_ID )
+                .amountOfNodes( nodeCount )
+                .transactionLogsRootDirectory( customTransactionLogsRootDirectory )
+                .build();
+
+        var storeFiles = new StoreFiles( fileSystem, pageCache );
+        var transactionLogs = buildLogFiles( database.layout() );
+        var bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
+        var config = Config.defaults();
+        var logProvider = NullLogProvider.getInstance();
+        var bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
+                                                 pageCache, fileSystem, logProvider, storageEngineFactory, config, bootstrapSaver, pageCacheTracer, INSTANCE );
+        bootstrapper.bootstrap( Set.of(), null, true );
+        var storeFilesDatabaseId = readDatabaseIdFromStoreFiles( database, storeFiles );
+        var randomDatabaseId = DatabaseIdFactory.from( UUID.randomUUID() );
+
+        // when/then
+        assertThat( bootstrapper.isEqualToStoreFileDatabaseId( storeFilesDatabaseId ) ).isTrue();
+        assertThat( bootstrapper.isEqualToStoreFileDatabaseId( randomDatabaseId ) ).isFalse();
+    }
+
+    private DatabaseId readDatabaseIdFromStoreFiles( ClassicNeo4jDatabase database, StoreFiles storeFiles )
+    {
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( "test_tag" ) )
+        {
+            return storeFiles.readDatabaseIdFromDisk( database.layout().metadataStore(), cursorTracer ).orElse(null );
+        }
     }
 
     private void verifySnapshot( CoreSnapshot snapshot, Set<RaftMemberId> expectedMembership, Config activeDatabaseConfig ) throws IOException

@@ -52,6 +52,13 @@ public class BootstrapState
         return Objects.equals( raftMemberId, bootstrapper );
     }
 
+    public Optional<RaftMemberId> getBootstrapper( NamedDatabaseId namedDatabaseId )
+    {
+        var raftid = RaftGroupId.from( namedDatabaseId.databaseId() );
+        var bootstrapper = previouslyBootstrapped.get( raftid );
+        return Optional.ofNullable( bootstrapper );
+    }
+
     @Override
     public boolean equals( Object o )
     {

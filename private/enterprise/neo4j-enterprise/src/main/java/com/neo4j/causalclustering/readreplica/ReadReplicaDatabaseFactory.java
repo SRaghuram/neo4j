@@ -24,6 +24,7 @@ import com.neo4j.causalclustering.upstream.strategies.PreferFollower;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.TopologyPublisher;
@@ -57,12 +58,13 @@ class ReadReplicaDatabaseFactory
     private final DatabaseStartAborter databaseStartAborter;
     private final PageCacheTracer pageCacheTracer;
     private final AsyncTxApplier asyncTxApplier;
+    private final ClusterSystemGraphDbmsModel systemDbmsModel;
 
     ReadReplicaDatabaseFactory( Config config, JobScheduler jobScheduler, TopologyService topologyService,
             ServerId serverId, CatchupComponentsRepository catchupComponentsRepository, ReplicatedDatabaseEventService databaseEventService,
             ClusterStateStorageFactory clusterStateFactory,
             PanicService panicService, DatabaseStartAborter databaseStartAborter, PageCacheTracer pageCacheTracer,
-            AsyncTxApplier asyncTxApplier )
+            AsyncTxApplier asyncTxApplier, ClusterSystemGraphDbmsModel systemDbmsModel  )
     {
         this.config = config;
         this.jobScheduler = jobScheduler;
@@ -74,12 +76,13 @@ class ReadReplicaDatabaseFactory
         this.clusterStateFactory = clusterStateFactory;
         this.databaseStartAborter = databaseStartAborter;
         this.pageCacheTracer = pageCacheTracer;
+        this.systemDbmsModel = systemDbmsModel;
         this.asyncTxApplier = asyncTxApplier;
     }
 
     ReadReplicaDatabase createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator )
     {
-        var namedDatabaseId = databaseContext.databaseId();
+        var namedDatabaseId = databaseContext.namedDatabaseId();
         var kernelDatabase = databaseContext.kernelDatabase();
         var databaseLogService = kernelDatabase.getLogService();
         var internalLogProvider = databaseLogService.getInternalLogProvider();
@@ -101,7 +104,7 @@ class ReadReplicaDatabaseFactory
 
         var catchupJobScheduler = new CatchupJobScheduler( timerService, catchupPollingProcess, txPullInterval );
 
-        var raftIdStorage = clusterStateFactory.createRaftGroupIdStorage( databaseContext.databaseId().name(), internalLogProvider );
+        var raftIdStorage = clusterStateFactory.createRaftGroupIdStorage( databaseContext.namedDatabaseId().name(), internalLogProvider );
 
         // TODO: Fix lifecycle issue.
         Supplier<CatchupComponents> catchupComponentsSupplier = () -> catchupComponentsRepository.componentsFor( namedDatabaseId ).orElseThrow(
@@ -110,7 +113,7 @@ class ReadReplicaDatabaseFactory
         var backoffStrategy = constant( 1, SECONDS );
         var bootstrap = new ReadReplicaBootstrap( databaseContext, upstreamDatabaseStrategySelector, internalLogProvider,
                 userLogProvider, topologyService, catchupComponentsSupplier, clusterInternalOperator, databaseStartAborter, backoffStrategy,
-                commandIndexTracker );
+                commandIndexTracker, systemDbmsModel );
 
         var raftIdCheck = new RaftIdCheck( raftIdStorage, namedDatabaseId );
 

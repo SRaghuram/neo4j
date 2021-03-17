@@ -195,7 +195,7 @@ public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJo
     {
         upToDateFuture.completeExceptionally( e );
         state = PANIC;
-        panicker.panic( new DatabasePanicEvent( databaseContext.databaseId(), CATCHUP_FAILED, e ) );
+        panicker.panic( new DatabasePanicEvent( databaseContext.namedDatabaseId(), CATCHUP_FAILED, e ) );
     }
 
     private void pullTransactions()
@@ -203,7 +203,7 @@ public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJo
         SocketAddress address;
         try
         {
-            address = upstreamProvider.primary( databaseContext.databaseId() );
+            address = upstreamProvider.primary( databaseContext.namedDatabaseId() );
         }
         catch ( CatchupAddressResolutionException e )
         {
@@ -253,9 +253,9 @@ public class CatchupPollingProcess extends LifecycleAdapter implements CatchupJo
         try
         {
             result = getCatchupClient( address )
-                    .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
-                    .v4( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
-                    .v5( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
+                    .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.namedDatabaseId() ) )
+                    .v4( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.namedDatabaseId() ) )
+                    .v5( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.namedDatabaseId() ) )
                     .withResponseHandler( pullUpdatesJob )
                     .request();
         }

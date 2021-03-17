@@ -39,9 +39,14 @@ public class BootstrapContext
         return databaseLayout;
     }
 
-    void replaceWith( Path sourceDir ) throws IOException
+    void deleteStoreFiles() throws IOException
     {
         storeFiles.delete( databaseLayout, transactionLogs );
+    }
+
+    void replaceWith( Path sourceDir ) throws IOException
+    {
+        deleteStoreFiles();
         storeFiles.moveTo( sourceDir, databaseLayout, transactionLogs );
     }
 

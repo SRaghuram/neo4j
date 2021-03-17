@@ -31,6 +31,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -112,6 +113,11 @@ public class RaftBootstrapper
 
     public CoreSnapshot bootstrap( Set<RaftMemberId> raftMembers, StoreId storeId )
     {
+        return bootstrap( raftMembers, storeId, false );
+    }
+
+    public CoreSnapshot bootstrap( Set<RaftMemberId> raftMembers, StoreId storeId, boolean overWriteDatabaseId )
+    {
         try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( RAFT_BOOTSTRAP_TAG ) )
         {
             log.info( "Bootstrapping " + bootstrapContext.databaseId() + " for members " + raftMembers );
@@ -128,7 +134,7 @@ public class RaftBootstrapper
             {
                 createStore( storeId, cursorTracer, bootstrapContext.databaseId().isSystemDatabase() );
             }
-            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( bootstrapContext, cursorTracer );
+            updateTransactionLogAndMetaDataStore( bootstrapContext, cursorTracer, overWriteDatabaseId );
             CoreSnapshot snapshot = buildCoreSnapshot( raftMembers );
             log.info( "Bootstrapping of " + bootstrapContext.databaseId() + " completed " + snapshot );
             return snapshot;
@@ -177,9 +183,24 @@ public class RaftBootstrapper
         }
     }
 
-    private boolean isStorePresent()
+    public boolean isStorePresent()
     {
         return storageEngineFactory.storageExists( fs, bootstrapContext.databaseLayout(), pageCache );
+    }
+
+    public void deleteLocalStore() throws IOException
+    {
+        bootstrapContext.deleteStoreFiles();
+    }
+
+    public boolean isEqualToStoreFileDatabaseId( DatabaseId databaseId )
+    {
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( RAFT_BOOTSTRAP_TAG ) )
+        {
+            final var storeFileDatabaseId = MetaDataStore.getDatabaseId( pageCache, bootstrapContext.databaseLayout().metadataStore(), cursorTracer );
+            return storeFileDatabaseId.map( uuid -> uuid.equals( databaseId.uuid() ) )
+                                      .orElse( false );
+        }
     }
 
     private void createStore( StoreId storeId, PageCursorTracer cursorTracer, boolean isSystemDatabase ) throws IOException
@@ -194,6 +215,7 @@ public class RaftBootstrapper
                 MetaDataStore.setStoreId( pageCache, bootstrapDatabaseLayout.metadataStore(), storeId, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP,
                         cursorTracer );
             }
+
             log.info( "Moving created store files from " + bootstrapDatabaseLayout + " to " + bootstrapContext.databaseLayout() );
             bootstrapContext.replaceWith( bootstrapDatabaseLayout.databaseDirectory() );
 
@@ -245,9 +267,13 @@ public class RaftBootstrapper
      * carries in its header the corresponding Raft log index. At bootstrap time an empty transaction log entry denoting
      * the beginning of time (Raft log index -1) is created. This is used during recovery by the Raft machinery to pick up
      * where it left off. It is also highly useful for debugging.
+     *
+     * To be able to determine the origin of the store files in regards to cluster and designated seeder the database id
+     * is written to the metadata store. This makes it possible to determine if store files originates from the current
+     * running cluster or if they are from an older backup.
      */
-    private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( BootstrapContext bootstrapContext,
-            PageCursorTracer cursorTracer ) throws IOException
+    private void updateTransactionLogAndMetaDataStore( BootstrapContext bootstrapContext,
+                                                       PageCursorTracer cursorTracer, boolean overWriteDatabaseId ) throws IOException
     {
         DatabaseLayout layout = bootstrapContext.databaseLayout();
         try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY,
@@ -287,6 +313,10 @@ public class RaftBootstrapper
             {
                 metadataProvider.setLastCommittedAndClosedTransactionId( dummyTransactionId, 0, currentTimeMillis(),
                         currentPosition.getByteOffset(), currentPosition.getLogVersion(), cursorTracer );
+                if ( overWriteDatabaseId )
+                {
+                    metadataProvider.setDatabaseIdUuid( bootstrapContext.databaseId().databaseId().uuid(), cursorTracer );
+                }
             }
         }
     }
