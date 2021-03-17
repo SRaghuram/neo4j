@@ -41,7 +41,7 @@ while (("$#")); do
     workload=$2
     shift 2
     ;;
-  --store)
+  --db_name)
     db_name=$2
     shift 2
     ;;
@@ -72,8 +72,6 @@ echo With workload: "${workload}"
 aws s3 cp "${s3_origin_datasets_url}/${old_neo4j_version}-enterprise-datasets/${zip_file}" ./ --no-progress
 tar xzvf "${zip_file}"
 rm "${zip_file}"
-mkdir -p "${db_name}"/data/databases
-mv "${db_name}"/graph.db "${db_name}"/data/databases/neo4j
 
 "${JAVA_HOME}/bin/java" -jar macro/target/macro.jar upgrade-store \
   --original-db "${db_name}" \
