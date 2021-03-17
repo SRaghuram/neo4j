@@ -6,14 +6,12 @@
 package com.neo4j.bench.client;
 
 import com.neo4j.bench.client.queries.Query;
+import com.neo4j.bench.common.util.Retrier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.function.Supplier;
-
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class QueryRetrier
 {
@@ -24,7 +22,7 @@ public class QueryRetrier
     public static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes( 5 );
 
     private final boolean verbose;
-    private final Duration timeout;
+    private final Retrier retrier;
 
     public QueryRetrier( boolean verbose )
     {
@@ -34,7 +32,7 @@ public class QueryRetrier
     public QueryRetrier( boolean verbose, Duration timeout )
     {
         this.verbose = verbose;
-        this.timeout = timeout;
+        this.retrier = new Retrier( timeout );
     }
 
     public <QUERY extends Query<RESULT>, RESULT> RESULT execute( StoreClient client, QUERY query )
@@ -49,42 +47,7 @@ public class QueryRetrier
 
     <R> R retry( Supplier<R> supplier, int retries )
     {
-        Instant start = Instant.now();
-        Throwable lastException = null;
-        int retry = 0;
-        while ( retry <= retries &&
-                Instant.now().isBefore( start.plus( timeout ) ) )
-        {
-            try
-            {
-                return supplier.get();
-            }
-            catch ( Throwable e )
-            {
-                LOG.error( "Error executing callable {}", supplier, e );
-                backOff( retry++ );
-                lastException = e;
-            }
-        }
-        throw new RuntimeException( "Failed to successfully execute callable", lastException );
-    }
-
-    private void backOff( int retry )
-    {
-        try
-        {
-            // retry:                   0  1  2  3   4   5   6    7    8    9    10    11    12    13
-            // milliseconds (2^retry):  1  2  4  8  16  32  64  128  256  512  1024  2048  4096  8192
-
-            // add 10 to 'retry' so minimum sleep duration is 1 second
-            long milliseconds = Math.round( Math.pow( 2, retry + 10 ) );
-            LOG.warn( "Will retry after {}} seconds", MILLISECONDS.toSeconds( milliseconds ) );
-            Thread.sleep( milliseconds );
-        }
-        catch ( InterruptedException e )
-        {
-            throw new RuntimeException( "Interrupted during backoff sleep", e );
-        }
+        return retrier.retry( supplier, retries );
     }
 
     private <RESULT, QUERY extends Query<RESULT>> Supplier<RESULT> querySupplier( StoreClient client, QUERY query )

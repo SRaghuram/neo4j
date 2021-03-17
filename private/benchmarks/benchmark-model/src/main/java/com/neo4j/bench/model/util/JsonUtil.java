@@ -17,6 +17,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.SimpleDateFormat;
 
 import static com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility.ANY;
 import static com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility.NONE;
@@ -28,8 +29,10 @@ import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 public class JsonUtil
 {
+    private static String ISO_8601_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .disable( SerializationFeature.FAIL_ON_EMPTY_BEANS )
+            .setDateFormat( new SimpleDateFormat( ISO_8601_FORMAT ) )
             .setVisibility( ALL, NONE )
             .setVisibility( FIELD, ANY )
             .registerModule( new JavaTimeModule() )

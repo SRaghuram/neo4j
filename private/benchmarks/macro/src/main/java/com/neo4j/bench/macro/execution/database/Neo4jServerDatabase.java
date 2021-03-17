@@ -5,12 +5,13 @@
  */
 package com.neo4j.bench.macro.execution.database;
 
+import com.neo4j.bench.agent.database.DatabaseServerConnection;
+import com.neo4j.bench.agent.database.DatabaseServerWrapper;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.DatabaseName;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.macro.execution.database.Neo4jServerWrapper.Neo4jServerConnection;
 import com.neo4j.bench.model.model.PlanOperator;
 
 import java.net.URI;
@@ -56,9 +57,8 @@ public class Neo4jServerDatabase implements ServerDatabase
                                         store.topLevelDirectory().resolve( "data" ).resolve( "transactions" ).toString() )
                           .writeToFile( neo4jConfigFile );
 
-        Neo4jServerWrapper neo4jServer = new Neo4jServerWrapper( neo4jDir );
-        neo4jServer.clearLogs();
-        Neo4jServerConnection connection = neo4jServer.start( jvm, neo4jConfigFile, outputRedirect, errorRedirect );
+        DatabaseServerWrapper neo4jServer = DatabaseServerWrapper.neo4j( neo4jDir );
+        DatabaseServerConnection connection = neo4jServer.start( jvm, neo4jConfigFile, outputRedirect, errorRedirect );
         ServerDatabase serverDatabase = connectClient( connection.boltUri(), databaseName, connection.pid() );
         return new DelegatingServerDatabase( serverDatabase, () ->
         {

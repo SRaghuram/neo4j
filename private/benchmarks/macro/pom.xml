@@ -52,6 +52,19 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+			<groupId>com.neo4j.bench</groupId>
+			<artifactId>benchmark-infra-agent</artifactId>
+			<version>${project.version}</version>
+            <classifier>repackaged</classifier>
+            <!-- sftp is repackaged into this artifact, we can exclude sftp -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.sshd</groupId>
+                    <artifactId>sshd-sftp</artifactId>
+                </exclusion>
+            </exclusions>
+		</dependency>
+		<dependency>
             <groupId>com.neo4j.bench</groupId>
             <artifactId>benchmark-neo4j-common</artifactId>
             <version>${project.version}</version>

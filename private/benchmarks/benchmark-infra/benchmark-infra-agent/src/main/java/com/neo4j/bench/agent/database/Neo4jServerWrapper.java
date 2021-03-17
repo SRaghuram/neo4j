@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.macro.execution.database;
+package com.neo4j.bench.agent.database;
 
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.process.ProcessWrapper;
@@ -33,7 +33,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
-class Neo4jServerWrapper
+public class Neo4jServerWrapper implements DatabaseServerWrapper
 {
     // NOTE: specifying neo4j configuration file location via env var should work, but neo4j does not seem to pick up the config
     private static final boolean CONFIG_VIA_ENV_VAR_WORKS = false;
@@ -47,18 +47,15 @@ class Neo4jServerWrapper
 
     private final Path neo4jDir;
 
-    Neo4jServerWrapper( Path neo4jDir )
+    public Neo4jServerWrapper( Path neo4jDir )
     {
         this.neo4jDir = neo4jDir;
-    }
-
-    void clearLogs()
-    {
         forceRecreateFile( neo4jDir.resolve( NEO4J_LOG_PATH ) );
         forceRecreateFile( neo4jDir.resolve( DEBUG_LOG_PATH ) );
     }
 
-    void copyLogsTo( Path destinationFolder )
+    @Override
+    public void copyLogsTo( Path destinationFolder )
     {
         try
         {
@@ -76,7 +73,8 @@ class Neo4jServerWrapper
         }
     }
 
-    Neo4jServerConnection start( Jvm jvm, Path neo4jConfigFile, Redirect outputRedirect, Redirect errorRedirect )
+    @Override
+    public DatabaseServerConnection start( Jvm jvm, Path neo4jConfigFile, Redirect outputRedirect, Redirect errorRedirect )
     {
         if ( isRunning() )
         {
@@ -102,7 +100,7 @@ class Neo4jServerWrapper
             processBuilder.start();
             List<String> neo4jLogLines = waitForServerAndGetOutput( outputRedirect );
             URI boltUri = extractBoltUriOrFail( neo4jLogLines );
-            return new Neo4jServerConnection( boltUri, pid() );
+            return new Neo4jServerConnection( boltUri, discoverPid() );
         }
         catch ( Exception e )
         {
@@ -154,7 +152,7 @@ class Neo4jServerWrapper
     }
 
     // Returns server PID if the server is running, and nothing otherwise
-    private Pid pid()
+    private Pid discoverPid()
     {
         String neo4jServerStatus = status();
         if ( !neo4jServerStatus.contains( NEO4J_IS_RUNNING_STATUS_PREFIX ) )
@@ -166,7 +164,8 @@ class Neo4jServerWrapper
         return new Pid( Long.parseLong( neo4jServerStatus.substring( pidOffset ).trim() ) );
     }
 
-    void stop() throws TimeoutException
+    @Override
+    public void stop() throws TimeoutException
     {
         ProcessWrapper.start( neo4jCommand( INHERIT, INHERIT, "stop" ) ).waitFor();
         EventualValue<String> eventualValue = new EventualValue<>()
@@ -229,8 +228,7 @@ class Neo4jServerWrapper
     }
 
     /**
-     * Waits for Neo4j Server to start.
-     * Check for started is done by intermittently reading in the process output and neo4j.log.
+     * Waits for Neo4j Server to start. Check for started is done by intermittently reading in the process output and neo4j.log.
      *
      * @param output a redirect of neo4j server process output
      * @return neo4j server output, as list of lines from both process output and neo4j.log -- process output lines precede neo4j.log lines.
@@ -354,7 +352,7 @@ class Neo4jServerWrapper
         }
     }
 
-    static class Neo4jServerConnection
+    static class Neo4jServerConnection implements DatabaseServerConnection
     {
         private final URI boltUri;
         private final Pid pid;
@@ -365,12 +363,12 @@ class Neo4jServerWrapper
             this.pid = pid;
         }
 
-        URI boltUri()
+        public URI boltUri()
         {
             return boltUri;
         }
 
-        Pid pid()
+        public Pid pid()
         {
             return pid;
         }
