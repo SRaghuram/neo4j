@@ -61,7 +61,8 @@ public class ReadReplicaDatabaseContext
     {
         try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( READ_REPLICA_DATABASE_ID_READER_TAG ) )
         {
-            return storeFiles.readDatabaseIdFromDisk( kernelDatabase.getDatabaseLayout().metadataStore(), cursorTracer );
+            var databaseLayout = kernelDatabase.getDatabaseLayout();
+            return storeFiles.readDatabaseIdFromDisk( databaseLayout.metadataStore(), databaseLayout.getDatabaseName(), cursorTracer );
         }
     }
 

@@ -542,7 +542,7 @@ class ReadReplicaBootstrapTest
         StoreFiles storeFiles = mock( StoreFiles.class );
         when( storeFiles.readStoreId( any(), any() ) ).thenReturn( storeId );
         when( storeFiles.isEmpty( any() ) ).thenReturn( isEmpty );
-        when( storeFiles.readDatabaseIdFromDisk( any(), any() ) ).thenReturn( databaseId );
+        when( storeFiles.readDatabaseIdFromDisk( any(), any(), any() ) ).thenReturn( databaseId );
         return storeFiles;
     }
 

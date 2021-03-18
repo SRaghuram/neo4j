@@ -422,7 +422,8 @@ class RaftBootstrapperIT
     {
         try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( "test_tag" ) )
         {
-            return storeFiles.readDatabaseIdFromDisk( database.layout().metadataStore(), cursorTracer ).orElse(null );
+            DatabaseLayout databaseLayout = database.layout();
+            return storeFiles.readDatabaseIdFromDisk( databaseLayout.metadataStore(), databaseLayout.getDatabaseName(), cursorTracer ).orElse(null );
         }
     }
 

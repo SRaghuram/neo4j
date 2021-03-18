@@ -197,7 +197,9 @@ public class RaftBootstrapper
     {
         try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( RAFT_BOOTSTRAP_TAG ) )
         {
-            final var storeFileDatabaseId = MetaDataStore.getDatabaseId( pageCache, bootstrapContext.databaseLayout().metadataStore(), cursorTracer );
+            var databaseLayout = bootstrapContext.databaseLayout();
+            final var storeFileDatabaseId =
+                    MetaDataStore.getDatabaseId( pageCache, databaseLayout.metadataStore(), databaseLayout.getDatabaseName(), cursorTracer );
             return storeFileDatabaseId.map( uuid -> uuid.equals( databaseId.uuid() ) )
                                       .orElse( false );
         }

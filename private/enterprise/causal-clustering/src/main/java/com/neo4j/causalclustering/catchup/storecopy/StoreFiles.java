@@ -126,8 +126,8 @@ public class StoreFiles
         return selectStorageEngine().storeId( databaseLayout, pageCache, cursorTracer );
     }
 
-    public Optional<DatabaseId> readDatabaseIdFromDisk( Path neoStore, PageCursorTracer cursorTracer )
+    public Optional<DatabaseId> readDatabaseIdFromDisk( Path neoStore, String databaseName, PageCursorTracer cursorTracer )
     {
-        return MetaDataStore.getDatabaseId( pageCache, neoStore, cursorTracer ).map( DatabaseIdFactory::from );
+        return MetaDataStore.getDatabaseId( pageCache, neoStore, databaseName, cursorTracer ).map( DatabaseIdFactory::from );
     }
 }

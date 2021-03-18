@@ -377,7 +377,7 @@ public class DesignatedSeederIT
         final var databaseLayout = getDatabaseLayout( clusterMember, databaseName );
         try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( "test_tag" ) )
         {
-            return MetaDataStore.getDatabaseId( pageCache, databaseLayout.metadataStore(), cursorTracer ).map( DatabaseIdFactory::from );
+            return MetaDataStore.getDatabaseId( pageCache, databaseLayout.metadataStore(), databaseName, cursorTracer ).map( DatabaseIdFactory::from );
         }
     }
 
