@@ -38,6 +38,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       "GRANT ROLE foo TO Bar" -> 1,
       "REVOKE ROLE foo FROM Bar" -> 1,
       "RENAME ROLE foo3 TO foo232" -> 1,
+      "RENAME ROLE foo232 IF EXISTS TO foo3" -> 1,
       "DROP ROLE foo" -> 1,
       "DROP ROLE foo2 IF EXISTS" -> 1,
       "GRANT ROLE a,b,c TO x,y,z" -> 9
@@ -829,7 +830,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when renaming non-existing role") {
     // WHEN
-    val exception = the[IllegalStateException] thrownBy execute("RENAME ROLE foo TO bar")
+    val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE foo TO bar")
     exception.getMessage should startWith("Failed to rename the specified role 'foo' to 'bar': The role 'foo' does not exist.")
 
     // THEN

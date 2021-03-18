@@ -11,7 +11,6 @@ import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
-  private val alterDefaultUserQuery = s"ALTER USER $defaultUsername SET PASSWORD '$password' CHANGE NOT REQUIRED"
 
   test("should execute dbms.security.createUser on system") {
     // GIVEN

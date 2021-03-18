@@ -18,6 +18,7 @@ import org.neo4j.logging.Log;
 
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D3;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.RENAME_ROLE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.RENAME_USER;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_USER_HOME_DATABASE;
 
 /**
@@ -59,7 +60,7 @@ public class EnterpriseSecurityComponentVersion_10_43D3 extends SupportedEnterpr
     @Override
     boolean supportsUpdateAction( PrivilegeAction action )
     {
-        return action == SET_USER_HOME_DATABASE || action == RENAME_ROLE || previous.supportsUpdateAction( action );
+        return action == SET_USER_HOME_DATABASE || action == RENAME_ROLE || action == RENAME_USER || previous.supportsUpdateAction( action );
     }
 
     @Override

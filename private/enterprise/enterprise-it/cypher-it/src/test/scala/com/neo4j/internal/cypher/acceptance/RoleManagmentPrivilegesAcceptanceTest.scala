@@ -178,7 +178,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     } should have message PERMISSION_DENIED_RENAME_ROLE
   }
 
-  test("should fail when renaming role when denied rename role privilege") {
+  test("should fail renaming role when denied rename role privilege") {
     // GIVEN
     setupUserWithCustomAdminRole("foo", "bar")
 

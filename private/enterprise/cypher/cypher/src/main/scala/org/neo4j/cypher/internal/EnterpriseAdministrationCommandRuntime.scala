@@ -85,6 +85,7 @@ import org.neo4j.cypher.internal.logical.plans.LogSystemCommand
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NameValidator
 import org.neo4j.cypher.internal.logical.plans.RenameRole
+import org.neo4j.cypher.internal.logical.plans.RenameUser
 import org.neo4j.cypher.internal.logical.plans.RequireRole
 import org.neo4j.cypher.internal.logical.plans.RevokeDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.RevokeDbmsAction
@@ -277,6 +278,20 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context))
       makeCreateUserExecutionPlan(userName, isEncryptedPassword, password, requirePasswordChange, suspended, defaultDatabase)(sourcePlan, normalExecutionEngine)
 
+    // RENAME USER foo [IF EXISTS] TO bar
+    case RenameUser(source, fromUserName, toUserName) => context =>
+      if (blockRename) {
+        throw new UnsupportedOperationException("Changing username is not supported when using an authentication or authentication provider apart from native.")
+      }
+      val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context))
+      makeRenameExecutionPlan("User", fromUserName, toUserName,
+        params => {
+          val toName = runtimeValue(toUserName, params)
+          NameValidator.assertValidUsername(toName)
+        }
+      )(sourcePlan, normalExecutionEngine)
+
+
     // ALTER USER foo [SET [PLAINTEXT | ENCRYPTED] PASSWORD pw] [CHANGE [NOT] REQUIRED] [SET STATUS ACTIVE]
     case AlterUser(source, userName, isEncryptedPassword, password, requirePasswordChange, suspended, defaultDatabase) => context =>
       val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context))
@@ -380,36 +395,14 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       if (blockRename) {
         throw new UnsupportedOperationException("Changing role name is not supported when using an authentication or authentication provider apart from native.")
       }
-
-      val fromRoleNameFields = getNameFields("fromrolename", fromRoleName)
-      val toRoleNameFields = getNameFields("toRolename", toRoleName)
-      val mapValueConverter: (Transaction, MapValue) => MapValue = (tx, p) => toRoleNameFields.nameConverter(tx, fromRoleNameFields.nameConverter(tx, p))
-      UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
-        s"""MATCH (old:Role {name: $$`${fromRoleNameFields.nameKey}`})
-           |SET old.name = $$`${toRoleNameFields.nameKey}`
-           |RETURN old.name
-        """.stripMargin,
-        VirtualValues.map(Array(fromRoleNameFields.nameKey, toRoleNameFields.nameKey), Array(fromRoleNameFields.nameValue, toRoleNameFields.nameValue)),
-        QueryHandler
-          .handleNoResult(p => Some(new IllegalStateException(s"Failed to rename the specified role '${runtimeValue(fromRoleName, p)}' to '${runtimeValue(toRoleName, p)}': " +
-            s"The role '${runtimeValue(fromRoleName, p)}' does not exist.")))
-          .handleError((error, p) => (error, error.getCause) match {
-            case (_, _: UniquePropertyValueValidationException) =>
-              new InvalidArgumentException(s"Failed to rename the specified role '${runtimeValue(fromRoleName, p)}' to '${runtimeValue(toRoleName, p)}': " +
-                s"Role '${runtimeValue(toRoleName, p)}' already exists.", error)
-            case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
-              new DatabaseAdministrationOnFollowerException(s"Failed to rename the specified role '${runtimeValue(fromRoleName, p)}': $followerError", error)
-            case _ => new IllegalStateException(s"Failed to rename the specified role '${runtimeValue(fromRoleName, p)}' to '${runtimeValue(toRoleName, p)}'.", error)
-          }),
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context)),
-        initFunction = params => {
+      val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context))
+      makeRenameExecutionPlan("Role", fromRoleName, toRoleName,
+      params => {
           val toName = runtimeValue(toRoleName, params)
           val fromName = runtimeValue(fromRoleName, params)
           NameValidator.assertValidRoleName(toName)
           NameValidator.assertUnreservedRoleName("rename", fromName, Some(toName))
-        },
-        parameterConverter = mapValueConverter
-      )
+        })(sourcePlan, normalExecutionEngine)
 
     // DROP ROLE foo [IF EXISTS]
     case DropRole(source, roleName) => context =>

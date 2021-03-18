@@ -255,6 +255,8 @@ public class ResourcePrivilege
             return List.of( String.format( "%s%s SHOW USER ON DBMS %s %s", optionalRevoke, privilegeType.prefix, preposition, role ) );
         case CREATE_USER:
             return List.of( String.format( "%s%s CREATE USER ON DBMS %s %s", optionalRevoke, privilegeType.prefix, preposition, role ) );
+        case RENAME_USER:
+            return List.of( String.format( "%s%s RENAME USER ON DBMS %s %s", optionalRevoke, privilegeType.prefix, preposition, role ) );
         case SET_USER_STATUS:
             return List.of( String.format( "%s%s SET USER STATUS ON DBMS %s %s", optionalRevoke, privilegeType.prefix, preposition, role ) );
         case SET_PASSWORDS:

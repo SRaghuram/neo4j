@@ -258,6 +258,56 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
+    public void shouldFailRenameUserWhenUsingLDAP()
+    {
+        startDatabaseWithSettings( Map.of(
+                SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME ),
+                SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME )
+        ) );
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "abc123" );
+              Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // when
+            try
+            {
+                session.run( "RENAME USER neo4j TO admin" ).single();
+                fail( "An exception was expected but not thrown here." );
+            }
+            catch ( DatabaseException e )
+            {
+                // then
+                assertThat( e.getMessage(),
+                        equalTo( "Changing username is not supported when using an authentication or authentication provider apart from native." ) );
+            }
+        }
+    }
+
+    @Test
+    public void shouldFailRenameUserIfExistsWhenUsingLDAP()
+    {
+        startDatabaseWithSettings( Map.of(
+                SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME ),
+                SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME )
+        ) );
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "abc123" );
+              Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // when
+            try
+            {
+                session.run( "RENAME USER doesNotExist IF EXISTS TO admin" ).single();
+                fail( "An exception was expected but not thrown here." );
+            }
+            catch ( DatabaseException e )
+            {
+                // then
+                assertThat( e.getMessage(),
+                        equalTo( "Changing username is not supported when using an authentication or authentication provider apart from native." ) );
+            }
+        }
+    }
+
+    @Test
     public void shouldShowCurrentUserPrivileges()
     {
         startDatabase();

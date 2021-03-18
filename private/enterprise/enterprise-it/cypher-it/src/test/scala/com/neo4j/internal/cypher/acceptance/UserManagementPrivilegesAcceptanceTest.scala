@@ -17,6 +17,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // GIVEN
     execute("CREATE ROLE custom")
     execute("GRANT CREATE USER ON DBMS TO custom")
+    execute("GRANT RENAME USER ON DBMS TO custom")
     execute("GRANT DROP USER ON DBMS TO custom")
     execute("GRANT SHOW USER ON DBMS TO custom")
     execute("GRANT SET USER STATUS ON DBMS TO custom")
@@ -30,6 +31,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       granted(adminAction("create_user")).role("custom").map,
+      granted(adminAction("rename_user")).role("custom").map,
       granted(adminAction("drop_user")).role("custom").map,
       granted(adminAction("show_user")).role("custom").map,
       granted(adminAction("set_user_status")).role("custom").map,
@@ -59,6 +61,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // Given
     execute("CREATE ROLE custom")
     execute("GRANT CREATE USER ON DBMS TO custom")
+    execute("GRANT RENAME USER ON DBMS TO custom")
     execute("GRANT DROP USER ON DBMS TO custom")
     execute("GRANT SHOW USER ON DBMS TO custom")
     execute("GRANT ALTER USER ON DBMS TO custom")
@@ -68,6 +71,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // Now revoke each sub-privilege in turn
     Seq(
       "CREATE USER",
+      "RENAME USER",
       "DROP USER",
       "SHOW USER",
       "ALTER USER"
@@ -167,6 +171,48 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE USER bar SET PASSWORD 'firstPassword'")
     } should have message PERMISSION_DENIED_CREATE_OR_DROP_USER
+  }
+
+  // RENAME USER
+
+  test("should enforce rename user privilege") {
+    // GIVEN
+    setupUserWithCustomRole("foo", "bar")
+
+    // WHEN
+    execute("CREATE USER user SET PASSWORD 'abc' CHANGE REQUIRED")
+    execute("GRANT RENAME USER ON DBMS TO custom")
+
+    // THEN
+    executeOnSystem("foo", "bar", "RENAME USER user TO name")
+
+    execute("SHOW USERS").toSet should be(Set(
+      defaultUser,
+      user("foo", passwordChangeRequired = false, roles = Seq("custom")),
+      user("name")
+    ))
+
+    // WHEN
+    execute("REVOKE RENAME USER ON DBMS FROM custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "RENAME USER name TO user")
+    } should have message PERMISSION_DENIED_RENAME_USER
+  }
+
+  test("should fail renaming user when denied rename user privilege") {
+    // GIVEN
+    setupUserWithCustomAdminRole("foo", "bar")
+
+    // WHEN
+    execute("CREATE USER user SET PASSWORD 'abc' CHANGE REQUIRED")
+    execute("DENY RENAME USER ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "RENAME USER user TO name")
+    } should have message PERMISSION_DENIED_RENAME_USER
   }
 
   // DROP USER
@@ -497,8 +543,9 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
     executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
+    executeOnSystem("foo", "bar", "RENAME USER user TO bob")
     executeOnSystem("foo", "bar", "SHOW USERS")
-    executeOnSystem("foo", "bar", "DROP USER user")
+    executeOnSystem("foo", "bar", "DROP USER bob")
 
     // WHEN
     execute("REVOKE USER MANAGEMENT ON DBMS FROM custom")
@@ -511,6 +558,9 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "ALTER USER alice SET PASSWORD CHANGE NOT REQUIRED")
     } should have message PERMISSION_DENIED_SET_PASSWORDS
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "RENAME USER alice TO bob")
+    } should have message PERMISSION_DENIED_RENAME_USER
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW USERS")
     } should have message PERMISSION_DENIED_SHOW_USER
@@ -525,6 +575,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
     // WHEN
     execute("GRANT CREATE USER ON DBMS TO custom")
+    execute("GRANT RENAME USER ON DBMS TO custom")
     execute("GRANT DROP USER ON DBMS TO custom")
     execute("GRANT ALTER USER ON DBMS TO custom")
     execute("GRANT SHOW USER ON DBMS TO custom")
@@ -540,6 +591,9 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "ALTER USER foo SET PASSWORD 'abc'")
     } should have message PERMISSION_DENIED_SET_PASSWORDS
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "RENAME USER alice TO Bob")
+    } should have message PERMISSION_DENIED_RENAME_USER
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW USERS")
     } should have message PERMISSION_DENIED_SHOW_USER

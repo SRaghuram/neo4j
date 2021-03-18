@@ -83,6 +83,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABE
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_PRIVILEGE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_ROLE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.RENAME_ROLE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.RENAME_USER;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ROLE_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_PASSWORDS;
@@ -151,6 +152,7 @@ class PrivilegesAsCommandsIT
                 DROP_DATABASE == action ||
                 SHOW_USER == action ||
                 CREATE_USER == action ||
+                RENAME_USER == action ||
                 SET_USER_STATUS == action ||
                 SET_PASSWORDS == action ||
                 SET_USER_HOME_DATABASE == action ||

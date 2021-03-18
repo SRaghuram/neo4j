@@ -601,4 +601,20 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
       }
     })
   }
+
+  test("RENAME USER should not work with 4.2") {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    Seq("CYPHER 4.2").foreach(version => {
+      withClue(version) {
+        // WHEN
+
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"$version RENAME USER alice TO bob")
+        }
+
+        // THEN
+        exception.getMessage should include("Changing a username is not supported in this Cypher version.")
+      }
+    })
+  }
 }

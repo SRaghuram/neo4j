@@ -41,11 +41,13 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
     "CREATE USER foo SET ENCRYPTED PASSWORD 'password'",
     "CREATE OR REPLACE USER foo SET PASSWORD 'secret' CHANGE NOT REQUIRED",
     "CREATE USER foo IF NOT EXISTS SET PASSWORD 'secret' SET STATUS SUSPENDED",
-    "DROP USER foo",
-    "DROP USER foo IF EXISTS",
-    "ALTER USER foo SET PLAINTEXT PASSWORD 'password' SET STATUS suspended",
-    "ALTER USER foo SET ENCRYPTED PASSWORD 'password'",
-    "ALTER USER foo IF EXISTS SET PASSWORD CHANGE NOT REQUIRED",
+    "RENAME USER foo TO bar",
+    "RENAME USER foo IF EXISTS TO baz",
+    "DROP USER bar",
+    "DROP USER bar IF EXISTS",
+    "ALTER USER bar SET PLAINTEXT PASSWORD 'password' SET STATUS suspended",
+    "ALTER USER bar SET ENCRYPTED PASSWORD 'password'",
+    "ALTER USER bar IF EXISTS SET PASSWORD CHANGE NOT REQUIRED",
     "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'secret'",
 
     // Role commands
