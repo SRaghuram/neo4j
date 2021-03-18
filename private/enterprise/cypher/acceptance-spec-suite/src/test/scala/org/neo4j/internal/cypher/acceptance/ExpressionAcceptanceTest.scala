@@ -367,6 +367,54 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     result.toList should be(List(Map("value" -> 1.4)))
   }
 
+  test("should support double numbers with d") {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN .4d as value")
+    result.toList should be(List(Map("value" -> 0.4)))
+  }
+
+  test("should support double numbers with D") {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN 1e4D as value")
+    result.toList should be(List(Map("value" -> 10000.0)))
+  }
+
+  test("should support double numbers with f") {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN 1.4f as value")
+    result.toList should be(List(Map("value" -> 1.4)))
+  }
+
+  test("should support double numbers with F") {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN 1.4F as value")
+    result.toList should be(List(Map("value" -> 1.4)))
+  }
+
+  test("should not support double numbers with infinity") {
+    val config =  Configs.All
+    val query = "RETURN infinity as value"
+    failWithError(config, query,
+      "Variable `infinity` not defined")
+  }
+
+  test("should not support double numbers with -infinity") {
+    val config =  Configs.All
+    val query = "RETURN -Infinity as value"
+    failWithError(config, query,
+      "Variable `Infinity` not defined")
+  }
+
+  test("should not support double numbers with NaN") {
+    val config =  Configs.All
+    val query = "RETURN NaN as value"
+    failWithError(config, query,
+      "Variable `NaN` not defined")
+  }
+
+  test("should not support double numbers with random string") {
+    val config =  Configs.All
+    val query = "RETURN 1.4hello as value"
+    failWithError(config, query,
+      "invalid literal number")
+  }
+
   test("should support regex with toString of null parameter") {
     //Given
     createLabeledNode(Map("name" -> "a"), "Person")
