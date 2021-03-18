@@ -111,7 +111,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy[Ne
   private class BreakOn extends Attribute[LogicalPlan, (Boolean, Int)]
 
   private val cache: BreakOn = {
-    if (DebugSupport.PHYSICAL_PLANNING.enabled) {
+    if (DebugSupport.DEBUG_PHYSICAL_PLANNING) {
       DebugSupport.PHYSICAL_PLANNING.log("New breaking policy cache for %s", this)
     }
     new BreakOn
@@ -133,7 +133,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy[Ne
       //       like this in production we could reuse the mechanics of TreeBuilder, which maintains its own stack)
       val sourceFuseOverPipelineCount = findSourcePlanFuseOverPipelineCount(lp, outerApplyPlanId)
       val break = computeBreakOn(lp, outerApplyPlanId, sourceFuseOverPipelineCount)
-      if (DebugSupport.PHYSICAL_PLANNING.enabled) {
+      if (DebugSupport.DEBUG_PHYSICAL_PLANNING) {
         DebugSupport.PHYSICAL_PLANNING.log(f" + Breaking policy for ${s"${lp.getClass.getSimpleName}(${lp.id.x})"}%-32s break=${break._1}%-8s fuseOverPipelineCount=${break._2}%3d")
       }
       cache.set(lp.id, break)

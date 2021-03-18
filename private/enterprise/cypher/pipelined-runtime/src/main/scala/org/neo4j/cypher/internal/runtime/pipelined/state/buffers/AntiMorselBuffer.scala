@@ -42,7 +42,7 @@ class AntiMorselBuffer(id: BufferId,
   override def canPut: Boolean = true
 
   override def put(data: IndexedSeq[PerArgument[Morsel]], resources: QueryResources): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
 
@@ -86,7 +86,7 @@ class AntiMorselBuffer(id: BufferId,
         }
         datas
       }
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[take]  $this -> $result")
     }
     result
@@ -109,7 +109,7 @@ class AntiMorselBuffer(id: BufferId,
   override def close(datas: Seq[MorselData]): Unit = {
     var decrementCount = 0
     for (data <- datas) {
-      if (DebugSupport.BUFFERS.enabled) {
+      if (DebugSupport.DEBUG_BUFFERS) {
         DebugSupport.BUFFERS.log(s"[closeOne] $this -X- ${data.argumentStream} , 0 , ${data.argumentRowIdsForReducers}")
       }
 

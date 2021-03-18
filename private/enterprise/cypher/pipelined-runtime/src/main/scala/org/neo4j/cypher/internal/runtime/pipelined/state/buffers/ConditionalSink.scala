@@ -34,7 +34,7 @@ class ConditionalSink(predicate: Expression,
   override def toString: String = s"${getClass.getSimpleName}"
 
   override def put(morsel: Morsel, resources: QueryResources): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
     val expressionState = queryState.queryStateForExpressionEvaluation(resources)

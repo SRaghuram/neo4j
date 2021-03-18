@@ -162,9 +162,9 @@ class PipelineState(val pipeline: ExecutablePipeline,
       } while (task != null && taskCancelled(task))
     } catch {
       case NonFatalCypherError(t) =>
-        if (DebugSupport.SCHEDULING.enabled) {
+        if (DebugSupport.DEBUG_SCHEDULING) {
           DebugSupport.SCHEDULING.log(s"[nextTask] failed with $t")
-        } else if (DebugSupport.WORKERS.enabled) {
+        } else if (DebugSupport.DEBUG_WORKERS) {
           DebugSupport.WORKERS.log(s"[nextTask] failed with $t")
         }
         throw NextTaskException(pipeline, t)
@@ -197,7 +197,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
   private def innerNextTask(state: PipelinedQueryState,
                             resources: QueryResources): PipelineTask = {
     if (!executionState.canPut(pipeline)) {
-      if (DebugSupport.SCHEDULING.enabled) {
+      if (DebugSupport.DEBUG_SCHEDULING) {
         DebugSupport.SCHEDULING.log(s"[nextTask] pipeline cannot put! ($pipeline)")
       }
       return null

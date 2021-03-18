@@ -313,7 +313,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
           // Try again with fusion disabled
             TemplateOperatorPolicy(fusionEnabled = false, fusionOverPipelinesEnabled = false, context.config.operatorFusionOverPipelineLimit, query.readOnly, parallelExecution)
 
-        if (DebugSupport.PHYSICAL_PLANNING.enabled) {
+        if (DebugSupport.DEBUG_PHYSICAL_PLANNING) {
           DebugSupport.PHYSICAL_PLANNING.log("Could not compile pipeline because of %s. Retrying with %s", e, nextOperatorFusionPolicy)
         }
 

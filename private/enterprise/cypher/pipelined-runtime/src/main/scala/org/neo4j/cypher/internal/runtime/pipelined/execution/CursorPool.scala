@@ -170,7 +170,7 @@ class TrackingBoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURS
 
   override def allocateAndTrace(): CURSOR = {
     liveCount += 1L
-    if (DebugSupport.CURSORS.enabled) {
+    if (DebugSupport.DEBUG_CURSORS) {
       DebugSupport.CURSORS.log(stackTraceSlice(2, 5).mkString("+ allocate\n        ", "\n        ", ""))
     }
     super.allocateAndTrace()
@@ -178,7 +178,7 @@ class TrackingBoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURS
 
   override def allocate(): CURSOR = {
     liveCount += 1L
-    if (DebugSupport.CURSORS.enabled) {
+    if (DebugSupport.DEBUG_CURSORS) {
       DebugSupport.CURSORS.log(stackTraceSlice(2, 5).mkString("+ allocate\n        ", "\n        ", ""))
     }
     super.allocate()
@@ -187,7 +187,7 @@ class TrackingBoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURS
   override def free(cursor: CURSOR): Unit = {
     if (cursor != null) {
       liveCount -= 1L
-      if (DebugSupport.CURSORS.enabled) {
+      if (DebugSupport.DEBUG_CURSORS) {
         DebugSupport.CURSORS.log(stackTraceSlice(4, 5).mkString( s"""+ free $cursor
         """, "\n        ", ""))
       }

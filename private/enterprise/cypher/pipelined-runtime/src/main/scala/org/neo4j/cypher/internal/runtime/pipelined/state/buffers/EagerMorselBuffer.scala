@@ -67,7 +67,7 @@ class EagerMorselBuffer(id: BufferId,
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     TopLevelArgument.assertTopLevelArgument(argumentRowId) // This is a requirement since we never reset the state
 
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
 
@@ -130,7 +130,7 @@ class EagerMorselBuffer(id: BufferId,
       val completedStates = argumentStateMap.takeCompleted(1)
       if (completedStates != null) {
         // Permanently flip the state to become ready for take
-        if (DebugSupport.BUFFERS.enabled) {
+        if (DebugSupport.DEBUG_BUFFERS) {
           DebugSupport.BUFFERS.log(s"[readyForTake] !!!  $this")
         }
         _hasCompleted = true

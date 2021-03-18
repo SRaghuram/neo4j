@@ -39,7 +39,7 @@ class NoLock(val id: String) extends Lock {
     if (isLocked)
       throw new IllegalStateException(s"$name is already locked")
     isLocked = true
-    if (DebugSupport.LOCKS.enabled) {
+    if (DebugSupport.DEBUG_LOCKS) {
       DebugSupport.LOCKS.log("Locked %s", name)
     }
     isLocked
@@ -48,7 +48,7 @@ class NoLock(val id: String) extends Lock {
   override def unlock(): Unit = {
     if (!isLocked)
       throw new IllegalStateException(s"$name is not locked")
-    if (DebugSupport.LOCKS.enabled) {
+    if (DebugSupport.DEBUG_LOCKS) {
       DebugSupport.LOCKS.log("Unlocked %s", name)
     }
     isLocked = false
@@ -68,7 +68,7 @@ class ConcurrentLock(val id: String) extends Lock {
 
   override def tryLock(): Boolean = {
     val success = isLocked.compareAndSet(false, true)
-    if (DebugSupport.LOCKS.enabled) {
+    if (DebugSupport.DEBUG_LOCKS) {
       DebugSupport.LOCKS.log("%s tried locking %s. Success: %s", Thread.currentThread().getId, name, success)
     }
     success
@@ -78,7 +78,7 @@ class ConcurrentLock(val id: String) extends Lock {
     if (!isLocked.compareAndSet(true, false)) {
       throw new IllegalStateException(s"${Thread.currentThread().getId} tried to release $name that was not acquired.")
     } else {
-      if (DebugSupport.LOCKS.enabled) {
+      if (DebugSupport.DEBUG_LOCKS) {
         DebugSupport.LOCKS.log("%s unlocked %s.", Thread.currentThread().getId, name)
       }
     }

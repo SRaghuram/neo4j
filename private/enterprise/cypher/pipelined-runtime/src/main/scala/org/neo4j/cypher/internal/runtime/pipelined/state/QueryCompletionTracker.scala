@@ -102,25 +102,25 @@ trait QueryCompletionTracker extends FlowControl {
     _assertions
   }
 
-  private val instanceName = if (DebugSupport.TRACKER.enabled) s"[${getClass.getSimpleName}@${System.identityHashCode(this)}] " else ""
+  private val instanceName = if (DebugSupport.DEBUG_TRACKER) s"[${getClass.getSimpleName}@${System.identityHashCode(this)}] " else ""
 
   def debug(str: String): Unit =
-    if (DebugSupport.TRACKER.enabled) {
+    if (DebugSupport.DEBUG_TRACKER) {
       DebugSupport.TRACKER.log(instanceName + str)
     }
 
   def debug(str: String, x: Any): Unit =
-    if (DebugSupport.TRACKER.enabled) {
+    if (DebugSupport.DEBUG_TRACKER) {
       DebugSupport.TRACKER.log(instanceName + str, x)
     }
 
   def debug(str: String, x1: Any, x2: Any): Unit =
-    if (DebugSupport.TRACKER.enabled) {
+    if (DebugSupport.DEBUG_TRACKER) {
       DebugSupport.TRACKER.log(instanceName + str, x1, x2)
     }
 
   def debug(str: String, x1: Any, x2: Any, x3: Any): Unit =
-    if (DebugSupport.TRACKER.enabled) {
+    if (DebugSupport.DEBUG_TRACKER) {
       DebugSupport.TRACKER.log(instanceName + str, x1, x2, x3)
     }
 }

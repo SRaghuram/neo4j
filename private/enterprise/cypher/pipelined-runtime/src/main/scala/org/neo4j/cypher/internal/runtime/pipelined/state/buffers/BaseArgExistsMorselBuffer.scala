@@ -53,7 +53,7 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef, S <: ArgumentState]
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
   override final def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))

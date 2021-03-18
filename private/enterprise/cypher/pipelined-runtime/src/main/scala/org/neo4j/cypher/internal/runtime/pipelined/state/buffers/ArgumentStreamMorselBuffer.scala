@@ -48,7 +48,7 @@ class ArgumentStreamMorselBuffer(id: BufferId,
   override def canPut: Boolean = argumentStateMap.exists(_.canPut)
 
   override def put(data: IndexedSeq[PerArgument[Morsel]], resources: QueryResources): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
 
@@ -100,7 +100,7 @@ class ArgumentStreamMorselBuffer(id: BufferId,
       } else {
         null.asInstanceOf[MorselData]
       }
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[take]  $this -> $data")
     }
     data
@@ -121,7 +121,7 @@ class ArgumentStreamMorselBuffer(id: BufferId,
   }
 
   private def closeOne(argumentStream: ArgumentStream, numberOfDecrements: Int, argumentRowIdsForReducers: Array[Long]): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[closeOne] $this -X- $argumentStream , $numberOfDecrements , $argumentRowIdsForReducers")
     }
 

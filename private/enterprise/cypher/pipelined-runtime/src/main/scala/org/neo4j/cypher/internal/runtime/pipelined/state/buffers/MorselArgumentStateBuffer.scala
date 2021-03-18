@@ -48,7 +48,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
   override def put(data: IndexedSeq[PerArgument[DATA]], resources: QueryResources): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
     var i = 0
@@ -75,7 +75,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   override def take(n: Int): IndexedSeq[ACC] = {
     val accumulators = argumentStateMap.takeCompleted(n)
     if (accumulators != null) {
-      if (DebugSupport.BUFFERS.enabled) {
+      if (DebugSupport.DEBUG_BUFFERS) {
         for (acc <- accumulators) {
           DebugSupport.BUFFERS.log(s"[take]  $this -> $acc")
         }
@@ -85,7 +85,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   }
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
 
@@ -111,7 +111,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
    * Decrement reference counters attached to `accumulator`.
    */
   def close(accumulator: MorselAccumulator[_]): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- $accumulator")
     }
     forAllArgumentReducers(downstreamArgumentReducers, accumulator.argumentRowIdsForReducers, _.decrement(_))

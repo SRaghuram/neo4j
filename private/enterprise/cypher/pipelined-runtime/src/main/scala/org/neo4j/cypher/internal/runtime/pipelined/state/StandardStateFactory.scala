@@ -39,7 +39,7 @@ class StandardStateFactory extends StateFactory {
                           queryContext: QueryContext,
                           tracer: QueryExecutionTracer,
                           resources: QueryResources): QueryCompletionTracker = {
-    if (DebugSupport.TRACKER.enabled) {
+    if (DebugSupport.DEBUG_TRACKER) {
       new StandardDebugQueryCompletionTracker(subscriber, tracer, resources)
     } else {
       new StandardQueryCompletionTracker(subscriber, tracer, resources)

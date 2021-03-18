@@ -37,7 +37,7 @@ class ConcurrentStateFactory extends StateFactory {
                           queryContext: QueryContext,
                           tracer: QueryExecutionTracer,
                           resouces: QueryResources): QueryCompletionTracker = {
-    if (DebugSupport.TRACKER.enabled) {
+    if (DebugSupport.DEBUG_TRACKER) {
       new ConcurrentDebugQueryCompletionTracker(subscriber, queryContext, tracer, resouces)
     } else {
       new ConcurrentQueryCompletionTracker(subscriber, queryContext, tracer, resouces)

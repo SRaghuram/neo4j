@@ -113,7 +113,7 @@ class LHSAccumulatingRHSStreamingSource[ACC_DATA <: AnyRef,
       if (rhsBuffer != null) {
         val rhsMorsel = rhsBuffer.take()
         if (rhsMorsel != null) {
-          if (DebugSupport.BUFFERS.enabled) {
+          if (DebugSupport.DEBUG_BUFFERS) {
             DebugSupport.BUFFERS.log(s"[take] $this -> $lhsAcc & ${PipelinedDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
           }
           return AccumulatorAndPayload(lhsAcc, rhsMorsel)
@@ -153,7 +153,7 @@ class LHSAccumulatingRHSStreamingSource[ACC_DATA <: AnyRef,
   }
 
   override def close(accumulator: MorselAccumulator[_], rhsMorsel: Morsel): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- $accumulator & ${PipelinedDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
     }
 
@@ -191,7 +191,7 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
   override def toString: String = s"${getClass.getSimpleName}($lhsArgumentStateMap)"
 
   override def put(data: IndexedSeq[PerArgument[DATA]], resources: QueryResources): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
     var i = 0
@@ -204,7 +204,7 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
   override def canPut: Boolean = !lhsArgumentStateMap.hasCompleted
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, (_, _) => Unit)
@@ -247,7 +247,7 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
   override def toString: String = s"${getClass.getSimpleName}($rhsArgumentStateMap)"
 
   override def put(data: IndexedSeq[PerArgument[Morsel]], resources: QueryResources): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
     // there is no need to take a lock in this case, because we are sure the argument state is thread safe when needed (is created by state factory)
@@ -270,7 +270,7 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
     if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey("LHSAccumulatingRHSStreamingSource - Increment for an ArgumentID in RHS's accumulator") else null.asInstanceOf[QueryTrackerKey]
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
     // Increment for an ArgumentID in RHS's accumulator

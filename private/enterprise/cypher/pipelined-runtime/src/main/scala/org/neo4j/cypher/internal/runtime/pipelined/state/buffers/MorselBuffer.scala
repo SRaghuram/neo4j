@@ -62,7 +62,7 @@ class MorselBuffer(id: BufferId,
   private[this] val trackerKey: QueryTrackerKey = if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"MorselBuffer($id)") else null.asInstanceOf[QueryTrackerKey]
 
   override def put(morsel: Morsel, resources: QueryResources): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
     if (morsel.hasData) {
@@ -80,7 +80,7 @@ class MorselBuffer(id: BufferId,
    * buffer took care of incrementing the right ones already.
    */
   def putInDelegate(morsel: Morsel, resources: QueryResources): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[putInDelegate] $this <- $morsel")
     }
     if (morsel.hasData) {
@@ -96,7 +96,7 @@ class MorselBuffer(id: BufferId,
     if (morsel == null) {
       null
     } else {
-      if (DebugSupport.BUFFERS.enabled) {
+      if (DebugSupport.DEBUG_BUFFERS) {
         DebugSupport.BUFFERS.log(s"[take]  $this -> $morsel")
       }
       new Parallelizer(morsel)
@@ -225,7 +225,7 @@ class MorselBuffer(id: BufferId,
    * Decrement reference counters attached to `morsel`.
    */
   def close(morsel: Morsel): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- $morsel")
     }
     decrementArgumentCounts(downstreamArgumentReducers, morsel)

@@ -45,7 +45,7 @@ class MorselApplyBuffer(id: BufferId,
                          with Sink[Morsel] {
 
   def put(morsel: Morsel, resources: QueryResources): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
+    if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
     if (morsel.hasData) {
