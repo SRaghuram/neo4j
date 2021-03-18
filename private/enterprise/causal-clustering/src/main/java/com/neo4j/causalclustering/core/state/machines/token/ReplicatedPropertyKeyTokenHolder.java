@@ -9,8 +9,7 @@ import com.neo4j.causalclustering.core.replication.Replicator;
 
 import java.util.function.Supplier;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -25,7 +24,7 @@ public class ReplicatedPropertyKeyTokenHolder extends ReplicatedTokenHolder
     public ReplicatedPropertyKeyTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry registry, Replicator replicator,
                                              IdGeneratorFactory idGeneratorFactory, Supplier<StorageEngine> storageEngineSupplier,
                                              PageCacheTracer pageCacheTracer, LogEntryWriterFactory logEntryWriterFactory,
-                                             ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
+                                             DatabaseReadOnlyChecker readOnlyDatabaseChecker )
     {
         super( namedDatabaseId, registry, replicator, idGeneratorFactory, IdType.PROPERTY_KEY_TOKEN, storageEngineSupplier, TokenType.PROPERTY,
                TransactionState::propertyKeyDoCreateForName, pageCacheTracer, logEntryWriterFactory, readOnlyDatabaseChecker );

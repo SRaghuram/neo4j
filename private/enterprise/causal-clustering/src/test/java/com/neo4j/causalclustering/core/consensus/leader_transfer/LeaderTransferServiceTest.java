@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.DbmsReadOnlyChecker;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -51,6 +52,7 @@ class LeaderTransferServiceTest
     private final Duration leaderTransferInterval = Duration.ofSeconds( 5 );
     private final Duration leaderMemberBackoff = Duration.ofSeconds( 15 );
     private ServerGroupsSupplier serverGroupsProvider;
+    private DbmsReadOnlyChecker.Default dbmsReadOnlyChecker;
 
     @BeforeEach
     void startScheduler() throws Exception
@@ -59,6 +61,7 @@ class LeaderTransferServiceTest
         jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         jobScheduler.start();
         serverGroupsProvider = ServerGroupsSupplier.listen( config );
+        dbmsReadOnlyChecker = new DbmsReadOnlyChecker.Default( config );
     }
 
     @AfterEach
@@ -83,7 +86,7 @@ class LeaderTransferServiceTest
         var messageHandler = new TransferLeaderJobTest.TrackingMessageHandler();
         var leaderService = new StubLeaderService( Map.of() );
         var leaderTransferService = new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, myIdentity,
-                leaderMemberBackoff, nullLogProvider(), clock, leaderService, serverGroupsProvider, new StubRaftMembershipResolver() );
+                leaderMemberBackoff, nullLogProvider(), clock, leaderService, serverGroupsProvider, new StubRaftMembershipResolver(), dbmsReadOnlyChecker );
 
         // when
         life.add( leaderTransferService );
@@ -108,7 +111,7 @@ class LeaderTransferServiceTest
         var leaderService = new StubLeaderService( Map.of( databaseId, myIdentity.serverId() ) );
 
         var leaderTransferService = new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, myIdentity,
-                leaderMemberBackoff, nullLogProvider(), clock, leaderService, serverGroupsProvider, raftMembership );
+                leaderMemberBackoff, nullLogProvider(), clock, leaderService, serverGroupsProvider, raftMembership, dbmsReadOnlyChecker );
 
         // when
         life.add( leaderTransferService );
@@ -135,7 +138,7 @@ class LeaderTransferServiceTest
         var logProvider = new AssertableLogProvider();
 
         var leaderTransferService = new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, myIdentity,
-                leaderMemberBackoff, logProvider, clock, leaderService, serverGroupsProvider, raftMembership );
+                leaderMemberBackoff, logProvider, clock, leaderService, serverGroupsProvider, raftMembership, dbmsReadOnlyChecker );
         var rejection = new RaftMessages.LeadershipTransfer.Rejection( remoteRaftId, 100, 1 );
 
         //when

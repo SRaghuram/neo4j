@@ -9,8 +9,7 @@ import com.neo4j.causalclustering.core.replication.Replicator;
 
 import java.util.function.Supplier;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.api.txstate.TransactionState;
@@ -26,7 +25,7 @@ public class ReplicatedRelationshipTypeTokenHolder extends ReplicatedTokenHolder
     public ReplicatedRelationshipTypeTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry registry,
                                                   Replicator replicator, IdGeneratorFactory idGeneratorFactory,
                                                   Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer,
-                                                  LogEntryWriterFactory logEntryWriterFactory, ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
+                                                  LogEntryWriterFactory logEntryWriterFactory, DatabaseReadOnlyChecker readOnlyDatabaseChecker )
     {
         super( namedDatabaseId, registry, replicator, idGeneratorFactory, RELATIONSHIP_TYPE_TOKEN, storageEngineSupplier, TokenType.RELATIONSHIP,
                TransactionState::relationshipTypeDoCreateForName, pageCacheTracer, logEntryWriterFactory, readOnlyDatabaseChecker );

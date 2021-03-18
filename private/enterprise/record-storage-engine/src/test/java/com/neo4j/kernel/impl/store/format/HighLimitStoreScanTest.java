@@ -35,6 +35,7 @@ import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.FreeIds;
 import org.neo4j.internal.id.IdGenerator;
@@ -75,6 +76,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.writable;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
@@ -138,7 +140,7 @@ class HighLimitStoreScanTest
         Config config = Config.defaults();
         StoreFactory storeFactory =
                 new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, directory.getFileSystem(), format, nullLogProvider(),
-                        PageCacheTracer.NULL, Sets.immutable.empty() );
+                        PageCacheTracer.NULL, writable(), Sets.immutable.empty() );
         neoStores = storeFactory.openAllNeoStores( true );
         neoStores.start( NULL );
         relationshipStore = neoStores.getRelationshipStore();
@@ -237,10 +239,10 @@ class HighLimitStoreScanTest
         IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( directory.getFileSystem(), immediate(), databaseLayout.getDatabaseName() )
         {
             @Override
-            public IdGenerator open( PageCache pageCache, Path filename, IdType idType, LongSupplier highIdScanner, long maxId, boolean readOnly,
-                    Config config, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
+            public IdGenerator open( PageCache pageCache, Path filename, IdType idType, LongSupplier highIdScanner, long maxId,
+                    DatabaseReadOnlyChecker readOnlyChecker, Config config, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
             {
-                return new IndexedIdGenerator( pageCache, filename, immediate(), idType, false, highIdScanner, maxId, readOnly, config, cursorTracer,
+                return new IndexedIdGenerator( pageCache, filename, immediate(), idType, false, highIdScanner, maxId, readOnlyChecker, config, cursorTracer,
                         databaseLayout.getDatabaseName(), openOptions )
                 {
                     @Override
@@ -259,8 +261,8 @@ class HighLimitStoreScanTest
             }
 
             @Override
-            public IdGenerator create( PageCache pageCache, Path filename, IdType idType, long highId, boolean throwIfFileExists, long maxId, boolean readOnly,
-                    Config config, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
+            public IdGenerator create( PageCache pageCache, Path filename, IdType idType, long highId, boolean throwIfFileExists, long maxId,
+                    DatabaseReadOnlyChecker readOnlyChecker, Config config, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
             {
                 throw new UnsupportedOperationException( "Unexpected call since the store should exist" );
             }

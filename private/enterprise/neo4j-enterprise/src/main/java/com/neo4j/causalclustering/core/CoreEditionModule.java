@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerProvider;
+import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
 import com.neo4j.causalclustering.common.PipelineBuilders;
@@ -368,7 +369,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), globalConfig, leaderTransferInterval, databaseManager,
                 raftMessageDispatcher, identityModule, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService, serverGroupsSupplier,
-                membershipResolver );
+                membershipResolver, globalModule.getDbmsReadOnlyChecker() );
 
         var logEntryWriterFactory = new DbmsLogEntryWriterProvider( databaseManager );
 

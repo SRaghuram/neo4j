@@ -24,6 +24,12 @@ import org.neo4j.kernel.api.exceptions.Status;
 
 public class ReadOnly implements AccessCapability
 {
+    public static final ReadOnly INSTANCE = new ReadOnly();
+
+    private ReadOnly()
+    {
+    }
+
     @Override
     public void assertCanWrite()
     {

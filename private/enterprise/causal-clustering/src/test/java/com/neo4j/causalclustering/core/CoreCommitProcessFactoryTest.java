@@ -13,7 +13,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -36,7 +36,8 @@ class CoreCommitProcessFactoryTest
     private final TransactionAppender appender = mock( TransactionAppender.class );
     private final StorageEngine storageEngine = mock( StorageEngine.class );
     private final Config config = Config.defaults();
-    private final ReadOnlyDatabaseChecker readOnlyDatabaseChecker = new ReadOnlyDatabaseChecker.Default( config );
+    private final DatabaseReadOnlyChecker readOnlyDatabaseChecker =
+            new DatabaseReadOnlyChecker.Default( config, namedDatabaseId.name() );
 
     private final CoreCommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( replicator, coreStateMachines,
                                                                                                 leaseCoordinator, LogEntryWriterFactory.LATEST );

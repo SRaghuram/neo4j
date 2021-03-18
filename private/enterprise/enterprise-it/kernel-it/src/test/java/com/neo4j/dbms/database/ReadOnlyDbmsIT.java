@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.read_only;
+import static org.neo4j.configuration.GraphDatabaseSettings.read_only_database_default;
 
 @TestDirectoryExtension
 class ReadOnlyDbmsIT
@@ -39,7 +39,7 @@ class ReadOnlyDbmsIT
         {
             var defaultDatabase = managementService.database( DEFAULT_DATABASE_NAME );
             var dbConfig = getDbConfig( defaultDatabase );
-            assertFalse( dbConfig.get( read_only ) );
+            assertFalse( dbConfig.get( read_only_database_default ) );
             assertDoesNotThrow( () -> createNodeTransaction( defaultDatabase ) );
         }
         finally
@@ -52,7 +52,7 @@ class ReadOnlyDbmsIT
         {
             var readOnlyDatabase = readOnlyService.database( DEFAULT_DATABASE_NAME );
             var dbConfig = getDbConfig( readOnlyDatabase );
-            assertTrue( dbConfig.get( read_only ) );
+            assertTrue( dbConfig.get( read_only_database_default ) );
             assertThrows( WriteOperationsNotAllowedException.class, () -> createNodeTransaction( readOnlyDatabase ) );
         }
         finally
@@ -78,6 +78,6 @@ class ReadOnlyDbmsIT
     private DatabaseManagementService createDbms( boolean readOnly )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
-                .setConfig( read_only, readOnly ).build();
+                .setConfig( read_only_database_default, readOnly ).build();
     }
 }

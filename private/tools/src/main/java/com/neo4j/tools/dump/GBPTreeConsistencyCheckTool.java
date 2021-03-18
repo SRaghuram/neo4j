@@ -27,6 +27,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
+import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.readOnly;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
@@ -51,7 +52,7 @@ public class GBPTreeConsistencyCheckTool
         System.out.println( "Check consistency on " + file.toAbsolutePath() );
         try ( DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
               JobScheduler jobScheduler = createInitialisedScheduler();
-              GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( fs, jobScheduler, new SchemaLayouts(), true, NULL ) )
+              GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( fs, jobScheduler, new SchemaLayouts(), readOnly(), NULL ) )
         {
             GBPTreeBootstrapper.Bootstrap bootstrap = bootstrapper.bootstrapTree( file );
 

@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
+import org.neo4j.configuration.helpers.DbmsReadOnlyChecker;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
@@ -33,17 +33,17 @@ class TransferLeaderJob implements Runnable
     private final ServerGroupsSupplier myServerGroups;
     private final Config config;
     private final Supplier<List<NamedDatabaseId>> leadershipsResolver;
-    private final ReadOnlyDatabaseChecker readOnlyDatabaseChecker;
+    private final DbmsReadOnlyChecker dbmsReadOnlyChecker;
 
     TransferLeaderJob( LeadershipTransferor leadershipTransferor, ServerGroupsSupplier myServerGroups, Config config,
-            SelectionStrategy leaderLoadBalancing, Supplier<List<NamedDatabaseId>> leadershipsResolver )
+            SelectionStrategy leaderLoadBalancing, Supplier<List<NamedDatabaseId>> leadershipsResolver, DbmsReadOnlyChecker dbmsReadOnlyChecker )
     {
         this.myServerGroups = myServerGroups;
         this.config = config;
         this.leadershipsResolver = leadershipsResolver;
         this.leadershipTransferor = leadershipTransferor;
         this.selectionStrategy = leaderLoadBalancing;
-        this.readOnlyDatabaseChecker = new ReadOnlyDatabaseChecker.Default( config );
+        this.dbmsReadOnlyChecker = dbmsReadOnlyChecker;
     }
 
     @Override
@@ -120,7 +120,7 @@ class TransferLeaderJob implements Runnable
     private boolean transferLeadershipIfReadOnly( List<NamedDatabaseId> myLeaderships )
     {
         var readOnlyLeaderships = myLeaderships.stream()
-                                               .filter( db -> readOnlyDatabaseChecker.test( db.name() ) )
+                                               .filter( db -> dbmsReadOnlyChecker.isReadOnly( db.name() ) )
                                                .collect( Collectors.toList() );
         return leadershipTransferor.balanceLeadership( readOnlyLeaderships, RANDOMISED_SELECTION_STRATEGY );
     }

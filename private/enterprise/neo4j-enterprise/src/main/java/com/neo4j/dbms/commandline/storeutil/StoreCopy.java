@@ -117,6 +117,7 @@ import org.neo4j.token.api.TokensLoader;
 import static java.lang.String.format;
 import static org.eclipse.collections.impl.factory.Sets.immutable;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
+import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.readOnly;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.internal.recordstorage.StoreTokens.allReadableTokens;
 import static org.neo4j.kernel.extension.ExtensionFailureStrategies.ignore;
@@ -203,7 +204,7 @@ public class StoreCopy
                   JobScheduler scheduler = createInitialisedScheduler();
                   PageCache fromPageCache = createPageCache( fs, fromPageCacheMemory, scheduler, clock, config );
                   NeoStores neoStores = new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, fs,
-                                                          NullLogProvider.getInstance(), pageCacheTracer ).openAllNeoStores() )
+                                                          NullLogProvider.getInstance(), pageCacheTracer, readOnly() ).openAllNeoStores() )
             {
                 out.println( "Starting to copy store, output will be saved to: " + logFilePath.toAbsolutePath() );
                 nodeStore = neoStores.getNodeStore();
@@ -410,7 +411,7 @@ public class StoreCopy
         // Open store with old reader
         LifeSupport life = new LifeSupport();
         try ( SchemaStore35 schemaStore35 = new SchemaStore35( from.schemaStore(), from.idSchemaStore(), config, org.neo4j.internal.id.IdType.SCHEMA,
-                new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, NullLogProvider.getInstance(), recordFormats, from.getDatabaseName(),
+                new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, NullLogProvider.getInstance(), recordFormats, readOnly(), from.getDatabaseName(),
                 immutable.empty() ) )
         {
             schemaStore35.initialise( true, cursorTracer );

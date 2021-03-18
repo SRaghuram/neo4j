@@ -53,6 +53,7 @@ import static org.eclipse.collections.api.factory.Sets.immutable;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.writable;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
@@ -155,7 +156,7 @@ class HighLimitStoreMigrationTest
         Config config = Config.defaults();
         IdType idType = IdType.SCHEMA;
         try ( SchemaStore35 schemaStore35 = new SchemaStore35( store, idFile, config, idType, idGeneratorFactory, pageCache, logProvider, recordFormats,
-                databaseLayout.getDatabaseName(), immutable.empty() ) )
+                writable(), databaseLayout.getDatabaseName(), immutable.empty() ) )
         {
             schemaStore35.initialise( true, PageCursorTracer.NULL );
         }

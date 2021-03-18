@@ -56,7 +56,7 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
                 new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
         this.commitProcessFactory = ( appender, storageEngine, databaseId, readOnlyDatabaseChecker ) -> new ReadOnlyTransactionCommitProcess();
         this.transactionMonitor = editionModule.createTransactionMonitor();
-        this.accessCapabilityFactory = AccessCapabilityFactory.fixed( new ReadOnly() );
+        this.accessCapabilityFactory = AccessCapabilityFactory.fixed( ReadOnly.INSTANCE );
     }
 
     @Override

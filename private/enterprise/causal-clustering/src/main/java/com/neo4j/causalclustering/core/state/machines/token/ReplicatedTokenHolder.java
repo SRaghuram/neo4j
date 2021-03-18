@@ -12,13 +12,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.kernel.api.exceptions.ReadOnlyDbException;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -48,13 +47,13 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     private final NamedDatabaseId namedDatabaseId;
     private final PageCacheTracer pageCacheTracer;
     private final LogEntryWriterFactory logEntryWriterFactory;
-    private final ReadOnlyDatabaseChecker readOnlyDatabaseChecker;
+    private final DatabaseReadOnlyChecker readOnlyDatabaseChecker;
 
     ReplicatedTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry tokenRegistry, Replicator replicator,
                            IdGeneratorFactory idGeneratorFactory, IdType tokenIdType,
                            Supplier<StorageEngine> storageEngineSupplier, TokenType type,
                            ReplicatedTokenCreator tokenCreator, PageCacheTracer pageCacheTracer,
-                           LogEntryWriterFactory logEntryWriterFactory, ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
+                           LogEntryWriterFactory logEntryWriterFactory, DatabaseReadOnlyChecker readOnlyDatabaseChecker )
     {
         super( tokenRegistry );
         this.replicator = replicator;
@@ -125,12 +124,9 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         }
     }
 
-    private void validateNotReadOnly( ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
+    private void validateNotReadOnly( DatabaseReadOnlyChecker readOnlyDatabaseChecker )
     {
-        if ( readOnlyDatabaseChecker.test( namedDatabaseId.name() ) )
-        {
-            throw new RuntimeException( new ReadOnlyDbException( namedDatabaseId.name() ) );
-        }
+        readOnlyDatabaseChecker.check();
     }
 
     private byte[] createCommands( String tokenName, boolean internal )

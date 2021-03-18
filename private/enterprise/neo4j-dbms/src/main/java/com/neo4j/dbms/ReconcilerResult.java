@@ -11,13 +11,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.internal.helpers.Exceptions;
-import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 /**

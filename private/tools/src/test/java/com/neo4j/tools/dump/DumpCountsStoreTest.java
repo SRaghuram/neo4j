@@ -25,6 +25,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.writable;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.counts.CountsBuilder.EMPTY;
 import static org.neo4j.internal.counts.GBPTreeCountsStore.NO_MONITOR;
@@ -51,8 +52,8 @@ class DumpCountsStoreTest
     {
         // given
         Path file = directory.file( "file" );
-        try ( GBPTreeCountsStore store = new GBPTreeCountsStore( pageCache, file, directory.getFileSystem(), immediate(), EMPTY, false, PageCacheTracer.NULL,
-                NO_MONITOR, DEFAULT_DATABASE_NAME ) )
+        try ( GBPTreeCountsStore store = new GBPTreeCountsStore( pageCache, file, directory.getFileSystem(), immediate(), EMPTY, writable(),
+                PageCacheTracer.NULL, NO_MONITOR, DEFAULT_DATABASE_NAME ) )
         {
             store.start( NULL, INSTANCE );
             try ( CountsAccessor.Updater updater = store.apply( BASE_TX_ID + 1, NULL ) )

@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.DbmsReadOnlyChecker;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -52,7 +53,8 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
             DatabaseManager<ClusteredDatabaseContext> databaseManager,
             Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
             CoreServerIdentity myIdentity, Duration leaderMemberBackoff, LogProvider logProvider, Clock clock,
-            LeaderService leaderService, ServerGroupsSupplier serverGroupsSupplier, RaftMembershipResolver membershipResolver )
+            LeaderService leaderService, ServerGroupsSupplier serverGroupsSupplier, RaftMembershipResolver membershipResolver,
+            DbmsReadOnlyChecker dbmsReadOnlyChecker )
     {
         this.databasePenalties = new DatabasePenalties( leaderMemberBackoff, clock );
         this.jobScheduler = jobScheduler;
@@ -65,7 +67,7 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
         this.leadershipsResolver = new RaftLeadershipsResolver( databaseManager, myIdentity );
 
         this.transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config,
-                pickSelectionStrategy( config, databaseManager, leaderService, myIdentity ), leadershipsResolver );
+                pickSelectionStrategy( config, databaseManager, leaderService, myIdentity ), leadershipsResolver, dbmsReadOnlyChecker );
     }
 
     @Override

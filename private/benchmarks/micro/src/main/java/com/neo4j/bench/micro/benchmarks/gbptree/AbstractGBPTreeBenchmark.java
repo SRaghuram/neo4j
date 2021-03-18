@@ -35,6 +35,7 @@ import org.neo4j.logging.NullLog;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.time.Clocks;
 
+import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.writable;
 import static org.eclipse.collections.api.factory.Sets.immutable;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_READER;
@@ -193,7 +194,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 NO_HEADER_READER,
                 NO_HEADER_WRITER,
                 RecoveryCleanupWorkCollector.immediate(),
-                false,
+                writable(),
                 PageCacheTracer.NULL,
                 immutable.empty(),
                 DEFAULT_DATABASE_NAME,

@@ -83,7 +83,8 @@ import java.util.UUID;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
+import org.neo4j.configuration.helpers.DbmsReadOnlyChecker;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabasePageCache;
@@ -165,7 +166,7 @@ class CoreDatabaseFactory
     private final DatabaseStartAborter databaseStartAborter;
     private final BootstrapSaver bootstrapSaver;
     private final DbmsLogEntryWriterProvider dbmsLogEntryWriterProvider;
-    private final ReadOnlyDatabaseChecker readOnlyDatabaseChecker;
+    private final DbmsReadOnlyChecker readOnlyDatabaseChecker;
 
     CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, DatabaseManager<ClusteredDatabaseContext> databaseManager,
                          CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
@@ -204,7 +205,7 @@ class CoreDatabaseFactory
         this.databaseStartAborter = databaseStartAborter;
         this.bootstrapSaver = new BootstrapSaver( fileSystem, globalModule.getLogService().getInternalLogProvider() );
         this.dbmsLogEntryWriterProvider = dbmsLogEntryWriterProvider;
-        this.readOnlyDatabaseChecker = new ReadOnlyDatabaseChecker.Default( config );
+        this.readOnlyDatabaseChecker = new DbmsReadOnlyChecker.Default( config );
     }
 
     CoreRaftContext createRaftContext( NamedDatabaseId namedDatabaseId, LifeSupport raftComponents, Monitors monitors, Dependencies dependencies,
@@ -250,7 +251,7 @@ class CoreDatabaseFactory
 
     CoreEditionKernelComponents createKernelComponents( NamedDatabaseId namedDatabaseId, LifeSupport raftComponents, CoreRaftContext raftContext,
             CoreKernelResolvers kernelResolvers, DatabaseLogService logService,
-            VersionContextSupplier versionContextSupplier )
+            VersionContextSupplier versionContextSupplier, DatabaseReadOnlyChecker databaseReadOnlyChecker )
     {
         var logEntryWriterFactory = this.dbmsLogEntryWriterProvider.getEntryWriterFactory( namedDatabaseId );
         var raftGroup = raftContext.raftGroup();
@@ -267,18 +268,18 @@ class CoreDatabaseFactory
         var relationshipTypeTokenRegistry = new TokenRegistry( TokenHolder.TYPE_RELATIONSHIP_TYPE );
         var relationshipTypeTokenHolder = new ReplicatedRelationshipTypeTokenHolder( namedDatabaseId, relationshipTypeTokenRegistry, replicator,
                                                                                      idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer,
-                                                                                     logEntryWriterFactory, readOnlyDatabaseChecker );
+                                                                                     logEntryWriterFactory, databaseReadOnlyChecker );
 
         var propertyKeyTokenRegistry = new TokenRegistry( TokenHolder.TYPE_PROPERTY_KEY );
         var propertyKeyTokenHolder = new ReplicatedPropertyKeyTokenHolder( namedDatabaseId, propertyKeyTokenRegistry, replicator,
                                                                                                         idContext.getIdGeneratorFactory(),
                                                                                                         storageEngineSupplier, pageCacheTracer,
-                                                                                                        logEntryWriterFactory, readOnlyDatabaseChecker );
+                                                                                                        logEntryWriterFactory, databaseReadOnlyChecker );
 
         var labelTokenRegistry = new TokenRegistry( TokenHolder.TYPE_LABEL );
         var labelTokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, labelTokenRegistry, replicator,
                                                                idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer,
-                                                               logEntryWriterFactory, readOnlyDatabaseChecker );
+                                                               logEntryWriterFactory, databaseReadOnlyChecker );
 
         var databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
         var commitHelper = new StateMachineCommitHelper( raftContext.commandIndexTracker(), versionContextSupplier,

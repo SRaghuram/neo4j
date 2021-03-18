@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
+import org.neo4j.configuration.helpers.DbmsReadOnlyChecker;
 import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -54,7 +54,7 @@ public class RaftGroupFactory
     public RaftGroup create( NamedDatabaseId namedDatabaseId, Lazy<RaftMemberId> raftMemberId,
             Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors, Dependencies dependencies,
             DatabaseLogService logService, Consumer<RaftMessages.StatusResponse> statusResponseConsumer,
-            ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
+            DbmsReadOnlyChecker readOnlyDatabaseChecker )
     {
         // TODO: Consider if additional services are per raft group, e.g. config, log-service.
         return new RaftGroup( globalModule.getGlobalConfig(), logService, globalModule.getFileSystem(), globalModule.getJobScheduler(),

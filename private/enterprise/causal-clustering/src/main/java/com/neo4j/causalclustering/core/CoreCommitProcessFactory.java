@@ -10,12 +10,12 @@ import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
 import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordinator;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionCommitProcess;
 
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
-import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.InternalTransactionCommitProcess;
+import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.storageengine.api.StorageEngine;
 
@@ -37,7 +37,7 @@ public class CoreCommitProcessFactory implements CommitProcessFactory
 
     @Override
     public TransactionCommitProcess create( TransactionAppender appender, StorageEngine storageEngine,
-            NamedDatabaseId databaseId, ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
+            NamedDatabaseId databaseId, DatabaseReadOnlyChecker readOnlyDatabaseChecker )
     {
         initializeCommitProcessForStateMachines( appender, storageEngine );
         return new ReplicatedTransactionCommitProcess( replicator, databaseId, leaseCoordinator, logEntryWriterFactory, readOnlyDatabaseChecker );

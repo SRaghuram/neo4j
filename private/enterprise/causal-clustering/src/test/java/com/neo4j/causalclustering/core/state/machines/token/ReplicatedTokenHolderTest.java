@@ -14,7 +14,8 @@ import org.junit.jupiter.api.Test;
 import java.util.Collection;
 import java.util.function.Supplier;
 
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
@@ -53,6 +54,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.read_only_database_default;
+import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.writable;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 
 class ReplicatedTokenHolderTest
@@ -68,7 +71,7 @@ class ReplicatedTokenHolderTest
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null, null, storageEngineSupplier,
-                                                                            NULL, logEntryWriterFactory, ReadOnlyDatabaseChecker.neverReadOnly() );
+                                                                            NULL, logEntryWriterFactory, writable() );
 
         // when
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
@@ -93,7 +96,7 @@ class ReplicatedTokenHolderTest
         when( replicator.replicate( any() ) ).thenReturn( replicationResult );
 
         var tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, replicator, factory, storageEngineSupplier, cacheTracer,
-                                                          logEntryWriterFactory, ReadOnlyDatabaseChecker.neverReadOnly() );
+                                                          logEntryWriterFactory, writable() );
         tokenHolder.createToken( "foo", false );
 
         verify( cacheTracer ).createPageCursorTracer( any() );
@@ -107,7 +110,7 @@ class ReplicatedTokenHolderTest
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null,
                                                                             null, storageEngineSupplier, NULL, logEntryWriterFactory,
-                                                                            ReadOnlyDatabaseChecker.neverReadOnly() );
+                                                                            writable() );
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
 
         // when
@@ -134,7 +137,7 @@ class ReplicatedTokenHolderTest
         ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry,
                                                                             content -> ReplicationResult.applied( StateMachineResult.of( generatedTokenId ) ),
                                                                             idGeneratorFactory, storageEngineSupplier,
-                                                                            NULL, logEntryWriterFactory, ReadOnlyDatabaseChecker.neverReadOnly() );
+                                                                            NULL, logEntryWriterFactory, writable() );
 
         // when
         Integer tokenId = tokenHolder.getOrCreateId( "name1" );
@@ -148,9 +151,10 @@ class ReplicatedTokenHolderTest
     {
         //given
         TokenRegistry registry = new TokenRegistry( "Label" );
-        ReadOnlyDatabaseChecker alwaysReadOnly = databaseName -> true;
+        var config = Config.defaults( read_only_database_default, true );
+        var readOnlyChecker = new DatabaseReadOnlyChecker.Default( config, DEFAULT_DATABASE_NAME );
         final var holder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null, null, storageEngineSupplier, NULL,
-                                                           logEntryWriterFactory, alwaysReadOnly );
+                logEntryWriterFactory, readOnlyChecker );
         //when
         final var exception = assertThrows( RuntimeException.class, () -> holder.createToken( "foo", false ) );
         Assertions.assertThat( getRootCause( exception ).getMessage() )

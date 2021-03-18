@@ -172,7 +172,6 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     @Override
     protected Function<NamedDatabaseId,TokenHolders> createTokenHolderProvider( GlobalModule platform )
     {
-        Config globalConfig = platform.getGlobalConfig();
         return databaseId -> {
             DatabaseManager<?> databaseManager = platform.getGlobalDependencies().resolveDependency( DatabaseManager.class );
             Supplier<Kernel> kernelSupplier = () ->
@@ -182,9 +181,9 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 return databaseContext.dependencies().resolveDependency( Kernel.class );
             };
             return new TokenHolders(
-                    new DelegatingTokenHolder( createPropertyKeyCreator( globalConfig, databaseId, kernelSupplier ), TYPE_PROPERTY_KEY ),
-                    new DelegatingTokenHolder( createLabelIdCreator( globalConfig, databaseId, kernelSupplier ), TYPE_LABEL ),
-                    new DelegatingTokenHolder( createRelationshipTypeCreator( globalConfig, databaseId, kernelSupplier ), TYPE_RELATIONSHIP_TYPE ) );
+                    new DelegatingTokenHolder( createPropertyKeyCreator( kernelSupplier ), TYPE_PROPERTY_KEY ),
+                    new DelegatingTokenHolder( createLabelIdCreator( kernelSupplier ), TYPE_LABEL ),
+                    new DelegatingTokenHolder( createRelationshipTypeCreator( kernelSupplier ), TYPE_RELATIONSHIP_TYPE ) );
         };
     }
 

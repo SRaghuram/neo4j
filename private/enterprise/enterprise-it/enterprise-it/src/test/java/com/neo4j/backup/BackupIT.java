@@ -140,7 +140,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
-import static org.neo4j.configuration.GraphDatabaseSettings.read_only;
+import static org.neo4j.configuration.GraphDatabaseSettings.read_only_database_default;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
@@ -873,7 +873,7 @@ class BackupIT
         addLotsOfData( db );
         managementService.shutdown();
 
-        db = startDb( serverHomeDir, Maps.mutable.of( read_only, true ) );
+        db = startDb( serverHomeDir, Maps.mutable.of( read_only_database_default, true ) );
 
         executeBackup( db );
 

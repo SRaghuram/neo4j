@@ -71,6 +71,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.writable;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory.INSTANCE;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
@@ -284,7 +285,7 @@ class ReplicatedTokenStateMachineTest
         var layout = DatabaseLayout.ofFlat( testDirectory.homePath( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
         var config = Config.defaults();
         var idFactory = new DefaultIdGeneratorFactory( fs, immediate(), layout.getDatabaseName() );
-        var storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider, PageCacheTracer.NULL );
+        var storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider, PageCacheTracer.NULL, writable() );
         assertThat( stores ).isNull();
         stores = storeFactory.openAllNeoStores( true );
         var commitProcess = mock( TransactionCommitProcess.class );

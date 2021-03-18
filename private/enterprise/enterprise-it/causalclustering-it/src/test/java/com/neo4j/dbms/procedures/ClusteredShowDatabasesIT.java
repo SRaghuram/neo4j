@@ -452,7 +452,7 @@ class ClusteredShowDatabasesIT
 
             // follower which is configured as dbms.read_only and will be unable to bootstrap a database.
             var misConfiguredCore = cluster.addCoreMemberWithIndex( additionalCoreIndex );
-            misConfiguredCore.updateConfig( GraphDatabaseSettings.read_only, true );
+            misConfiguredCore.updateConfig( GraphDatabaseSettings.read_only_database_default, true );
 
             misConfiguredCore.start();
 

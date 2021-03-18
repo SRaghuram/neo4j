@@ -968,7 +968,7 @@ order by a.COL1""".format(a, b))
     val old = new TestEnterpriseDatabaseManagementServiceBuilder(Path.of( "target/readonly" )).build()
     old.shutdown()
     val managementService = new TestEnterpriseDatabaseManagementServiceBuilder(Path.of( "target/readonly" ))
-      .setConfig(GraphDatabaseSettings.read_only, TRUE)
+      .setConfig(GraphDatabaseSettings.read_only_database_default, TRUE)
       .build()
     val db = managementService.database(DEFAULT_DATABASE_NAME)
     try {

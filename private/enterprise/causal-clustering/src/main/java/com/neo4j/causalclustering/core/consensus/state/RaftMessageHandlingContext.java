@@ -11,12 +11,8 @@ import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.util.Set;
 import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
-
-import static java.util.Set.copyOf;
 
 public class RaftMessageHandlingContext
 {

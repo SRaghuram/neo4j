@@ -21,6 +21,7 @@ import java.nio.file.Path;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseConfig;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -76,9 +77,10 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         var databaseConfig = new DatabaseConfig( config, namedDatabaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );
         var kernelResolvers = new CoreKernelResolvers();
+        var readOnlyChecker = new DatabaseReadOnlyChecker.Default( globalModule.getDbmsReadOnlyChecker(), namedDatabaseId.name() );
         var kernelContext = edition.coreDatabaseFactory()
                 .createKernelComponents( namedDatabaseId, raftComponents, raftContext, kernelResolvers,
-                        coreDatabaseLogService, versionContextSupplier );
+                        coreDatabaseLogService, versionContextSupplier, readOnlyChecker );
 
         var databaseCreationContext = newDatabaseCreationContext( namedDatabaseId, coreDatabaseDependencies,
                                                                   coreDatabaseMonitors, kernelContext, versionContextSupplier, databaseConfig,

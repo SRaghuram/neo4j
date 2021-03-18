@@ -41,6 +41,7 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.string.HexString;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.readOnly;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
@@ -95,7 +96,7 @@ public class RsdrMain
     private static Config buildConfig()
     {
         return Config.newBuilder()
-                .set( GraphDatabaseSettings.read_only, true )
+                .set( GraphDatabaseSettings.read_only_database_default, true )
                 .set( GraphDatabaseSettings.pagecache_memory, "64M" ).build();
     }
 
@@ -105,7 +106,7 @@ public class RsdrMain
         IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate(), DEFAULT_DATABASE_NAME );
         NullLogProvider logProvider = NullLogProvider.getInstance();
         return new StoreFactory( DatabaseLayout.ofFlat( storeDir ), config, idGeneratorFactory, pageCache, fileSystem, logProvider,
-                PageCacheTracer.NULL );
+                PageCacheTracer.NULL, readOnly() );
     }
 
     private static void interact( FileSystemAbstraction fileSystem, NeoStores neoStores, DatabaseLayout databaseLayout ) throws IOException

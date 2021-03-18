@@ -9,9 +9,8 @@ import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordinator;
 
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.exceptions.ReadOnlyDbException;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -31,10 +30,10 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
     private final NamedDatabaseId namedDatabaseId;
     private final ClusterLeaseCoordinator leaseCoordinator;
     private final LogEntryWriterFactory logEntryWriterFactory;
-    private final ReadOnlyDatabaseChecker readOnlyDatabaseChecker;
+    private final DatabaseReadOnlyChecker readOnlyDatabaseChecker;
 
     public ReplicatedTransactionCommitProcess( Replicator replicator, NamedDatabaseId namedDatabaseId, ClusterLeaseCoordinator leaseCoordinator,
-                                               LogEntryWriterFactory logEntryWriterFactory, ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
+                                               LogEntryWriterFactory logEntryWriterFactory, DatabaseReadOnlyChecker readOnlyDatabaseChecker )
     {
         this.replicator = replicator;
         this.namedDatabaseId = namedDatabaseId;
@@ -88,7 +87,7 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
         }
     }
 
-    private void validate( TransactionToApply tx, ReadOnlyDatabaseChecker readOnlyDatabaseChecker ) throws TransactionFailureException
+    private void validate( TransactionToApply tx, DatabaseReadOnlyChecker readOnlyDatabaseChecker ) throws TransactionFailureException
     {
         TransactionRepresentation txRepresentation = tx.transactionRepresentation();
         int leaseId = txRepresentation.getLeaseId();
@@ -97,10 +96,6 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
         {
             throw new TransactionFailureException( LeaseExpired, "The lease has been invalidated" );
         }
-
-        if ( readOnlyDatabaseChecker.test( namedDatabaseId.name() ) )
-        {
-            throw new RuntimeException( new ReadOnlyDbException( namedDatabaseId.name() ) );
-        }
+        readOnlyDatabaseChecker.check();
     }
 }

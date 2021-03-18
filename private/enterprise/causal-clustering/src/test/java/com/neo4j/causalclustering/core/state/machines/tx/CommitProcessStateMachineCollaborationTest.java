@@ -13,8 +13,7 @@ import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseStateMachine;
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
@@ -53,7 +52,7 @@ class CommitProcessStateMachineCollaborationTest
         ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, nameDatabaseId,
                                                                                                    mock( ClusterLeaseCoordinator.class ),
                                                                                                    LogEntryWriterFactory.LATEST,
-                                                                                                   ReadOnlyDatabaseChecker.neverReadOnly() );
+                                                                                                   DatabaseReadOnlyChecker.writable() );
 
         // when
         assertThrows( TransactionFailureException.class, () -> commitProcess.commit( transactionToApply, NULL, EXTERNAL ) );

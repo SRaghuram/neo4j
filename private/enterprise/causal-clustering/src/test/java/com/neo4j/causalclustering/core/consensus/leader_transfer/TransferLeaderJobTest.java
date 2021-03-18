@@ -24,7 +24,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.helpers.DbmsReadOnlyChecker;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
@@ -57,11 +57,12 @@ class TransferLeaderJobTest
         // given
         var config = Map.<Setting<?>,Object>of( read_only_databases, Set.of( databaseId1.name() ) );
         var myLeaderships = List.of( databaseId1 );
+        Config dbConfig = Config.defaults( config );
         var transferLeaderJob = new TransferLeaderJob( leadershipTransferor,
-                                                       ServerGroupsSupplier.EMPTY,
-                                                       Config.defaults(config),
+                                                       ServerGroupsSupplier.EMPTY, dbConfig,
                                                        SelectionStrategy.NO_OP,
-                                                       () -> myLeaderships );
+                                                       () -> myLeaderships,
+                                                        new DbmsReadOnlyChecker.Default( dbConfig ) );
 
         // when
         transferLeaderJob.run();
@@ -81,7 +82,8 @@ class TransferLeaderJobTest
                            .build();
         var serverGroupsSupplier = listen( config );
         var myLeaderships = new ArrayList<NamedDatabaseId>();
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, new RandomStrategy(), () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, new RandomStrategy(), () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
         // I am leader
         myLeaderships.add( databaseId1 );
 
@@ -106,7 +108,8 @@ class TransferLeaderJobTest
 
         // I am not leader for any database
         List<NamedDatabaseId> myLeaderships = List.of();
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
 
         // when
         transferLeaderJob.run();
@@ -124,7 +127,8 @@ class TransferLeaderJobTest
         var serverGroupsSupplier = listen( config );
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
         // I am leader
         myLeaderships.add( databaseId1 );
 
@@ -144,7 +148,8 @@ class TransferLeaderJobTest
         var serverGroupsSupplier = listen( config );
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
         // I am leader
         myLeaderships.add( databaseId1 );
 
@@ -172,7 +177,8 @@ class TransferLeaderJobTest
         };
 
         var myLeaderships = List.of( databaseId1, databaseId2 );
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, mockSelectionStrategy, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, mockSelectionStrategy, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
         // when
         transferLeaderJob.run();
 
@@ -198,7 +204,8 @@ class TransferLeaderJobTest
 
         var config = Config.defaults();
         var serverGroupsSupplier = listen( config );
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, mockSelectionStrategy, () -> nonSystemLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, mockSelectionStrategy, () -> nonSystemLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
 
         // when
         transferLeaderJob.run();
@@ -209,7 +216,8 @@ class TransferLeaderJobTest
         // given
         selectionStrategyInputs.clear();
         var systemLeaderships = List.of( NAMED_SYSTEM_DATABASE_ID );
-        transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, mockSelectionStrategy, () -> systemLeaderships );
+        transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, mockSelectionStrategy, () -> systemLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
 
         // when
         transferLeaderJob.run();
@@ -234,7 +242,8 @@ class TransferLeaderJobTest
         var serverGroupsSupplier = listen( config );
 
         var myLeaderships = new ArrayList<>( databaseIds );
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
 
         // when
         transferLeaderJob.run();
@@ -256,7 +265,8 @@ class TransferLeaderJobTest
         var serverGroupsSupplier = listen( config );
 
         var myLeaderships = List.of( databaseId1 );
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
         // when I am leader in prio
         transferLeaderJob.run();
 
@@ -282,7 +292,8 @@ class TransferLeaderJobTest
         var config = Config.newBuilder().set( CausalClusteringSettings.default_leadership_priority_group, new ServerGroupName( "prio" ) ).build();
         var serverGroupsSupplier = listen( config );
         var myLeaderships = new ArrayList<NamedDatabaseId>();
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, new RandomStrategy(), () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, new RandomStrategy(), () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
         // I am leader
         myLeaderships.add( databaseId1 );
 
@@ -306,7 +317,8 @@ class TransferLeaderJobTest
         var serverGroupsSupplier = listen( config );
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
         // I am leader
         myLeaderships.add( databaseId1 );
 
@@ -330,7 +342,8 @@ class TransferLeaderJobTest
         var serverGroupsSupplier = listen( config );
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
         // I am leader
         myLeaderships.add( databaseId1 );
 
@@ -367,7 +380,8 @@ class TransferLeaderJobTest
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         var serverGroupsSupplier = listen( config );
         var stubLeadershipTransferor = new StubLeadershipTransferor();
-        var transferLeaderJob = new TransferLeaderJob( stubLeadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( stubLeadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
 
         // when
         myLeaderships.add( databaseId1 );
@@ -381,7 +395,7 @@ class TransferLeaderJobTest
             assertTrue( myLeaderships.contains( namedDatabaseId ) );
         } );
         prioritisedGroups.values().stream().forEach( serverGroupName -> {
-            assertTrue( serverGroupName.equals( defaultGroupName ) );
+            assertEquals( serverGroupName, defaultGroupName );
         } );
     }
 
@@ -397,7 +411,8 @@ class TransferLeaderJobTest
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         var serverGroupsSupplier = listen( config );
         var stubLeadershipTransferor = new StubLeadershipTransferor();
-        var transferLeaderJob = new TransferLeaderJob( stubLeadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( stubLeadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
 
         // when
         myLeaderships.add( databaseId1 );
@@ -422,7 +437,8 @@ class TransferLeaderJobTest
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         var serverGroupsSupplier = listen( config );
         var stubLeadershipTransferor = new StubLeadershipTransferor();
-        var transferLeaderJob = new TransferLeaderJob( stubLeadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( stubLeadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
 
         // when
         myLeaderships.add( databaseId1 );
@@ -452,7 +468,8 @@ class TransferLeaderJobTest
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         var serverGroupsSupplier = listen( config );
         var stubLeadershipTransferor = new StubLeadershipTransferor();
-        var transferLeaderJob = new TransferLeaderJob( stubLeadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( stubLeadershipTransferor, serverGroupsSupplier, config, SelectionStrategy.NO_OP, () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
 
         // when
         myLeaderships.add( databaseId1 );
@@ -464,7 +481,7 @@ class TransferLeaderJobTest
         assertThat( prioritisedGroups.size() ).isEqualTo( myLeaderships.size() );
         for ( var entry : prioritisedGroups.entrySet() )
         {
-            assertTrue( entry.getValue().equals( explicitGroupNames.get( entry.getKey() ) ) );
+            assertEquals( entry.getValue(), explicitGroupNames.get( entry.getKey() ) );
         }
     }
 
@@ -481,7 +498,8 @@ class TransferLeaderJobTest
                            .set( read_only_databases, Set.of( databaseId1.name() ) ).build();
         var serverGroupsSupplier = listen( config );
         var myLeaderships = new ArrayList<>( List.of( databaseId1, databaseId2 ) );
-        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, new RandomStrategy(), () -> myLeaderships );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, new RandomStrategy(), () -> myLeaderships,
+                new DbmsReadOnlyChecker.Default( config ) );
 
         //when
         transferLeaderJob.run();

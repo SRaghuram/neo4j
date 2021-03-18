@@ -33,6 +33,7 @@ import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.Driver;
@@ -557,19 +558,20 @@ class TransactionGuardIT
         }
 
         @Override
-        public IdGenerator open( PageCache pageCache, Path filename, IdType idType, LongSupplier highIdSupplier, long maxId, boolean readOnly, Config config,
-                PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions ) throws IOException
+        public IdGenerator open( PageCache pageCache, Path filename, IdType idType, LongSupplier highIdSupplier, long maxId,
+                DatabaseReadOnlyChecker readOnlyChecker, Config config, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions ) throws IOException
         {
-            return new TerminationIdGenerator( delegate.open( pageCache, filename, idType, highIdSupplier, maxId, readOnly, config, cursorTracer, openOptions ),
+            return new TerminationIdGenerator(
+                    delegate.open( pageCache, filename, idType, highIdSupplier, maxId, readOnlyChecker, config, cursorTracer, openOptions ),
                     getIdInjectionFunction );
         }
 
         @Override
-        public IdGenerator create( PageCache pageCache, Path filename, IdType idType, long highId, boolean throwIfFileExists, long maxId, boolean readOnly,
-                Config config, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions ) throws IOException
+        public IdGenerator create( PageCache pageCache, Path filename, IdType idType, long highId, boolean throwIfFileExists, long maxId,
+                DatabaseReadOnlyChecker readOnlyChecker, Config config, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions ) throws IOException
         {
             return new TerminationIdGenerator(
-                    delegate.create( pageCache, filename, idType, highId, throwIfFileExists, maxId, readOnly, config, cursorTracer, openOptions ),
+                    delegate.create( pageCache, filename, idType, highId, throwIfFileExists, maxId, readOnlyChecker, config, cursorTracer, openOptions ),
                     getIdInjectionFunction );
         }
 

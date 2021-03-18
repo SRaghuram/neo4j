@@ -16,7 +16,6 @@ import java.util.function.Consumer;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.exceptions.ReadOnlyDbException;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -59,7 +58,7 @@ public class ReadOnlyStandaloneIT
 
         //when/then
         var t = assertThrows( RuntimeException.class, () -> createData( service, property, label ) );
-        assertThat( t ).hasCauseInstanceOf( ReadOnlyDbException.class );
+        assertThat( t ).hasRootCauseInstanceOf( ReadOnlyDbException.class );
         managementService.shutdown();
     }
 
@@ -77,7 +76,7 @@ public class ReadOnlyStandaloneIT
 
         //when/then
         var t = assertThrows( RuntimeException.class, () -> createData( service, property, label ) );
-        assertThat( t ).hasCauseInstanceOf( ReadOnlyDbException.class );
+        assertThat( t ).hasRootCauseInstanceOf( ReadOnlyDbException.class );
         managementService.shutdown();
     }
 

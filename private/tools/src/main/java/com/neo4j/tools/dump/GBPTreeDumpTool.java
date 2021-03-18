@@ -21,6 +21,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.index.schema.SchemaLayouts;
 import org.neo4j.scheduler.JobScheduler;
 
+import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.readOnly;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 public class GBPTreeDumpTool
@@ -44,7 +45,7 @@ public class GBPTreeDumpTool
         out.println( "Dump tree " + file.toAbsolutePath() );
         try ( DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
               JobScheduler jobScheduler = createInitialisedScheduler();
-              GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( fs, jobScheduler, new SchemaLayouts(), true, PageCacheTracer.NULL ) )
+              GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( fs, jobScheduler, new SchemaLayouts(), readOnly(), PageCacheTracer.NULL ) )
         {
             GBPTreeBootstrapper.Bootstrap bootstrap = bootstrapper.bootstrapTree( file );
 
