@@ -5,6 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.util
+
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.InterpretedRuntimeName
 import org.neo4j.cypher.internal.PipelinedRuntimeName
@@ -12,7 +14,6 @@ import org.neo4j.cypher.internal.SlottedRuntimeName
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
 
-import java.util
 import scala.collection.JavaConverters.asScalaIteratorConverter
 
 class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
@@ -104,6 +105,20 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     executeAndEnsureError(
       "RETURN toFloatList('foo')",
       "Type mismatch: expected List<T> but was String (line 1, column 20 (offset: 19))"
+    )
+  }
+
+  test("cant use toBoolean() on floats") {
+    executeAndEnsureError(
+      "RETURN toBoolean(3.4)",
+      "Type mismatch: expected Boolean, Integer or String but was Float (line 1, column 18 (offset: 17))"
+    )
+  }
+
+  test("cant use toBooleanList() on string") {
+    executeAndEnsureError(
+      "RETURN toBooleanList('foo')",
+      "Type mismatch: expected List<T> but was String (line 1, column 22 (offset: 21))"
     )
   }
 

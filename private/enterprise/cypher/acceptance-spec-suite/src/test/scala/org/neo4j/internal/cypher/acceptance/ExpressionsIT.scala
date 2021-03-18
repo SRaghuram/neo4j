@@ -5,6 +5,13 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.lang.Math.PI
+import java.lang.Math.sin
+import java.time.Clock
+import java.time.Duration
+import java.util.UUID
+import java.util.concurrent.ThreadLocalRandom
+
 import org.neo4j.codegen.api.CodeGeneration.ByteCodeGeneration
 import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -183,12 +190,6 @@ import org.neo4j.values.virtual.VirtualValues.list
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
 
-import java.lang.Math.PI
-import java.lang.Math.sin
-import java.time.Clock
-import java.time.Duration
-import java.util.UUID
-import java.util.concurrent.ThreadLocalRandom
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -929,8 +930,42 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, params(Values.FALSE)) should equal(Values.FALSE)
     evaluate(compiled, params(stringValue("false"))) should equal(Values.FALSE)
     evaluate(compiled, params(stringValue("true"))) should equal(Values.TRUE)
+    evaluate(compiled, params(intValue(0))) should equal(Values.FALSE)
+    evaluate(compiled, params(intValue(1))) should equal(Values.TRUE)
     evaluate(compiled, params(stringValue("uncertain"))) should equal(NO_VALUE)
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+  }
+
+  test("toBooleanOrNull function") {
+    val compiled = compile(function("toBooleanOrNull", parameter(0)))
+    evaluate(compiled, params(doubleValue(3.2))) should equal(NO_VALUE)
+    evaluate(compiled, params(intValue(3))) should equal(Values.TRUE)
+    evaluate(compiled, params(intValue(0))) should equal(Values.FALSE)
+    evaluate(compiled, params(stringValue("3.1"))) should equal(NO_VALUE)
+    evaluate(compiled, params(booleanValue(true))) should equal(Values.TRUE)
+    evaluate(compiled, params(booleanValue(false))) should equal(Values.FALSE)
+    evaluate(compiled, params(stringValue("true"))) should equal(Values.TRUE)
+    evaluate(compiled, params(stringValue("TrUE"))) should equal(Values.TRUE)
+    evaluate(compiled, params(stringValue("false"))) should equal(Values.FALSE)
+    evaluate(compiled, params(stringValue("fAlSe"))) should equal(Values.FALSE)
+    evaluate(compiled, params(VirtualValues.EMPTY_MAP)) should equal(NO_VALUE)
+    evaluate(compiled, params(VirtualValues.EMPTY_LIST)) should equal(NO_VALUE)
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled, params(evaluate(compiled, params(DateValue.MIN_VALUE)))) should equal(NO_VALUE)
+  }
+
+  test("toBooleanList function") {
+    val compiled = compile(function("toBooleanList", parameter(0)))
+    evaluate(compiled, params(list(doubleValue(3.2)))) should equal(list(NO_VALUE))
+    evaluate(compiled, params(list(intValue(3)))) should equal(list(Values.TRUE))
+    evaluate(compiled, params(list(intValue(0)))) should equal(list(Values.FALSE))
+    evaluate(compiled, params(list(stringValue("3.1"), intValue(2), doubleValue(1.2)))) should equal(
+      list(NO_VALUE, Values.TRUE, NO_VALUE))
+    evaluate(compiled, params(list(stringValue("true")))) should equal(list(Values.TRUE))
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled, params(list(booleanValue(true)))) should equal(list(Values.TRUE))
+    evaluate(compiled, params(list(doubleValue(3.2), VirtualValues.EMPTY_MAP))) should equal(list(NO_VALUE, NO_VALUE))
+    evaluate(compiled, params(list(NO_VALUE))) should equal(list(NO_VALUE))
   }
 
   test("toFloat function") {

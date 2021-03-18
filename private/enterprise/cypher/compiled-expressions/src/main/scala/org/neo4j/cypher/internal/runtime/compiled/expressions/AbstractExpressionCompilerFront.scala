@@ -90,8 +90,8 @@ import org.neo4j.cypher.internal.expressions.HasDegreeGreaterThanOrEqual
 import org.neo4j.cypher.internal.expressions.HasDegreeLessThan
 import org.neo4j.cypher.internal.expressions.HasDegreeLessThanOrEqual
 import org.neo4j.cypher.internal.expressions.HasLabels
-import org.neo4j.cypher.internal.expressions.HasTypes
 import org.neo4j.cypher.internal.expressions.HasLabelsOrTypes
+import org.neo4j.cypher.internal.expressions.HasTypes
 import org.neo4j.cypher.internal.expressions.In
 import org.neo4j.cypher.internal.expressions.IntegerLiteral
 import org.neo4j.cypher.internal.expressions.LabelOrRelTypeName
@@ -235,7 +235,6 @@ import org.neo4j.cypher.operations.CypherMath
 import org.neo4j.cypher.operations.PathValueBuilder
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InternalException
-import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.ParameterWrongTypeException
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
@@ -2369,11 +2368,34 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           in.fields, in.variables, in.nullChecks)
       }
 
+    case functions.ToBooleanOrNull =>
+      for (in <- compileExpression(c.args.head, id)) yield {
+        val variableName = namer.nextVariableName()
+        val lazySet = oneTime(declareAndAssign(variableName,
+          noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toBooleanOrNull"), in.ir))))
+
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(variableName, noValue))
+
+        IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)    }
+
     case functions.ToBoolean =>
       for (in <- compileExpression(c.args.head, id)) yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toBoolean"), in.ir))))
+
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(variableName, noValue))
+
+        IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)
+      }
+
+    case functions.ToBooleanList =>
+      for (in <- compileExpression(c.args.head, id)) yield {
+        val variableName = namer.nextVariableName()
+        val lazySet = oneTime(declareAndAssign(variableName,
+          noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("toBooleanList"), in.ir))))
 
         val ops = block(lazySet, load[AnyValue](variableName))
         val nullChecks = block(lazySet, equal(variableName, noValue))
