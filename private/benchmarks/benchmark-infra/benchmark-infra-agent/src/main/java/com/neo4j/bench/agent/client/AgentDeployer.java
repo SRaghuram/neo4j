@@ -12,15 +12,13 @@ import org.apache.sshd.client.channel.ClientChannelEvent;
 import org.apache.sshd.client.future.AuthFuture;
 import org.apache.sshd.client.future.ConnectFuture;
 import org.apache.sshd.client.session.ClientSession;
-import org.apache.sshd.client.subsystem.sftp.SftpClient;
-import org.apache.sshd.client.subsystem.sftp.impl.DefaultSftpClientFactory;
+import org.apache.sshd.scp.client.DefaultScpClient;
 import org.apache.sshd.server.forward.AcceptAllForwardingFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.URI;
 import java.nio.file.Files;
@@ -102,11 +100,8 @@ public class AgentDeployer
 
     private void upload( ClientSession session, String destinationPath ) throws IOException
     {
-        try ( SftpClient sftpClient = DefaultSftpClientFactory.INSTANCE.createSftpClient( session );
-              OutputStream outputStream = sftpClient.write( destinationPath ) )
-        {
-            Files.copy( pathToAgent, outputStream );
-        }
+        DefaultScpClient client = new DefaultScpClient( session );
+        client.upload( pathToAgent, destinationPath );
     }
 
     private String execute( ClientSession session, String command ) throws IOException
@@ -123,7 +118,7 @@ public class AgentDeployer
 
     private void checkStarted( ClientSession session )
     {
-        new Retrier( STARTUP_DURATION ).retryUntil( () -> countStartupMessages( session ), count -> count > 0, 10 );
+        new Retrier( STARTUP_DURATION ).retryUntil( () -> countStartupMessages( session ), count -> count > 0, 100 );
     }
 
     private long countStartupMessages( ClientSession session )

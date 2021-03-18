@@ -12,10 +12,11 @@
     <artifactId>benchmark-infra-agent</artifactId>
     <properties>
         <license-text.header>../../build/license-header.txt</license-text.header>
-        <sshd.version>2.5.1</sshd.version>
+        <sshd.version>2.6.0</sshd.version>
         <spark.version>2.9.1</spark.version>
         <testcontainers.version>1.15.2</testcontainers.version>
         <awaitility.version>4.0.3</awaitility.version>
+        <hamcrest.version>2.0.0.0</hamcrest.version>
     </properties>
     <dependencies>
         <dependency>
@@ -35,7 +36,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.sshd</groupId>
-            <artifactId>sshd-sftp</artifactId>
+            <artifactId>sshd-scp</artifactId>
             <version>${sshd.version}</version>
         </dependency>
         <dependency>
@@ -77,6 +78,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>java-hamcrest</artifactId>
+            <version>${hamcrest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>io-test-utils</artifactId>
             <version>${project.version}</version>
@@ -89,38 +96,6 @@
     </dependencies>
     <build>
         <plugins>
-            <!-- we need jar without sftp file system provider, as it spawns ssh client during class loading -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>repackage-sshd-sftp</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <shadedArtifactAttached>true</shadedArtifactAttached>
-                            <shadedClassifierName>repackaged</shadedClassifierName>
-                            <filters>
-                                <filter>
-                                    <!-- Shading signed JARs will fail without this. http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar -->
-                                    <artifact>org.apache.sshd:sshd-sftp</artifact>
-                                    <excludes>
-                                        <exclude>META-INF/services/java.nio.file.spi.FileSystemProvider</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                            <artifactSet>
-                                <includes>
-                                    <include>org.apache.sshd:sshd-sftp</include>
-                                </includes>
-                            </artifactSet>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>

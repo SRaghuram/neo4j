@@ -10,7 +10,6 @@ import com.neo4j.bench.agent.client.StartDatabaseRequest;
 import com.neo4j.bench.agent.database.DatabaseServerConnection;
 import com.neo4j.bench.agent.database.DatabaseServerWrapper;
 import com.neo4j.bench.agent.server.AgentInstance;
-import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
@@ -19,7 +18,6 @@ import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
@@ -41,6 +39,8 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.agent.AgentTestHelper.DATASET_NAME;
+import static com.neo4j.bench.agent.AgentTestHelper.VERSION;
 import static com.neo4j.bench.agent.AgentTestHelper.assertEnvironmentVariables;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDirectoryIsNotEmpty;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertFileExists;
@@ -57,8 +57,6 @@ import static org.hamcrest.Matchers.instanceOf;
 @TestDirectoryExtension
 public class AgentInstanceTest
 {
-    private static final String DATASET_NAME = "zero";
-    private static final Version VERSION = new Version( "3.5.27" );
     private static final URI FIX_BOLT_URI = URI.create( "bolt://localhost:9007" );
     private static final Pid FIX_PID = new Pid( 0 );
 
@@ -117,7 +115,6 @@ public class AgentInstanceTest
                                                         } );
     }
 
-    @Disabled( "Ignored until build configuration is updated" )
     @Test
     void lifecycle() throws IOException
     {
@@ -325,13 +322,6 @@ public class AgentInstanceTest
         public void stop()
         {
             stopped = true;
-        }
-
-        void clear()
-        {
-            started = false;
-            logsCopied = false;
-            stopped = false;
         }
     }
 }

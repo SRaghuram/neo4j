@@ -7,7 +7,6 @@ package com.neo4j.bench.agent;
 
 import com.neo4j.bench.agent.client.AgentClient;
 import com.neo4j.bench.agent.client.AgentDeployer;
-import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import org.junit.jupiter.api.AfterEach;
@@ -17,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableList;
 
 import java.io.IOException;
@@ -35,6 +33,10 @@ import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.agent.AgentTestHelper.BOLT_LISTEN_ADDRESS;
+import static com.neo4j.bench.agent.AgentTestHelper.DATASET_NAME;
+import static com.neo4j.bench.agent.AgentTestHelper.HTTP_LISTEN_ADDRESS;
+import static com.neo4j.bench.agent.AgentTestHelper.VERSION;
 import static com.neo4j.bench.agent.AgentTestHelper.assertDatabaseIsAvailable;
 import static com.neo4j.bench.agent.AgentTestHelper.assertDatabaseIsNotAvailable;
 import static com.neo4j.bench.agent.AgentTestHelper.assertEnvironmentVariables;
@@ -53,14 +55,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Disabled( "Ignored until build configuration is updated" )
+@Disabled( "Ignored until docker in docker problem is solved properly" )
 @TestDirectoryExtension
-@Testcontainers
 @SkipThreadLeakageGuard // this is added because of test containers resource reaper
 public class AgentClientIT
 {
-    private static final String DATASET_NAME = "zero";
-    private static final Version VERSION = new Version( "3.5.27" );
     private static final int BOLT_PORT = 9007;
 
     private static final String PROCESS_NAME_OF_AGENT = AgentDeployer.AGENT_JAR_NAME + ".jar";
@@ -70,20 +69,20 @@ public class AgentClientIT
 
     private final String randomString = UUID.randomUUID().toString();
     private final Neo4jConfig neo4jConfig = Neo4jConfig.empty()
-                                                       .withSetting( AgentTestHelper.BOLT_LISTEN_ADDRESS, "0.0.0.0:" + BOLT_PORT )
+                                                       .withSetting( BOLT_LISTEN_ADDRESS, "0.0.0.0:" + BOLT_PORT )
                                                        .addJvmArg( "-Drandom=" + randomString );
     @Inject
     private TestDirectory temporaryFolder;
 
-    @org.testcontainers.junit.jupiter.Container
-    public GenericContainer<?> container =
-            new GenericContainer<>( new ImageFromDockerfile().withFileFromClasspath( "Dockerfile", "Dockerfile" ) );
+    private GenericContainer<?> container;
     private URI mappedBoltUri;
 
     @BeforeEach
     void setUp() throws Exception
     {
         assertEnvironmentVariables();
+        container = new GenericContainer<>( new ImageFromDockerfile().withFileFromClasspath( "Dockerfile", "Dockerfile" ) );
+        container.start();
         s3TestSupport = new S3TestSupport( temporaryFolder.directory( "s3" ), DATASET_NAME );
         s3TestSupport.setupPackage();
         s3TestSupport.setupDataset( VERSION );
@@ -94,6 +93,7 @@ public class AgentClientIT
     void tearDown()
     {
         s3TestSupport.close();
+        container.close();
     }
 
     @Test
@@ -118,7 +118,7 @@ public class AgentClientIT
 
         Agent secondAgent = shouldUploadAndStartAgent();
         shouldPrepare( secondAgent );
-        Neo4jConfig modifiedNeo4jConfig = neo4jConfig.withSetting( AgentTestHelper.HTTP_LISTEN_ADDRESS, ":8080" )
+        Neo4jConfig modifiedNeo4jConfig = neo4jConfig.withSetting( HTTP_LISTEN_ADDRESS, ":8080" )
                                                      .addJvmArg( "-DaddingDifferenceToConfig" );
         shouldStartDatabase( secondAgent, true, modifiedNeo4jConfig );
 
@@ -192,7 +192,7 @@ public class AgentClientIT
         assertAgentInitialized( agent );
     }
 
-    private void shouldDownloadResults( Agent agent ) throws IOException, InterruptedException
+    private void shouldDownloadResults( Agent agent ) throws IOException
     {
         Path resultDirectory = temporaryFolder.directory( "random" + UUID.randomUUID() );
 

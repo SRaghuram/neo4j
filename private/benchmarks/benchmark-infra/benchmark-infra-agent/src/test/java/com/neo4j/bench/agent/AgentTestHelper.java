@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.agent;
 
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.model.model.Neo4jConfig;
 
 import java.io.IOException;
@@ -40,6 +41,10 @@ public class AgentTestHelper
 {
     static final String BOLT_LISTEN_ADDRESS = "dbms.connector.bolt.listen_address";
     static final String HTTP_LISTEN_ADDRESS = "dbms.connector.http.listen_address";
+
+    static final String DATASET_NAME = "zero";
+    // actual patch version may differ - important is major and minor
+    static final Version VERSION = new Version( "4.0.12" );
 
     private static Config driverConfig = Config.builder()
                                                .withLogging( Logging.none() )

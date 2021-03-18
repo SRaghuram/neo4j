@@ -8,12 +8,10 @@ package com.neo4j.bench.agent;
 import com.neo4j.bench.agent.client.AgentClient;
 import com.neo4j.bench.agent.database.DatabaseServerWrapper;
 import com.neo4j.bench.agent.server.AgentInstance;
-import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -26,6 +24,10 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.agent.AgentTestHelper.BOLT_LISTEN_ADDRESS;
+import static com.neo4j.bench.agent.AgentTestHelper.DATASET_NAME;
+import static com.neo4j.bench.agent.AgentTestHelper.HTTP_LISTEN_ADDRESS;
+import static com.neo4j.bench.agent.AgentTestHelper.VERSION;
 import static com.neo4j.bench.agent.AgentTestHelper.alterDatabase;
 import static com.neo4j.bench.agent.AgentTestHelper.assertArchiveContent;
 import static com.neo4j.bench.agent.AgentTestHelper.assertDatabaseIsAvailable;
@@ -41,13 +43,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@Disabled( "Ignored until build configuration is updated" )
 @TestDirectoryExtension
 public class AgentServerTest
 {
-    private static final String DATASET_NAME = "zero";
-    private static final Version VERSION = new Version( "3.5.27" );
-
     private S3TestSupport s3TestSupport;
 
     @Inject
@@ -56,9 +54,9 @@ public class AgentServerTest
     private final int boltPort = PortAuthority.allocatePort();
     private final String randomString = UUID.randomUUID().toString();
     private final Neo4jConfig neo4jConfig = Neo4jConfig.empty()
-            .withSetting( AgentTestHelper.BOLT_LISTEN_ADDRESS, ":" + boltPort )
-            .withSetting( AgentTestHelper.HTTP_LISTEN_ADDRESS, ":" + PortAuthority.allocatePort() )
-            .addJvmArg( "-Drandom=" + randomString );
+                                                       .withSetting( BOLT_LISTEN_ADDRESS, ":" + boltPort )
+                                                       .withSetting( HTTP_LISTEN_ADDRESS, ":" + PortAuthority.allocatePort() )
+                                                       .addJvmArg( "-Drandom=" + randomString );
     private Path tempDirectory;
     private AgentInstance agentInstance;
     private Agent agent;

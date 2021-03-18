@@ -151,7 +151,7 @@ public class AgentClient implements Agent
 
     private Agent validate() throws IOException
     {
-        new Retrier( VALIDATION_DURATION ).retryUntil( this::quietPing, r -> r, 10 );
+        new Retrier( VALIDATION_DURATION ).retryUntil( this::quietPing, r -> r, 100 );
         return this;
     }
 
