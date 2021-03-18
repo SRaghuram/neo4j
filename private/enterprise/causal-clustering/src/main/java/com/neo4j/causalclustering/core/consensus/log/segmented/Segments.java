@@ -29,11 +29,11 @@ import static java.lang.String.format;
  */
 class Segments implements AutoCloseable
 {
-    private final OpenEndRangeMap<Long/*minIndex*/,SegmentFile> rangeMap = new OpenEndRangeMap<>();
+    private final OpenEndRangeMap<Long/*minIndex*/,SegmentFile> rangeMap;
     private final List<SegmentFile> allSegments;
     private final Log log;
 
-    private FileSystemAbstraction fileSystem;
+    private final FileSystemAbstraction fileSystem;
     private final FileNames fileNames;
     private final Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector;
     private final LogProvider logProvider;
@@ -53,16 +53,17 @@ class Segments implements AutoCloseable
         this.currentVersion = currentVersion;
         this.readerPool = readerPool;
         this.memoryTracker = memoryTracker;
-
-        populateRangeMap();
+        this.rangeMap = createRangeMap( allSegments );
     }
 
-    private synchronized void populateRangeMap()
+    private static OpenEndRangeMap<Long,SegmentFile> createRangeMap( List<SegmentFile> allSegments )
     {
+        var fileOpenEndRangeMap = new OpenEndRangeMap<Long,SegmentFile>();
         for ( SegmentFile segment : allSegments )
         {
-            rangeMap.replaceFrom( segment.header().prevIndex() + 1, segment );
+            fileOpenEndRangeMap.replaceFrom( segment.header().prevIndex() + 1, segment );
         }
+        return fileOpenEndRangeMap;
     }
 
     /*
