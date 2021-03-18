@@ -213,7 +213,7 @@ public class RaftBootstrapper
             {
                 log.info( "Changing store ID of bootstrapped database to " + storeId );
                 MetaDataStore.setStoreId( pageCache, bootstrapDatabaseLayout.metadataStore(), storeId, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP,
-                        cursorTracer );
+                        bootstrapDatabaseLayout.getDatabaseName(), cursorTracer );
             }
 
             log.info( "Moving created store files from " + bootstrapDatabaseLayout + " to " + bootstrapContext.databaseLayout() );
@@ -276,8 +276,7 @@ public class RaftBootstrapper
                                                        PageCursorTracer cursorTracer, boolean overWriteDatabaseId ) throws IOException
     {
         DatabaseLayout layout = bootstrapContext.databaseLayout();
-        try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY,
-                bootstrapContext.databaseId().name() ) )
+        try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY ) )
         {
             StoreId storeId = storageEngineFactory.storeId( layout, pageCache, cursorTracer );
             TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( fs, layout, databasePageCache,

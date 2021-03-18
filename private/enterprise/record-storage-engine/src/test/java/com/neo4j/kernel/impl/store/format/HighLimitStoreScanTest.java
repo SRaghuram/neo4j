@@ -129,7 +129,7 @@ class HighLimitStoreScanTest
 
     void startStore( RecordFormats format ) throws IOException
     {
-        startStore( format, new DefaultIdGeneratorFactory( directory.getFileSystem(), immediate() ) );
+        startStore( format, new DefaultIdGeneratorFactory( directory.getFileSystem(), immediate(), "db" ) );
     }
 
     void startStore( RecordFormats format, IdGeneratorFactory idGeneratorFactory ) throws IOException
@@ -234,14 +234,14 @@ class HighLimitStoreScanTest
         stopStore();
         directory.getFileSystem().deleteFile( databaseLayout.idNodeStore() );
         MutableBoolean checked = new MutableBoolean();
-        IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( directory.getFileSystem(), immediate() )
+        IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( directory.getFileSystem(), immediate(), databaseLayout.getDatabaseName() )
         {
             @Override
             public IdGenerator open( PageCache pageCache, Path filename, IdType idType, LongSupplier highIdScanner, long maxId, boolean readOnly,
                     Config config, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
             {
                 return new IndexedIdGenerator( pageCache, filename, immediate(), idType, false, highIdScanner, maxId, readOnly, config, cursorTracer,
-                        openOptions )
+                        databaseLayout.getDatabaseName(), openOptions )
                 {
                     @Override
                     public void start( FreeIds freeIdsForRebuild, PageCursorTracer cursorTracer ) throws IOException

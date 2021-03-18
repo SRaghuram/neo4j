@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.kernel.impl.store.MetaDataStore.getRecord;
 import static org.neo4j.kernel.impl.store.format.aligned.PageAligned.LATEST_RECORD_FORMATS;
 
 @EnterpriseDbmsExtension( configurationCallback = "configure" )
@@ -116,7 +117,7 @@ class EnterpriseDatabaseTest
 
     private String getRecordFormat( PageCache pageCache, Database database ) throws IOException
     {
-        long record = MetaDataStore.getRecord( pageCache, database.getDatabaseLayout().metadataStore(), MetaDataStore.Position.STORE_VERSION, NULL );
+        long record = getRecord( pageCache, database.getDatabaseLayout().metadataStore(), MetaDataStore.Position.STORE_VERSION, databaseName, NULL );
         return MetaDataStore.versionLongToString( record );
     }
 }

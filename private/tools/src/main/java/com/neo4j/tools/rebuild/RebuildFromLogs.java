@@ -173,7 +173,7 @@ class RebuildFromLogs
 
             // set last tx id in neostore otherwise the db is not usable
             MetaDataStore.setRecord( pageCache, targetLayout.metadataStore(),
-                    MetaDataStore.Position.LAST_TRANSACTION_ID, lastTxId, PageCursorTracer.NULL );
+                    MetaDataStore.Position.LAST_TRANSACTION_ID, lastTxId, targetLayout.getDatabaseName(), PageCursorTracer.NULL );
 
             checkConsistency( targetLayout, pageCache );
         }

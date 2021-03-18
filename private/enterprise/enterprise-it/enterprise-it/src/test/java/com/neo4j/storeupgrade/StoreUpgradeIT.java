@@ -556,7 +556,7 @@ public class StoreUpgradeIT
                     try
                     {
                         return MetaDataStore.getRecord( pageCache, databaseLayout.metadataStore(), MetaDataStore.Position.LAST_TRANSACTION_ID,
-                                PageCursorTracer.NULL );
+                                databaseLayout.getDatabaseName(), PageCursorTracer.NULL );
                     }
                     catch ( IOException e )
                     {

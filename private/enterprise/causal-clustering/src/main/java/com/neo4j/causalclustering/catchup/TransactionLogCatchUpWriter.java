@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.tx.ReceivedTxPullResponse;
-import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponseListener;
 
 import java.io.IOException;
@@ -79,7 +78,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         this.log = logProvider.getLog( getClass() );
         this.fullStoreCopy = fullStoreCopy;
         this.pageCacheTracer = pageCacheTracer;
-        this.databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY, databaseLayout.getDatabaseName() );
+        this.databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY );
 
         Config configWithoutSpecificStoreFormat = configWithoutSpecificStoreFormat( config );
         this.metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout,

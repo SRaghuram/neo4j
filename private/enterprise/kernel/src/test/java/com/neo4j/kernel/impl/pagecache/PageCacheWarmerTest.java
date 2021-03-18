@@ -71,6 +71,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch_allowlist;
 import static org.neo4j.io.pagecache.PagedFile.PF_READ_AHEAD;
@@ -125,7 +126,7 @@ class PageCacheWarmerTest
     void doNotReheatAfterStop() throws IOException
     {
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
-              PagedFile ignore = pageCache.map( file, pageCache.pageSize(), immutable.of( CREATE ) ) )
+              PagedFile ignore = pageCache.map( file, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
         {
             PageCacheWarmer warmer = createPageCacheWarmer( pageCache, Config.defaults(), log );
             warmer.start();
@@ -138,7 +139,7 @@ class PageCacheWarmerTest
     void doNoProfileAfterStop() throws IOException
     {
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
-              PagedFile ignore = pageCache.map( file, pageCache.pageSize(), immutable.of( CREATE ) ) )
+              PagedFile ignore = pageCache.map( file, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
         {
             PageCacheWarmer warmer = createPageCacheWarmer( pageCache, Config.defaults(), log );
             warmer.start();
@@ -151,7 +152,7 @@ class PageCacheWarmerTest
     void profileAndReheatAfterRestart() throws IOException
     {
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
-              PagedFile pf = pageCache.map( file, pageCache.pageSize(), immutable.of( CREATE ) ) )
+              PagedFile pf = pageCache.map( file, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
         {
             PageCacheWarmer warmer = createPageCacheWarmer( pageCache, Config.defaults(), log );
             warmer.start();
@@ -172,7 +173,7 @@ class PageCacheWarmerTest
     void mustDoNothingWhenReheatingUnprofiledPageCache() throws Exception
     {
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
-              PagedFile ignore = pageCache.map( file, pageCache.pageSize(), immutable.of( CREATE ) ) )
+              PagedFile ignore = pageCache.map( file, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
         {
             PageCacheWarmer warmer = createPageCacheWarmer( pageCache, Config.defaults(), log );
             warmer.reheat();
@@ -184,7 +185,7 @@ class PageCacheWarmerTest
     void mustReheatProfiledPageCache() throws Exception
     {
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
-              PagedFile pf = pageCache.map( file, pageCache.pageSize(), immutable.of( CREATE ) ) )
+              PagedFile pf = pageCache.map( file, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
         {
             try ( var tracer = cacheTracer.createPageCursorTracer( "mustReheatProfiledPageCache" );
                   PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, tracer ) )
@@ -200,7 +201,7 @@ class PageCacheWarmerTest
 
         long initialFaults = cacheTracer.faults();
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
-              PagedFile pf = pageCache.map( file, pageCache.pageSize() ) )
+              PagedFile pf = pageCache.map( file, pageCache.pageSize(), DEFAULT_DATABASE_NAME ) )
         {
             PageCacheWarmer warmer = createPageCacheWarmer( pageCache, Config.defaults(), log );
             warmer.start();
@@ -228,7 +229,7 @@ class PageCacheWarmerTest
 
         String pageCacheMemory = String.valueOf( maxPagesInMemory * ByteUnit.kibiBytes( 9 ) );
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg.withMemory( pageCacheMemory ) );
-              PagedFile pf = pageCache.map( file, pageCache.pageSize(), immutable.of( CREATE ) ) )
+              PagedFile pf = pageCache.map( file, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
         {
             try ( var tracer = cacheTracer.createPageCursorTracer( "reheatingMustWorkOnLargeNumberOfPages" );
                   PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, tracer ) )
@@ -245,7 +246,7 @@ class PageCacheWarmerTest
 
         long initialFaults = cacheTracer.faults();
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
-              PagedFile pf = pageCache.map( file, pageCache.pageSize() ) )
+              PagedFile pf = pageCache.map( file, pageCache.pageSize(), DEFAULT_DATABASE_NAME ) )
         {
             PageCacheWarmer warmer = createPageCacheWarmer( pageCache, Config.defaults(), log );
             warmer.start();
@@ -272,7 +273,7 @@ class PageCacheWarmerTest
     void profileMustNotDeleteFilesCurrentlyExposedViaFileListing() throws Exception
     {
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
-              PagedFile pf = pageCache.map( file, pageCache.pageSize(), immutable.of( CREATE ) ) )
+              PagedFile pf = pageCache.map( file, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
         {
             try ( var tracer = cacheTracer.createPageCursorTracer( "profileMustNotDeleteFilesCurrentlyExposedViaFileListing" );
                   PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, tracer ) )
@@ -323,8 +324,8 @@ class PageCacheWarmerTest
         fs.mkdirs( aaFile.getParent() );
         fs.mkdirs( baFile.getParent() );
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
-              PagedFile aa = pageCache.map( aaFile, pageCache.pageSize(), immutable.of( CREATE ) );
-              PagedFile ba = pageCache.map( baFile, pageCache.pageSize(), immutable.of( CREATE ) ) )
+              PagedFile aa = pageCache.map( aaFile, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) );
+              PagedFile ba = pageCache.map( baFile, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
         {
             PageCacheWarmer warmer = createPageCacheWarmer( pageCache, Config.defaults(), log );
             warmer.start();
@@ -427,7 +428,7 @@ class PageCacheWarmerTest
             Path testFile = testDirectory.createFile( "testfile" );
             fs.write( testFile ).writeAll( ByteBuffer.wrap( new byte[ numPages * pageSize] ) );
 
-            try ( PagedFile ignore = pageCache.map( testFile, pageCache.pageSize(), immutable.of( CREATE ) ) )
+            try ( PagedFile ignore = pageCache.map( testFile, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
             {
 
                 Config config = Config.newBuilder()
@@ -458,8 +459,8 @@ class PageCacheWarmerTest
             fs.write( testFile1 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
             fs.write( testFile2 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
 
-            try ( PagedFile pf1 = pageCache.map( testFile1, pageCache.pageSize(), immutable.of( READ ) );
-                  PagedFile pf2 = pageCache.map( testFile2, pageCache.pageSize(), immutable.of( READ ) ) )
+            try ( PagedFile pf1 = pageCache.map( testFile1, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( READ ) );
+                  PagedFile pf2 = pageCache.map( testFile2, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( READ ) ) )
             {
                 Config config = Config.defaults( pagecache_warmup_prefetch, true );
                 PageCacheWarmer warmer = createPageCacheWarmer( pageCache, config, log );
@@ -490,9 +491,9 @@ class PageCacheWarmerTest
             fs.write( testFile2 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
             fs.write( testFile3 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile3 * pageSize] ) );
 
-            try ( PagedFile pf1 = pageCache.map( testFile1, pageCache.pageSize() );
-                  PagedFile pf2 = pageCache.map( testFile2, pageCache.pageSize() );
-                  PagedFile pf3 = pageCache.map( testFile3, pageCache.pageSize() ) )
+            try ( PagedFile pf1 = pageCache.map( testFile1, pageCache.pageSize(), DEFAULT_DATABASE_NAME );
+                  PagedFile pf2 = pageCache.map( testFile2, pageCache.pageSize(), DEFAULT_DATABASE_NAME );
+                  PagedFile pf3 = pageCache.map( testFile3, pageCache.pageSize(), DEFAULT_DATABASE_NAME ) )
             {
 
                 Config config = Config.newBuilder()
@@ -520,7 +521,7 @@ class PageCacheWarmerTest
             var log = logProvider.getLog( PageCacheWarmer.class );
 
             Path testfile = testDirectory.createFile( "testfile" );
-            try ( PagedFile ignore = pageCache.map( testfile, pageCache.pageSize(), immutable.of( CREATE ) ) )
+            try ( PagedFile ignore = pageCache.map( testfile, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
             {
 
                 Config config = Config.newBuilder()
@@ -598,7 +599,7 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, smallPageCache ) )
         {
 
-            try ( PagedFile ignore = pageCache.map( testFile, pageCache.pageSize(), immutable.of( CREATE ) ) )
+            try ( PagedFile ignore = pageCache.map( testFile, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
             {
                 //When
                 Config config = Config.newBuilder()
@@ -628,7 +629,7 @@ class PageCacheWarmerTest
         //When
         long largePageCacheMaxPages;
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, largePageCache );
-                PagedFile pf = pageCache.map( file, pageCache.pageSize(), immutable.of( CREATE ) ) )
+                PagedFile pf = pageCache.map( file, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
         {
             try ( var tracer = largeCacheTracer.createPageCursorTracer( "mustReheatProfiledPageCache" );
                     PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, tracer ) )
@@ -652,7 +653,7 @@ class PageCacheWarmerTest
         //Then (profile will contain all pages, load in a smaller cache)
         long smallPageCacheMaxPages;
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, smallPageCache );
-                PagedFile pf = pageCache.map( file, pageCache.pageSize(), immutable.of( CREATE ) ) )
+                PagedFile pf = pageCache.map( file, pageCache.pageSize(), DEFAULT_DATABASE_NAME, immutable.of( CREATE ) ) )
         {
             PageCacheWarmer warmer = createPageCacheWarmer( pageCache, Config.defaults(), log );
             warmer.start();

@@ -40,6 +40,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.string.HexString;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
@@ -101,7 +102,7 @@ public class RsdrMain
     private static StoreFactory openStore( FileSystemAbstraction fileSystem, Path storeDir, Config config,
             PageCache pageCache )
     {
-        IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate() );
+        IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate(), DEFAULT_DATABASE_NAME );
         NullLogProvider logProvider = NullLogProvider.getInstance();
         return new StoreFactory( DatabaseLayout.ofFlat( storeDir ), config, idGeneratorFactory, pageCache, fileSystem, logProvider,
                 PageCacheTracer.NULL );

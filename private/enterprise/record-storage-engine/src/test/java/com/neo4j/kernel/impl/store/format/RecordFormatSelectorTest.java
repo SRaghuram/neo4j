@@ -184,9 +184,9 @@ class RecordFormatSelectorTest
         createNeoStoreFile( databaseLayout );
         PageCache pageCache = mock( PageCache.class );
         when( pageCache.pageSize() ).thenReturn( PageCache.PAGE_SIZE );
-        when( pageCache.map( any(), any(), anyInt(), any() ) ).thenThrow( new IOException( "No reading..." ) );
+        when( pageCache.map( any(), any(), anyInt(), any(), any() ) ).thenThrow( new IOException( "No reading..." ) );
         assertNull( selectForStore( databaseLayout, fs, pageCache, LOG, NULL ) );
-        verify( pageCache ).map( any(), any(), anyInt(), any() );
+        verify( pageCache ).map( any(), any(), anyInt(), any(), any() );
     }
 
     @Test
@@ -384,7 +384,7 @@ class RecordFormatSelectorTest
     {
         Path neoStoreFile = createNeoStoreFile( databaseLayout );
         long value = MetaDataStore.versionStringToLong( storeVersion );
-        MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value, PageCursorTracer.NULL );
+        MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value, databaseLayout.getDatabaseName(), PageCursorTracer.NULL );
     }
 
     private Path createNeoStoreFile( DatabaseLayout databaseLayout ) throws IOException

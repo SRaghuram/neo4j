@@ -229,7 +229,7 @@ class ClusterBindingIT
         try ( var jobScheduler = new ThreadPoolJobScheduler();
               var pageCache = StandalonePageCacheFactory.createPageCache( fs, jobScheduler, PageCacheTracer.NULL ) )
         {
-            MetaDataStore.setRecord( pageCache, neoStoreFile, RANDOM_NUMBER, System.currentTimeMillis(), NULL );
+            MetaDataStore.setRecord( pageCache, neoStoreFile, RANDOM_NUMBER, System.currentTimeMillis(), databaseLayout.getDatabaseName(), NULL );
         }
     }
 }

@@ -410,7 +410,8 @@ public class StoreCopy
         // Open store with old reader
         LifeSupport life = new LifeSupport();
         try ( SchemaStore35 schemaStore35 = new SchemaStore35( from.schemaStore(), from.idSchemaStore(), config, org.neo4j.internal.id.IdType.SCHEMA,
-                new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, NullLogProvider.getInstance(), recordFormats, immutable.empty() ) )
+                new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, NullLogProvider.getInstance(), recordFormats, from.getDatabaseName(),
+                immutable.empty() ) )
         {
             schemaStore35.initialise( true, cursorTracer );
             SchemaStorage schemaStorage35 = new SchemaStorage35( schemaStore35 );

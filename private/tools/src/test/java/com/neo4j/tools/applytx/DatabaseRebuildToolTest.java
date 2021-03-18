@@ -175,7 +175,7 @@ class DatabaseRebuildToolTest
 
         // THEN
         out.flush();
-        String dump = new String( byteArrayOut.toByteArray() );
+        String dump = byteArrayOut.toString();
         for ( String string : expectedResultContaining )
         {
             assertThat( dump ).as( "dump from command '" + command + "'" ).contains( string );
@@ -188,7 +188,8 @@ class DatabaseRebuildToolTest
               JobScheduler scheduler = createInitialisedScheduler();
               PageCache pageCache = createPageCache( fileSystem, scheduler, PageCacheTracer.NULL ) )
         {
-            return MetaDataStore.getRecord( pageCache, databaseLayout.metadataStore(), MetaDataStore.Position.LAST_TRANSACTION_ID, NULL );
+            return MetaDataStore.getRecord( pageCache, databaseLayout.metadataStore(), MetaDataStore.Position.LAST_TRANSACTION_ID,
+                    databaseLayout.getDatabaseName(), NULL );
         }
         catch ( Exception e )
         {

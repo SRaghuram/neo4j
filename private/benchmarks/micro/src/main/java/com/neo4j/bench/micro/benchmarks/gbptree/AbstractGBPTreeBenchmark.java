@@ -6,9 +6,9 @@
 package com.neo4j.bench.micro.benchmarks.gbptree;
 
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
-import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.data.Augmenterizer;
 import com.neo4j.bench.data.Stores.StoreAndConfig;
+import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +37,7 @@ import org.neo4j.memory.MemoryPools;
 import org.neo4j.time.Clocks;
 
 import static org.eclipse.collections.api.factory.Sets.immutable;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_READER;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_WRITER;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_MONITOR;
@@ -196,6 +197,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 false,
                 PageCacheTracer.NULL,
                 immutable.empty(),
+                DEFAULT_DATABASE_NAME,
                 "benchmark database" );
     }
 

@@ -330,11 +330,11 @@ class StoreFilesTest
         long upgradeTime = random.nextLong();
         long upgradeId = random.nextLong();
 
-        MetaDataStore.setRecord( pageCache, metadataStore, TIME, creationTime, NULL );
-        MetaDataStore.setRecord( pageCache, metadataStore, RANDOM_NUMBER, randomId, NULL );
-        MetaDataStore.setRecord( pageCache, metadataStore, STORE_VERSION, storeVersion, NULL );
-        MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TIME, upgradeTime, NULL );
-        MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TRANSACTION_ID, upgradeId, NULL );
+        MetaDataStore.setRecord( pageCache, metadataStore, TIME, creationTime, databaseLayout.getDatabaseName(), NULL );
+        MetaDataStore.setRecord( pageCache, metadataStore, RANDOM_NUMBER, randomId, databaseLayout.getDatabaseName(), NULL );
+        MetaDataStore.setRecord( pageCache, metadataStore, STORE_VERSION, storeVersion, databaseLayout.getDatabaseName(), NULL );
+        MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TIME, upgradeTime, databaseLayout.getDatabaseName(), NULL );
+        MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TRANSACTION_ID, upgradeId, databaseLayout.getDatabaseName(), NULL );
 
         DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
 

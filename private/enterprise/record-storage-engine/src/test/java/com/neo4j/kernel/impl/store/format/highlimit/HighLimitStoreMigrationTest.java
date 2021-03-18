@@ -134,7 +134,7 @@ class HighLimitStoreMigrationTest
     {
         Path neoStoreFile = createNeoStoreFile( fileSystem, databaseLayout );
         long value = MetaDataStore.versionStringToLong( storeVersion );
-        MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value, PageCursorTracer.NULL );
+        MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value, databaseLayout.getDatabaseName(), PageCursorTracer.NULL );
         createSchemaStoreFile( fileSystem, databaseLayout, pageCache );
     }
 
@@ -149,13 +149,13 @@ class HighLimitStoreMigrationTest
     {
         Path store = databaseLayout.schemaStore();
         Path idFile = databaseLayout.idSchemaStore();
-        DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate() );
+        DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate(), databaseLayout.getDatabaseName() );
         NullLogProvider logProvider = NullLogProvider.getInstance();
         RecordFormats recordFormats = HighLimitV3_0_0.RECORD_FORMATS;
         Config config = Config.defaults();
         IdType idType = IdType.SCHEMA;
         try ( SchemaStore35 schemaStore35 = new SchemaStore35( store, idFile, config, idType, idGeneratorFactory, pageCache, logProvider, recordFormats,
-                immutable.empty() ) )
+                databaseLayout.getDatabaseName(), immutable.empty() ) )
         {
             schemaStore35.initialise( true, PageCursorTracer.NULL );
         }
@@ -163,7 +163,7 @@ class HighLimitStoreMigrationTest
 
     private static class TrackingBatchImporterFactory extends BatchImporterFactory
     {
-        private StandardBatchImporterFactory delegate;
+        private final StandardBatchImporterFactory delegate;
         private Configuration configuration;
 
         TrackingBatchImporterFactory()

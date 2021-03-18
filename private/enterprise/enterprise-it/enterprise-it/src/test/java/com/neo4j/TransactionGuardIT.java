@@ -498,7 +498,7 @@ class TransactionGuardIT
     {
         return IdContextFactoryBuilder.of( fileSystem, JobSchedulerFactory.createScheduler(), Config.defaults(), PageCacheTracer.NULL )
                 .withIdGenerationFactoryProvider(
-                        any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( fileSystem, immediate() ) ) )
+                        any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( fileSystem, immediate(), DEFAULT_DATABASE_NAME ) ) )
                 .build();
     }
 

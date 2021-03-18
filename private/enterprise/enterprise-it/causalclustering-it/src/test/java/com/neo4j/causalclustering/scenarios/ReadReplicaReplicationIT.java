@@ -430,7 +430,7 @@ class ReadReplicaReplicationIT
     {
         var neoStoreFile = replica.databaseLayout().metadataStore();
         var pageCache = replica.defaultDatabase().getDependencyResolver().resolveDependency( PageCache.class );
-        MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis(), NULL );
+        MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis(), DEFAULT_DATABASE_NAME, NULL );
     }
 
     @TestAllClusterTypes
@@ -528,7 +528,7 @@ class ReadReplicaReplicationIT
         // then the replication should cause pins on a majority of core members to increase.
         // However, the commit returns as soon as the transaction has been replicated through the Raft log, which
         // happens before the transaction is applied on the members, and then replicated to read-replicas.
-        // Therefor we are racing with the transaction application on the read-replicas, so we have to spin.
+        // Therefore we are racing with the transaction application on the read-replicas, so we have to spin.
         var minimumUpdatedMembersCount = countersList.size() / 2 + 1;
         assertEventually( "Expected followers to eventually increase pin counts", () ->
         {

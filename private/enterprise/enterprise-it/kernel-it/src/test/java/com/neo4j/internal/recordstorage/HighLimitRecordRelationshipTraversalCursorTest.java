@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.storageengine.api.RelationshipSelection.selection;
 
 class HighLimitRecordRelationshipTraversalCursorTest extends RecordRelationshipTraversalCursorTest
@@ -52,7 +53,7 @@ class HighLimitRecordRelationshipTraversalCursorTest extends RecordRelationshipT
         unUseRecord( maxRecordId );
 
         // Sabotage the last record in the page, so that reading it will go out of bounds on the page.
-        try ( PagedFile pagedFile = pageCache.map( storageFile, 0, Sets.immutable.of( PageCacheOpenOptions.ANY_PAGE_SIZE ) );
+        try ( PagedFile pagedFile = pageCache.map( storageFile, 0, DEFAULT_DATABASE_NAME, Sets.immutable.of( PageCacheOpenOptions.ANY_PAGE_SIZE ) );
               PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, PageCursorTracer.NULL ) )
         {
             int offset = store.getRecordSize() * maxRecordId;

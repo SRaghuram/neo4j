@@ -37,8 +37,8 @@ import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
-import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.InternalTransactionCommitProcess;
+import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.store.IdUpdateListener;
 import org.neo4j.kernel.impl.store.NeoStores;
@@ -283,7 +283,7 @@ class ReplicatedTokenStateMachineTest
     {
         var layout = DatabaseLayout.ofFlat( testDirectory.homePath( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
         var config = Config.defaults();
-        var idFactory = new DefaultIdGeneratorFactory( fs, immediate() );
+        var idFactory = new DefaultIdGeneratorFactory( fs, immediate(), layout.getDatabaseName() );
         var storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider, PageCacheTracer.NULL );
         assertThat( stores ).isNull();
         stores = storeFactory.openAllNeoStores( true );

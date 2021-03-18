@@ -48,7 +48,7 @@ class GBPTreeDumpToolTest
         {
             new GBPTreeDumpTool().run( file, ps );
         }
-        String output = new String( baos.toByteArray(), UTF_8 );
+        String output = baos.toString( UTF_8 );
 
         // Then should print stuff to print stream
         assertThat( output ).contains( "Dump tree " + file.toAbsolutePath() );

@@ -35,6 +35,7 @@ import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipRecordFor
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.io.pagecache.PageCacheOpenOptions.ANY_PAGE_SIZE;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
@@ -69,7 +70,7 @@ public class HighLimitRecordStorageReaderRelTypesAndDegreeTest extends RecordSto
         TestRelType type = relTypeForId( record.getType() );
         markRelGroupNotInUse( nodeId, type );
         // Second, corrupt it such that decoding it will throw out-of-bounds.
-        try ( PagedFile pagedFile = pageCache.map( groupStore.getStorageFile(), 0, Sets.immutable.of( ANY_PAGE_SIZE ) );
+        try ( PagedFile pagedFile = pageCache.map( groupStore.getStorageFile(), 0, DEFAULT_DATABASE_NAME, Sets.immutable.of( ANY_PAGE_SIZE ) );
               PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, NULL ) )
         {
             assertTrue( cursor.next() );
@@ -118,7 +119,7 @@ public class HighLimitRecordStorageReaderRelTypesAndDegreeTest extends RecordSto
         update( relGroupRecord );
 
         // Mark it as not-in-use, and corrupt it such that decoding it will throw out-of-bounds.
-        try ( PagedFile pagedFile = pageCache.map( relStore.getStorageFile(), 0, Sets.immutable.of( ANY_PAGE_SIZE ) );
+        try ( PagedFile pagedFile = pageCache.map( relStore.getStorageFile(), 0, DEFAULT_DATABASE_NAME, Sets.immutable.of( ANY_PAGE_SIZE ) );
               PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, NULL ) )
         {
             assertTrue( cursor.next() );

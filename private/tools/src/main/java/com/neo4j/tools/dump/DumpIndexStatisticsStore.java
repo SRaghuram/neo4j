@@ -27,6 +27,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.token.TokenHolders;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
@@ -61,7 +62,8 @@ public class DumpIndexStatisticsStore
             {
                 DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( path );
                 indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, immediate(), true, cacheTracer );
-                StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, immediate() ),
+                StoreFactory factory =
+                        new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, immediate(), databaseLayout.getDatabaseName() ),
                         pageCache, fs, logProvider, PageCacheTracer.NULL );
                 NeoStores neoStores = factory.openAllNeoStores();
                 TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores, NULL );
@@ -70,7 +72,7 @@ public class DumpIndexStatisticsStore
             }
             else
             {
-                indexStatisticsStore = new IndexStatisticsStore( pageCache, path, immediate(), true, cacheTracer );
+                indexStatisticsStore = new IndexStatisticsStore( pageCache, path, immediate(), true, DEFAULT_DATABASE_NAME, cacheTracer );
             }
             life.add( indexStatisticsStore );
             indexStatisticsStore.visit( new IndexStatsVisitor( out, schema ), NULL );
