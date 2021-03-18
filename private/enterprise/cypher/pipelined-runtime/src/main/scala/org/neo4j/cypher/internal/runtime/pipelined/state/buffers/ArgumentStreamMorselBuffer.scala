@@ -42,7 +42,8 @@ class ArgumentStreamMorselBuffer(id: BufferId,
                           )
   extends BaseArgExistsMorselBuffer[MorselData, ArgumentStreamArgumentStateBuffer](id, tracker, downstreamArgumentReducers, argumentStateMaps, argumentStateMapId) {
 
-  private val trackerKey = QueryTrackerKey(s"ArgumentStreamMorselBuffer($id)")
+  private[this] val trackerKey: QueryTrackerKey =
+    if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"ArgumentStreamMorselBuffer($id)") else null.asInstanceOf[QueryTrackerKey]
 
   override def canPut: Boolean = argumentStateMap.exists(_.canPut)
 

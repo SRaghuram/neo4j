@@ -42,7 +42,8 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
    with DataHolder {
 
   private val argumentStateMap: ArgumentStateMap[ACC] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[ACC]]
-  private val trackerKey = QueryTrackerKey(s"MorselArgumentStateBuffer($argumentStateMapId)")
+  private[this] val trackerKey: QueryTrackerKey =
+    if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"MorselArgumentStateBuffer($argumentStateMapId)") else null.asInstanceOf[QueryTrackerKey]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 

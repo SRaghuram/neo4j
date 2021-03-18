@@ -44,7 +44,8 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef, S <: ArgumentState]
   with ClosingSource[PRODUCES]
   with DataHolder {
 
-  protected val initiateTrackerKey = QueryTrackerKey(s"BaseArgExistsMorselBuffer($id) - initiate")
+  protected val initiateTrackerKey: QueryTrackerKey =
+    if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"BaseArgExistsMorselBuffer($id) - initiate") else null.asInstanceOf[QueryTrackerKey]
 
   protected val argumentStateMap: ArgumentStateMap[S] =
     argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[S]]

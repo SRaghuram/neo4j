@@ -85,7 +85,8 @@ class LHSAccumulatingRHSStreamingSource[ACC_DATA <: AnyRef,
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
-  private val rhsTrackerKey = LHSAccumulatingRHSStreamingSource.rhsTrackerKey(rhsArgumentStateMapId)
+  private[this] val rhsTrackerKey: QueryTrackerKey =
+    if (DebugSupport.DEBUG_TRACKER) LHSAccumulatingRHSStreamingSource.rhsTrackerKey(rhsArgumentStateMapId) else null.asInstanceOf[QueryTrackerKey]
 
   checkOnlyWhenAssertionsAreEnabled {
     tracker.addCompletionAssertion { () =>
@@ -238,7 +239,8 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
                                                         with AccumulatingBuffer {
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId)
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
-  private val rhsTrackerKey = LHSAccumulatingRHSStreamingSource.rhsTrackerKey(rhsArgumentStateMapId)
+  private[this] val rhsTrackerKey: QueryTrackerKey =
+    if (DebugSupport.DEBUG_TRACKER) LHSAccumulatingRHSStreamingSource.rhsTrackerKey(rhsArgumentStateMapId) else null.asInstanceOf[QueryTrackerKey]
 
   override val argumentSlotOffset: Int = rhsArgumentStateMap.argumentSlotOffset
 
@@ -264,7 +266,8 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
 
   override def canPut: Boolean = true
 
-  private val argmunetIdTrackerKey = QueryTrackerKey("LHSAccumulatingRHSStreamingSource - Increment for an ArgumentID in RHS's accumulator")
+  private[this] val argumentIdTrackerKey: QueryTrackerKey =
+    if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey("LHSAccumulatingRHSStreamingSource - Increment for an ArgumentID in RHS's accumulator") else null.asInstanceOf[QueryTrackerKey]
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
@@ -273,7 +276,7 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
     // Increment for an ArgumentID in RHS's accumulator
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
     rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
-    tracker.increment(argmunetIdTrackerKey)
+    tracker.increment(argumentIdTrackerKey)
   }
 
   override def increment(argumentRowId: Long): Unit = {
@@ -293,7 +296,7 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
       // Decrement for an ArgumentID in RHS's accumulator
       val argumentRowIdsForReducers = maybeBuffer.argumentRowIdsForReducers
       forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
-      tracker.decrement(argmunetIdTrackerKey)
+      tracker.decrement(argumentIdTrackerKey)
     }
   }
 }

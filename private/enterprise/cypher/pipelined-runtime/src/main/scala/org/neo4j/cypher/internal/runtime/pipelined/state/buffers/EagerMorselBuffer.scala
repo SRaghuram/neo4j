@@ -58,7 +58,8 @@ class EagerMorselBuffer(id: BufferId,
   private[this] var _hasCompleted: Boolean = false // This should only change once to true, when we take the completed state from the argument state map
   @volatile private[this] var _hasCompletedVolatile: Boolean = false // This should change only once at the same time as _hasCompleted, but provides visibility to other threads in parallel execution
 
-  private val trackerKey = QueryTrackerKey(s"EagerMorselBuffer($id)")
+  private[this] val trackerKey: QueryTrackerKey =
+    if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"EagerMorselBuffer($id)") else null.asInstanceOf[QueryTrackerKey]
 
   //---------------------------------------------------------------------------
   // AccumulatingBuffer

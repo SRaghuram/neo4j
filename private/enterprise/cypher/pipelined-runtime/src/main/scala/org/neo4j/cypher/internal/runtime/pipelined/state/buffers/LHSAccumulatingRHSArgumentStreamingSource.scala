@@ -27,8 +27,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulating
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSArgumentStreamingSource.putMorselTrackerKey
 
 object LHSAccumulatingRHSArgumentStreamingSource {
-  val emptyRHSTrackerKey: QueryTrackerKey = QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - Empty RHS")
-  val putMorselTrackerKey: QueryTrackerKey = QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - RHS Morsel")
+  final val emptyRHSTrackerKey: QueryTrackerKey =
+    if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - Empty RHS") else null.asInstanceOf[QueryTrackerKey]
+  final val putMorselTrackerKey: QueryTrackerKey =
+    if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - RHS Morsel") else null.asInstanceOf[QueryTrackerKey]
 }
 
 class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
@@ -269,7 +271,8 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
 
   override def canPut: Boolean = true
 
-  private val initTrackerKey = QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - RHS Accumulator Init")
+  private[this] val initTrackerKey@org.neo4j.cypher.internal.runtime.pipelined.state.QueryTrackerKey(key) =
+    if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - RHS Accumulator Init") else null.asInstanceOf[QueryTrackerKey]
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.BUFFERS.enabled) {

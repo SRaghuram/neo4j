@@ -59,7 +59,7 @@ class MorselBuffer(id: BufferId,
     }
     x
   }
-  private val trackerKey = QueryTrackerKey(s"MorselBuffer($id)")
+  private[this] val trackerKey: QueryTrackerKey = if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"MorselBuffer($id)") else null.asInstanceOf[QueryTrackerKey]
 
   override def put(morsel: Morsel, resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
