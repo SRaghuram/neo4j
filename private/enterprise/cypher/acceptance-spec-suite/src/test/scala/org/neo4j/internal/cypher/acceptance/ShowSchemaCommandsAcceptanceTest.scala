@@ -9,8 +9,6 @@ import java.util
 import java.util.concurrent.ThreadLocalRandom
 
 import org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex
-import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.ast.NodeExistsConstraints
 import org.neo4j.cypher.internal.ast.NodeKeyConstraints
 import org.neo4j.cypher.internal.ast.RelExistsConstraints
@@ -19,59 +17,44 @@ import org.neo4j.cypher.internal.ast.UniqueConstraints
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.schema.AnalyzerProvider
 import org.neo4j.graphdb.schema.IndexSettingImpl
-import org.neo4j.graphdb.schema.IndexSettingImpl.FULLTEXT_ANALYZER
-import org.neo4j.graphdb.schema.IndexSettingImpl.FULLTEXT_EVENTUALLY_CONSISTENT
-import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_3D_MAX
-import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_3D_MIN
-import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_MAX
-import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_MIN
-import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_3D_MAX
-import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_3D_MIN
-import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_MAX
-import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_MIN
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.StandardNoStopWords
-import org.neo4j.kernel.impl.index.schema.FulltextIndexProviderFactory
-import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
 import org.neo4j.service.Services
 import org.neo4j.values.storable.RandomValues
 
-class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
-
-  private val defaultBtreeProvider = GenericNativeIndexProvider.DESCRIPTOR.name()
-  private val fulltextProvider = FulltextIndexProviderFactory.DESCRIPTOR.name()
+class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase {
+  /* Tests for listing indexes and constraints */
 
   private val defaultBtreeOptionsString: String =
     "{indexConfig: {" +
-      s"`${SPATIAL_CARTESIAN_3D_MAX.getSettingName}`: [1000000.0, 1000000.0, 1000000.0]," +
-      s"`${SPATIAL_CARTESIAN_3D_MIN.getSettingName}`: [-1000000.0, -1000000.0, -1000000.0]," +
-      s"`${SPATIAL_CARTESIAN_MAX.getSettingName}`: [1000000.0, 1000000.0]," +
-      s"`${SPATIAL_CARTESIAN_MIN.getSettingName}`: [-1000000.0, -1000000.0]," +
-      s"`${SPATIAL_WGS84_3D_MAX.getSettingName}`: [180.0, 90.0, 1000000.0]," +
-      s"`${SPATIAL_WGS84_3D_MIN.getSettingName}`: [-180.0, -90.0, -1000000.0]," +
-      s"`${SPATIAL_WGS84_MAX.getSettingName}`: [180.0, 90.0]," +
-      s"`${SPATIAL_WGS84_MIN.getSettingName}`: [-180.0, -90.0]}, " +
-      s"indexProvider: '$defaultBtreeProvider'}"
+      s"`$cartesian3dMax`: [1000000.0, 1000000.0, 1000000.0]," +
+      s"`$cartesian3dMin`: [-1000000.0, -1000000.0, -1000000.0]," +
+      s"`$cartesianMax`: [1000000.0, 1000000.0]," +
+      s"`$cartesianMin`: [-1000000.0, -1000000.0]," +
+      s"`$wgs3dMax`: [180.0, 90.0, 1000000.0]," +
+      s"`$wgs3dMin`: [-180.0, -90.0, -1000000.0]," +
+      s"`$wgsMax`: [180.0, 90.0]," +
+      s"`$wgsMin`: [-180.0, -90.0]}, " +
+      s"indexProvider: '$nativeProvider'}"
 
   private val defaultBtreeOptionsMap: Map[String, Object] = Map(
     "indexConfig" -> Map(
-      SPATIAL_CARTESIAN_3D_MAX.getSettingName -> Array(1000000.0, 1000000.0, 1000000.0),
-      SPATIAL_CARTESIAN_3D_MIN.getSettingName -> Array(-1000000.0, -1000000.0, -1000000.0),
-      SPATIAL_CARTESIAN_MAX.getSettingName -> Array(1000000.0, 1000000.0),
-      SPATIAL_CARTESIAN_MIN.getSettingName -> Array(-1000000.0, -1000000.0),
-      SPATIAL_WGS84_3D_MAX.getSettingName -> Array(180.0, 90.0, 1000000.0),
-      SPATIAL_WGS84_3D_MIN.getSettingName -> Array(-180.0, -90.0, -1000000.0),
-      SPATIAL_WGS84_MAX.getSettingName -> Array(180.0, 90.0),
-      SPATIAL_WGS84_MIN.getSettingName -> Array(-180.0, -90.0)),
-    "indexProvider" -> defaultBtreeProvider)
+      cartesian3dMax -> Array(1000000.0, 1000000.0, 1000000.0),
+      cartesian3dMin -> Array(-1000000.0, -1000000.0, -1000000.0),
+      cartesianMax -> Array(1000000.0, 1000000.0),
+      cartesianMin -> Array(-1000000.0, -1000000.0),
+      wgs3dMax -> Array(180.0, 90.0, 1000000.0),
+      wgs3dMin -> Array(-180.0, -90.0, -1000000.0),
+      wgsMax -> Array(180.0, 90.0),
+      wgsMin -> Array(-180.0, -90.0)),
+    "indexProvider" -> nativeProvider)
 
   private val defaultFulltextConfigString =
-    s"{`${FULLTEXT_ANALYZER.getSettingName}`: '${StandardNoStopWords.ANALYZER_NAME}',`${FULLTEXT_EVENTUALLY_CONSISTENT.getSettingName}`: 'false'}"
+    s"{`$analyzer`: '${StandardNoStopWords.ANALYZER_NAME}',`$eventuallyConsistent`: 'false'}"
 
   private val defaultFulltextOptionsMap: Map[String, Object] = Map(
     "indexConfig" -> Map(
-      FULLTEXT_ANALYZER.getSettingName -> StandardNoStopWords.ANALYZER_NAME,
-      FULLTEXT_EVENTUALLY_CONSISTENT.getSettingName -> false),
+      analyzer -> StandardNoStopWords.ANALYZER_NAME,
+      eventuallyConsistent -> false),
     "indexProvider" -> fulltextProvider)
 
   private val label = "Label"
@@ -1080,7 +1063,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private def createDefaultUniquenessConstraint(): Unit = graph.createUniqueConstraintWithName("constraint1", label, prop)
 
   private def defaultUniquenessBriefIndexOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "constraint1", "UNIQUE", "BTREE", "NODE", List(label), List(prop), defaultBtreeProvider)
+    indexOutputBrief(id, "constraint1", "UNIQUE", "BTREE", "NODE", List(label), List(prop), nativeProvider)
 
   private def defaultUniquenessVerboseIndexOutput(id: Long): Map[String, Any] = defaultUniquenessBriefIndexOutput(id) ++
     indexOutputVerbose(s"CREATE CONSTRAINT `constraint1` ON (n:`$label`) ASSERT (n.`$prop`) IS UNIQUE OPTIONS $defaultBtreeOptionsString")
@@ -1096,7 +1079,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private def createDefaultNodeKeyConstraint(): Unit = graph.createNodeKeyConstraintWithName("constraint2", label2, prop2)
 
   private def defaultNodeKeyBriefIndexOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "constraint2", "UNIQUE", "BTREE", "NODE", List(label2), List(prop2), defaultBtreeProvider)
+    indexOutputBrief(id, "constraint2", "UNIQUE", "BTREE", "NODE", List(label2), List(prop2), nativeProvider)
 
   private def defaultNodeKeyVerboseIndexOutput(id: Long): Map[String, Any] = defaultNodeKeyBriefIndexOutput(id) ++
     indexOutputVerbose(s"CREATE CONSTRAINT `constraint2` ON (n:`$label2`) ASSERT (n.`$prop2`) IS NODE KEY OPTIONS $defaultBtreeOptionsString")
@@ -1257,21 +1240,21 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   private def randomSpatialValue(indexSetting: IndexSettingImpl): Array[Double] = {
     indexSetting match {
-      case SPATIAL_CARTESIAN_MIN =>
+      case IndexSettingImpl.SPATIAL_CARTESIAN_MIN =>
         negative(randomValues.nextCartesianPoint.coordinate)
-      case SPATIAL_CARTESIAN_MAX =>
+      case IndexSettingImpl.SPATIAL_CARTESIAN_MAX =>
         positive(randomValues.nextCartesianPoint.coordinate)
-      case SPATIAL_CARTESIAN_3D_MIN =>
+      case IndexSettingImpl.SPATIAL_CARTESIAN_3D_MIN =>
         negative(randomValues.nextCartesian3DPoint.coordinate)
-      case SPATIAL_CARTESIAN_3D_MAX =>
+      case IndexSettingImpl.SPATIAL_CARTESIAN_3D_MAX =>
         positive(randomValues.nextCartesian3DPoint().coordinate())
-      case SPATIAL_WGS84_MIN =>
+      case IndexSettingImpl.SPATIAL_WGS84_MIN =>
         negative(randomValues.nextGeographicPoint().coordinate())
-      case SPATIAL_WGS84_MAX =>
+      case IndexSettingImpl.SPATIAL_WGS84_MAX =>
         positive(randomValues.nextGeographicPoint.coordinate)
-      case SPATIAL_WGS84_3D_MIN =>
+      case IndexSettingImpl.SPATIAL_WGS84_3D_MIN =>
         negative(randomValues.nextGeographic3DPoint.coordinate)
-      case SPATIAL_WGS84_3D_MAX =>
+      case IndexSettingImpl.SPATIAL_WGS84_3D_MAX =>
         positive(randomValues.nextGeographic3DPoint.coordinate)
       case setting => fail("Unexpected spatial index setting: " + setting.getSettingName)
     }
@@ -1286,8 +1269,6 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   }
 
   private def randomFulltextSetting(): (String, Map[String, Any]) = {
-    val eventuallyConsistent = FULLTEXT_EVENTUALLY_CONSISTENT.getSettingName
-    val analyzer = FULLTEXT_ANALYZER.getSettingName
     val randomBoolean = randomValues.nextBoolean()
     val randomAnalyzer = getRandomAnalyzer
     val settingString = s"{`$eventuallyConsistent`: '$randomBoolean', `$analyzer`: '$randomAnalyzer'}"
