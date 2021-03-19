@@ -7,27 +7,31 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 abstract class AbstractArgumentStateMapTest extends CypherFunSuite {
   private val argumentId = 0L
   def argumentStateMap: ArgumentStateMap[TestArgumentState]
 
-  test("should not be able to take when count not zero") {
+  test("should takeIfCompletedOrElsePeek with tracking enabled") {
     val asm = argumentStateMap
-    asm.initiate(argumentId, mock[MorselReadCursor], Array.emptyLongArray, 1)
-    asm.takeCompletedExclusive(argumentId) shouldBe null
+    asm.initiate(argumentId, mock[MorselReadCursor], Array.emptyLongArray, initialCount = 1, withPeekerTracking = true) // complete = false (count = 1, peekers = 0)
+    asm.takeIfCompletedOrElsePeek(argumentId, doIncrementIfPeek = true) shouldBe ArgumentStateWithCompleted[TestArgumentState](asm.peek(argumentId), isCompleted = false) // complete = false (count = 1, peekers = 1)
     asm.decrement(argumentId)
-    asm.takeCompletedExclusive(argumentId) should not be null
+    asm.takeIfCompletedOrElsePeek(argumentId, doIncrementIfPeek = true) shouldBe null // complete = false (count = 0, peekers = 1)
+    asm.unTrackPeek(argumentId)
+    val state = asm.peek(argumentId)
+    asm.takeIfCompletedOrElsePeek(argumentId, doIncrementIfPeek = true) shouldBe ArgumentStateWithCompleted[TestArgumentState](state, isCompleted = true) // complete = true (count = 0, peekers = 0)
   }
 
-  test("should not be able to take when peek count not zero") {
+  test("should takeIfCompletedOrElsePeek with tracking disabled") {
     val asm = argumentStateMap
-    asm.initiate(argumentId, mock[MorselReadCursor], Array.emptyLongArray, 0)
-    asm.trackedPeek(argumentId)
-    asm.takeCompletedExclusive(argumentId) shouldBe null
-    asm.unTrackPeek(argumentId)
-    asm.takeCompletedExclusive(argumentId) should not be null
+    asm.initiate(argumentId, mock[MorselReadCursor], Array.emptyLongArray, initialCount = 1, withPeekerTracking = false)
+    asm.takeIfCompletedOrElsePeek(argumentId, doIncrementIfPeek = false) shouldBe ArgumentStateWithCompleted[TestArgumentState](asm.peek(argumentId), isCompleted = false) // complete = false (count = 1)
+    asm.decrement(argumentId) // decrement for initial count => complete = true (count = 0)
+    val state = asm.peek(argumentId)
+    asm.takeIfCompletedOrElsePeek(argumentId, doIncrementIfPeek = false) shouldBe ArgumentStateWithCompleted[TestArgumentState](state, isCompleted = true) // complete = true (count = 0, peekers = 0)
   }
 }
 

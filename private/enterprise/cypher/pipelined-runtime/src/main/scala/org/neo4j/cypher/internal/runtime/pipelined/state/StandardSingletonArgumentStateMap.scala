@@ -29,7 +29,8 @@ class StandardSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStat
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
                                             initialCount: Int,
-                                            memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
+                                            memoryTracker: MemoryTracker,
+                                            withPeekerTracking: Boolean): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
       val state = factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker)
       memoryTracker.allocateHeap(state.shallowSize)

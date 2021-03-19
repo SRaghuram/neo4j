@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentStateController
+import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.PeekTrackingConcurrentStateController
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.MemoryTracker
 
@@ -27,15 +28,17 @@ class ConcurrentSingletonArgumentStateMap[STATE <: ArgumentState](val argumentSt
   @volatile
   override protected var hasController = true
 
-  override protected def newStateController(argument: Long,
-                                            argumentMorsel: MorselReadCursor,
-                                            argumentRowIdsForReducers: Array[Long],
-                                            initialCount: Int,
-                                            memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
+  override protected def newStateController(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int, memoryTracker: MemoryTracker, withPeekerTracking: Boolean): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
+      if (withPeekerTracking) {
+        throw new UnsupportedOperationException("Peeker tracking not supported on completed state controllers")
+      }
       ConcurrentCompletedStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
-      new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
+      if (withPeekerTracking)
+        new PeekTrackingConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
+      else
+        new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
     }
   }
 }

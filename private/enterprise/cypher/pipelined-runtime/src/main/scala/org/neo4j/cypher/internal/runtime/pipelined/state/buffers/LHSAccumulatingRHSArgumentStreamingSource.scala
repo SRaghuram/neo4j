@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
@@ -72,41 +73,36 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
   }
 
   private def tryTakeRhs(lhsAcc: LHS_ACC): MorselData = {
-    if (rhsArgumentStateMap.hasCompleted(lhsAcc.argumentRowId)) {
-      val completedArgumentState = rhsArgumentStateMap.takeCompletedExclusive(lhsAcc.argumentRowId)
-      if (completedArgumentState != null) {
-        if (!completedArgumentState.didReceiveData) {
-          MorselData(IndexedSeq.empty, EndOfEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
-        } else {
-          val morsels = completedArgumentState.takeAll()
-          if (morsels != null) {
-            MorselData(morsels, EndOfNonEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
+    val argumentRowId = lhsAcc.argumentRowId
+    val rhsBuffer = rhsArgumentStateMap.takeIfCompletedOrElsePeek(argumentRowId, doIncrementIfPeek = true)
+    if (rhsBuffer != null) {
+      rhsBuffer match {
+        case ArgumentStateWithCompleted(completedArgumentState, true) =>
+          if (!completedArgumentState.didReceiveData) {
+            MorselData(IndexedSeq.empty, EndOfEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
           } else {
-            // We need to return this message to signal that the end of the stream was reached (even if some other Thread got the morsels
-            // before us), to close and decrement correctly.
-            MorselData(IndexedSeq.empty, EndOfNonEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
+            val morsels = completedArgumentState.takeAll()
+            if (morsels != null) {
+              MorselData(morsels, EndOfNonEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
+            } else {
+              // We need to return this message to signal that the end of the stream was reached (even if some other Thread got the morsels
+              // before us), to close and decrement correctly.
+              MorselData(IndexedSeq.empty, EndOfNonEmptyStream, completedArgumentState.argumentRowIdsForReducers, completedArgumentState.argumentRow)
+            }
           }
-        }
-      }
-      else {
-        // either lost race or there are peekers still running
-        null.asInstanceOf[MorselData]
+
+        case ArgumentStateWithCompleted(incompleteArgumentState, false) =>
+          val morsels = incompleteArgumentState.takeAll()
+          if (morsels != null) {
+            MorselData(morsels, NotTheEnd, incompleteArgumentState.argumentRowIdsForReducers, incompleteArgumentState.argumentRow)
+          } else {
+            rhsArgumentStateMap.unTrackPeek(argumentRowId)
+            // In this case we can simply not return anything, there will arrive more data for this argument row id.
+            null.asInstanceOf[MorselData]
+          }
       }
     } else {
-      val incompleteArgumentState = rhsArgumentStateMap.trackedPeek(lhsAcc.argumentRowId)
-      if (incompleteArgumentState != null) {
-        val morsels = incompleteArgumentState.takeAll()
-        if (morsels != null) {
-          MorselData(morsels, NotTheEnd, incompleteArgumentState.argumentRowIdsForReducers, incompleteArgumentState.argumentRow)
-        } else {
-          // In this case we can simply not return anything, there will arrive more data for this argument row id.
-          rhsArgumentStateMap.unTrackPeek(lhsAcc.argumentRowId)
-          null.asInstanceOf[MorselData]
-        }
-      } else {
-        // we lost a race, no problem
-        null.asInstanceOf[MorselData]
-      }
+      null.asInstanceOf[MorselData]
     }
   }
 
@@ -287,7 +283,7 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
                                                                                               acc.increment(argumentRowId)
                                                                                               acc.increment(argumentRowId)
                                                                                             })
-    rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
+    rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount, withPeekerTracking = true)
     // Count Type: RHS Accumulator Init
     tracker.increment(initTrackerKey)
   }

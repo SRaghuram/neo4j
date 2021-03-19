@@ -22,18 +22,7 @@ import scala.collection.mutable.ArrayBuffer
  * All functionality of either standard or concurrent ASM that can be written without knowing the concrete Map type.
  */
 abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]](memoryTracker: MemoryTracker)
-  extends ArgumentStateMap[STATE] with Controllers[CONTROLLER] {
-
-  /**
-   * Create a new state controller
-   *
-   * @param initialCount the initial count for the controller
-   */
-  protected def newStateController(argument: Long,
-                                   argumentMorsel: MorselReadCursor,
-                                   argumentRowIdsForReducers: Array[Long],
-                                   initialCount: Int,
-                                   memoryTracker: MemoryTracker): CONTROLLER
+  extends ArgumentStateMap[STATE] with Controllers[CONTROLLER] with StateControllerFactory[CONTROLLER] {
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
     DebugSupport.ASM.log("ASM %s update %03d", argumentStateMapId, argumentRowId)
@@ -124,17 +113,17 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     }
   }
 
-  override def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[STATE] = {
+  override def takeIfCompletedOrElsePeek(argumentId: Long, doIncrementIfPeek: Boolean): ArgumentStateWithCompleted[STATE] = {
     val controller = getController(argumentId)
-    takeIfCompletedOrElsePeek(controller)
+    takeIfCompletedOrElsePeek(controller, doIncrementIfPeek)
   }
 
   override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
     val controller = getFirstController
-    takeIfCompletedOrElsePeek(controller)
+    takeIfCompletedOrElsePeek(controller, doIncrementIfPeek = false)
   }
 
-  private[this] def takeIfCompletedOrElsePeek(controller: CONTROLLER): ArgumentStateWithCompleted[STATE] = {
+  private[this] def takeIfCompletedOrElsePeek(controller: CONTROLLER, doIncrementIfPeek: Boolean): ArgumentStateWithCompleted[STATE] = {
     if (controller != null) {
       val completedState = controller.takeCompleted()
       if (completedState != null) {
@@ -143,7 +132,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
         ArgumentStateWithCompleted(completedState, isCompleted = true)
       } else {
-        val peekedState = controller.peek
+        val peekedState = if (doIncrementIfPeek) controller.trackedPeek else controller.peek
         if (peekedState != null) {
           ArgumentStateWithCompleted(peekedState, isCompleted = false)
         } else {
@@ -181,23 +170,6 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     val controller = getController(argumentId)
     if (controller != null) {
       controller.unTrackPeek
-    }
-  }
-
-  override def takeCompletedExclusive(argumentId: Long): STATE = {
-    val controller = getController(argumentId)
-    if (controller != null) {
-      val completedState = controller.takeCompletedExclusive
-      if (completedState != null) {
-        removeController(completedState.argumentRowId)
-        memoryTracker.releaseHeap(controller.shallowSize + completedState.shallowSize)
-        DebugSupport.ASM.log("ASM %s take exclusive %03d", argumentStateMapId, completedState.argumentRowId)
-        completedState
-      } else {
-        null.asInstanceOf[STATE]
-      }
-    } else {
-      null.asInstanceOf[STATE]
     }
   }
 
@@ -255,9 +227,9 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     }
   }
 
-  override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {
+  override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int, withPeekerTracking: Boolean = false): Unit = {
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
-    val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, memoryTracker)
+    val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, memoryTracker, withPeekerTracking)
     val previousValue = putController(argument, newController)
     Preconditions.checkState(previousValue == null, "ArgumentStateMap cannot re-initiate the same argument (argument: %d)", Long.box(argument))
   }
@@ -338,14 +310,6 @@ object AbstractArgumentStateMap {
      * Decrement peeker count.
      */
     def unTrackPeek: Unit
-
-    /**
-     * Atomically tries to take the controller and returns the state if the count is zero _and_ the peeker count is zero _and_ the state has not already been taken.
-     * The implementation must guarantee that taking can only happen once. This call must be used together with trackedPeek and unTrackPeek.
-     *
-     * @return the state if successful, otherwise null
-     */
-    def takeCompletedExclusive: STATE
 
     /**
      * Peeks the controller and returns the state if the count is zero _and_ the state has not already been taken.

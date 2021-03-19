@@ -90,7 +90,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
    *                                  reducers.
    * @param initialCount              the initial count for the argument row id
    */
-  def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit
+  def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int, withPeekerTracking: Boolean = false): Unit
 
   /**
    * Increment the argument counter for `argument`.
@@ -156,7 +156,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
   /**
    * Like [[takeOneIfCompletedOrElsePeek]] but restricted to a single, specific argument.
    */
-  def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[S]
+  def takeIfCompletedOrElsePeek(argumentId: Long, doIncrementIfPeek: Boolean): ArgumentStateWithCompleted[S]
 
   /**
    * The semantics of this call differ depending on whether this ASM is ordered.
@@ -194,15 +194,6 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def unTrackPeek(argumentId: Long): Unit
 
   /**
-   * Atomically tries to take the [[ArgumentState]] for the specified argumentId.
-   * Takes the state if the count is zero _and_ the peeker count is zero _and_ the state has not already been taken, otherwise null.
-   * The implementation must guarantee that taking can only happen once. This call must be used together with trackedPeek and unTrackPeek.
-   *
-   * @return the state if it was successfully taken, otherwise null.
-   */
-  def takeCompletedExclusive(argumentId: Long): S
-
-  /**
    * Returns `true` iff there is a completed argument.
    * @return
    */
@@ -219,6 +210,20 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def exists(statePredicate: S => Boolean): Boolean
 }
 
+trait StateControllerFactory[CONTROLLER <: AbstractArgumentStateMap.StateController[_ <: ArgumentState]] {
+  /**
+   * Create a new state controller
+   *
+   * @param initialCount the initial count for the argument row id
+   */
+  protected def newStateController(argument: Long,
+                                   argumentMorsel: MorselReadCursor,
+                                   argumentRowIdsForReducers: Array[Long],
+                                   initialCount: Int,
+                                   memoryTracker: MemoryTracker,
+                                   withPeekerTracking: Boolean): CONTROLLER
+
+}
 /**
  * Static methods and interfaces connected to ArgumentStateMap
  */

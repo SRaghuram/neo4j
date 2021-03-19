@@ -65,7 +65,8 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
                                             initialCount: Int,
-                                            memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
+                                            memoryTracker: MemoryTracker,
+                                            withPeekerTracking: Boolean): AbstractArgumentStateMap.StateController[STATE] = {
     val state = factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker)
     val controller =
       if (factory.completeOnConstruction) {
@@ -136,16 +137,11 @@ object StandardArgumentStateMap {
 
     override final def shallowSize: Long = StandardStateController.SHALLOW_SIZE
 
-    // TODO reviewer: should we keep a peek count here in order to have the same behaviour as the docs describe?
-    //      Since this implementation is single threaded we know there won't be any other threads peeking if we try to take,
-    //      but then you could take with `takeCompletedExclusive` after `trackedPeek` without calling `unTrackPeek`.
     override def trackedPeek: STATE = peek // No need to track peekers in single threaded version
 
     override def unTrackPeek: Unit = {
       // No need to track peekers in single threaded version
     }
-
-    override def takeCompletedExclusive: STATE = takeCompleted // No need to track peekers in single threaded version
   }
 
   object StandardStateController {
@@ -190,16 +186,11 @@ object StandardArgumentStateMap {
 
     override def shallowSize: Long = StandardCompletedStateController.SHALLOW_SIZE
 
-    // TODO reviewer: should we keep a peek count here in order to have the same behaviour as the docs describe?
-    //      Since this implementation is single threaded we know there won't be any other threads peeking if we try to take,
-    //      but then you could take with `takeCompletedExclusive` after `trackedPeek` without calling `unTrackPeek`.
     override def trackedPeek: STATE = peek // No need to track peekers in single threaded version
 
     override def unTrackPeek: Unit = {
       // No need to track peekers in single threaded version
     }
-
-    override def takeCompletedExclusive: STATE = takeCompleted() // No need to track peekers in single threaded version
   }
 
   object StandardCompletedStateController {

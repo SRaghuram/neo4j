@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentStateController
+import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.PeekTrackingConcurrentStateController
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
@@ -67,11 +68,19 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
                                             initialCount: Int,
-                                            memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
+                                            memoryTracker: MemoryTracker,
+                                            withPeekerTracking: Boolean): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
+      if (withPeekerTracking) {
+        throw new UnsupportedOperationException("Peeker tracking not supported on completed state controllers")
+      }
       ConcurrentCompletedStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
-      new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
+      if (withPeekerTracking) {
+        new PeekTrackingConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
+      } else {
+        new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
+      }
     }
   }
 
@@ -105,10 +114,8 @@ object ConcurrentArgumentStateMap {
    */
   private[state] class ConcurrentStateController[STATE <: ArgumentState](private var state: STATE, initialCount: Int)
     extends AbstractArgumentStateMap.StateController[STATE] {
-    checkOnlyWhenAssertionsAreEnabled(state != null)
 
     private val count = new AtomicLong(initialCount)
-    private val peekerCount = new AtomicLong(0)
 
     override def increment(): Long = count.incrementAndGet()
 
@@ -138,35 +145,6 @@ object ConcurrentArgumentStateMap {
 
     override def peek: STATE = state
 
-    override def trackedPeek: STATE = {
-      peekerCount.incrementAndGet() // Increment here in order to protect against race with takeCompletedExclusive
-      if (count.get() >= 0) {
-        state
-      } else {
-        peekerCount.decrementAndGet()
-        null.asInstanceOf[STATE]
-      }
-    }
-
-    override def unTrackPeek: Unit = {
-      peekerCount.decrementAndGet()
-    }
-
-    override def takeCompletedExclusive: STATE = {
-      if (count.compareAndSet(0, TAKEN)) {
-        if (peekerCount.get() == 0) {
-          val returnState = state
-          state = null.asInstanceOf[STATE]
-          returnState
-        } else {
-          count.set(0)
-          null.asInstanceOf[STATE]
-        }
-      } else {
-        null.asInstanceOf[STATE]
-      }
-    }
-
     override def peekCompleted: STATE = {
       if (count.get() == 0) {
         // TODO: There is a potential race condition here where it's possible to return the (non null) state
@@ -182,6 +160,96 @@ object ConcurrentArgumentStateMap {
     }
 
     override def shallowSize: Long = ConcurrentStateController.SHALLOW_SIZE
+
+    override def trackedPeek: STATE = {
+      throw new UnsupportedOperationException("Peek tracking not supported")
+    }
+
+    override def unTrackPeek: Unit = {
+      throw new UnsupportedOperationException("Peek tracking not supported")
+    }
+  }
+
+  object PeekTrackingConcurrentStateController {
+    private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[PeekTrackingConcurrentStateController[ArgumentState]])
+  }
+
+  /**
+   * Controller which knows when an [[ArgumentState]] is complete,
+   * and protects it from concurrent access.
+   */
+  private[state] class PeekTrackingConcurrentStateController[STATE <: ArgumentState](private var state: STATE, initialCount: Int)
+    extends AbstractArgumentStateMap.StateController[STATE] {
+    checkOnlyWhenAssertionsAreEnabled(state != null)
+
+    private val count = new AtomicLong(initialCount)
+    private val peekerCount = new AtomicLong(0)
+
+    override def increment(): Long = count.incrementAndGet()
+
+    override def decrement(): Long = count.decrementAndGet()
+
+    override def takeCompleted(): STATE = {
+      if (count.compareAndSet(0, TAKEN)) {
+        if (peekerCount.compareAndSet(0, TAKEN)) {
+          val returnState = state
+          state = null.asInstanceOf[STATE]
+          returnState
+        } else {
+          count.set(0)
+          null.asInstanceOf[STATE]
+        }
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    }
+
+    override def take(): STATE = {
+      if (count.getAndSet(TAKEN) >= 0) {
+        val returnState = state
+        state = null.asInstanceOf[STATE]
+        returnState
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    }
+
+    override def hasCompleted: Boolean = count.get() == 0
+
+    override def peek: STATE = state
+
+    override def trackedPeek: STATE = {
+      if (count.get() > 0) { // check count to avoid toggling peeker count between 0 & >0 unnecessarily when many threads are contending for state
+        if (peekerCount.incrementAndGet() > 0) {
+          state
+        } else {
+          peekerCount.decrementAndGet()
+          null.asInstanceOf[STATE]
+        }
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    }
+
+    override def unTrackPeek: Unit = {
+      peekerCount.decrementAndGet()
+    }
+
+    override def peekCompleted: STATE = {
+      if (count.get() == 0) {
+        // TODO: There is a potential race condition here where it's possible to return the (non null) state
+        //       even if it's taken (taker hasn't completed setting it to null). Is it ok to give no guarantees here?
+        state
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    }
+
+    override def toString: String = {
+      s"[count: ${count.get()}, peekers: ${peekerCount.get()}, state: $state]"
+    }
+
+    override def shallowSize: Long = PeekTrackingConcurrentStateController.SHALLOW_SIZE
   }
 
   object ConcurrentStateController {
@@ -197,8 +265,6 @@ object ConcurrentArgumentStateMap {
   private[state] class ConcurrentCompletedStateController[STATE <: ArgumentState] private (private val atomicState: AtomicReference[STATE])
     extends AbstractArgumentStateMap.StateController[STATE] {
     checkOnlyWhenAssertionsAreEnabled(atomicState.get() != null)
-
-    private val peekerCount = new AtomicLong(0)
 
     override def increment(): Long = throw new IllegalStateException(s"Cannot increment ${this.getClass.getSimpleName}")
 
@@ -225,32 +291,11 @@ object ConcurrentArgumentStateMap {
     override def shallowSize: Long = ConcurrentCompletedStateController.SHALLOW_SIZE
 
     override def trackedPeek: STATE = {
-      peekerCount.incrementAndGet() // Increment here in order to protect against race with takeCompletedExclusive
-      val state = atomicState.get()
-      if (state != null) {
-        state
-      } else {
-        peekerCount.decrementAndGet()
-        null.asInstanceOf[STATE]
-      }
+      throw new UnsupportedOperationException("Peek tracking not supported")
     }
 
     override def unTrackPeek: Unit = {
-      peekerCount.decrementAndGet()
-    }
-
-    override def takeCompletedExclusive: STATE = {
-      val state = atomicState.getAndSet(null.asInstanceOf[STATE])
-      if (state != null) {
-        if (peekerCount.get() == 0) {
-          state
-        } else {
-          atomicState.set(state)
-          null.asInstanceOf[STATE]
-        }
-      } else {
-        null.asInstanceOf[STATE]
-      }
+      throw new UnsupportedOperationException("Peek tracking not supported")
     }
   }
 
