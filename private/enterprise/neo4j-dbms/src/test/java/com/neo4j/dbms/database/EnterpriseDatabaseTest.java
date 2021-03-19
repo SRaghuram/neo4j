@@ -73,7 +73,7 @@ class EnterpriseDatabaseTest
     }
 
     @Test
-    void shouldCleanupComponentsOnFailure() throws Exception
+    void shouldStopComponentsOnFailure() throws Exception
     {
         doThrow( RuntimeException.class ).when( componentC ).start();
 
@@ -98,11 +98,6 @@ class EnterpriseDatabaseTest
         inOrder.verify( kernel ).stop();
         inOrder.verify( componentB ).stop();
         inOrder.verify( componentA ).stop();
-
-        inOrder.verify( componentC ).shutdown();
-        inOrder.verify( kernel ).shutdown();
-        inOrder.verify( componentB ).shutdown();
-        inOrder.verify( componentA ).shutdown();
 
         inOrder.verifyNoMoreInteractions();
     }

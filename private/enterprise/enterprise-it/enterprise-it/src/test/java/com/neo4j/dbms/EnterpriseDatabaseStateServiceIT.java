@@ -58,4 +58,28 @@ class EnterpriseDatabaseStateServiceIT
         assertThat( throwable.get().getMessage() ).contains( "Unable to start" );
         assertEquals( STOPPED, stateService.stateOfDatabase( testId ).operatorState(), "The state service should report the db in its stopped state" );
     }
+
+    @Test
+    void shouldKeepErrorStatusOnConsecutiveFailures() throws IOException
+    {
+        var testId = idRepository.getRaw( "test2" );
+        managementService.createDatabase( testId.name() );
+        var testDb = (GraphDatabaseAPI) managementService.database( testId.name() );
+        DatabaseLayout testDbLayout = testDb.databaseLayout();
+
+        managementService.shutdownDatabase( testId.name() );
+
+        fileSystem.deleteFile( testDbLayout.nodeStore() );
+        fileSystem.deleteRecursively( testDbLayout.getTransactionLogsDirectory() );
+
+        // when
+        managementService.startDatabase( testId.name() );
+        managementService.startDatabase( testId.name() );
+
+        // then
+        Optional<Throwable> throwable = stateService.causeOfFailure( testId );
+        assertTrue( throwable.isPresent(), "The state service should have recorded an error when starting a db without key files" );
+        assertThat( throwable.get().getMessage() ).contains( "Unable to start" );
+        assertEquals( STOPPED, stateService.stateOfDatabase( testId ).operatorState(), "The state service should report the db in its stopped state" );
+    }
 }

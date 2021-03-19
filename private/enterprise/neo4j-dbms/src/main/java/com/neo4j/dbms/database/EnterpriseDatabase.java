@@ -41,10 +41,11 @@ public class EnterpriseDatabase
         }
         catch ( LifecycleException startException )
         {
-            // LifeSupport will stop() on failure, but not shutdown()
+            // LifeSupport will call Lifecycle#stop() for all components on failure, however, EnterpriseDatabase instances
+            // may perform extra steps on their own stop method.
             try
             {
-                components.shutdown();
+                stop();
             }
             catch ( Throwable shutdownException )
             {
