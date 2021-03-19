@@ -312,14 +312,14 @@ class ReadReplicaReplicationIT
     }
 
     @TestAllClusterTypes
-    void shouldBeAbleToPullTxAfterHavingDownloadedANewStoreAfterPruning() throws Exception
+    void shouldBeAbleToPullTxAfterHavingDownloadedANewStoreAfterPruning( ClusterConfig.ClusterType type ) throws Exception
     {
         // given
         var params = Map.of( GraphDatabaseSettings.keep_logical_logs.name(), "keep_none",
                 GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
                 GraphDatabaseSettings.check_point_interval_time.name(), "100ms" );
 
-        var cluster = startCluster( defaultClusterConfig().withSharedCoreParams( params ) );
+        var cluster = startCluster( defaultClusterConfig(type).withSharedCoreParams( params ) );
 
         createDataInOneTransaction( cluster, 10 );
 
