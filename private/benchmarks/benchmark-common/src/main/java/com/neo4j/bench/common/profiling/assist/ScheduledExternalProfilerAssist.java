@@ -65,15 +65,15 @@ class ScheduledExternalProfilerAssist implements ExternalProfilerAssist
     @Override
     public void afterProcess()
     {
-        delegate.afterProcess();
         scheduledProfilerRunner.stop();
+        delegate.afterProcess();
     }
 
     @Override
     public void processFailed()
     {
-        delegate.processFailed();
         scheduledProfilerRunner.stop();
+        delegate.processFailed();
     }
 
     @Override

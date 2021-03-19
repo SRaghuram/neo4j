@@ -45,12 +45,13 @@ class InteractiveExecutionIT
 
     private void executeWorkloadInteractively( String workloadName, Deployment deployment ) throws Exception
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
+        Path workDir = temporaryFolder.absolutePath();
+        try ( Resources resources = new Resources( workDir ) )
         {
             Workload workload = Workload.fromName( workloadName, resources, deployment );
             Path neo4jConfigFile = temporaryFolder.createFile( "neo4j.conf" );
             Store store = StoreTestUtil.createEmptyStoreFor( workload,
-                                                             temporaryFolder.directory( "store" ), // store
+                                                             workDir, // store
                                                              neo4jConfigFile );
             Path dataset = store.topLevelDirectory();
             MeasurementOptions measurementOptions = new MeasurementOptions( 1,
@@ -58,7 +59,7 @@ class InteractiveExecutionIT
                                                                             Duration.ofSeconds( 0 ),
                                                                             Duration.ofSeconds( 10 ) );
             Jvm jvm = Jvm.defaultJvmOrFail();
-            Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( deployment, Edition.ENTERPRISE, measurementOptions, jvm, dataset );
+            Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( deployment, Edition.ENTERPRISE, measurementOptions, jvm, dataset, workDir );
 
             Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
             OptionsBuilder optionsBuilder = new OptionsBuilder()

@@ -391,7 +391,7 @@ class EndToEndIT extends BaseEndToEndIT
                        // execution_mode
                        executionMode.name(),
                        // jvm_args
-                       "-Xmx1g",
+                       "-Xmx1536M -Xms1536M",
                        // recreate_schema
                        "false",
                        // planner

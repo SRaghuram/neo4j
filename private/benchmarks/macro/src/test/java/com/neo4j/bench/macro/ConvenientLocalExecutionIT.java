@@ -135,7 +135,8 @@ class ConvenientLocalExecutionIT
     @Test
     void executeQuery() throws Exception
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
+        Path workDir = temporaryFolder.absolutePath();
+        try ( Resources resources = new Resources( workDir ) )
         {
             Workload workload = Workload.fromName( WORKLOAD_NAME, resources, DEPLOYMENT );
             Query query = workload.queries()
@@ -158,7 +159,8 @@ class ConvenientLocalExecutionIT
                                                                     edition,
                                                                     measurementOptions,
                                                                     jvm,
-                                                                    dataset );
+                                                                    dataset,
+                                                                    workDir );
             ForkRunner.runForksFor( neo4jDeployment,
                                     groupDir,
                                     query.copyWith( PLANNER ).copyWith( RUNTIME ),
@@ -171,7 +173,7 @@ class ConvenientLocalExecutionIT
                                     TimeUnit.MILLISECONDS,
                                     printer,
                                     JVM_ARGS,
-                                    resources );
+                                    workDir );
         }
     }
 

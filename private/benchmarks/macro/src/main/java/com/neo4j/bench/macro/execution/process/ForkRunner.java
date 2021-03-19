@@ -18,7 +18,6 @@ import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.Main;
 import com.neo4j.bench.macro.cli.ExportPlanCommand;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
@@ -59,8 +58,8 @@ public class ForkRunner
                                        int measurementForkCount,
                                        TimeUnit unit,
                                        BenchmarkGroupBenchmarkMetricsPrinter metricsPrinter,
-                                       JvmArgs jvmArgs,
-                                       Resources resources ) throws ForkFailureException
+                                       JvmArgs baseJvmArgs,
+                                       Path workDir ) throws ForkFailureException
     {
         BenchmarkDirectory benchmarkDir = benchmarkDirFor( groupDir, query );
         boolean doFork = measurementForkCount != 0;
@@ -73,15 +72,14 @@ public class ForkRunner
                 ForkDirectory forkDirectory = benchmarkDir.create( forkName );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
                 Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
-                DatabaseLauncher launcher = neo4jDeployment.launcherFor( query.shouldCopyStore(), neo4jConfigFile, forkDirectory );
-                RunnableFork profilerFork = fork( launcher,
+                RunnableFork profilerFork = fork( neo4jDeployment,
                                                   query,
                                                   forkDirectory,
                                                   singletonList( profiler ),
                                                   jvm,
                                                   doFork,
-                                                  jvmArgs,
-                                                  resources );
+                                                  baseJvmArgs,
+                                                  neo4jConfigFile );
                 LOG.debug( profilerFork.toString() );
                 runFork( query, unit, metricsPrinter, profilerFork );
             }
@@ -94,16 +92,14 @@ public class ForkRunner
                 ForkDirectory forkDirectory = benchmarkDir.create( forkName );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
                 Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
-                DatabaseLauncher launcher = neo4jDeployment.launcherFor( query.shouldCopyStore(), neo4jConfigFile, forkDirectory );
-
-                RunnableFork measurementFork = fork( launcher,
+                RunnableFork measurementFork = fork( neo4jDeployment,
                                                      query,
                                                      forkDirectory,
                                                      ParameterizedProfiler.defaultProfilers( ProfilerType.OOM ),
                                                      jvm,
                                                      doFork,
-                                                     jvmArgs,
-                                                     resources );
+                                                     baseJvmArgs,
+                                                     neo4jConfigFile );
                 // Export logical plan -- only necessary to do so once, every fork should produce the same plan
                 if ( forkNumber == 0 )
                 {
@@ -112,9 +108,9 @@ public class ForkRunner
                                        edition,
                                        neo4jConfigFile,
                                        forkDirectory,
-                                       resources,
+                                       workDir,
                                        jvm,
-                                       jvmArgs,
+                                       baseJvmArgs,
                                        doFork );
                 }
                 LOG.debug( measurementFork.toString() );
@@ -135,6 +131,25 @@ public class ForkRunner
         return groupDir.findOrCreate( query.benchmark() );
     }
 
+    private static RunnableFork fork( Neo4jDeployment neo4jDeployment,
+                                      Query query,
+                                      ForkDirectory forkDirectory,
+                                      List<ParameterizedProfiler> parameterizedProfilers,
+                                      Jvm jvm,
+                                      boolean doFork,
+                                      JvmArgs baseJvmArgs,
+                                      Path neo4jConfigFile )
+    {
+        DatabaseLauncher launcher = neo4jDeployment.launcherFor( query,
+                                                                 neo4jConfigFile,
+                                                                 forkDirectory,
+                                                                 baseJvmArgs,
+                                                                 parameterizedProfilers );
+        return doFork
+               ? new ForkingRunnable<>( launcher, forkDirectory, jvm )
+               : new NonForkingRunnable<>( launcher, forkDirectory );
+    }
+
     private static void runFork( Query query,
                                  TimeUnit unit,
                                  BenchmarkGroupBenchmarkMetricsPrinter metricsPrinter,
@@ -149,38 +164,12 @@ public class ForkRunner
         LOG.debug( metricsPrinter.toPrettyString( justForPrinting ) );
     }
 
-    private static RunnableFork fork( DatabaseLauncher<?> launcher,
-                                      Query query,
-                                      ForkDirectory forkDirectory,
-                                      List<ParameterizedProfiler> profilers,
-                                      Jvm jvm,
-                                      boolean doFork,
-                                      JvmArgs jvmArgs,
-                                      Resources resources )
-    {
-        return doFork
-               ? new ForkingRunnable<>( launcher,
-                                        query,
-                                        forkDirectory,
-                                        profilers,
-                                        jvm,
-                                        jvmArgs,
-                                        resources )
-               : new NonForkingRunnable<>( launcher,
-                                           query,
-                                           forkDirectory,
-                                           profilers,
-                                           jvm,
-                                           jvmArgs,
-                                           resources );
-    }
-
     private static void runPlanExportFork( Query query,
                                            Store originalStore,
                                            Edition edition,
                                            Path neo4jConfigFile,
                                            ForkDirectory forkDirectory,
-                                           Resources resources,
+                                           Path workDir,
                                            Jvm jvm,
                                            JvmArgs jvmArgs,
                                            boolean doFork )
@@ -189,7 +178,7 @@ public class ForkRunner
                             ? originalStore.makeTemporaryCopy()
                             : originalStore )
         {
-            List<String> commandArgs = ExportPlanCommand.argsFor( query, store, edition, neo4jConfigFile, forkDirectory, resources.workDir() );
+            List<String> commandArgs = ExportPlanCommand.argsFor( query, store, edition, neo4jConfigFile, forkDirectory, workDir );
 
             if ( doFork )
             {

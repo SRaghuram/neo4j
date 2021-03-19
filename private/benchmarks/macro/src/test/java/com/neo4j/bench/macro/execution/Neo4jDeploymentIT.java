@@ -18,9 +18,12 @@ import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.Pid;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
+import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
+import com.neo4j.bench.common.tool.macro.Deployment.Server;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
@@ -37,11 +40,13 @@ import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.execution.process.DatabaseLauncher;
 import com.neo4j.bench.macro.execution.process.MeasurementOptions;
+import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.options.Edition;
+import com.neo4j.bench.model.process.JvmArgs;
 import io.findify.s3mock.S3Mock;
 import org.apache.commons.io.FileUtils;
 import org.hamcrest.Matchers;
@@ -59,6 +64,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -109,6 +115,7 @@ public class Neo4jDeploymentIT
     private ArtifactStorage artifactStorage;
     private String packageName;
     private String packageArchive;
+    private Path resourcesDir;
     private Schema expectedSchema;
     private Path results;
     private Pid pid;
@@ -130,7 +137,7 @@ public class Neo4jDeploymentIT
         FileUtils.copyDirectory( originalDir.toFile(), packageDir.resolve( packageName ).toFile() );
 
         Path dbDir = temporaryFolder.directory( "db" );
-        Path resourcesDir = temporaryFolder.directory( "resources" );
+        this.resourcesDir = temporaryFolder.directory( "resources" );
         this.expectedSchema = createDataset( resourcesDir, dbDir, emptyConfig, randomId );
         this.databaseName = getDatabaseName( resourcesDir );
 
@@ -221,7 +228,7 @@ public class Neo4jDeploymentIT
         Path baseNeo4jConfigFile = workspace.resolve( UUID.randomUUID() + "-neo4j.conf" );
         writeConfig( baseNeo4jConfigFile );
 
-        Neo4jDeployment<?> deployment = shouldSetup( workspace, baseNeo4jConfigFile );
+        Neo4jDeployment<Server,ServerDatabase> deployment = shouldSetup( workspace, baseNeo4jConfigFile );
 
         // first round
         URI uri;
@@ -249,7 +256,7 @@ public class Neo4jDeploymentIT
         Path baseNeo4jConfigFile = workspace.resolve( UUID.randomUUID() + "-neo4j.conf" );
         writeConfig( baseNeo4jConfigFile );
 
-        Neo4jDeployment<?> deployment = shouldSetup( workspace, baseNeo4jConfigFile );
+        Neo4jDeployment<Server,ServerDatabase> deployment = shouldSetup( workspace, baseNeo4jConfigFile );
 
         // first round
         URI uri;
@@ -278,16 +285,18 @@ public class Neo4jDeploymentIT
                                       .findOrCreate( UUID.randomUUID().toString() );
     }
 
-    private Neo4jDeployment<?> shouldSetup( Path workspace, Path baseNeo4jConfigFile )
+    private Neo4jDeployment<Server,ServerDatabase> shouldSetup( Path workspace, Path baseNeo4jConfigFile )
     {
         WorkspaceState workspaceState = shouldDownloadWorkspace( workspace );
         Path dataset = workspaceState.dataset();
         // deployment won't be started so this path does not matter
-        Neo4jDeployment<?> deployment = Neo4jDeployment.from( Deployment.server( workspaceState.product().toAbsolutePath().toString() ),
-                                                              EDITION,
-                                                              MEASUREMENT_OPTIONS,
-                                                              JVM,
-                                                              dataset );
+        Deployment server = Deployment.server( workspaceState.product().toAbsolutePath().toString() );
+        Neo4jDeployment<Server,ServerDatabase> deployment = Neo4jDeployment.from( server,
+                                                                                  EDITION,
+                                                                                  MEASUREMENT_OPTIONS,
+                                                                                  JVM,
+                                                                                  dataset,
+                                                                                  workspace );
         try ( Store store = Neo4jStore.createFrom( dataset ) )
         {
             EmbeddedDatabase.verifySchema( store, EDITION, baseNeo4jConfigFile, expectedSchema );
@@ -315,16 +324,33 @@ public class Neo4jDeploymentIT
         return workspaceState;
     }
 
-    private ServerDatabase shouldStart( Path baseNeo4jConfigFile, Neo4jDeployment<?> deployment, boolean copyStore, ForkDirectory forkDirectory )
+    private ServerDatabase shouldStart( Path baseNeo4jConfigFile, Neo4jDeployment<Server,ServerDatabase> deployment, boolean copyStore,
+                                        ForkDirectory forkDirectory )
     {
         Neo4jConfig neo4jConfig = RunMacroWorkloadCommand.prepareConfig( EXECUTION_MODE, baseNeo4jConfigFile );
         Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
         Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
-        List<String> additionalJvmArgs = Collections.emptyList();
+        JvmArgs additionalJvmArgs = JvmArgs.empty();
 
-        DatabaseLauncher<ServerDatabase> databaseLauncher =
-                (DatabaseLauncher<ServerDatabase>) deployment.launcherFor( copyStore, neo4jConfigFile, forkDirectory );
-        return databaseLauncher.initDatabaseServer( additionalJvmArgs );
+        Query query = loadQuery( copyStore );
+        List<ParameterizedProfiler> profilers = Collections.singletonList( ParameterizedProfiler.defaultProfiler( ProfilerType.NO_OP ) );
+        DatabaseLauncher<ServerDatabase> databaseLauncher = deployment.launcherFor( query,
+                                                                                    neo4jConfigFile,
+                                                                                    forkDirectory,
+                                                                                    additionalJvmArgs,
+                                                                                    profilers );
+        return databaseLauncher.initDatabaseServer();
+    }
+
+    private Query loadQuery( boolean isMutating )
+    {
+        try ( Resources resources = new Resources( resourcesDir ) )
+        {
+            Map<String,Object> configEntry = ImmutableMap.of( "name", "query",
+                                                              "queryFile", "queries/Q1.cypher",
+                                                              "isMutating", isMutating );
+            return Query.from( configEntry, "group", resources.getResourceFile( "/test_workloads/deployment" ), Deployment.embedded() );
+        }
     }
 
     private void assertRunning( ServerDatabase serverDatabase, ForkDirectory forkDirectory )

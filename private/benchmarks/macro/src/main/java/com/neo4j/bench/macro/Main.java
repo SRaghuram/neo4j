@@ -83,7 +83,7 @@ public class Main
                                                       options.unit(),
                                                       verboseMetricsPrinter,
                                                       JvmArgs.from( options.jvmArgs() ),
-                                                      resources );
+                                                      workDir );
 
             BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();
             queryResults.add( query.benchmarkGroup(),

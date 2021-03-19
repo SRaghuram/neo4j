@@ -5,53 +5,25 @@
  */
 package com.neo4j.bench.macro.execution.process;
 
-import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
-import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.measurement.Results;
-import com.neo4j.bench.macro.workload.Query;
-import com.neo4j.bench.model.process.JvmArgs;
 
 import java.util.List;
 
 public class NonForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONNECTION extends AutoCloseable> extends RunnableFork<LAUNCHER,CONNECTION>
 {
-    NonForkingRunnable( LAUNCHER launcher,
-                        Query query,
-                        ForkDirectory forkDirectory,
-                        List<ParameterizedProfiler> profilers,
-                        Jvm jvm,
-                        JvmArgs jvmArgs,
-                        Resources resources )
+    NonForkingRunnable( LAUNCHER launcher, ForkDirectory forkDirectory )
     {
-        super( launcher,
-               query,
-               forkDirectory,
-               profilers,
-               jvm,
-               jvmArgs,
-               resources );
+        super( launcher, forkDirectory );
     }
 
     @Override
     protected Results runFork( LAUNCHER launcher,
                                CONNECTION connection,
-                               Query query,
-                               ForkDirectory forkDirectory,
-                               List<ParameterizedProfiler> profilers,
-                               Jvm jvm,
-                               JvmArgs jvmArgs,
-                               Resources resources )
+                               ForkDirectory forkDirectory )
     {
-        ParameterizedProfiler.assertInternal( profilers );
-        boolean isClientForked = false;
-        List<String> commandArgs = launcher.toolArgs( query,
-                                                      connection,
-                                                      ParameterizedProfiler.profilerTypes( profilers ),
-                                                      isClientForked,
-                                                      resources );
+        List<String> commandArgs = launcher.toolArgs( connection, false /* isClientForked */ );
 
         com.neo4j.bench.macro.Main.main( commandArgs.toArray( new String[0] ) );
 

@@ -16,7 +16,6 @@ import com.neo4j.bench.common.command.ResultsStoreArgs;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
-import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
@@ -142,6 +141,8 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
     @Override
     protected void doRun( RunMacroWorkloadParams params )
     {
+        LOG.debug( "Running report with params {}", params );
+
         TestRunReport testRunReport = runReport( params,
                                                  workDir.toPath(),
                                                  storeDir.toPath(),
@@ -177,7 +178,8 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                                                                 params.neo4jEdition(),
                                                                 measurementOptions,
                                                                 jvm,
-                                                                storeDir.toAbsolutePath() );
+                                                                storeDir.toAbsolutePath(),
+                                                                workDir );
         params.deployment().assertExists();
 
         try ( Resources resources = new Resources( workDir ) )
@@ -185,8 +187,6 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             Workload workload = Workload.fromName( params.workloadName(), resources, neo4jDeployment.deployment() );
             Store originalStore = Neo4jStore.createFrom( storeDir.toAbsolutePath(), workload.getDatabaseName() );
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( workDir, workload.benchmarkGroup() );
-
-            LOG.debug( params.toString() );
 
             assertQueryNames( params, workload );
 
@@ -211,18 +211,18 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                 try
                 {
                     Results results = ForkRunner.runForksFor( neo4jDeployment,
-                                                                   groupDir,
-                                                                   query,
-                                                                   originalStore,
-                                                                   params.neo4jEdition(),
-                                                                   neo4jConfig,
-                                                                   params.profilers(),
-                                                                   jvm,
-                                                                   params.measurementForkCount(),
-                                                                   params.unit(),
-                                                                   conciseMetricsPrinter,
-                                                                   params.jvmArgs(),
-                                                                   resources );
+                                                              groupDir,
+                                                              query,
+                                                              originalStore,
+                                                              params.neo4jEdition(),
+                                                              neo4jConfig,
+                                                              params.profilers(),
+                                                              jvm,
+                                                              params.measurementForkCount(),
+                                                              params.unit(),
+                                                              conciseMetricsPrinter,
+                                                              params.jvmArgs(),
+                                                              workDir );
 
                     BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();
                     queryResults.add( query.benchmarkGroup(),
@@ -265,13 +265,12 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                 currentTestRunId = BenchmarkUtil.generateUniqueId();
             }
 
-            TestRun testRun = new TestRun(
-                    currentTestRunId,
-                    Duration.between( start, finish ).toMillis(),
-                    start.toEpochMilli(),
-                    params.parentBuild(),
-                    params.parentBuild(),
-                    params.triggeredBy() );
+            TestRun testRun = new TestRun( currentTestRunId,
+                                           Duration.between( start, finish ).toMillis(),
+                                           start.toEpochMilli(),
+                                           params.parentBuild(),
+                                           params.teamcityBuild(),
+                                           params.triggeredBy() );
 
             BenchmarkTool tool = new BenchmarkTool( Repository.MACRO_BENCH, params.neo4jCommit(), params.neo4jBranchOwner(), params.neo4jBranch() );
 
