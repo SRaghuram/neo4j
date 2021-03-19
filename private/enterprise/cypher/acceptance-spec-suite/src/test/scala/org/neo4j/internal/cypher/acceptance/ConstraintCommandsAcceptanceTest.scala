@@ -1662,6 +1662,383 @@ class ConstraintCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     } should have message "Constraint already exists: Constraint( id=2, name='constraint_952591e6', type='UNIQUENESS', schema=(:Label {prop}), ownedIndex=1 )"
   }
 
+  // Create constraint: Existing index
+
+  test("creating constraint on same schema as existing node index") {
+    // GIVEN
+    graph.createNodeIndex("Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Node property existence constraint
+    // THEN
+    val resN = executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NOT NULL")
+    assertStats(resN, existenceConstraintsAdded = 1)
+
+    // Relationship property existence constraint (close as can get to same schema)
+    // THEN
+    val resR = executeSingle("CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
+    assertStats(resR, existenceConstraintsAdded = 1)
+  }
+
+  test("creating constraint on same schema as existing node index with IF NOT EXISTS") {
+    // GIVEN
+    graph.createNodeIndex("Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Node property existence constraint
+    // THEN
+    val resN = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NOT NULL")
+    assertStats(resN, existenceConstraintsAdded = 1)
+
+    // Relationship property existence constraint (close as can get to same schema)
+    // THEN
+    val resR = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
+    assertStats(resR, existenceConstraintsAdded = 1)
+  }
+
+  test("creating constraint on same schema as existing relationship property index") {
+    // GIVEN
+    graph.createRelationshipIndex("Type", "prop")
+    graph.awaitIndexesOnline()
+
+    // THEN
+
+    // Node key constraint (close as can get to same schema)
+    val resNK = executeSingle("CREATE CONSTRAINT ON (n:Type) ASSERT (n.prop) IS NODE KEY")
+    assertStats(resNK, nodekeyConstraintsAdded = 1)
+    executeSingle("DROP CONSTRAINT `constraint_846711f3`") // needed to test the uniqueness constraint
+
+    // Uniqueness constraint (close as can get to same schema)
+    val resU = executeSingle("CREATE CONSTRAINT ON (n:Type) ASSERT (n.prop) IS UNIQUE")
+    assertStats(resU, uniqueConstraintsAdded = 1)
+
+    // Node property existence constraint (close as can get to same schema)
+    val resN = executeSingle("CREATE CONSTRAINT ON (n:Type) ASSERT (n.prop) IS NOT NULL")
+    assertStats(resN, existenceConstraintsAdded = 1)
+
+    // Relationship property existence constraint
+    val resR = executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    assertStats(resR, existenceConstraintsAdded = 1)
+  }
+
+  test("creating named constraint on same schema as existing named node index") {
+    // GIVEN
+    graph.createNodeIndexWithName("my_index", "Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Node property existence constraint
+    // THEN
+    val resN = executeSingle("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS NOT NULL")
+    assertStats(resN, existenceConstraintsAdded = 1)
+
+    // Relationship property existence constraint (close as can get to same schema)
+    // THEN
+    val resR = executeSingle("CREATE CONSTRAINT my_rel_constraint ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
+    assertStats(resR, existenceConstraintsAdded = 1)
+  }
+
+  test("creating named constraint on same schema as existing named relationship property index") {
+    // GIVEN
+    graph.createRelationshipIndexWithName("my_index", "Type", "prop")
+    graph.awaitIndexesOnline()
+
+    // THEN
+
+    // Node key constraint (close as can get to same schema)
+    val resNK = executeSingle("CREATE CONSTRAINT my_nk_constraint ON (n:Type) ASSERT (n.prop) IS NODE KEY")
+    assertStats(resNK, nodekeyConstraintsAdded = 1)
+    executeSingle("DROP CONSTRAINT my_nk_constraint") // needed to test the uniqueness constraint
+
+    // Uniqueness constraint (close as can get to same schema)
+    val resU = executeSingle("CREATE CONSTRAINT my_u_constraint ON (n:Type) ASSERT (n.prop) IS UNIQUE")
+    assertStats(resU, uniqueConstraintsAdded = 1)
+
+    // Node property existence constraint (close as can get to same schema)
+    val resN = executeSingle("CREATE CONSTRAINT my_n_constraint ON (n:Type) ASSERT (n.prop) IS NOT NULL")
+    assertStats(resN, existenceConstraintsAdded = 1)
+
+    // Relationship property existence constraint
+    val resR = executeSingle("CREATE CONSTRAINT my_r_constraint ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    assertStats(resR, existenceConstraintsAdded = 1)
+  }
+
+  test("should fail when creating constraint with same name as existing node index") {
+    // GIVEN
+    graph.createNodeIndexWithName("mine", "Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Type) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Type) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Type) ASSERT (n.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Relationship property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+  }
+
+  test("should fail when creating constraint with same name as existing node index with IF NOT EXISTS") {
+    // GIVEN
+    graph.createNodeIndexWithName("mine", "Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON (n:Type) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON (n:Type) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON (n:Type) ASSERT (n.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Relationship property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+  }
+
+  test("should fail when creating constraint with same name and schema as existing node index") {
+    // GIVEN
+    graph.createNodeIndexWithName("mine", "Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Label) ASSERT (n.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Relationship property existence constraint (close as can get to same schema)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+  }
+
+  test("should fail when creating constraint with same name as existing relationship property index") {
+    // GIVEN
+    graph.createRelationshipIndexWithName("mine", "Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Type) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Type) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Type) ASSERT (n.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Relationship property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+  }
+
+  test("should fail when creating constraint with same name as existing relationship property index with IF NOT EXISTS") {
+    // GIVEN
+    graph.createRelationshipIndexWithName("mine", "Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON (n:Type) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON (n:Type) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON (n:Type) ASSERT (n.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Relationship property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+  }
+
+  test("should fail when creating constraint with same name and schema as existing relationship property index") {
+    // GIVEN
+    graph.createRelationshipIndexWithName("mine", "Type", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Type) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Type) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON (n:Type) ASSERT (n.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Relationship property existence constraint (close as can get to same schema)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+  }
+
+  test("should fail when creating constraints when existing node index (same schema, different options)") {
+    // When
+    executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop) OPTIONS {indexProvider: 'lucene+native-3.0'}")
+    graph.awaitIndexesOnline()
+
+    // Then
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY OPTIONS {indexProvider: 'native-btree-1.0'}")
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Then
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE OPTIONS {indexProvider: 'native-btree-1.0'}")
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+  }
+
+  test("should be able to create constraints when existing relationship property index (close to same schema, different options)") {
+    // When
+    executeSingle("CREATE INDEX FOR ()-[r:Type]-() ON (r.prop) OPTIONS {indexProvider: 'lucene+native-3.0'}")
+    graph.awaitIndexesOnline()
+
+    // Then
+    val resNK = executeSingle("CREATE CONSTRAINT ON (n:Type) ASSERT (n.prop) IS NODE KEY OPTIONS {indexProvider: 'native-btree-1.0'}")
+    assertStats(resNK, nodekeyConstraintsAdded = 1)
+    executeSingle("DROP CONSTRAINT `constraint_846711f3`") // needed to test the uniqueness constraint
+
+    // Then
+    val resU = executeSingle("CREATE CONSTRAINT ON (n:Type) ASSERT (n.prop) IS UNIQUE OPTIONS {indexProvider: 'native-btree-1.0'}")
+    assertStats(resU, uniqueConstraintsAdded = 1)
+  }
+
   // Drop constraint
 
   test("should drop node key constraint by schema") {
@@ -2058,5 +2435,97 @@ class ConstraintCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     the[IllegalArgumentException] thrownBy {
       graph.getConstraintSchemaByName("existence")
     } should have message "No constraint found with the name 'existence'."
+  }
+
+  test("should fail when dropping constraint when only node index exists") {
+    // GIVEN
+    graph.createNodeIndexWithName("my_index", "Person", "name")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY")
+      // THEN
+    } should have message "Unable to drop constraint on (:Person {name}): No such constraint (:Person {name})."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE")
+      // THEN
+    } should have message "Unable to drop constraint on (:Person {name}): No such constraint (:Person {name})."
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT EXISTS (n.name)")
+      // THEN
+    } should have message "Unable to drop constraint on (:Person {name}): No such constraint (:Person {name})."
+
+    // Relationship property existence constraint (close as can get to same schema)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON ()-[n:Person]-() ASSERT EXISTS (n.name)")
+      // THEN
+    } should have message "Unable to drop constraint on -[:Person {name}]-: No such constraint -[:Person {name}]-."
+
+    // Drop by name
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT my_index")
+      // THEN
+    } should have message "Unable to drop constraint `my_index`: No such constraint my_index."
+
+    // Drop by name IF EXISTS
+    // THEN no error
+    val res = executeSingle("DROP CONSTRAINT my_index IF EXISTS")
+    assertStats(res, namedConstraintsRemoved = 0)
+  }
+
+  test("should fail when dropping constraint when only relationship property index exists") {
+    // GIVEN
+    graph.createRelationshipIndexWithName("my_index", "Person", "name")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint (close as can get to same schema)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY")
+      // THEN
+    } should have message "Unable to drop constraint on (:Person {name}): No such constraint (:Person {name})."
+
+    // Uniqueness constraint (close as can get to same schema)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE")
+      // THEN
+    } should have message "Unable to drop constraint on (:Person {name}): No such constraint (:Person {name})."
+
+    // Node property existence constraint (close as can get to same schema)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT EXISTS (n.name)")
+      // THEN
+    } should have message "Unable to drop constraint on (:Person {name}): No such constraint (:Person {name})."
+
+    // Relationship property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON ()-[n:Person]-() ASSERT EXISTS (n.name)")
+      // THEN
+    } should have message "Unable to drop constraint on -[:Person {name}]-: No such constraint -[:Person {name}]-."
+
+    // Drop by name
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT my_index")
+      // THEN
+    } should have message "Unable to drop constraint `my_index`: No such constraint my_index."
+
+    // Drop by name IF EXISTS
+    // THEN no error
+    val res = executeSingle("DROP CONSTRAINT my_index IF EXISTS")
+    assertStats(res, namedConstraintsRemoved = 0)
   }
 }
