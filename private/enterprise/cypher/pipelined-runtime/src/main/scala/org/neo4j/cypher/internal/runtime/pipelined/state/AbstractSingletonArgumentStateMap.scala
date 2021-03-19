@@ -88,7 +88,15 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     null
   }
 
-  override def takeIfCompletedOrElsePeek(argumentId: Long, doIncrementIfPeek: Boolean): ArgumentStateWithCompleted[STATE] = {
+  override def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[STATE] = {
+    takeIfCompletedOrElsePeek(doIncrementIfPeek = true)
+  }
+
+  override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
+    takeIfCompletedOrElsePeek(doIncrementIfPeek = false)
+  }
+
+  private def takeIfCompletedOrElsePeek(doIncrementIfPeek: Boolean): ArgumentStateWithCompleted[STATE] = {
     if (hasController) {
       val completedState = controller.takeCompleted()
       if (completedState != null) {
@@ -106,10 +114,6 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     } else {
       null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
     }
-  }
-
-  override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
-    takeIfCompletedOrElsePeek(TopLevelArgument.VALUE, doIncrementIfPeek = false)
   }
 
   override def someArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
@@ -152,10 +156,10 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     }
   }
 
-  override def unTrackPeek(argumentId: Long): Unit = {
+  override def untrackPeek(argumentId: Long): Unit = {
     TopLevelArgument.assertTopLevelArgument(argumentId)
     if (hasController) {
-      controller.unTrackPeek
+      controller.untrackPeek
     }
   }
 
@@ -175,10 +179,10 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     controller.take()
   }
 
-  override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int, withPeekerTracking: Boolean = false): Unit = {
+  override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {
     TopLevelArgument.assertTopLevelArgument(argument)
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
-    controller = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, memoryTracker, withPeekerTracking)
+    controller = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, memoryTracker)
   }
 
   override def increment(argument: Long): Unit = {

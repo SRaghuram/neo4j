@@ -155,14 +155,14 @@ class ArgumentStateMapMemoryManagementTest extends MorselUnitTest {
     // Phase 1
     val taken1 = new ArrayBuffer[TestArgumentState]()
     args1.foreach { arg =>
-      val peeked: ArgumentStateMap.ArgumentStateWithCompleted[TestArgumentState] = asm.takeIfCompletedOrElsePeek(arg, doIncrementIfPeek = false)
+      val peeked: ArgumentStateMap.ArgumentStateWithCompleted[TestArgumentState] = asm.takeIfCompletedOrElsePeek(arg)
       peeked should not be null
       peeked.isCompleted shouldBe false
 
       val state = asm.decrement(arg)
       state should not be null
 
-      val taken = asm.takeIfCompletedOrElsePeek(arg, doIncrementIfPeek = false)
+      val taken = asm.takeIfCompletedOrElsePeek(arg)
       taken should not be null
       taken.isCompleted shouldBe true
 
@@ -178,14 +178,14 @@ class ArgumentStateMapMemoryManagementTest extends MorselUnitTest {
     // Phase 2
     val taken2 = new ArrayBuffer[TestArgumentState]()
     args2.foreach { arg =>
-      val peeked: ArgumentStateMap.ArgumentStateWithCompleted[TestArgumentState] = asm.takeIfCompletedOrElsePeek(arg, doIncrementIfPeek = false)
+      val peeked: ArgumentStateMap.ArgumentStateWithCompleted[TestArgumentState] = asm.takeIfCompletedOrElsePeek(arg)
       peeked should not be null
       peeked.isCompleted shouldBe false
 
       val state = asm.decrement(arg)
       state should not be null
 
-      val taken = asm.takeIfCompletedOrElsePeek(arg, doIncrementIfPeek = false)
+      val taken = asm.takeIfCompletedOrElsePeek(arg)
       taken should not be null
       taken.isCompleted shouldBe true
 
@@ -299,7 +299,7 @@ class ArgumentStateMapMemoryManagementTest extends MorselUnitTest {
     // Build a morsel with numberOfArgument rows and one unique argument id per row in slot offset 0
     val morsel = buildSequentialInput(numberOfArguments)
     val stateFactory = new StandardStateFactory
-    val argumentStateFactory = TestArgumentStateFactory
+    val argumentStateFactory = TestArgumentStateFactory()
     val asmId = ArgumentStateMapId(0)
     val asm = stateFactory.newArgumentStateMap(asmId, 0, argumentStateFactory, orderPreservingInParallel = false, memoryTracker, morselSize = numberOfArguments)
 
@@ -312,7 +312,7 @@ class ArgumentStateMapMemoryManagementTest extends MorselUnitTest {
   }
 }
 
-object TestArgumentStateFactory extends ArgumentStateFactory[TestArgumentState] {
+case class TestArgumentStateFactory(override val withPeekerTracking: Boolean = false) extends ArgumentStateFactory[TestArgumentState] {
   override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): TestArgumentState = {
     val scopedMemoryTracker = memoryTracker.getScopedMemoryTracker
     scopedMemoryTracker.allocateHeap(SCOPED_MEMORY_TRACKER_SHALLOW_SIZE)

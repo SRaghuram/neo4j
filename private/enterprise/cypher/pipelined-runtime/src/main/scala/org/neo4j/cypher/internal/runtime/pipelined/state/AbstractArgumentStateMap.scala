@@ -113,9 +113,9 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     }
   }
 
-  override def takeIfCompletedOrElsePeek(argumentId: Long, doIncrementIfPeek: Boolean): ArgumentStateWithCompleted[STATE] = {
+  override def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[STATE] = {
     val controller = getController(argumentId)
-    takeIfCompletedOrElsePeek(controller, doIncrementIfPeek)
+    takeIfCompletedOrElsePeek(controller, doIncrementIfPeek = true)
   }
 
   override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
@@ -166,10 +166,10 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     }
   }
 
-  override def unTrackPeek(argumentId: Long): Unit = {
+  override def untrackPeek(argumentId: Long): Unit = {
     val controller = getController(argumentId)
     if (controller != null) {
-      controller.unTrackPeek
+      controller.untrackPeek
     }
   }
 
@@ -227,9 +227,9 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     }
   }
 
-  override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int, withPeekerTracking: Boolean = false): Unit = {
+  override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
-    val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, memoryTracker, withPeekerTracking)
+    val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, memoryTracker)
     val previousValue = putController(argument, newController)
     Preconditions.checkState(previousValue == null, "ArgumentStateMap cannot re-initiate the same argument (argument: %d)", Long.box(argument))
   }
@@ -309,7 +309,7 @@ object AbstractArgumentStateMap {
     /**
      * Decrement peeker count.
      */
-    def unTrackPeek: Unit
+    def untrackPeek: Unit
 
     /**
      * Peeks the controller and returns the state if the count is zero _and_ the state has not already been taken.

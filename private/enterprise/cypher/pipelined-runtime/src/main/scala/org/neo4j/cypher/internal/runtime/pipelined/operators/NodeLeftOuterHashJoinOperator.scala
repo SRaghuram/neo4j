@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import java.util
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
-
 import org.eclipse.collections.api.set.MutableSet
 import org.neo4j.collection.trackable.HeapTrackingCollections
 import org.neo4j.cypher.internal.NonFatalCypherError
@@ -27,7 +26,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinOperato
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinOperator.HashTable
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinOperator.StandardHashTable
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeLeftOuterHashJoinOperator.HashTableAndSet
-import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeLeftOuterHashJoinOperator.LeftOuterJoinFactory
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeLeftOuterHashJoinOperator.LeftOuterJoinLhsStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeLeftOuterHashJoinOperator.LeftOuterJoinRhsStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
@@ -70,10 +70,10 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new LeftOuterJoinFactory(lhsKeyOffsets), memoryTracker)
+      new LeftOuterJoinLhsStateFactory(lhsKeyOffsets), memoryTracker)
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
-      new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), memoryTracker)
+      new LeftOuterJoinRhsStateFactory(stateFactory, id), memoryTracker)
     new State
   }
 
@@ -220,12 +220,16 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
 }
 
 object NodeLeftOuterHashJoinOperator {
-  class LeftOuterJoinFactory(lhsOffsets: KeyOffsets) extends ArgumentStateFactory[HashTableAndSet] {
+  class LeftOuterJoinLhsStateFactory(lhsOffsets: KeyOffsets) extends ArgumentStateFactory[HashTableAndSet] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): StandardHashTableAndSet =
       StandardHashTableAndSet(argumentRowId, argumentRowIdsForReducers, lhsOffsets, memoryTracker)
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ConcurrentHashTableAndSet = {
       new ConcurrentHashTableAndSet(new ConcurrentHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, acceptNulls = true))
     }
+  }
+
+  class LeftOuterJoinRhsStateFactory(stateFactory: StateFactory, operatorId: Id) extends ArgumentStreamArgumentStateBuffer.Factory(stateFactory, operatorId) {
+    override def withPeekerTracking: Boolean = true
   }
 
   trait HashTableAndSet extends MorselAccumulator[Morsel] {

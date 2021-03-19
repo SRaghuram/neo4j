@@ -90,7 +90,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
    *                                  reducers.
    * @param initialCount              the initial count for the argument row id
    */
-  def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int, withPeekerTracking: Boolean = false): Unit
+  def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit
 
   /**
    * Increment the argument counter for `argument`.
@@ -156,7 +156,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
   /**
    * Like [[takeOneIfCompletedOrElsePeek]] but restricted to a single, specific argument.
    */
-  def takeIfCompletedOrElsePeek(argumentId: Long, doIncrementIfPeek: Boolean): ArgumentStateWithCompleted[S]
+  def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[S]
 
   /**
    * The semantics of this call differ depending on whether this ASM is ordered.
@@ -191,7 +191,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
   /**
    * Decrement peeker count for the specified argumentId.
    */
-  def unTrackPeek(argumentId: Long): Unit
+  def untrackPeek(argumentId: Long): Unit
 
   /**
    * Returns `true` iff there is a completed argument.
@@ -220,8 +220,7 @@ trait StateControllerFactory[CONTROLLER <: AbstractArgumentStateMap.StateControl
                                    argumentMorsel: MorselReadCursor,
                                    argumentRowIdsForReducers: Array[Long],
                                    initialCount: Int,
-                                   memoryTracker: MemoryTracker,
-                                   withPeekerTracking: Boolean): CONTROLLER
+                                   memoryTracker: MemoryTracker): CONTROLLER
 
 }
 /**
@@ -308,6 +307,11 @@ object ArgumentStateMap {
      * argument state.
      */
     def completeOnConstruction: Boolean = false
+
+    /**
+     * When true, prevents StateController.takeCompleted from succeeding if any other readers are simultaneously peeking
+     */
+    def withPeekerTracking: Boolean = false
   }
 
   trait ArgumentStateBufferFactoryFactory extends ArgumentStateFactoryFactory[ArgumentStateBuffer]

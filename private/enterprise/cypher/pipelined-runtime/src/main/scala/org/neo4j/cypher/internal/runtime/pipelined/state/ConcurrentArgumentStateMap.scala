@@ -68,15 +68,14 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
                                             initialCount: Int,
-                                            memoryTracker: MemoryTracker,
-                                            withPeekerTracking: Boolean): AbstractArgumentStateMap.StateController[STATE] = {
+                                            memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
-      if (withPeekerTracking) {
+      if (factory.withPeekerTracking) {
         throw new UnsupportedOperationException("Peeker tracking not supported on completed state controllers")
       }
       ConcurrentCompletedStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
-      if (withPeekerTracking) {
+      if (factory.withPeekerTracking) {
         new PeekTrackingConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
       } else {
         new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
@@ -165,7 +164,7 @@ object ConcurrentArgumentStateMap {
       throw new UnsupportedOperationException("Peek tracking not supported")
     }
 
-    override def unTrackPeek: Unit = {
+    override def untrackPeek: Unit = {
       throw new UnsupportedOperationException("Peek tracking not supported")
     }
   }
@@ -231,7 +230,7 @@ object ConcurrentArgumentStateMap {
       }
     }
 
-    override def unTrackPeek: Unit = {
+    override def untrackPeek: Unit = {
       peekerCount.decrementAndGet()
     }
 
@@ -294,7 +293,7 @@ object ConcurrentArgumentStateMap {
       throw new UnsupportedOperationException("Peek tracking not supported")
     }
 
-    override def unTrackPeek: Unit = {
+    override def untrackPeek: Unit = {
       throw new UnsupportedOperationException("Peek tracking not supported")
     }
   }

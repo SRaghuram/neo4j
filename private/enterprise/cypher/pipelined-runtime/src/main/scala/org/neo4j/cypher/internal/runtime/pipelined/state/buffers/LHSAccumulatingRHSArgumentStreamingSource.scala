@@ -74,7 +74,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
 
   private def tryTakeRhs(lhsAcc: LHS_ACC): MorselData = {
     val argumentRowId = lhsAcc.argumentRowId
-    val rhsBuffer = rhsArgumentStateMap.takeIfCompletedOrElsePeek(argumentRowId, doIncrementIfPeek = true)
+    val rhsBuffer = rhsArgumentStateMap.takeIfCompletedOrElsePeek(argumentRowId)
     if (rhsBuffer != null) {
       rhsBuffer match {
         case ArgumentStateWithCompleted(completedArgumentState, true) =>
@@ -96,7 +96,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
           if (morsels != null) {
             MorselData(morsels, NotTheEnd, incompleteArgumentState.argumentRowIdsForReducers, incompleteArgumentState.argumentRow)
           } else {
-            rhsArgumentStateMap.unTrackPeek(argumentRowId)
+            rhsArgumentStateMap.untrackPeek(argumentRowId)
             // In this case we can simply not return anything, there will arrive more data for this argument row id.
             null.asInstanceOf[MorselData]
           }
@@ -161,7 +161,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
         tracker.decrementBy(emptyRHSTrackerKey, 1)
         nbrOfMorsels /*Count Type: RHS Put per Morsel*/ + 1 /*Count Type: Empty RHS*/
       case _ =>
-        rhsArgumentStateMap.unTrackPeek(argumentRowId)
+        rhsArgumentStateMap.untrackPeek(argumentRowId)
         // Count Type: RHS Put per Morsel
         nbrOfMorsels
     }
@@ -283,7 +283,7 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
                                                                                               acc.increment(argumentRowId)
                                                                                               acc.increment(argumentRowId)
                                                                                             })
-    rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount, withPeekerTracking = true)
+    rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
     // Count Type: RHS Accumulator Init
     tracker.increment(initTrackerKey)
   }

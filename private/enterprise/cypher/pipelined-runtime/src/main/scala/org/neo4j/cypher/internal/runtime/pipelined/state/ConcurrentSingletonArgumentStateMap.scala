@@ -28,14 +28,18 @@ class ConcurrentSingletonArgumentStateMap[STATE <: ArgumentState](val argumentSt
   @volatile
   override protected var hasController = true
 
-  override protected def newStateController(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int, memoryTracker: MemoryTracker, withPeekerTracking: Boolean): AbstractArgumentStateMap.StateController[STATE] = {
+  override protected def newStateController(argument: Long,
+                                            argumentMorsel: MorselReadCursor,
+                                            argumentRowIdsForReducers: Array[Long],
+                                            initialCount: Int,
+                                            memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
-      if (withPeekerTracking) {
+      if (factory.withPeekerTracking) {
         throw new UnsupportedOperationException("Peeker tracking not supported on completed state controllers")
       }
       ConcurrentCompletedStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
-      if (withPeekerTracking)
+      if (factory.withPeekerTracking)
         new PeekTrackingConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
       else
         new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)

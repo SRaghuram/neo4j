@@ -65,8 +65,7 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
                                             initialCount: Int,
-                                            memoryTracker: MemoryTracker,
-                                            withPeekerTracking: Boolean): AbstractArgumentStateMap.StateController[STATE] = {
+                                            memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
     val state = factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker)
     val controller =
       if (factory.completeOnConstruction) {
@@ -139,7 +138,7 @@ object StandardArgumentStateMap {
 
     override def trackedPeek: STATE = peek // No need to track peekers in single threaded version
 
-    override def unTrackPeek: Unit = {
+    override def untrackPeek: Unit = {
       // No need to track peekers in single threaded version
     }
   }
@@ -188,7 +187,7 @@ object StandardArgumentStateMap {
 
     override def trackedPeek: STATE = peek // No need to track peekers in single threaded version
 
-    override def unTrackPeek: Unit = {
+    override def untrackPeek: Unit = {
       // No need to track peekers in single threaded version
     }
   }
