@@ -932,6 +932,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, params(stringValue("true"))) should equal(Values.TRUE)
     evaluate(compiled, params(intValue(0))) should equal(Values.FALSE)
     evaluate(compiled, params(intValue(1))) should equal(Values.TRUE)
+    val r = scala.util.Random
+    evaluate(compiled, params(intValue(r.nextInt(Integer.MAX_VALUE)+1))) should equal(Values.TRUE) // any non 0 value
     evaluate(compiled, params(stringValue("uncertain"))) should equal(NO_VALUE)
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
   }
