@@ -33,6 +33,7 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.init.ServerChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.configuration.CausalClusteringSettings;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelInboundHandler;
 
 import java.util.Collection;
@@ -70,6 +71,7 @@ public class RaftServerFactory
     private final DatabaseIdRepository databaseIdRepository;
     private final ServerNameService serverNameService;
     private final LogProvider internalLogProvider;
+    private final ByteBufAllocator centralAllocator;
 
     RaftServerFactory( GlobalModule globalModule, CoreServerIdentity myIdentity, NettyPipelineBuilderFactory pipelineBuilderFactory,
             RaftMessageLogger<RaftMemberId> raftMessageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
@@ -84,6 +86,7 @@ public class RaftServerFactory
         this.databaseIdRepository = databaseIdRepository;
         this.serverNameService = new ServerNameService( globalModule.getLogService(), RAFT_SERVER_NAME );
         this.internalLogProvider = serverNameService.getInternalLogProvider();
+        this.centralAllocator = globalModule.getCentralBufferMangerHolder().getNettyBufferAllocator();
     }
 
     Server createRaftServer( RaftMessageDispatcher raftMessageDispatcher, ChannelInboundHandler installedProtocolsHandler )
@@ -114,7 +117,7 @@ public class RaftServerFactory
 
         var raftServerExecutor = globalModule.getJobScheduler().executor( Group.RAFT_SERVER );
         var raftServer = new Server( channelInitializer, installedProtocolsHandler, serverNameService, raftListenAddress, raftServerExecutor,
-                globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
+                globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ), centralAllocator );
 
         var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, databaseIdRepository );
         loggingRaftInbound.registerHandler( raftMessageDispatcher );

@@ -8,7 +8,9 @@ package com.neo4j.causalclustering.net;
 import com.neo4j.causalclustering.net.TrackingChannelPoolMap.TrackingChannelPoolMapFactory;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
@@ -52,6 +54,7 @@ public class ChannelPoolService<T> implements Lifecycle
     private final ChannelPoolFactory poolFactory;
     private final Function<T,InetSocketAddress> keyToInetAddress;
     private final TrackingChannelPoolMapFactory<T> poolMapFactory;
+    private final ByteBufAllocator customAllocator;
     private EventLoopGroup eventLoopGroup;
 
     public ChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration,
@@ -60,7 +63,8 @@ public class ChannelPoolService<T> implements Lifecycle
                                ChannelPoolHandler channelPoolHandler,
                                ChannelPoolFactory poolFactory,
                                Function<T,InetSocketAddress> keyToInetAddress,
-                               TrackingChannelPoolMapFactory<T> poolMapFactory
+                               TrackingChannelPoolMapFactory<T> poolMapFactory,
+                               ByteBufAllocator customAllocator
     )
     {
         this.bootstrapConfiguration = bootstrapConfiguration;
@@ -70,6 +74,7 @@ public class ChannelPoolService<T> implements Lifecycle
         this.poolFactory = poolFactory;
         this.keyToInetAddress = keyToInetAddress;
         this.poolMapFactory = poolMapFactory;
+        this.customAllocator = customAllocator;
     }
 
     public CompletableFuture<PooledChannel> acquire( T address )
@@ -107,7 +112,10 @@ public class ChannelPoolService<T> implements Lifecycle
         {
             endOfLife = new CompletableFuture<>();
             eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( group ) );
-            Bootstrap baseBootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() );
+            Bootstrap baseBootstrap = new Bootstrap()
+                    .group( eventLoopGroup )
+                    .channel( bootstrapConfiguration.channelClass() )
+                    .option( ChannelOption.ALLOCATOR, customAllocator );
             poolMap = poolMapFactory.create( baseBootstrap, poolHandler, poolFactory, keyToInetAddress );
         }
         finally

@@ -72,7 +72,7 @@ class ChannelPoolServiceIT
         poolEventsMonitor = new PoolEventsMonitor();
         poolScheduler = new ThreadPoolJobScheduler();
         pool = new ChannelPoolService<>( BootstrapConfiguration.clientConfig( Config.defaults() ), poolScheduler, Group.RAFT_CLIENT,
-                                         poolEventsMonitor, SimpleChannelPool::new, SOCKET_TO_INET, TrackingChannelPoolMap::new );
+                                         poolEventsMonitor, SimpleChannelPool::new, SOCKET_TO_INET, TrackingChannelPoolMap::new, null );
 
         startServers();
 

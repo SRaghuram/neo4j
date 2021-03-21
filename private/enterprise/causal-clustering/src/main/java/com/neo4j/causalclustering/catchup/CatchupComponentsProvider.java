@@ -21,6 +21,7 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
+import io.netty.buffer.ByteBufAllocator;
 
 import java.time.Duration;
 import java.util.List;
@@ -78,6 +79,7 @@ public final class CatchupComponentsProvider
     private final SystemNanoClock clock;
     private final CompositeDatabaseAvailabilityGuard availabilityGuard;
     private final CatchupInboundEventListener catchupInboundEventListener;
+    private final ByteBufAllocator centralAllocator;
 
     public CatchupComponentsProvider( GlobalModule globalModule, PipelineBuilders pipelineBuilders )
     {
@@ -93,6 +95,7 @@ public final class CatchupComponentsProvider
         this.globalLife = globalModule.getGlobalLife();
         this.fileSystem = globalModule.getFileSystem();
         this.storageEngineFactory = globalModule.getStorageEngineFactory();
+        this.centralAllocator = globalModule.getCentralBufferMangerHolder().getNettyBufferAllocator();
         this.catchupClientFactory = createCatchupClientFactory();
         this.portRegister = globalModule.getConnectorPortRegister();
         this.databaseTracers = new DatabaseTracers( globalModule.getTracers() );
@@ -123,6 +126,7 @@ public final class CatchupComponentsProvider
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .debugLogProvider( logProvider )
                 .clock( Clocks.nanoClock() )
+                .customAllocator( centralAllocator )
                 .build();
         globalLife.add( catchupClient );
         return catchupClient;
@@ -150,6 +154,7 @@ public final class CatchupComponentsProvider
                 .serverName( CATCHUP_SERVER_NAME )
                 .handshakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .catchupInboundEventListener( catchupInboundEventListener )
+                .customAllocator( centralAllocator )
                 .build();
     }
 
@@ -166,7 +171,8 @@ public final class CatchupComponentsProvider
                         catchupServerHandler,
                         installedProtocolsHandler,
                         scheduler,
-                        portRegister );
+                        portRegister,
+                        centralAllocator );
 
         return transactionBackupServiceProvider.resolveIfBackupEnabled( config );
     }

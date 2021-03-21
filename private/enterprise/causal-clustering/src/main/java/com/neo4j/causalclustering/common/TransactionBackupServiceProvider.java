@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelInboundHandler;
 
 import java.util.Collection;
@@ -39,12 +40,13 @@ public class TransactionBackupServiceProvider
     private final CatchupServerHandler catchupServerHandler;
     private final JobScheduler scheduler;
     private final ConnectorPortRegister portRegister;
+    private final ByteBufAllocator customAllocator;
 
     public TransactionBackupServiceProvider( LogProvider logProvider, ApplicationSupportedProtocols catchupProtocols,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols,
             NettyPipelineBuilderFactory serverPipelineBuilderFactory,
             CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler,
-            JobScheduler scheduler, ConnectorPortRegister portRegister )
+            JobScheduler scheduler, ConnectorPortRegister portRegister, ByteBufAllocator customAllocator )
     {
         this.logProvider = logProvider;
         this.parentHandler = parentHandler;
@@ -54,6 +56,7 @@ public class TransactionBackupServiceProvider
         this.catchupServerHandler = catchupServerHandler;
         this.scheduler = scheduler;
         this.portRegister = portRegister;
+        this.customAllocator = customAllocator;
     }
 
     public Optional<Server> resolveIfBackupEnabled( Config config )
@@ -77,6 +80,7 @@ public class TransactionBackupServiceProvider
                     .serverName( BACKUP_SERVER_NAME )
                     .handshakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                     .catchupInboundEventListener( new SimpleInboundCatchupProtocolMessageLogger( logProvider ) )
+                    .customAllocator( customAllocator )
                     .build();
             return Optional.of( catchupServer );
         }

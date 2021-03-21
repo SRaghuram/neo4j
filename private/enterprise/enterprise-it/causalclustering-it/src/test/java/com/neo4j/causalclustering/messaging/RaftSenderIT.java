@@ -333,7 +333,7 @@ class RaftSenderIT
 
         return new Server( channelInitializer, null, new ServerNameService( logProvider, logProvider, "raft-server" ), listenAddress,
                 serverExecutor,
-                new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
+                new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ), null );
     }
 
     private RaftChannelPoolService raftPoolService( ApplicationProtocols clientProtocol )
@@ -387,9 +387,11 @@ class RaftSenderIT
                 logProvider,
                 logProvider );
 
-        ClientChannelInitializer channelInitializer = new ClientChannelInitializer( handshakeInitializer, pipelineFactory, handshakeTimeout, logProvider );
+        ClientChannelInitializer channelInitializer =
+                new ClientChannelInitializer( handshakeInitializer, pipelineFactory, handshakeTimeout, logProvider );
 
-        return new RaftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), scheduler, logProvider, channelInitializer , maxChannels );
+        return new RaftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), scheduler, logProvider, channelInitializer, maxChannels,
+                null );
     }
 
     private ApplicationProtocolRepository clientRepository( ApplicationProtocols clientProtocol )

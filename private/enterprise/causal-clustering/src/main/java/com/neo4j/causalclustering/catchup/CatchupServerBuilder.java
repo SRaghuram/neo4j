@@ -24,6 +24,7 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.init.ServerChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.ServerSocketChannel;
 
@@ -79,6 +80,7 @@ public final class CatchupServerBuilder
         private BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration;
         private Config config = Config.defaults();
         private CatchupInboundEventListener catchupInboundEventListener = CatchupInboundEventListener.NO_OP;
+        private ByteBufAllocator customAllocator;
 
         private StepBuilder()
         {
@@ -169,6 +171,13 @@ public final class CatchupServerBuilder
         }
 
         @Override
+        public AcceptsOptionalParams customAllocator( ByteBufAllocator customAllocator )
+        {
+            this.customAllocator = customAllocator;
+            return this;
+        }
+
+        @Override
         public AcceptsOptionalParams handshakeTimeout( Duration handshakeTimeout )
         {
             this.handshakeTimeout = handshakeTimeout;
@@ -213,7 +222,7 @@ public final class CatchupServerBuilder
             Executor executor = scheduler.executor( Group.CATCHUP_SERVER );
 
             return new Server( channelInitializer, parentHandler, serverLogService, listenAddress,
-                                      executor, portRegister, bootstrapConfiguration );
+                                      executor, portRegister, bootstrapConfiguration, customAllocator );
         }
 
         private static List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> buildProtocolList(
@@ -310,6 +319,8 @@ public final class CatchupServerBuilder
         AcceptsOptionalParams handshakeTimeout( Duration handshakeTimeout );
 
         AcceptsOptionalParams catchupInboundEventListener( CatchupInboundEventListener listener );
+
+        AcceptsOptionalParams customAllocator( ByteBufAllocator customAllocator );
 
         Server build();
     }

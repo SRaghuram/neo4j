@@ -134,7 +134,7 @@ class ServerStateTest
     {
         return new Server( channel ->
         {}, null, new ServerNameService( logProvider, logProvider, name ), new SocketAddress( "localhost", 0 ), executor, portRegister,
-                BootstrapConfiguration.serverConfig( Config.defaults() ) );
+                BootstrapConfiguration.serverConfig( Config.defaults() ), null );
     }
 
     private boolean canConnect() throws InterruptedException

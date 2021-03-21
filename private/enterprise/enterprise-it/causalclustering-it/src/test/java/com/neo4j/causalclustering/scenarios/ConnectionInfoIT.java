@@ -52,7 +52,7 @@ class ConnectionInfoIT
         Server catchupServer = new Server( channel ->
         {
         }, null, new ServerNameService( logProvider, userLogProvider, "server-name" ), listenSocketAddress, executor,
-                new ConnectorPortRegister(), serverConfig( Config.defaults() ) );
+                new ConnectorPortRegister(), serverConfig( Config.defaults() ), null );
 
         //then
         try

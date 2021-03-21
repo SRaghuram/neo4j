@@ -323,7 +323,9 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                         globalModule.getGlobalDependencies(),
                         backupStrategyProvider ),
                 new InstalledProtocolHandler(),
-                jobScheduler, portRegister );
+                jobScheduler,
+                portRegister,
+                globalModule.getCentralBufferMangerHolder().getNettyBufferAllocator() );
 
         Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
 

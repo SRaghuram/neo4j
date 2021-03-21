@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.net;
 
 import com.neo4j.causalclustering.core.ServerNameService;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
@@ -36,6 +37,7 @@ public class Server extends LifecycleAdapter
     private final ChannelInboundHandler parentHandler;
     private final ConnectorPortRegister portRegister;
     private final ServerNameService serverNameService;
+    private final ByteBufAllocator customAllocator;
 
     private EventLoopGroup workerGroup;
     private Channel channel;
@@ -43,7 +45,7 @@ public class Server extends LifecycleAdapter
 
     public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, ServerNameService serverNameService,
             SocketAddress listenAddress, Executor executor, ConnectorPortRegister portRegister,
-            BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
+            BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration, ByteBufAllocator customAllocator )
     {
         this.childInitializer = childInitializer;
         this.parentHandler = parentHandler;
@@ -54,6 +56,7 @@ public class Server extends LifecycleAdapter
         this.executor = executor;
         this.portRegister = portRegister;
         this.bootstrapConfiguration = bootstrapConfiguration;
+        this.customAllocator = customAllocator;
     }
 
     @Override
@@ -70,6 +73,8 @@ public class Server extends LifecycleAdapter
                 .group( workerGroup )
                 .channel( bootstrapConfiguration.channelClass() )
                 .option( ChannelOption.SO_REUSEADDR, Boolean.TRUE )
+                .option( ChannelOption.ALLOCATOR, customAllocator )
+                .childOption( ChannelOption.ALLOCATOR, customAllocator )
                 .localAddress( listenAddress.socketAddress() )
                 .childHandler( childInitializer.asChannelInitializer() );
 

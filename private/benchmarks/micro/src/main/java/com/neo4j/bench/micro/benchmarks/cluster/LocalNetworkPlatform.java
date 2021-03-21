@@ -53,7 +53,7 @@ public class LocalNetworkPlatform
             SocketAddress listenSocketAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
             log.info( "Starting server. Binding to: %s", listenSocketAddress );
             server = new Server( serverProtocolInstaller::install, null, serverLogService, listenSocketAddress, executor,
-                    new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
+                    new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ), null );
             server.init();
             server.start();
 

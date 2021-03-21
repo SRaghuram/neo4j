@@ -507,7 +507,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     {
         var clientChannelInitializer = buildClientChannelInitializer( globalModule.getLogService() );
         var bootstrapConfig = BootstrapConfiguration.clientConfig( this.globalConfig );
-        return new RaftChannelPoolService( bootstrapConfig, globalModule.getJobScheduler(), logProvider, clientChannelInitializer, maxChannels );
+        return new RaftChannelPoolService( bootstrapConfig, globalModule.getJobScheduler(), logProvider, clientChannelInitializer, maxChannels,
+                globalModule.getCentralBufferMangerHolder().getNettyBufferAllocator() );
     }
 
     private ClientChannelInitializer buildClientChannelInitializer( LogService logService )

@@ -48,7 +48,7 @@ class TestCatchupServer extends Server
     {
         super( childInitializer( catchupServerHandler, logProvider ), null, new ServerNameService( logProvider, logProvider, "fake-catchup-server" ),
                 new SocketAddress( "localhost", 0 ), executor,
-                new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
+                new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ), null );
     }
 
     private static ChildInitializer childInitializer( CatchupServerHandler catchupServerHandler, LogProvider logProvider )

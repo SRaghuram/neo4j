@@ -22,6 +22,7 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.socket.SocketChannel;
 
 import java.time.Clock;
@@ -67,6 +68,7 @@ public final class CatchupClientBuilder
         private Duration inactivityTimeout;
         private Duration handshakeTimeout = Duration.ofSeconds( 5 );
         private Clock clock;
+        private ByteBufAllocator customAllocator;
         private BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
         private CommandReaderFactory commandReaderFactory;
         private Config config;
@@ -132,6 +134,13 @@ public final class CatchupClientBuilder
         }
 
         @Override
+        public AcceptsOptionalParams customAllocator( ByteBufAllocator customAllocator )
+        {
+            this.customAllocator = customAllocator;
+            return this;
+        }
+
+        @Override
         public NeedCommandReader bootstrapConfig( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration )
         {
             this.bootstrapConfiguration = bootstrapConfiguration;
@@ -173,7 +182,7 @@ public final class CatchupClientBuilder
             };
 
             CatchupChannelPoolService catchupChannelPoolService = new CatchupChannelPoolService(
-                    bootstrapConfiguration, scheduler, clock, channelInitializerFactory );
+                    bootstrapConfiguration, scheduler, clock, channelInitializerFactory, customAllocator );
 
             return new CatchupClientFactory( inactivityTimeout, catchupChannelPoolService );
         }
@@ -241,6 +250,7 @@ public final class CatchupClientBuilder
         AcceptsOptionalParams handShakeTimeout( Duration handshakeTimeout );
         AcceptsOptionalParams clock( Clock clock );
         AcceptsOptionalParams debugLogProvider( LogProvider debugLogProvider );
+        AcceptsOptionalParams customAllocator( ByteBufAllocator customAllocator );
         CatchupClientFactory build();
     }
 }

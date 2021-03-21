@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.net.LoadBalancedTrackingChannelPoolMap;
 import com.neo4j.causalclustering.net.LoadBalancedTrackingChannelPoolMap.RaftGroupSocket;
 import com.neo4j.causalclustering.net.TrackingChannelPoolMap.TrackingChannelPoolMapFactory;
 import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.AbstractChannelPoolHandler;
 import io.netty.channel.socket.SocketChannel;
@@ -30,11 +31,11 @@ public class RaftChannelPoolService extends ChannelPoolService<RaftGroupSocket>
     }
 
     public RaftChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, LogProvider logProvider,
-                                   ClientChannelInitializer channelInitializer, int maxChannels )
+                                   ClientChannelInitializer channelInitializer, int maxChannels, ByteBufAllocator customAllocator )
     {
         super( bootstrapConfiguration, scheduler, Group.RAFT_CLIENT,
                new PipelineInstaller( logProvider.getLog( RaftChannelPoolService.class ), channelInitializer ), OneMultiplexedChannel::new,
-               RaftGroupSocket::unresolvedSocketAddress, createPoolMapFactory( maxChannels ) );
+               RaftGroupSocket::unresolvedSocketAddress, createPoolMapFactory( maxChannels ), customAllocator );
     }
 
     private static class PipelineInstaller extends AbstractChannelPoolHandler
