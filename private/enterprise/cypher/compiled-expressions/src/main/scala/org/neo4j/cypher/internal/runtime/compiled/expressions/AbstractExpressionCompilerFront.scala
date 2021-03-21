@@ -527,7 +527,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     case e: ExpressionVariable =>
       val varLoad = loadExpressionVariable(e)
-      Some(IntermediateExpression(varLoad, Seq.empty, Seq.empty, Set(equal(varLoad, noValue)) ))
+      Some(IntermediateExpression(varLoad, Seq.empty, Seq.empty, Set(equal(varLoad, noValue)), requireNullCheck = false))
 
     case SingleIterablePredicate(scope, collectionExpression) =>
       /*
