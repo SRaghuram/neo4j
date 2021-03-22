@@ -46,7 +46,7 @@ public class ConsistencyCheck extends Validation
     @Override
     protected void validate() throws Exception
     {
-        Iterable<ClusterMember> members = Iterables.concat( cluster.coreMembers(), cluster.readReplicas() );
+        Iterable<ClusterMember> members = Iterables.concat( cluster.primaryMembers(), cluster.readReplicas() );
 
         for ( ClusterMember member : members )
         {

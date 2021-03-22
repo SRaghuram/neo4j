@@ -57,14 +57,14 @@ class ClusterStartWithVMPauseIT
     void followersWithNotStartedTimersShouldReactToPreElection() throws Exception
     {
         var config = ClusterConfig.clusterConfig()
-                .withSharedCoreParam( CausalClusteringSettings.leader_balancing, CausalClusteringSettings.SelectionStrategies.NO_BALANCING.name() )
-                .withSharedCoreParam( CausalClusteringSettings.leader_failure_detection_window, "15s-16s" )
+                .withSharedPrimaryParam( CausalClusteringSettings.leader_balancing, CausalClusteringSettings.SelectionStrategies.NO_BALANCING.name() )
+                .withSharedPrimaryParam( CausalClusteringSettings.leader_failure_detection_window, "15s-16s" )
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 );
 
         cluster = clusterFactory.createCluster( config );
         cluster.start();
-        cluster.coreMembers().forEach( core ->
+        cluster.primaryMembers().forEach( core ->
                 core.resolveDependency( SYSTEM_DATABASE_NAME, DbmsReconciler.class ).registerDatabaseStateChangedListener(
                         new VmPauseInstallerDatabaseStateChangedListener( core ) ) );
 

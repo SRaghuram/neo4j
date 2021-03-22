@@ -100,7 +100,7 @@ class NewMemberSeedingIT
 
         // then
         intermediateLoad.stop();
-        dataMatchesEventually( newCoreClusterMember, cluster.coreMembers() );
+        dataMatchesEventually( newCoreClusterMember, cluster.primaryMembers() );
         assertFalse( fileCopyDetector.anyFileInDirectoryWithName( DEFAULT_DATABASE_NAME ) );
     }
 

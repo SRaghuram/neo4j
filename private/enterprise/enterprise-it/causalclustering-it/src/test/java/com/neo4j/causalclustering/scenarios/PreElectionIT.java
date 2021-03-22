@@ -23,7 +23,6 @@ import java.util.concurrent.TimeoutException;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
-import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
@@ -46,7 +45,7 @@ class PreElectionIT
     private final ClusterConfig clusterConfig = clusterConfig()
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 0 )
-            .withSharedCoreParam( CausalClusteringSettings.enable_pre_voting, TRUE );
+            .withSharedPrimaryParam( CausalClusteringSettings.enable_pre_voting, TRUE );
 
     @Test
     void shouldActuallyStartAClusterWithPreVoting()
@@ -59,7 +58,7 @@ class PreElectionIT
     {
         assertDoesNotThrow( () -> startCluster(
                 clusterConfig
-                        .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE ) ) );
+                        .withSharedPrimaryParam( CausalClusteringSettings.multi_dc_license, TRUE ) ) );
     }
 
     @Test
@@ -88,7 +87,7 @@ class PreElectionIT
         CoreClusterMember oldLeader = cluster.awaitLeader();
 
         // when
-        cluster.removeCoreMember( oldLeader );
+        cluster.removePrimaryMember( oldLeader );
 
         // then
         CoreClusterMember newLeader = cluster.awaitLeader();

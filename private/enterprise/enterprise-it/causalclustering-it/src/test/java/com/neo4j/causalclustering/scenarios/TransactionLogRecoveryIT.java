@@ -63,10 +63,10 @@ class TransactionLogRecoveryIT
     void coreShouldStartAfterPartialTransactionWriteCrash() throws Exception
     {
         // given: a fully synced cluster with some data
-        dataMatchesEventually( DataCreator.createEmptyNodes( cluster, 10 ), cluster.coreMembers() );
+        dataMatchesEventually( DataCreator.createEmptyNodes( cluster, 10 ), cluster.primaryMembers() );
 
         // when: shutting down a core
-        CoreClusterMember core = cluster.getCoreMemberByIndex( 0 );
+        CoreClusterMember core = cluster.getPrimaryMemberByIndex( 0 );
         core.shutdown();
 
         // and making sure there will be something new to pull
@@ -86,10 +86,10 @@ class TransactionLogRecoveryIT
     void coreShouldStartWithSeedHavingPartialTransactionWriteCrash() throws Exception
     {
         // given: a fully synced cluster with some data
-        dataMatchesEventually( DataCreator.createEmptyNodes( cluster, 10 ), cluster.coreMembers() );
+        dataMatchesEventually( DataCreator.createEmptyNodes( cluster, 10 ), cluster.primaryMembers() );
 
         // when: shutting down a core
-        CoreClusterMember core = cluster.getCoreMemberByIndex( 0 );
+        CoreClusterMember core = cluster.getPrimaryMemberByIndex( 0 );
         core.shutdown();
 
         // and making sure there will be something new to pull
@@ -121,7 +121,7 @@ class TransactionLogRecoveryIT
 
         // and making sure there will be something new to pull
         CoreClusterMember lastWrites = DataCreator.createEmptyNodes( cluster, 10 );
-        dataMatchesEventually( lastWrites, cluster.coreMembers() );
+        dataMatchesEventually( lastWrites, cluster.primaryMembers() );
 
         // and writing a partial tx
         writePartialTx( readReplica.databaseLayout() );

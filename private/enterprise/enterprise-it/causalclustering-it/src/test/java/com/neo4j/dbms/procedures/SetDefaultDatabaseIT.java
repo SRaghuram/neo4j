@@ -52,7 +52,7 @@ public class SetDefaultDatabaseIT
     void setup() throws Exception
     {
         var clusterConfig = ClusterConfig.clusterConfig()
-                                         .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
+                                         .withSharedPrimaryParam( GraphDatabaseSettings.auth_enabled, "true" )
                                          .withNumberOfCoreMembers( 3 )
                                          .withNumberOfReadReplicas( 0 );
         cluster = clusterFactory.createCluster( clusterConfig );
@@ -226,7 +226,7 @@ public class SetDefaultDatabaseIT
         // GIVEN
         assertSystemDefaultDatabase( "neo4j", cluster );
 
-        cluster.coreTx( "neo4j", ( db, tx ) ->
+        cluster.primaryTx( "neo4j", ( db, tx ) ->
         {
             // WHEN
             assertThatThrownBy( () -> tx.execute( "CALL dbms.cluster.setDefaultDatabase('foo')" ) ).hasMessageContaining(
@@ -243,21 +243,21 @@ public class SetDefaultDatabaseIT
         // GIVEN
         assertSystemDefaultDatabase( "neo4j", cluster );
 
-        cluster.coreTx( "neo4j", ( db, tx ) ->
+        cluster.primaryTx( "neo4j", ( db, tx ) ->
         {
             // WHEN .. THEN
             assertThatThrownBy( () -> tx.execute( "CALL dbms.cluster.setDefaultDatabase()" ) ).hasMessageContaining(
                     "Procedure call does not provide the required number of arguments: got 0 expected at least 1 (total: 1, 0 of which have default values)" );
         } );
 
-        cluster.coreTx( "neo4j", ( db, tx ) ->
+        cluster.primaryTx( "neo4j", ( db, tx ) ->
         {
             // WHEN .. THEN
             assertThatThrownBy( () -> tx.execute( "CALL dbms.cluster.setDefaultDatabase('foo', 'bar')" ) ).hasMessageContaining(
                     "Procedure call provides too many arguments: got 2 expected no more than 1" );
         } );
 
-        cluster.coreTx( "neo4j", ( db, tx ) ->
+        cluster.primaryTx( "neo4j", ( db, tx ) ->
         {
             // WHEN .. THEN
             assertThatThrownBy( () -> tx.execute( "CALL dbms.cluster.setDefaultDatabase(true)" ) ).hasMessageContaining(

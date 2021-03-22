@@ -280,7 +280,7 @@ public class DesignatedSeederIT
         cluster = clusterFactory.createCluster( config );
 
         // restore backup to seeder
-        var designatedSeeder = cluster.getCoreMemberByIndex( 0 );
+        var designatedSeeder = cluster.getPrimaryMemberByIndex( 0 );
         restoreFromBackup( firstValueBackup, fsa, designatedSeeder, SOME_DB_NAME );
 
         // start the cluster and create database with designated seeder
@@ -301,8 +301,8 @@ public class DesignatedSeederIT
             assertAllMembersHaveFirstValueDatabase( cluster );
 
             // remove an old core
-            var coreToRemove = cluster.getCoreMemberByIndex( i );
-            cluster.removeCoreMember( coreToRemove );
+            var coreToRemove = cluster.getPrimaryMemberByIndex( i );
+            cluster.removePrimaryMember( coreToRemove );
         }
 
         // read replica should be able to start without designated seeder or any other original member
@@ -331,7 +331,7 @@ public class DesignatedSeederIT
 
     private void writeNode( String dbName, String propValue ) throws Exception
     {
-        cluster.coreTx( dbName, ( db, tx ) -> {
+        cluster.primaryTx( dbName, ( db, tx ) -> {
             var node = tx.createNode( NODE_LABEL );
             node.setProperty( PROP_NAME, propValue );
             tx.commit();
@@ -340,7 +340,7 @@ public class DesignatedSeederIT
 
     private void updateNode( String dbName, String propValue ) throws Exception
     {
-        cluster.coreTx( dbName, ( db, tx ) -> {
+        cluster.primaryTx( dbName, ( db, tx ) -> {
             var node = tx.findNodes( NODE_LABEL ).next();
             node.setProperty( PROP_NAME, propValue );
             tx.commit();

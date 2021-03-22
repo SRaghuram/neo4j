@@ -119,7 +119,7 @@ class ClusterDiscoveryIT
     private static void testReadWriteAndRouteServersDiscovery( Cluster cluster, ReadsOnFollowers readsOnFollowers, ServerSideRouting serverSideRouting )
             throws Exception
     {
-        for ( var coreMember : cluster.coreMembers() )
+        for ( var coreMember : cluster.primaryMembers() )
         {
             verifyServersDiscovery( cluster, coreMember, readsOnFollowers );
         }
@@ -149,7 +149,7 @@ class ClusterDiscoveryIT
     private static Set<String> expectedReadEndpoints( Cluster cluster, ReadsOnFollowers readsOnFollowers ) throws TimeoutException
     {
         var leader = cluster.awaitLeader();
-        var cores = cluster.coreMembers().stream();
+        var cores = cluster.primaryMembers().stream();
         var readReplicas = cluster.readReplicas().stream();
 
         var members = readsOnFollowers.equals( ReadsOnFollowers.ALLOW ) ? Stream.concat( cores, readReplicas ) : readReplicas;
@@ -161,7 +161,7 @@ class ClusterDiscoveryIT
 
     private static Set<String> expectedRouteEndpoints( Cluster cluster )
     {
-        return cluster.coreMembers()
+        return cluster.primaryMembers()
                 .stream()
                 .map( CoreClusterMember::boltAdvertisedAddress )
                 .collect( toSet() );
@@ -219,9 +219,9 @@ class ClusterDiscoveryIT
         return clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withSharedCoreParams( readsOnFollowers.asConfig() )
+                .withSharedPrimaryParams( readsOnFollowers.asConfig() )
                 .withSharedReadReplicaParams( readsOnFollowers.asConfig() )
-                .withSharedCoreParams( serverSideRouting.asConfig() )
+                .withSharedPrimaryParams( serverSideRouting.asConfig() )
                 .withSharedReadReplicaParams( serverSideRouting.asConfig() );
     }
 

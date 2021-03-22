@@ -40,7 +40,6 @@ import org.neo4j.bolt.v41.messaging.RoutingContext;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.connectors.BoltConnectorInternalSettings;
 import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthToken;
@@ -128,16 +127,16 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                                                    .withNumberOfCoreMembers( 2 )
                                                    .withNumberOfReadReplicas( 1 )
-                                                   .withSharedCoreParams( coreParams )
+                                                   .withSharedPrimaryParams( coreParams )
                                                    .withSharedReadReplicaParams( readReplicaParams );
 
         cluster = clusterFactory.createCluster( clusterConfig );
 
         // install the cryptographic objects for each core
-        for ( var core : cluster.coreMembers() )
+        for ( var primary : cluster.primaryMembers() )
         {
-            var index = core.index();
-            var homeDir = cluster.getCoreMemberByIndex( core.index() ).homePath();
+            var index = primary.index();
+            var homeDir = cluster.getPrimaryMemberByIndex( primary.index() ).homePath();
             installKeyToInstance( homeDir, index );
             addUpgradeUser( homeDir );
         }
@@ -145,7 +144,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         // install the cryptographic objects for each read replica
         for ( var replica : cluster.readReplicas() )
         {
-            var index = replica.index() + cluster.coreMembers().size();
+            var index = replica.index() + cluster.primaryMembers().size();
             var homeDir = cluster.getReadReplicaByIndex( replica.index() ).homePath();
             installKeyToInstance( homeDir, index );
             addUpgradeUser( homeDir );
@@ -167,13 +166,13 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         var readReplica = cluster.findAnyReadReplica();
         readReplicaDriver = driver( readReplica.directURI() );
 
-        cluster.coreMembers().forEach( core -> coreDrivers.put( core.index(), driver( core.directURI() ) ) );
+        cluster.primaryMembers().forEach( core -> coreDrivers.put( core.index(), driver( core.directURI() ) ) );
 
         var fooFollower = getFollower( cluster, fooLeader );
         fooFollowerDriver = coreDrivers.get( fooFollower.index() );
 
         List<String> allUris = new ArrayList<>();
-        cluster.coreMembers().forEach( member -> allUris.add( member.directURI() ) );
+        cluster.primaryMembers().forEach( member -> allUris.add( member.directURI() ) );
         cluster.readReplicas().forEach( member -> allUris.add( member.directURI() ) );
 
         adminDrivers = allUris.stream()

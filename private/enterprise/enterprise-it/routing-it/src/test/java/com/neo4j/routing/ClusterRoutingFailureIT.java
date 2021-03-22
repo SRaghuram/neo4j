@@ -55,7 +55,7 @@ class ClusterRoutingFailureIT
         {
             ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                                                        .withNumberOfCoreMembers( 2 )
-                                                       .withSharedCoreParam( GraphDatabaseSettings.routing_enabled, "true" );
+                                                       .withSharedPrimaryParam( GraphDatabaseSettings.routing_enabled, "true" );
 
             cluster = clusterFactory.createCluster( clusterConfig );
             cluster.start();

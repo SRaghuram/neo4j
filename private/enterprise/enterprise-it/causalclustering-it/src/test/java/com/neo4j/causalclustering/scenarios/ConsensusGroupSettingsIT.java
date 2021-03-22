@@ -50,11 +50,11 @@ class ConsensusGroupSettingsIT
         for ( var i = 0; i < numberOfCoreSeversToRemove; i++ )
         {
             var leader = cluster.awaitLeader();
-            cluster.removeCoreMember( leader );
+            cluster.removePrimaryMember( leader );
         }
 
         // then
-        var core = cluster.coreMembers().iterator().next();
+        var core = cluster.primaryMembers().iterator().next();
         var raft = core.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class );
         assertEquals( 3, raft.replicationMembers().size() );
     }

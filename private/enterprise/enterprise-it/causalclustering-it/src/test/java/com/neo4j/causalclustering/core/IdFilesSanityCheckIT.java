@@ -61,7 +61,7 @@ class IdFilesSanityCheckIT
 
         var nodes = new ArrayList<Node>( nodeCount );
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             for ( var i = 0; i < nodeCount; i++ )
             {
@@ -70,7 +70,7 @@ class IdFilesSanityCheckIT
             tx.commit();
         } );
 
-        var leader = cluster.coreTx( ( db, tx ) ->
+        var leader = cluster.primaryTx( ( db, tx ) ->
         {
             nodes.forEach( n -> tx.getNodeById( n.getId() ).delete() );
             tx.commit();

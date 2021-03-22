@@ -64,7 +64,7 @@ class ClusterFormationIT
                 clusterConfig()
                         .withNumberOfCoreMembers( 3 )
                         .withNumberOfReadReplicas( 1 )
-                        .withSharedCoreParam( CausalClusteringSettings.log_shipping_retry_timeout, "20s" )
+                        .withSharedPrimaryParam( CausalClusteringSettings.log_shipping_retry_timeout, "20s" )
         );
         cluster.start();
 
@@ -81,7 +81,7 @@ class ClusterFormationIT
         // when
         var s = StopWatch.createStarted();
         var createNode = executor.submit(
-                () -> cluster.coreTx( ( db, tx ) ->
+                () -> cluster.primaryTx( ( db, tx ) ->
                                       {
                                           tx.execute( "CREATE ()" );
                                           tx.commit();
@@ -200,7 +200,7 @@ class ClusterFormationIT
     {
         while ( !stop.get() )
         {
-            cluster.coreTx( ( db, tx ) ->
+            cluster.primaryTx( ( db, tx ) ->
             {
                 tx.createNode();
                 tx.commit();
@@ -214,14 +214,14 @@ class ClusterFormationIT
     {
         // return the core listed last in discovery members
         // never return the first core in discovery members because it might be stopped and then Akka cluster can't bootstrap
-        var cores = new ArrayList<>( cluster.coreMembers() );
+        var cores = new ArrayList<>( cluster.primaryMembers() );
         cores.sort( ClusterFormationIT::compareDiscoveryAddresses );
         return last( cores );
     }
 
     private static void removeCoreMember( Cluster cluster )
     {
-        cluster.removeCoreMember( getExistingCoreMember( cluster ) );
+        cluster.removePrimaryMember( getExistingCoreMember( cluster ) );
     }
 
     private static void verifyNumberOfCoresReportedByTopology( int expectedSize, Cluster cluster )

@@ -43,7 +43,7 @@ final class ClusteringEndpointHelpers
 
     static void writeSomeData( Cluster cluster, String databaseName ) throws Exception
     {
-        cluster.coreTx( databaseName, ( db, tx ) ->
+        cluster.primaryTx( databaseName, ( db, tx ) ->
         {
             tx.createNode( Label.label( "MyNode" ) );
             tx.commit();

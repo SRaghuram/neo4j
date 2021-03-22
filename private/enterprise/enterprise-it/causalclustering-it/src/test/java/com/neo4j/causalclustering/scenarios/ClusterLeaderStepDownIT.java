@@ -49,14 +49,14 @@ class ClusterLeaderStepDownIT
     void leaderShouldStepDownWhenFollowersAreGone() throws Throwable
     {
         //Do some work to make sure the cluster is operating normally.
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember leader = cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode( Label.label( "bam" ) );
             node.setProperty( "bam", "bam" );
             tx.commit();
         } );
 
-        Callable<List<CoreClusterMember>> followers = () -> cluster.coreMembers().stream().filter(
+        Callable<List<CoreClusterMember>> followers = () -> cluster.primaryMembers().stream().filter(
                 m -> m.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class ).currentRole() != Role.LEADER ).collect( toList() );
         assertEventually( "All followers visible", followers, new HamcrestCondition<>( Matchers.hasSize( 7 ) ), 2, TimeUnit.MINUTES );
 

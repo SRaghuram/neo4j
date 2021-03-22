@@ -62,14 +62,14 @@ class ClusterIndexProcedureIT
     void createIndexProcedureMustPropagate() throws Exception
     {
         // create an index
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             tx.execute( "CALL db.createIndex( 'person names', ['Person'], ['name'], 'lucene+native-3.0' )" ).close();
             tx.commit();
         } );
 
         // node created just to be able to use dataMatchesEventually as a barrier
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember leader = cluster.primaryTx( ( db, tx ) ->
         {
             Node person = tx.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "Bo Burnham" );
@@ -77,15 +77,15 @@ class ClusterIndexProcedureIT
         } );
 
         // node creation is guaranteed to happen after index creation
-        dataMatchesEventually( leader, cluster.coreMembers() );
+        dataMatchesEventually( leader, cluster.primaryMembers() );
         dataMatchesEventually( leader, cluster.readReplicas() );
 
         // now the indexes must exist, so we wait for them to come online
-        cluster.coreMembers().forEach( ClusterIndexProcedureIT::awaitIndexOnline );
+        cluster.primaryMembers().forEach( ClusterIndexProcedureIT::awaitIndexOnline );
         cluster.readReplicas().forEach( ClusterIndexProcedureIT::awaitIndexOnline );
 
         // verify indexes
-        cluster.coreMembers().forEach( core -> verifyIndexes( core.defaultDatabase() ) );
+        cluster.primaryMembers().forEach( core -> verifyIndexes( core.defaultDatabase() ) );
         cluster.readReplicas().forEach( rr -> verifyIndexes( rr.defaultDatabase() ) );
     }
 
@@ -93,14 +93,14 @@ class ClusterIndexProcedureIT
     void createUniquePropertyConstraintMustPropagate() throws Exception
     {
         // create a constraint
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             tx.execute( "CALL db.createUniquePropertyConstraint( 'person names', ['Person'], ['name'], 'lucene+native-3.0' )" ).close();
             tx.commit();
         } );
 
         // node created just to be able to use dataMatchesEventually as a barrier
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember leader = cluster.primaryTx( ( db, tx ) ->
         {
             Node person = tx.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "Bo Burnham" );
@@ -108,15 +108,15 @@ class ClusterIndexProcedureIT
         } );
 
         // node creation is guaranteed to happen after constraint creation
-        dataMatchesEventually( leader, cluster.coreMembers() );
+        dataMatchesEventually( leader, cluster.primaryMembers() );
         dataMatchesEventually( leader, cluster.readReplicas() );
 
         // verify indexes
-        cluster.coreMembers().forEach( core -> verifyIndexes( core.defaultDatabase() ) );
+        cluster.primaryMembers().forEach( core -> verifyIndexes( core.defaultDatabase() ) );
         cluster.readReplicas().forEach( rr -> verifyIndexes( rr.defaultDatabase() ) );
 
         // verify constraints
-        cluster.coreMembers().forEach( core -> verifyConstraints( core.defaultDatabase(), UNIQUENESS ) );
+        cluster.primaryMembers().forEach( core -> verifyConstraints( core.defaultDatabase(), UNIQUENESS ) );
         cluster.readReplicas().forEach( rr -> verifyConstraints( rr.defaultDatabase(), UNIQUENESS ) );
     }
 
@@ -124,14 +124,14 @@ class ClusterIndexProcedureIT
     void createNodeKeyConstraintMustPropagate() throws Exception
     {
         // create a node key
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             tx.execute( "CALL db.createNodeKey( 'person names', ['Person'], ['name'], 'lucene+native-3.0' )" ).close();
             tx.commit();
         } );
 
         // node created just to be able to use dataMatchesEventually as a barrier
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember leader = cluster.primaryTx( ( db, tx ) ->
         {
             Node person = tx.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "Bo Burnham" );
@@ -139,15 +139,15 @@ class ClusterIndexProcedureIT
         } );
 
         // node creation is guaranteed to happen after constraint creation
-        dataMatchesEventually( leader, cluster.coreMembers() );
+        dataMatchesEventually( leader, cluster.primaryMembers() );
         dataMatchesEventually( leader, cluster.readReplicas() );
 
         // verify indexes
-        cluster.coreMembers().forEach( core -> verifyIndexes( core.defaultDatabase() ) );
+        cluster.primaryMembers().forEach( core -> verifyIndexes( core.defaultDatabase() ) );
         cluster.readReplicas().forEach( rr -> verifyIndexes( rr.defaultDatabase() ) );
 
         // verify node keys
-        cluster.coreMembers().forEach( core -> verifyConstraints( core.defaultDatabase(), NODE_KEY ) );
+        cluster.primaryMembers().forEach( core -> verifyConstraints( core.defaultDatabase(), NODE_KEY ) );
         cluster.readReplicas().forEach( rr -> verifyConstraints( rr.defaultDatabase(), NODE_KEY ) );
     }
 

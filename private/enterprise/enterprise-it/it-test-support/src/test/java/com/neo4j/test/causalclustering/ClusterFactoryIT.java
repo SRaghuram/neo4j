@@ -88,22 +88,24 @@ class ClusterFactoryIT
         private void isRunningAndNotContainingData( Cluster cluster ) throws Exception
         {
             cluster.awaitLeader();
-            cluster.coreTx( ( coreGraphDatabase, transaction ) -> assertEquals( 0,
-                    transaction.getAllNodes().stream().filter( node -> node.hasLabel( uniqueLabel ) ).count() ) );
+            cluster.primaryTx( ( coreGraphDatabase, transaction ) -> assertEquals( 0,
+                                                                                   transaction.getAllNodes().stream()
+                                                                                              .filter( node -> node.hasLabel( uniqueLabel ) ).count() ) );
         }
 
         private void isRunningAndContainData( Cluster cluster ) throws Exception
         {
             cluster.awaitLeader();
-            cluster.coreTx( ( coreGraphDatabase, transaction ) -> assertEquals( 1,
-                    transaction.getAllNodes().stream().filter( node -> node.hasLabel( uniqueLabel ) ).count() ) );
+            cluster.primaryTx( ( coreGraphDatabase, transaction ) -> assertEquals( 1,
+                                                                                   transaction.getAllNodes().stream()
+                                                                                              .filter( node -> node.hasLabel( uniqueLabel ) ).count() ) );
         }
 
         Cluster createAndStartCluster() throws Exception
         {
             cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
             cluster.start();
-            cluster.coreTx( ( coreGraphDatabase, transaction ) ->
+            cluster.primaryTx( ( coreGraphDatabase, transaction ) ->
             {
                 transaction.createNode( uniqueLabel );
                 transaction.commit();

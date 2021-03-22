@@ -196,7 +196,7 @@ public abstract class ClusterTestSupport
 
     static CoreClusterMember getFollower( Cluster cluster, CoreClusterMember leader )
     {
-        return cluster.coreMembers().stream()
+        return cluster.primaryMembers().stream()
                       .filter( member -> member.index() != leader.index() )
                       .findAny()
                       .get();

@@ -215,7 +215,7 @@ abstract class BaseEncryptedBackupIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withSharedCoreParams( memberSettings )
+                .withSharedPrimaryParams( memberSettings )
                 .withSharedReadReplicaParams( memberSettings );
 
         return clusterFactory.createCluster( clusterConfig );

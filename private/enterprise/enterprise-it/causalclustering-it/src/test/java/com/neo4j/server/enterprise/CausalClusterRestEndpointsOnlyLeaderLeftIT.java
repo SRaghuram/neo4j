@@ -46,12 +46,12 @@ class CausalClusterRestEndpointsOnlyLeaderLeftIT
                 .clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withSharedCoreParam( CausalClusteringSettings.leader_failure_detection_window, "10s-12s" );
+                .withSharedPrimaryParam( CausalClusteringSettings.leader_failure_detection_window, "10s-12s" );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
 
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             assertEventually( canVote( statusEndpoint( core, DEFAULT_DATABASE_NAME ) ), TRUE, 1, MINUTES );
         }
@@ -69,7 +69,7 @@ class CausalClusterRestEndpointsOnlyLeaderLeftIT
     @Test
     void participatingInRaftGroupFalseWhenNotInGroup() throws TimeoutException
     {
-        var cores = cluster.coreMembers();
+        var cores = cluster.primaryMembers();
         assertThat( cores, hasSize( greaterThan( 1 ) ) );
         var leader = cluster.awaitLeader( DEFAULT_DATABASE_NAME );
         // stop all cores except the leader

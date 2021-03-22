@@ -105,7 +105,7 @@ class FulltextIndexCausalClusterIT
     @Test
     void fulltextIndexContentsMustBeReplicatedWhenPopulating() throws Exception
     {
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             Node node1 = tx.createNode( LABEL );
             node1.setProperty( PROP, "This is an integration test." );
@@ -121,7 +121,7 @@ class FulltextIndexCausalClusterIT
             relId1 = rel.getId();
             tx.commit();
         } );
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             tx.execute( format( NODE_CREATE, NODE_INDEX, asStrList( LABEL.name() ), asStrList( PROP, PROP2 ) ) ).close();
             tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX, asStrList( REL.name() ), asStrList( PROP ) ) ).close();
@@ -151,7 +151,7 @@ class FulltextIndexCausalClusterIT
     @Test
     void fulltextIndexContentsMustBeReplicatedWhenUpdating() throws Exception
     {
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             tx.execute( format( NODE_CREATE, NODE_INDEX, asStrList( LABEL.name() ), asStrList( PROP, PROP2 ) ) ).close();
             tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX, asStrList( REL.name() ), asStrList( PROP ) ) ).close();
@@ -162,7 +162,7 @@ class FulltextIndexCausalClusterIT
 
         awaitCatchup();
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             Node node1 = tx.createNode( LABEL );
             node1.setProperty( PROP, "This is an integration test." );
@@ -199,7 +199,7 @@ class FulltextIndexCausalClusterIT
         String analyzerRelIndex = new Arabic().getName();
         boolean eventuallyConsistentRelIndex = false;
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             String nodeString = asConfigString( asProcedureConfigMap( analyserNodeIndex, eventuallyConsistentNodeIndex ) );
             String relString = asConfigString( asProcedureConfigMap( analyzerRelIndex, eventuallyConsistentRelIndex ) );
@@ -224,7 +224,7 @@ class FulltextIndexCausalClusterIT
 
     private void verifyIndexConfig( String indexName, Map<String,Value> expectedIndexConfig ) throws IndexNotFoundKernelException
     {
-        for ( CoreClusterMember member : cluster.coreMembers() )
+        for ( CoreClusterMember member : cluster.primaryMembers() )
         {
             verifyIndexConfig( member.defaultDatabase(), indexName, expectedIndexConfig );
         }
@@ -294,7 +294,7 @@ class FulltextIndexCausalClusterIT
         {
             appliedTransactions.clear();
             Thread.sleep( 25 );
-            Collection<CoreClusterMember> cores = cluster.coreMembers();
+            Collection<CoreClusterMember> cores = cluster.primaryMembers();
             Collection<ReadReplica> readReplicas = cluster.readReplicas();
             cores.forEach( awaitPopulationAndCollectionAppliedTransactionId );
             readReplicas.forEach( awaitPopulationAndCollectionAppliedTransactionId );
@@ -304,7 +304,7 @@ class FulltextIndexCausalClusterIT
 
     private void verifyIndexContents( String index, String queryString, boolean queryNodes, long... entityIds ) throws Exception
     {
-        for ( CoreClusterMember member : cluster.coreMembers() )
+        for ( CoreClusterMember member : cluster.primaryMembers() )
         {
             verifyIndexContents( member.defaultDatabase(), index, queryString, entityIds, queryNodes );
         }

@@ -60,7 +60,7 @@ class BackupReadReplicaIT
     {
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                 .withNumberOfCoreMembers( 3 )
-                .withSharedCoreParam( online_backup_enabled, FALSE )
+                .withSharedPrimaryParam( online_backup_enabled, FALSE )
                 .withNumberOfReadReplicas( 1 )
                 .withSharedReadReplicaParam( online_backup_enabled, TRUE );
 

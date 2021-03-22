@@ -56,7 +56,7 @@ class CoreReplicationIT
     private final ClusterConfig clusterConfig = ClusterConfig
             .clusterConfig()
             .withNumberOfCoreMembers( 3 )
-            .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
+            .withSharedPrimaryParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
             .withNumberOfReadReplicas( 0 );
 
     @BeforeEach
@@ -70,7 +70,7 @@ class CoreReplicationIT
     void shouldReplicateTransactionsToCoreMembers() throws Exception
     {
         // when
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember leader = cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
@@ -104,11 +104,11 @@ class CoreReplicationIT
         // Given initial pin counts on all members
         Function<CoreClusterMember,PageCacheCounters> getPageCacheCounters =
                 ccm -> ccm.defaultDatabase().getDependencyResolver().resolveDependency( PageCacheCounters.class );
-        List<PageCacheCounters> countersList = cluster.coreMembers().stream().map( getPageCacheCounters ).collect( Collectors.toList() );
+        List<PageCacheCounters> countersList = cluster.primaryMembers().stream().map( getPageCacheCounters ).collect( Collectors.toList() );
         long[] initialPins = countersList.stream().mapToLong( PageCacheCounters::pins ).toArray();
 
         // when the leader commits a write transaction,
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
@@ -158,14 +158,14 @@ class CoreReplicationIT
     void shouldNotAllowTokenCreationFromAFollowerWithNoInitialTokens() throws Exception
     {
         // given
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember leader = cluster.primaryTx( ( db, tx ) ->
         {
             tx.createNode();
             tx.commit();
         } );
 
         awaitForDataToBeApplied( leader );
-        dataMatchesEventually( leader, cluster.coreMembers() );
+        dataMatchesEventually( leader, cluster.primaryMembers() );
 
         GraphDatabaseFacade follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER ).defaultDatabase();
 
@@ -189,12 +189,12 @@ class CoreReplicationIT
     void shouldReplicateTransactionToCoreMemberAddedAfterInitialStartUp() throws Exception
     {
         // given
-        cluster.getCoreMemberByIndex( 0 ).shutdown();
+        cluster.getPrimaryMemberByIndex( 0 ).shutdown();
 
         cluster.newCoreMember().start();
-        cluster.getCoreMemberByIndex( 0 ).start();
+        cluster.getPrimaryMemberByIndex( 0 ).start();
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode();
             node.setProperty( "foobar", "baz_bat" );
@@ -203,7 +203,7 @@ class CoreReplicationIT
 
         // when
         cluster.newCoreMember().start();
-        CoreClusterMember last = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember last = cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode();
             node.setProperty( "foobar", "baz_bat" );
@@ -212,14 +212,14 @@ class CoreReplicationIT
 
         // then
         assertEquals( 2, DataCreator.countNodes( last ) );
-        dataMatchesEventually( last, cluster.coreMembers() );
+        dataMatchesEventually( last, cluster.primaryMembers() );
     }
 
     @Test
     void shouldReplicateTransactionAfterLeaderWasRemovedFromCluster() throws Exception
     {
         // given
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode();
             node.setProperty( "foobar", "baz_bat" );
@@ -227,10 +227,10 @@ class CoreReplicationIT
         } );
 
         // when
-        cluster.removeCoreMember( cluster.awaitLeader() );
+        cluster.removePrimaryMember( cluster.awaitLeader() );
         cluster.awaitLeader();
 
-        CoreClusterMember last = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember last = cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode();
             node.setProperty( "foobar", "baz_bat" );
@@ -239,7 +239,7 @@ class CoreReplicationIT
 
         // then
         assertEquals( 2, DataCreator.countNodes( last ) );
-        dataMatchesEventually( last, cluster.coreMembers() );
+        dataMatchesEventually( last, cluster.primaryMembers() );
     }
 
     @Test
@@ -249,7 +249,7 @@ class CoreReplicationIT
         CoreClusterMember last = null;
         for ( int i = 0; i < 15; i++ )
         {
-            last = cluster.coreTx( ( db, tx ) ->
+            last = cluster.primaryTx( ( db, tx ) ->
             {
                 Node node = tx.createNode();
                 node.setProperty( "foobar", "baz_bat" );
@@ -262,25 +262,25 @@ class CoreReplicationIT
 
         // then
         assertEquals( 15, DataCreator.countNodes( last ) );
-        dataMatchesEventually( last, cluster.coreMembers() );
+        dataMatchesEventually( last, cluster.primaryMembers() );
     }
 
     @Test
     void shouldReplicateTransactionsToReplacementCoreMembers() throws Exception
     {
         // when
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );
 
-        cluster.removeCoreMemberWithIndex( 0 );
+        cluster.removePrimaryMemberWithIndex( 0 );
         CoreClusterMember replacement = cluster.addCoreMemberWithIndex( 0 );
         replacement.start();
 
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember leader = cluster.primaryTx( ( db, tx ) ->
         {
             tx.schema().indexFor( label( "boo" ) ).on( "foobar" ).create();
             tx.commit();
@@ -288,14 +288,14 @@ class CoreReplicationIT
 
         // then
         assertEquals( 1, DataCreator.countNodes( leader ) );
-        dataMatchesEventually( leader, cluster.coreMembers() );
+        dataMatchesEventually( leader, cluster.primaryMembers() );
     }
 
     @Test
     void shouldBeAbleToShutdownWhenTheLeaderIsTryingToReplicateTransaction() throws Exception
     {
         // given
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
@@ -309,13 +309,13 @@ class CoreReplicationIT
         {
             try
             {
-                cluster.coreTx( ( db, tx ) ->
+                cluster.primaryTx( ( db, tx ) ->
                 {
                     tx.createNode();
                     tx.commit();
 
-                    cluster.removeCoreMember( cluster.getMemberWithAnyRole( Role.FOLLOWER, Role.CANDIDATE ) );
-                    cluster.removeCoreMember( cluster.getMemberWithAnyRole( Role.FOLLOWER, Role.CANDIDATE ) );
+                    cluster.removePrimaryMember( cluster.getPrimaryWithAnyRole( Role.FOLLOWER, Role.CANDIDATE ) );
+                    cluster.removePrimaryMember( cluster.getPrimaryWithAnyRole( Role.FOLLOWER, Role.CANDIDATE ) );
                     latch.countDown();
                 } );
                 fail( "Should have thrown" );

@@ -58,11 +58,11 @@ class CoreFallBehindIT
     private final ClusterConfig clusterConfig = ClusterConfig
             .clusterConfig()
             .withNumberOfCoreMembers( 3 )
-            .withSharedCoreParam( minimum_core_cluster_size_at_runtime, "2" )
-            .withSharedCoreParam( state_machine_flush_window_size, "1" )
-            .withSharedCoreParam( raft_log_pruning_strategy, "keep_none" )
-            .withSharedCoreParam( raft_log_rotation_size, "1K" )
-            .withSharedCoreParam( raft_log_pruning_frequency, "100ms" )
+            .withSharedPrimaryParam( minimum_core_cluster_size_at_runtime, "2" )
+            .withSharedPrimaryParam( state_machine_flush_window_size, "1" )
+            .withSharedPrimaryParam( raft_log_pruning_strategy, "keep_none" )
+            .withSharedPrimaryParam( raft_log_rotation_size, "1K" )
+            .withSharedPrimaryParam( raft_log_pruning_frequency, "100ms" )
             .withNumberOfReadReplicas( 0 );
 
     static class DownloadMonitor implements CoreSnapshotMonitor
@@ -101,7 +101,7 @@ class CoreFallBehindIT
     {
         assertDatabaseEventuallyStarted( SYSTEM_DATABASE_NAME, cluster );
         // given a follower that soon will be made to fall behind
-        CoreClusterMember staleFollower = cluster.getMemberWithAnyRole( SYSTEM_DATABASE_NAME, Role.FOLLOWER );
+        CoreClusterMember staleFollower = cluster.getPrimaryWithAnyRole( SYSTEM_DATABASE_NAME, Role.FOLLOWER );
 
         // make sure this follower gets disconnected from the system Raft, by completely disconnecting it from discovery
         // this will cause the Leader to stop pushing new Raft log entries to that follower, causing it to fall behind
@@ -113,7 +113,7 @@ class CoreFallBehindIT
 
         // then create a database of which that follower should be unaware
         createDatabase( "foo", cluster );
-        Set<CoreClusterMember> remaining = cluster.coreMembers().stream().filter( m -> !m.serverId().equals( staleFollower.serverId() ) ).collect( toSet() );
+        Set<CoreClusterMember> remaining = cluster.primaryMembers().stream().filter( m -> !m.serverId().equals( staleFollower.serverId() ) ).collect( toSet() );
         assertDatabaseEventuallyStarted( "foo", remaining );
 
         // next make sure it cannot catchup from the others through catching up on Raft log entries, forcing an eventual store copy
@@ -147,7 +147,7 @@ class CoreFallBehindIT
 
         while ( Files.exists( lastRaftLog ) )
         {
-            cluster.coreTx( SYSTEM_DATABASE_NAME, ( db, tx ) ->
+            cluster.primaryTx( SYSTEM_DATABASE_NAME, ( db, tx ) ->
             {
                 tx.createNode();
                 tx.commit();

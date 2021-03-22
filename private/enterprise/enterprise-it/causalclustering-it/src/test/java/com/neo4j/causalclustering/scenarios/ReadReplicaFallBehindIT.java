@@ -56,7 +56,7 @@ class ReadReplicaFallBehindIT
         return ClusterConfig
                 .clusterConfig()
                 .withClusterType( clusterType )
-                .withSharedCoreParam( keep_logical_logs, FALSE )
+                .withSharedPrimaryParam( keep_logical_logs, FALSE )
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 1 );
     }
@@ -78,11 +78,11 @@ class ReadReplicaFallBehindIT
         for ( var databaseName : databaseNames )
         {
             createDatabase( databaseName, cluster );
-            for ( var core : cluster.coreMembers() )
+            for ( var core : cluster.primaryMembers() )
             {
                 forceTxLogRotationAndCheckpoint( core.database( SYSTEM_DATABASE_NAME ) );
             }
-            assertDatabaseEventuallyStarted( databaseName, cluster.coreMembers() );
+            assertDatabaseEventuallyStarted( databaseName, cluster.primaryMembers() );
         }
 
         // none of the databases should exist yet on the read replica

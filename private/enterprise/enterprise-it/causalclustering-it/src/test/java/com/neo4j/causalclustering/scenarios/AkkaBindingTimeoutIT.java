@@ -66,13 +66,13 @@ class AkkaBindingTimeoutIT
         return clusterFactory.createCluster(
                 clusterConfig().withNumberOfCoreMembers( 3 )
                                .withNumberOfReadReplicas( 0 )
-                               .withSharedCoreParams( extraConfig )
+                               .withSharedPrimaryParams( extraConfig )
         );
     }
 
     private CoreClusterMember getInitialSeedNode( Cluster cluster )
     {
-        return cluster.coreMembers().stream().filter( c -> {
+        return cluster.primaryMembers().stream().filter( c -> {
             SocketAddress discoveryAdvertisedAddress = c.config().get( CausalClusteringSettings.discovery_advertised_address );
             SocketAddress seedNodeAddress =  c.config().get( CausalClusteringSettings.initial_discovery_members ).get( 0 );
             return seedNodeAddress.equals( discoveryAdvertisedAddress );
@@ -91,7 +91,7 @@ class AkkaBindingTimeoutIT
         var cluster = createCluster( extraConfig );
 
         CoreClusterMember initialSeedNode = getInitialSeedNode( cluster );
-        List<CoreClusterMember> notInitialSeedNodes = cluster.coreMembers().stream().filter( c -> !initialSeedNode.equals( c ) ).collect( toList() );
+        List<CoreClusterMember> notInitialSeedNodes = cluster.primaryMembers().stream().filter( c -> !initialSeedNode.equals( c ) ).collect( toList() );
 
         // when
         var stopWatch = Stopwatch.start();
@@ -105,7 +105,7 @@ class AkkaBindingTimeoutIT
 
         // when
         stopWatch = Stopwatch.start();
-        var startedTheRest = cluster.coreMembers().stream()
+        var startedTheRest = cluster.primaryMembers().stream()
                                     .filter( c -> !notInitialSeedNodes.get( 0 ).equals( c ) )
                                     .map( this::startCoreAsync )
                                     .toArray( CompletableFuture<?>[]::new );
@@ -140,7 +140,7 @@ class AkkaBindingTimeoutIT
         assertThat( stopWatch.elapsed( SECONDS ) ).isLessThan( extraLongTimeout.toSeconds() );
 
         // when
-        var startedTheRest = cluster.coreMembers().stream()
+        var startedTheRest = cluster.primaryMembers().stream()
                                     .filter( c -> !initialSeedNode.equals( c ) )
                                     .map( this::startCoreAsync )
                                     .toArray( CompletableFuture<?>[]::new );
@@ -181,7 +181,7 @@ class AkkaBindingTimeoutIT
 
         // when
         stopWatch = Stopwatch.start();
-        var startedTheRest = cluster.coreMembers().stream()
+        var startedTheRest = cluster.primaryMembers().stream()
                                     .filter( c -> !initialSeedNode.equals( c ) )
                                     .map( this::startCoreAsync )
                                     .toArray( CompletableFuture<?>[]::new );
@@ -190,7 +190,7 @@ class AkkaBindingTimeoutIT
         CompletableFuture.allOf( startedTheRest ).get();
 
         // then
-        cluster.coreMembers().forEach( c -> verifyAkkaClusterStatus( c, MemberStatus.up(), 5, SECONDS ) );
+        cluster.primaryMembers().forEach( c -> verifyAkkaClusterStatus( c, MemberStatus.up(), 5, SECONDS ) );
         assertThat( stopWatch.elapsed( SECONDS ) ).isLessThan( longSeedNodeTimeout.toSeconds() );
         verifyNumberOfCoresReportedByTopology( cluster );
         assertThat( stopWatch.elapsed( SECONDS ) ).isLessThan( longSeedNodeTimeout.toSeconds() );
@@ -203,12 +203,12 @@ class AkkaBindingTimeoutIT
         var cluster = clusterFactory.createCluster(
                 clusterConfig().withNumberOfCoreMembers( 3 )
                                .withNumberOfReadReplicas( 0 )
-                               .withSharedCoreParams( Map.of( CausalClusteringSettings.minimum_core_cluster_size_at_runtime.name(), "2" ) )
-                               .withSharedCoreParams( Map.of( CausalClusteringSettings.minimum_core_cluster_size_at_formation.name(), "2" ) )
+                               .withSharedPrimaryParams( Map.of( CausalClusteringSettings.minimum_core_cluster_size_at_runtime.name(), "2" ) )
+                               .withSharedPrimaryParams( Map.of( CausalClusteringSettings.minimum_core_cluster_size_at_formation.name(), "2" ) )
         );
 
         CoreClusterMember initialSeedNode = getInitialSeedNode( cluster );
-        List<CoreClusterMember> notInitialSeedNodes = cluster.coreMembers().stream()
+        List<CoreClusterMember> notInitialSeedNodes = cluster.primaryMembers().stream()
                                                              .filter( c -> !initialSeedNode.equals( c ) )
                                                              .collect( toList() );
 
@@ -233,12 +233,12 @@ class AkkaBindingTimeoutIT
         var cluster = clusterFactory.createCluster(
                 clusterConfig().withNumberOfCoreMembers( 3 )
                                .withNumberOfReadReplicas( 0 )
-                               .withSharedCoreParams( Map.of( CausalClusteringSettings.minimum_core_cluster_size_at_runtime.name(), "2" ) )
-                               .withSharedCoreParams( Map.of( CausalClusteringSettings.minimum_core_cluster_size_at_formation.name(), "2" ) )
+                               .withSharedPrimaryParams( Map.of( CausalClusteringSettings.minimum_core_cluster_size_at_runtime.name(), "2" ) )
+                               .withSharedPrimaryParams( Map.of( CausalClusteringSettings.minimum_core_cluster_size_at_formation.name(), "2" ) )
         );
 
         CoreClusterMember initialSeedNode = getInitialSeedNode( cluster );
-        List<CoreClusterMember> notInitialSeedNodes = cluster.coreMembers().stream()
+        List<CoreClusterMember> notInitialSeedNodes = cluster.primaryMembers().stream()
                                                              .filter( c -> !initialSeedNode.equals( c ) )
                                                              .collect( toList() );
 
@@ -268,7 +268,7 @@ class AkkaBindingTimeoutIT
         var cluster = clusterFactory.createCluster(
                 clusterConfig().withNumberOfCoreMembers( 3 )
                                .withNumberOfReadReplicas( 0 )
-                               .withSharedCoreParams( extraConfig )
+                               .withSharedPrimaryParams( extraConfig )
         );
 
         var stopWatch = Stopwatch.start();

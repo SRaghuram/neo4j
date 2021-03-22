@@ -65,7 +65,7 @@ class CreateNodesWithProperties extends Workload
 
         try
         {
-            cluster.coreTx( ( db, tx ) ->
+            cluster.primaryTx( ( db, tx ) ->
             {
                 Node node = tx.createNode( label );
                 for ( int i = 1; i <= 8; i++ )
@@ -95,7 +95,7 @@ class CreateNodesWithProperties extends Workload
     {
         try
         {
-            cluster.coreTx( ( db, tx ) ->
+            cluster.primaryTx( ( db, tx ) ->
             {
                 for ( int i = 1; i <= 8; i++ )
                 {

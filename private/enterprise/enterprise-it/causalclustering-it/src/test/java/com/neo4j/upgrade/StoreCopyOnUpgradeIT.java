@@ -77,9 +77,9 @@ class StoreCopyOnUpgradeIT
     {
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                 .withRecordFormat( Extended_StandardV4_0.PARENT_FORMAT )
-                .withSharedCoreParam( GraphDatabaseSettings.allow_upgrade, TRUE )
+                .withSharedPrimaryParam( GraphDatabaseSettings.allow_upgrade, TRUE )
                 .withSharedReadReplicaParam( GraphDatabaseSettings.allow_upgrade, TRUE )
-                .withSharedCoreParam( GraphDatabaseSettings.store_internal_log_level, Level.INFO.name() )
+                .withSharedPrimaryParam( GraphDatabaseSettings.store_internal_log_level, Level.INFO.name() )
                 .withSharedReadReplicaParam( GraphDatabaseSettings.store_internal_log_level, Level.INFO.name() )
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 );
@@ -187,7 +187,7 @@ class StoreCopyOnUpgradeIT
 
     private ClusterMember seededMember( MemberFactory factory, String format ) throws IOException
     {
-        CoreClusterMember seedMember = cluster.coreMembers().iterator().next();
+        CoreClusterMember seedMember = cluster.primaryMembers().iterator().next();
         seedMember.shutdown();
         ClusterMember newMember = factory.create( cluster, format );
         copyDirectory( seedMember.databaseLayout().databaseDirectory(), newMember.databaseLayout().databaseDirectory() );
@@ -200,7 +200,7 @@ class StoreCopyOnUpgradeIT
     {
         for ( int i = 0; i < 10; i++ )
         {
-            cluster.coreTx( GraphDatabaseSettings.DEFAULT_DATABASE_NAME, ( graphDatabaseFacade, transaction ) ->
+            cluster.primaryTx( GraphDatabaseSettings.DEFAULT_DATABASE_NAME, ( graphDatabaseFacade, transaction ) ->
             {
                 transaction.createNode( label( "foo" ) ).createRelationshipTo( transaction.createNode( label( "bar" ) ), withName( "baz" ) );
                 transaction.commit();

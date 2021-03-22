@@ -70,7 +70,7 @@ class BackupCoreIT
     void makeSureBackupCanBePerformedFromAnyInstance() throws Throwable
     {
         var clusteredDriver = driverFactory.graphDatabaseDriver( cluster );
-        for ( CoreClusterMember db : cluster.coreMembers() )
+        for ( CoreClusterMember db : cluster.primaryMembers() )
         {
             var dbDriver = driverFactory.graphDatabaseDriver( db.directURI() );
             // Run backup

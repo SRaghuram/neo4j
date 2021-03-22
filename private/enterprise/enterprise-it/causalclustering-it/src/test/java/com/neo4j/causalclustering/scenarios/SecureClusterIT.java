@@ -71,23 +71,23 @@ class SecureClusterIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withSharedCoreParams( coreParams )
+                .withSharedPrimaryParams( coreParams )
                 .withSharedReadReplicaParams( readReplicaParams );
 
         var cluster = clusterFactory.createCluster( clusterConfig );
 
         // install the cryptographic objects for each core
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             var index = core.index();
-            var homeDir = cluster.getCoreMemberByIndex( core.index() ).homePath();
+            var homeDir = cluster.getPrimaryMemberByIndex( core.index() ).homePath();
             installKeyToInstance( homeDir, index );
         }
 
         // install the cryptographic objects for each read replica
         for ( var replica : cluster.readReplicas() )
         {
-            var index = replica.index() + cluster.coreMembers().size();
+            var index = replica.index() + cluster.primaryMembers().size();
             var homeDir = cluster.getReadReplicaByIndex( replica.index() ).homePath();
             installKeyToInstance( homeDir, index );
         }
@@ -95,7 +95,7 @@ class SecureClusterIT
         // when
         cluster.start();
 
-        var leader = cluster.coreTx( ( db, tx ) ->
+        var leader = cluster.primaryTx( ( db, tx ) ->
         {
             var node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
@@ -103,7 +103,7 @@ class SecureClusterIT
         } );
 
         // then
-        dataMatchesEventually( leader, cluster.coreMembers() );
+        dataMatchesEventually( leader, cluster.primaryMembers() );
         dataMatchesEventually( leader, cluster.readReplicas() );
     }
 

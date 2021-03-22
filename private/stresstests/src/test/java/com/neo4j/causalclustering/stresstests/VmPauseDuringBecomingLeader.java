@@ -65,7 +65,7 @@ public class VmPauseDuringBecomingLeader extends Workload
 
         assertDatabaseEventuallyStarted( DEFAULT_DATABASE_NAME, cluster );
 
-        cluster.coreMembers().forEach( core ->
+        cluster.primaryMembers().forEach( core ->
                 core.resolveDependency( SYSTEM_DATABASE_NAME, DbmsReconciler.class ).registerDatabaseStateChangedListener(
                         new VmPauseInstallerDatabaseStateChangedListener( core ) ) );
     }

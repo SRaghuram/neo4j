@@ -47,7 +47,7 @@ class ReadReplicaStoreCopyIT
     {
         var clusterConfig = clusterConfig()
                 .withClusterType( type )
-                .withSharedCoreParam( GraphDatabaseSettings.keep_logical_logs, FALSE )
+                .withSharedPrimaryParam( GraphDatabaseSettings.keep_logical_logs, FALSE )
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 1 );
 
@@ -85,7 +85,7 @@ class ReadReplicaStoreCopyIT
     {
         for ( int i = 0; i < 20; i++ )
         {
-            cluster.coreTx( ( db, tx ) ->
+            cluster.primaryTx( ( db, tx ) ->
             {
                 tx.execute( "CREATE ()" );
                 tx.commit();
@@ -97,7 +97,7 @@ class ReadReplicaStoreCopyIT
 
     private static void forceLogRotationOnAllCores( Cluster cluster ) throws IOException
     {
-        for ( CoreClusterMember core : cluster.coreMembers() )
+        for ( CoreClusterMember core : cluster.primaryMembers() )
         {
             forceTxLogRotationAndCheckpoint( core.defaultDatabase() );
         }

@@ -63,7 +63,7 @@ class ClusterRoutingDisabledIT extends ClusterTestSupport
     {
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                                                    .withNumberOfCoreMembers( 2 )
-                                                   .withSharedCoreParam( GraphDatabaseSettings.routing_enabled, "false" )
+                                                   .withSharedPrimaryParam( GraphDatabaseSettings.routing_enabled, "false" )
                                                    .withNumberOfReadReplicas( 1 )
                                                    .withSharedReadReplicaParam( GraphDatabaseSettings.routing_enabled, "false" );
 
@@ -72,7 +72,7 @@ class ClusterRoutingDisabledIT extends ClusterTestSupport
 
         readReplicaDriver = getReadReplicaDriver( cluster );
 
-        cluster.coreMembers().forEach( core -> coreDrivers.put( core.index(), driver( core.directURI() ) ) );
+        cluster.primaryMembers().forEach( core -> coreDrivers.put( core.index(), driver( core.directURI() ) ) );
 
         var systemLeader = cluster.awaitLeader( "system" );
         Driver systemLeaderDriver = coreDrivers.get( systemLeader.index() );

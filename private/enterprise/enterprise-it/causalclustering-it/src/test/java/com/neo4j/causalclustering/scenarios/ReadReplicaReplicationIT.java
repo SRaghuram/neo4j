@@ -152,7 +152,7 @@ class ReadReplicaReplicationIT
         }
 
         Set<Path> labelScanStoreFiles = new HashSet<>();
-        cluster.coreTx( ( db, tx ) -> gatherLabelScanStoreFiles( db, labelScanStoreFiles ) );
+        cluster.primaryTx( ( db, tx ) -> gatherLabelScanStoreFiles( db, labelScanStoreFiles ) );
 
         var labelScanStoreCorrectlyPlaced = new AtomicBoolean( false );
         var monitors = new Monitors();
@@ -211,7 +211,7 @@ class ReadReplicaReplicationIT
 
         createDataInOneTransaction( cluster, 10 );
 
-        assertNotNull( cluster.getMemberWithAnyRole( Role.LEADER ) );
+        assertNotNull( cluster.getPrimaryWithAnyRole( Role.LEADER ) );
 
         // Get a read replica and make sure that it is operational
         var readReplica = cluster.addReadReplicaWithIndex( 4 );
@@ -281,7 +281,7 @@ class ReadReplicaReplicationIT
                 GraphDatabaseSettings.check_point_interval_time.name(), "100ms" );
 
         var cluster = startCluster( defaultClusterConfig( type )
-                                            .withSharedCoreParams( params )
+                                            .withSharedPrimaryParams( params )
         );
 
         createDataInOneTransaction( cluster, 10 );
@@ -319,7 +319,7 @@ class ReadReplicaReplicationIT
                 GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
                 GraphDatabaseSettings.check_point_interval_time.name(), "100ms" );
 
-        var cluster = startCluster( defaultClusterConfig(type).withSharedCoreParams( params ) );
+        var cluster = startCluster( defaultClusterConfig(type).withSharedPrimaryParams( params ) );
 
         createDataInOneTransaction( cluster, 10 );
 
@@ -361,7 +361,7 @@ class ReadReplicaReplicationIT
                 .resolveDependency( CatchupPollingProcess.class );
         catchupProcessFactory.stop();
 
-        cluster.coreTx( ( coreGraphDatabase, transaction ) ->
+        cluster.primaryTx( ( coreGraphDatabase, transaction ) ->
         {
             transaction.createNode();
             transaction.commit();
@@ -392,7 +392,7 @@ class ReadReplicaReplicationIT
                 .resolveDependency( CatchupPollingProcess.class );
         catchupPollingProcess.pause();
 
-        var leader = cluster.coreTx( ( coreGraphDatabase, transaction ) ->
+        var leader = cluster.primaryTx( ( coreGraphDatabase, transaction ) ->
         {
             transaction.createNode();
             transaction.commit();
@@ -459,12 +459,12 @@ class ReadReplicaReplicationIT
 
         var clusterConfig = defaultClusterConfig()
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParams( params )
+                .withSharedPrimaryParams( params )
                 .withRecordFormat( HighLimit.NAME );
 
         var cluster = startCluster( clusterConfig );
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             var node = tx.createNode( Label.label( "L" ) );
             for ( var i = 0; i < 10; i++ )
@@ -479,7 +479,7 @@ class ReadReplicaReplicationIT
         CoreClusterMember coreGraphDatabase = null;
         for ( var j = 0; j < 2; j++ )
         {
-            coreGraphDatabase = cluster.coreTx( ( db, tx ) ->
+            coreGraphDatabase = cluster.primaryTx( ( db, tx ) ->
             {
                 var node = tx.createNode( Label.label( "L" ) );
                 for ( var i = 0; i < 10; i++ )
@@ -573,7 +573,7 @@ class ReadReplicaReplicationIT
                 .withNumberOfCoreMembers( NR_CORE_MEMBERS )
                 .withNumberOfReadReplicas( NR_READ_REPLICAS )
                 .withSharedReadReplicaParam( cluster_topology_refresh, "5s" )
-                .withSharedCoreParam( cluster_topology_refresh, "5s" );
+                .withSharedPrimaryParam( cluster_topology_refresh, "5s" );
     }
 
     private static ClusterConfig defaultClusterConfig()

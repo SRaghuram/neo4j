@@ -71,14 +71,14 @@ class ClusterCommunityToEnterpriseIT
         var before = DbRepresentation.of( databaseLayout, config );
 
         // when
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             copyStoreToCore( databaseLayout, core );
         }
         cluster.start();
 
         // then
-        dataMatchesEventually( before, DEFAULT_DATABASE_NAME, cluster.coreMembers() );
+        dataMatchesEventually( before, DEFAULT_DATABASE_NAME, cluster.primaryMembers() );
     }
 
     private void copyStoreToCore( DatabaseLayout databaseLayout, ClusterMember member ) throws IOException

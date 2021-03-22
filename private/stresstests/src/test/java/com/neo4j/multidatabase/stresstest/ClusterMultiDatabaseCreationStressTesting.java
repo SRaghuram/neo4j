@@ -54,8 +54,8 @@ class ClusterMultiDatabaseCreationStressTesting
         var threads = parseInt( fromEnv( "CLUSTER_MULTIDATABASE_STRESS_NUM_THREADS", DEFAULT_NUM_THREADS ) );
 
         var clusterConfig = clusterConfig()
-                .withSharedCoreParam( EnterpriseEditionSettings.max_number_of_databases, String.valueOf( Long.MAX_VALUE ) )
-                .withSharedCoreParam( GraphDatabaseSettings.preallocate_logical_logs, "false" )
+                .withSharedPrimaryParam( EnterpriseEditionSettings.max_number_of_databases, String.valueOf( Long.MAX_VALUE ) )
+                .withSharedPrimaryParam( GraphDatabaseSettings.preallocate_logical_logs, "false" )
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 );
 

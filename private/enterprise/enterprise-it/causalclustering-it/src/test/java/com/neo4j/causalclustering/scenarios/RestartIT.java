@@ -73,7 +73,7 @@ class RestartIT
         cluster = startCluster( 3, 0 );
 
         // when
-        cluster.removeCoreMemberWithIndex( 0 );
+        cluster.removePrimaryMemberWithIndex( 0 );
         cluster.addCoreMemberWithIndex( 0 ).start();
     }
 
@@ -84,7 +84,7 @@ class RestartIT
         cluster = startCluster( 3, 0 );
 
         // when
-        cluster.removeCoreMemberWithIndex( 1 );
+        cluster.removePrimaryMemberWithIndex( 1 );
         cluster.addCoreMemberWithIndex( 1 ).start();
     }
 
@@ -104,7 +104,7 @@ class RestartIT
             CoreClusterMember lastWriter = null;
             while ( !done.get() )
             {
-                lastWriter = cluster.coreTx( this::createNode );
+                lastWriter = cluster.primaryTx( this::createNode );
                 someTransactionsCommitted.countDown();
             }
             return lastWriter;
@@ -112,19 +112,19 @@ class RestartIT
 
         assertTrue( someTransactionsCommitted.await( 1, MINUTES ) );
 
-        int followerId = cluster.getMemberWithAnyRole( Role.FOLLOWER ).index();
-        cluster.removeCoreMemberWithIndex( followerId );
+        int followerId = cluster.getPrimaryWithAnyRole( Role.FOLLOWER ).index();
+        cluster.removePrimaryMemberWithIndex( followerId );
         cluster.addCoreMemberWithIndex( followerId ).start();
 
         // then
-        assertEventually( () -> cluster.healthyCoreMembers(), new HamcrestCondition<>( hasSize( 3 ) ), 1, MINUTES );
+        assertEventually( () -> cluster.healthyPrimaryMembers(), new HamcrestCondition<>( hasSize( 3 ) ), 1, MINUTES );
         assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ), equalityCondition( 3 ), 1, MINUTES );
 
         done.set( true );
 
         CoreClusterMember lastWriter = transactionsFuture.get( 1, MINUTES );
         assertNotNull( lastWriter );
-        dataMatchesEventually( lastWriter, cluster.coreMembers() );
+        dataMatchesEventually( lastWriter, cluster.primaryMembers() );
     }
 
     @Test
@@ -137,10 +137,10 @@ class RestartIT
         // when
         cluster.start();
 
-        CoreClusterMember last = cluster.coreTx( this::createNode );
+        CoreClusterMember last = cluster.primaryTx( this::createNode );
 
         // then
-        dataMatchesEventually( last, cluster.coreMembers() );
+        dataMatchesEventually( last, cluster.primaryMembers() );
     }
 
     @Test
@@ -150,17 +150,17 @@ class RestartIT
         cluster = startCluster( 2, 1 );
 
         // when
-        CoreClusterMember last = cluster.coreTx( this::createNode );
+        CoreClusterMember last = cluster.primaryTx( this::createNode );
 
         cluster.addCoreMemberWithIndex( 2 ).start();
-        dataMatchesEventually( last, cluster.coreMembers() );
+        dataMatchesEventually( last, cluster.primaryMembers() );
         dataMatchesEventually( last, cluster.readReplicas() );
 
         cluster.shutdown();
 
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            for ( CoreClusterMember core : cluster.coreMembers() )
+            for ( CoreClusterMember core : cluster.primaryMembers() )
             {
                 ConsistencyCheckService.Result result =
                         new ConsistencyCheckService().runFullConsistencyCheck( core.databaseLayout(), Config.defaults(),

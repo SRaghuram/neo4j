@@ -49,10 +49,10 @@ class CausalClusterDatabaseOperationCountMetricIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( MetricsSettings.metrics_enabled, TRUE )
-                .withSharedCoreParam( MetricsSettings.metrics_filter, "*" )
-                .withSharedCoreParam( MetricsSettings.csv_enabled, TRUE )
-                .withSharedCoreParam( MetricsSettings.csv_interval, "1s" );
+                .withSharedPrimaryParam( MetricsSettings.metrics_enabled, TRUE )
+                .withSharedPrimaryParam( MetricsSettings.metrics_filter, "*" )
+                .withSharedPrimaryParam( MetricsSettings.csv_enabled, TRUE )
+                .withSharedPrimaryParam( MetricsSettings.csv_interval, "1s" );
         var cluster = clusterFactory.createCluster( clusterConfig );
 
         // when start

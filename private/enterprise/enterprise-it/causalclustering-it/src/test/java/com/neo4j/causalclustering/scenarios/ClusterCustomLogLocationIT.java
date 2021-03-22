@@ -48,14 +48,14 @@ class ClusterCustomLogLocationIT
     {
         for ( int i = 0; i < 10; i++ )
         {
-            cluster.coreTx( ( db, tx ) ->
+            cluster.primaryTx( ( db, tx ) ->
             {
                 tx.createNode();
                 tx.commit();
             } );
         }
 
-        var coreClusterMembers = cluster.coreMembers();
+        var coreClusterMembers = cluster.primaryMembers();
         for ( var coreClusterMember : coreClusterMembers )
         {
             var dependencyResolver = coreClusterMember.defaultDatabase().getDependencyResolver();

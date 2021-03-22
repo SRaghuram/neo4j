@@ -138,7 +138,7 @@ class ClusterOverviewProcedureIT
     {
         var disableBoltAndBackup = Map.of( BoltConnector.enabled.name(), FALSE, online_backup_enabled.name(), FALSE );
         return clusterConfig()
-                .withSharedCoreParams( disableBoltAndBackup )
+                .withSharedPrimaryParams( disableBoltAndBackup )
                 .withSharedReadReplicaParams( disableBoltAndBackup )
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
@@ -310,13 +310,13 @@ class ClusterOverviewProcedureIT
 
         boolean isLeader( ClusterMember member, String databaseName )
         {
-            var leader = cluster.getMemberWithAnyRole( databaseName, Role.LEADER );
+            var leader = cluster.getPrimaryWithAnyRole( databaseName, Role.LEADER );
             return Objects.equals( member, leader );
         }
 
         boolean isCore( ClusterMember member )
         {
-            return cluster.coreMembers().contains( member );
+            return cluster.primaryMembers().contains( member );
         }
 
         boolean isReadReplica( ClusterMember member )

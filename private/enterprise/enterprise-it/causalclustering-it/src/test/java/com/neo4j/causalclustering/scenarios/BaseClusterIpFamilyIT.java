@@ -38,7 +38,7 @@ abstract class BaseClusterIpFamilyIT
     private final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 2 )
-            .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
+            .withSharedPrimaryParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
             .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() );
 
     private Cluster cluster;
@@ -61,7 +61,7 @@ abstract class BaseClusterIpFamilyIT
 
         // then
         Assertions.assertEquals( numberOfNodes, DataCreator.countNodes( leader ) );
-        dataMatchesEventually( leader, cluster.coreMembers() );
+        dataMatchesEventually( leader, cluster.primaryMembers() );
         dataMatchesEventually( leader, cluster.readReplicas() );
     }
 }

@@ -45,7 +45,7 @@ public class WriteOnRRReproducerTest
     {
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                                                    .withNumberOfCoreMembers( 2 )
-                                                   .withSharedCoreParam( GraphDatabaseSettings.routing_enabled, "true" )
+                                                   .withSharedPrimaryParam( GraphDatabaseSettings.routing_enabled, "true" )
                                                    .withNumberOfReadReplicas( 1 )
                                                    .withSharedReadReplicaParam( GraphDatabaseSettings.routing_enabled, "true" );
 

@@ -48,7 +48,7 @@ class VersionContextTrackingIT
     void beforeAll() throws Exception
     {
         var clusterConfig = clusterConfig()
-                .withSharedCoreParam( GraphDatabaseInternalSettings.snapshot_query, TRUE )
+                .withSharedPrimaryParam( GraphDatabaseInternalSettings.snapshot_query, TRUE )
                 .withSharedReadReplicaParam( GraphDatabaseInternalSettings.snapshot_query, TRUE );
 
         cluster = clusterFactory.createCluster( clusterConfig );
@@ -97,7 +97,7 @@ class VersionContextTrackingIT
 
     private CoreClusterMember anyCoreClusterMember()
     {
-        return cluster.coreMembers().iterator().next();
+        return cluster.primaryMembers().iterator().next();
     }
 
     private GraphDatabaseFacade getAnyCore()
@@ -136,7 +136,7 @@ class VersionContextTrackingIT
     {
         for ( int i = 0; i < NUMBER_OF_TRANSACTIONS; i++ )
         {
-            cluster.coreTx( ( coreGraphDatabase, transaction ) ->
+            cluster.primaryTx( ( coreGraphDatabase, transaction ) ->
             {
                 transaction.createNode();
                 transaction.commit();

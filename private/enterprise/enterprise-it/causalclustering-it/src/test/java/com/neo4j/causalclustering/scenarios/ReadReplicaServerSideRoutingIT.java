@@ -159,7 +159,7 @@ class ReadReplicaServerSideRoutingIT
                 .withNumberOfCoreMembers( NR_CORE_MEMBERS )
                 .withNumberOfReadReplicas( NR_READ_REPLICAS )
                 .withSharedReadReplicaParam( GraphDatabaseSettings.routing_enabled, serverSideRoutingEnabled ? "true" : "false" )
-                .withSharedCoreParam( GraphDatabaseSettings.routing_enabled, serverSideRoutingEnabled ? "true" : "false" );
+                .withSharedPrimaryParam( GraphDatabaseSettings.routing_enabled, serverSideRoutingEnabled ? "true" : "false" );
     }
 
     private static void assertReadReplicasEventuallyUpToDateWithLeader( Cluster cluster )

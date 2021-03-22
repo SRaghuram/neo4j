@@ -51,10 +51,10 @@ class CorePruningIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( state_machine_flush_window_size, "1" )
-                .withSharedCoreParam( raft_log_pruning_strategy, "keep_none" )
-                .withSharedCoreParam( raft_log_rotation_size, "1K" )
-                .withSharedCoreParam( raft_log_pruning_frequency, "100ms" );
+                .withSharedPrimaryParam( state_machine_flush_window_size, "1" )
+                .withSharedPrimaryParam( raft_log_pruning_strategy, "keep_none" )
+                .withSharedPrimaryParam( raft_log_rotation_size, "1K" )
+                .withSharedPrimaryParam( raft_log_pruning_frequency, "100ms" );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();

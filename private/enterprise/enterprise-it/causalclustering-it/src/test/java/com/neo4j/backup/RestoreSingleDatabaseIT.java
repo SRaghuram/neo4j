@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.Driver;
@@ -49,7 +48,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @TestDirectoryExtension
 @ClusterExtension
@@ -94,7 +92,7 @@ public class RestoreSingleDatabaseIT
             assertDatabaseEventuallyStarted( databaseName, cluster );
         }
 
-        cluster.coreTx( databaseName, ( db, tx ) ->
+        cluster.primaryTx( databaseName, ( db, tx ) ->
         {
             Node person = tx.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "less" );
@@ -130,7 +128,7 @@ public class RestoreSingleDatabaseIT
         assertDatabaseEventuallyStarted( databaseName, cluster );
 
         // and contain the data which was previously in it
-        cluster.coreTx( databaseName, ( db, tx ) -> assertNotNull( tx.findNode( Label.label( "Person" ), "name", "less" ) ) );
+        cluster.primaryTx( databaseName, ( db, tx ) -> assertNotNull( tx.findNode( Label.label( "Person" ), "name", "less" ) ) );
 
         // on every server
         dataMatchesEventually( cluster, databaseName );

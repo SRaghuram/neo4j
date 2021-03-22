@@ -53,7 +53,7 @@ public final class ClusterOverviewHelper
     public static void assertAllEventualOverviews( Cluster cluster, Condition<List<MemberInfo>> expected, Set<Integer> excludedCores,
             Set<Integer> excludedRRs )
     {
-        for ( CoreClusterMember core : cluster.coreMembers() )
+        for ( CoreClusterMember core : cluster.primaryMembers() )
         {
             if ( !excludedCores.contains( core.index() ) )
             {

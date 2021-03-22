@@ -162,7 +162,7 @@ class SystemGraphAuthCacheClearingIT
     {
         // Given a cluster with 1 user
         var clusterConfig = ClusterConfig.clusterConfig()
-            .withSharedCoreParams( getConfig() )
+            .withSharedPrimaryParams( getConfig() )
             .withNumberOfCoreMembers( 3 );
 
         cluster = clusterFactory.createCluster( clusterConfig );
@@ -195,7 +195,7 @@ class SystemGraphAuthCacheClearingIT
     {
         // Given a cluster and 1 user with no privileges
         var clusterConfig = ClusterConfig.clusterConfig()
-                .withSharedCoreParams( getConfig() )
+                .withSharedPrimaryParams( getConfig() )
                 .withNumberOfCoreMembers( 3 );
 
         cluster = clusterFactory.createCluster( clusterConfig );

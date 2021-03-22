@@ -62,7 +62,7 @@ class ClusterShutdownIT
 
     private void createANode( AtomicReference<Node> node ) throws Exception
     {
-        cluster.coreTx( ( coreGraphDatabase, transaction ) ->
+        cluster.primaryTx( ( coreGraphDatabase, transaction ) ->
         {
             node.set( transaction.createNode() );
             transaction.commit();
@@ -89,7 +89,7 @@ class ClusterShutdownIT
         CompletableFuture<Void> afterShutdown = preShutdown;
         for ( var index : shutdownOrder )
         {
-            afterShutdown = afterShutdown.thenRunAsync( () -> cluster.getCoreMemberByIndex( index ).shutdown(), shutdownExecutor );
+            afterShutdown = afterShutdown.thenRunAsync( () -> cluster.getPrimaryMemberByIndex( index ).shutdown(), shutdownExecutor );
         }
 
         createANode( node );
@@ -97,7 +97,7 @@ class ClusterShutdownIT
         try
         {
             // when - blocking on lock acquiring
-            final GraphDatabaseService leader = cluster.getCoreMemberByIndex( victimId ).defaultDatabase();
+            final GraphDatabaseService leader = cluster.getPrimaryMemberByIndex( victimId ).defaultDatabase();
 
             for ( int i = 0; i < NUMBER_OF_LOCK_ACQUIRERS; i++ )
             {

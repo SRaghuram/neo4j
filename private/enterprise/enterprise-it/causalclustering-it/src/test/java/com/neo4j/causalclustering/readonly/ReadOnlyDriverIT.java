@@ -54,11 +54,11 @@ public class ReadOnlyDriverIT
         var config = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( cluster_topology_refresh, "5s" );
+                .withSharedPrimaryParam( cluster_topology_refresh, "5s" );
 
         var dbsStr = String.join( ",", readOnlyDatabases );
 
-        return config.withSharedCoreParam( GraphDatabaseSettings.read_only_databases, dbsStr )
-                     .withSharedCoreParam( GraphDatabaseSettings.read_only_database_default, String.valueOf( globalReadOnly ) );
+        return config.withSharedPrimaryParam( GraphDatabaseSettings.read_only_databases, dbsStr )
+                     .withSharedPrimaryParam( GraphDatabaseSettings.read_only_database_default, String.valueOf( globalReadOnly ) );
     }
 }

@@ -81,7 +81,7 @@ class AdministrationCommandsOnClusterIT
     @BeforeAll
     static void setUp() throws ExecutionException, InterruptedException
     {
-        var clusterConfig = ClusterConfig.clusterConfig().withSharedCoreParams( getConfig() ).withNumberOfReadReplicas( 0 );
+        var clusterConfig = ClusterConfig.clusterConfig().withSharedPrimaryParams( getConfig() ).withNumberOfReadReplicas( 0 );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
@@ -1551,7 +1551,7 @@ class AdministrationCommandsOnClusterIT
      */
     private void leaderTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        cluster.coreTx( SYSTEM_DATABASE_NAME, op, (int) MINUTES.toMillis( 3 ), MILLISECONDS );
+        cluster.primaryTx( SYSTEM_DATABASE_NAME, op, (int) MINUTES.toMillis( 3 ), MILLISECONDS );
     }
 
     /**
@@ -1559,7 +1559,7 @@ class AdministrationCommandsOnClusterIT
      */
     private void followerTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        cluster.coreTx( SYSTEM_DATABASE_NAME, Role.FOLLOWER, op, (int) MINUTES.toMillis( 3 ), MILLISECONDS );
+        cluster.primaryTx( SYSTEM_DATABASE_NAME, Role.FOLLOWER, op, (int) MINUTES.toMillis( 3 ), MILLISECONDS );
     }
 
     private static Map<String,String> getConfig()

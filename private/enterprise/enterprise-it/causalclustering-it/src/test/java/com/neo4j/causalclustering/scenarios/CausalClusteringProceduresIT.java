@@ -128,13 +128,13 @@ class CausalClusteringProceduresIT
     @Test
     void installedProtocolsProcedure()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.primaryMembers(), this::invokeClusterProtocolsProcedure );
     }
 
     @Test
     void installedProtocolsProcedureOnSystemDatabase()
     {
-        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.primaryMembers(), this::invokeClusterProtocolsProcedure );
     }
 
     @Test
@@ -154,9 +154,9 @@ class CausalClusteringProceduresIT
     {
         var databaseName = DEFAULT_DATABASE_NAME;
         var leader = cluster.awaitLeader();
-        var follower = cluster.getMemberWithAnyRole( databaseName, Role.FOLLOWER );
+        var follower = cluster.getPrimaryWithAnyRole( databaseName, Role.FOLLOWER );
 
-        assertThat( cluster.coreMembers(), hasSize( 2 ) );
+        assertThat( cluster.primaryMembers(), hasSize( 2 ) );
 
         try
         {
@@ -244,7 +244,7 @@ class CausalClusteringProceduresIT
     {
         var leader = cluster.awaitLeader( databaseName );
 
-        for ( var member : cluster.coreMembers() )
+        for ( var member : cluster.primaryMembers() )
         {
             var expectedRole = Objects.equals( member, leader ) ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
             assertEventually( roleReportedByProcedure( member, databaseName ), equalityCondition( expectedRole ), 2, MINUTES );

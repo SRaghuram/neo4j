@@ -47,9 +47,9 @@ class CausalClusterRestEndpointsWithAuthIT
                 .clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
+                .withSharedPrimaryParam( GraphDatabaseSettings.auth_enabled, "true" )
                 .withSharedReadReplicaParam( GraphDatabaseSettings.auth_enabled, "true" )
-                .withSharedCoreParam( CausalClusteringSettings.status_auth_enabled, "false" )
+                .withSharedPrimaryParam( CausalClusteringSettings.status_auth_enabled, "false" )
                 .withSharedReadReplicaParam( CausalClusteringSettings.status_auth_enabled, "false" );
 
         cluster = clusterFactory.createCluster( clusterConfig );

@@ -44,12 +44,12 @@ class CandidateStuckIT
         Cluster cluster = clusterFactory.createCluster( clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( CausalClusteringSettings.leader_failure_detection_window, "60s-61s" ) );
+                .withSharedPrimaryParam( CausalClusteringSettings.leader_failure_detection_window, "60s-61s" ) );
         cluster.start();
 
         var leader = cluster.awaitLeader();
         var databaseId = leader.databaseId();
-        var followers = cluster.coreMembers().stream().filter( member -> !member.equals( leader ) ).collect( Collectors.toList() );
+        var followers = cluster.primaryMembers().stream().filter( member -> !member.equals( leader ) ).collect( Collectors.toList() );
         for ( int i = 0; i < 100; i++ )
         {
             createNode( cluster );
@@ -71,7 +71,7 @@ class CandidateStuckIT
         createNode( cluster );
         createNode( cluster );
         raftServerStop( newLeader );
-        var lastMember = cluster.coreMembers().stream().filter( member -> !member.equals( leader ) && !member.equals( newLeader ) ).findFirst();
+        var lastMember = cluster.primaryMembers().stream().filter( member -> !member.equals( leader ) && !member.equals( newLeader ) ).findFirst();
         assertNotNull( lastMember );
         // fake delayed preVote response to force member to become candidate and start an election
         raftMachine.handle( new RaftMessages.PreVote.Response( followers.get( 0 ).raftMemberIdFor( databaseId ), raftMachine.term(), true ) );
@@ -91,7 +91,7 @@ class CandidateStuckIT
 
     private Boolean hasNoLeader( Cluster cluster )
     {
-        for ( CoreClusterMember m : cluster.coreMembers() )
+        for ( CoreClusterMember m : cluster.primaryMembers() )
         {
             var managementService = m.managementService();
             if ( managementService == null )
@@ -154,7 +154,7 @@ class CandidateStuckIT
 
     private void createNode( Cluster cluster ) throws Exception
     {
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode();
             node.setProperty( "prop", counter++ );

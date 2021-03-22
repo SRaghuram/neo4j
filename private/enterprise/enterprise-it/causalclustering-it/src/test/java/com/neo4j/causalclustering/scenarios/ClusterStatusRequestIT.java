@@ -54,7 +54,8 @@ public class ClusterStatusRequestIT
 
         Status ok = new Status( Status.Message.OK );
         var expectedResponses =
-                cluster.coreMembers().stream().map( m -> new StatusResponse( m.raftMemberIdFor( databaseId ), ok, requestID ) ).collect( Collectors.toList() );
+                cluster.primaryMembers().stream().map( m -> new StatusResponse( m.raftMemberIdFor( databaseId ), ok, requestID ) )
+                       .collect( Collectors.toList() );
 
         assertEquals( response.getReplicationResult().outcome(), APPLIED );
         assertThat( response.getResponses() ).containsAll( expectedResponses );
@@ -68,7 +69,7 @@ public class ClusterStatusRequestIT
         cluster.start();
 
         cluster.awaitLeader();
-        var follower = cluster.getMemberWithAnyRole( Role.FOLLOWER );
+        var follower = cluster.getPrimaryWithAnyRole( Role.FOLLOWER );
         var clusterStatus = follower.resolveDependency( GraphDatabaseSettings.DEFAULT_DATABASE_NAME, ClusterStatusService.class );
         var databaseId = follower.databaseId();
         UUID requestID = UUID.randomUUID();
@@ -81,7 +82,8 @@ public class ClusterStatusRequestIT
 
         Status ok = new Status( Status.Message.OK );
         var expectedResponses =
-                cluster.coreMembers().stream().map( m -> new StatusResponse( m.raftMemberIdFor( databaseId ), ok, requestID ) ).collect( Collectors.toList() );
+                cluster.primaryMembers().stream().map( m -> new StatusResponse( m.raftMemberIdFor( databaseId ), ok, requestID ) )
+                       .collect( Collectors.toList() );
 
         assertEquals( response.getReplicationResult().outcome(), APPLIED );
         assertThat( response.getResponses() ).containsAll( expectedResponses );
@@ -91,7 +93,7 @@ public class ClusterStatusRequestIT
     void responseShouldIndicateFailedReplication() throws Exception
     {
         //given a cluster with elected leader and two followers
-        ClusterConfig clusterConfig = ClusterConfig.clusterConfig().withSharedCoreParam( CausalClusteringSettings.replication_leader_await_timeout, "1s" );
+        ClusterConfig clusterConfig = ClusterConfig.clusterConfig().withSharedPrimaryParam( CausalClusteringSettings.replication_leader_await_timeout, "1s" );
         var cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
 

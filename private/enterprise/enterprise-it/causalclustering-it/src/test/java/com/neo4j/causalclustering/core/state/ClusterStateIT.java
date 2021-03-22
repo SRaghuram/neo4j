@@ -61,7 +61,7 @@ class ClusterStateIT
     @Test
     void shouldPlaceClusterStateInExpectedLocation()
     {
-        for ( CoreClusterMember core : cluster.coreMembers() )
+        for ( CoreClusterMember core : cluster.primaryMembers() )
         {
             Path databaseStateDir = core.clusterStateDirectory().resolve( "db" );
             Path defaultDatabaseStateDir = databaseStateDir.resolve( DEFAULT_DATABASE_NAME );

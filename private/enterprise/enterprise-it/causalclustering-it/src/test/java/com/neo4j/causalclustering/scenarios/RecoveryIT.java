@@ -57,10 +57,10 @@ class RecoveryIT
         // given
         fireSomeLoadAtTheCluster( cluster );
 
-        var coreDatabaseLayouts = cluster.coreMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
+        var coreDatabaseLayouts = cluster.primaryMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
 
         assertEventually( "All cores have the same data",
-                () -> cluster.coreMembers().stream().map( RecoveryIT::dbRepresentation ).collect( toSet() ).size(),
+                () -> cluster.primaryMembers().stream().map( RecoveryIT::dbRepresentation ).collect( toSet() ).size(),
                 equalityCondition( 1 ), 10, TimeUnit.SECONDS );
 
         // when
@@ -76,19 +76,19 @@ class RecoveryIT
         // given
         fireSomeLoadAtTheCluster( cluster );
 
-        var coreDatabaseLayouts = cluster.coreMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
+        var coreDatabaseLayouts = cluster.primaryMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
 
         // when
         for ( var i = 0; i < CORE_COUNT; i++ )
         {
-            cluster.removeCoreMemberWithIndex( i );
+            cluster.removePrimaryMemberWithIndex( i );
             fireSomeLoadAtTheCluster( cluster );
             cluster.addCoreMemberWithIndex( i ).start();
         }
 
         // then
         assertEventually( "All cores have the same data",
-                () -> cluster.coreMembers().stream().map( RecoveryIT::dbRepresentation ).collect( toSet() ).size(),
+                () -> cluster.primaryMembers().stream().map( RecoveryIT::dbRepresentation ).collect( toSet() ).size(),
                 equalityCondition( 1 ), 10, TimeUnit.SECONDS );
 
         cluster.shutdown();
@@ -121,7 +121,7 @@ class RecoveryIT
         for ( var i = 0; i < CORE_COUNT; i++ )
         {
             var prop = "val" + i;
-            cluster.coreTx( ( db, tx ) ->
+            cluster.primaryTx( ( db, tx ) ->
             {
                 var node = tx.createNode( label( "demo" ) );
                 node.setProperty( "server", prop );

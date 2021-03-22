@@ -87,14 +87,14 @@ class AkkaDiscoveryUncleanShutdownIT
         cluster = clusterFactory.createCluster( clusterConfig );
 
         // when
-        var started = CompletableFuture.runAsync( cluster.getCoreMemberByIndex( coreToStartFirst )::start );
+        var started = CompletableFuture.runAsync( cluster.getPrimaryMemberByIndex( coreToStartFirst )::start );
         Thread.sleep( Duration.ofMinutes( 2 ).toMillis() );
-        Cluster.startMembers( cluster.coreMembers().stream().filter( c -> c.index() != coreToStartFirst ).toArray( ClusterMember[]::new ) );
+        Cluster.startMembers( cluster.primaryMembers().stream().filter( c -> c.index() != coreToStartFirst ).toArray( ClusterMember[]::new ) );
         Cluster.startMembers( cluster.readReplicas().toArray( ClusterMember[]::new ) );
 
         // then
         assertThat( started ).succeedsWithin( Duration.ofMinutes( 1 ) );
-        runningCores = List.copyOf( cluster.coreMembers() );
+        runningCores = List.copyOf( cluster.primaryMembers() );
         removedCoreIds = new HashSet<>();
         assertOverviews();
         checkClusterHealthy();
@@ -144,7 +144,7 @@ class AkkaDiscoveryUncleanShutdownIT
         cluster.start();
 
         runningCores = IntStream.range( 0, CORES )
-                                .mapToObj( cluster::getCoreMemberByIndex )
+                                .mapToObj( cluster::getPrimaryMemberByIndex )
                                 .collect( toList() );
         removedCoreIds = new HashSet<>();
 
@@ -164,14 +164,14 @@ class AkkaDiscoveryUncleanShutdownIT
 
     private Stream<CoreClusterMember> upMembers()
     {
-        return cluster.coreMembers().stream().filter( c -> !c.isShutdown() );
+        return cluster.primaryMembers().stream().filter( c -> !c.isShutdown() );
     }
 
     private CoreClusterMember shutdownCoreAndWaitForRemoval( int memberId ) throws InterruptedException
     {
         var deadline = Instant.now().plus( MAX_INTERVAL_BETWEEN_SHUTDOWNS );
 
-        var memberToDown = cluster.getCoreMemberByIndex( memberId );
+        var memberToDown = cluster.getPrimaryMemberByIndex( memberId );
         var memberToDownAddress = memberToDown.getAkkaCluster().get().selfAddress();
         var member = shutdownCore( memberId );
 
@@ -199,7 +199,7 @@ class AkkaDiscoveryUncleanShutdownIT
 
     private CoreClusterMember shutdownCore( int index ) throws InterruptedException
     {
-        CoreClusterMember core = cluster.getCoreMemberByIndex( index );
+        CoreClusterMember core = cluster.getPrimaryMemberByIndex( index );
         core.shutdown();
         runningCores.remove( core );
         removedCoreIds.add( index );
@@ -211,8 +211,8 @@ class AkkaDiscoveryUncleanShutdownIT
     private static ClusterConfig newClusterConfig( int minimumCoreClusterSizeAtRuntime )
     {
         return clusterConfig()
-                .withSharedCoreParam( minimum_core_cluster_size_at_runtime, String.valueOf( minimumCoreClusterSizeAtRuntime ) )
-                .withSharedCoreParam( middleware_logging_level, Level.DEBUG.toString() )
+                .withSharedPrimaryParam( minimum_core_cluster_size_at_runtime, String.valueOf( minimumCoreClusterSizeAtRuntime ) )
+                .withSharedPrimaryParam( middleware_logging_level, Level.DEBUG.toString() )
                 .withDiscoveryServiceType( AKKA_UNCLEAN_SHUTDOWN )
                 .withNumberOfCoreMembers( CORES )
                 .withNumberOfReadReplicas( 0 );

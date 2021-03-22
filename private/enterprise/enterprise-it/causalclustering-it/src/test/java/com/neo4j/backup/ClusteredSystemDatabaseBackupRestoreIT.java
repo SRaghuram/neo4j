@@ -133,7 +133,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
             tx.commit();
         } );
 
-        List<Config> memberConfigs = cluster.coreMembers().stream().map( CoreClusterMember::config ).collect( Collectors.toList() );
+        List<Config> memberConfigs = cluster.primaryMembers().stream().map( CoreClusterMember::config ).collect( Collectors.toList() );
 
         cluster.shutdown();
 
@@ -162,7 +162,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
     private void unbindCluster( Cluster cluster, FileSystemAbstraction fs ) throws IOException
     {
-        for ( CoreClusterMember member : cluster.coreMembers() )
+        for ( CoreClusterMember member : cluster.primaryMembers() )
         {
             member.unbind( fs );
         }
@@ -170,7 +170,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
     private Cluster createCluster( Map<String,String> configMap )
     {
-        return clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfReadReplicas( 0 ).withSharedCoreParams( configMap ) );
+        return clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfReadReplicas( 0 ).withSharedPrimaryParams( configMap ) );
     }
 
     private static void runRestore( FileSystemAbstraction fs, Path backupLocation, Config memberConfig ) throws Exception

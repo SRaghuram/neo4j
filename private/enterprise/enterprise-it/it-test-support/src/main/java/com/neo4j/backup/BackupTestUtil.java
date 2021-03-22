@@ -66,7 +66,7 @@ public final class BackupTestUtil
 
     public static GraphDatabaseFacade createSomeData( Cluster cluster ) throws Exception
     {
-        return cluster.coreTx( ( db, tx ) ->
+        return cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );

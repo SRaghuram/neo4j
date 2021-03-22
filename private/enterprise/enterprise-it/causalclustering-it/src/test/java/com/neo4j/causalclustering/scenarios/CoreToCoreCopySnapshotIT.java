@@ -65,7 +65,7 @@ class CoreToCoreCopySnapshotIT
         CoreClusterMember source = DataCreator.createDataInOneTransaction( cluster, 1000 );
 
         // when
-        CoreClusterMember follower = cluster.getMemberWithAnyRole( Role.FOLLOWER );
+        CoreClusterMember follower = cluster.getPrimaryWithAnyRole( Role.FOLLOWER );
 
         // shutdown the follower, remove the store, restart
         follower.shutdown();
@@ -92,7 +92,7 @@ class CoreToCoreCopySnapshotIT
         CoreClusterMember source = DataCreator.createDataInOneTransaction( cluster, 1000 );
 
         // when
-        CoreClusterMember follower = cluster.getMemberWithAnyRole( Role.FOLLOWER );
+        CoreClusterMember follower = cluster.getPrimaryWithAnyRole( Role.FOLLOWER );
 
         // shutdown the follower, remove the store, restart
         follower.shutdown();
@@ -117,17 +117,17 @@ class CoreToCoreCopySnapshotIT
         CoreClusterMember leader = DataCreator.createDataInOneTransaction( cluster, 10000 );
 
         // when
-        for ( CoreClusterMember coreDb : cluster.coreMembers() )
+        for ( CoreClusterMember coreDb : cluster.primaryMembers() )
         {
             coreDb.resolveDependency( DEFAULT_DATABASE_NAME, RaftLogPruner.class ).prune();
         }
 
-        cluster.removeCoreMember( leader ); // to force a change of leader
+        cluster.removePrimaryMember( leader ); // to force a change of leader
         leader = cluster.awaitLeader();
 
         int newDbIndex = 3;
         cluster.addCoreMemberWithIndex( newDbIndex ).start();
-        GraphDatabaseFacade newDb = cluster.getCoreMemberByIndex( newDbIndex ).defaultDatabase();
+        GraphDatabaseFacade newDb = cluster.getPrimaryMemberByIndex( newDbIndex ).defaultDatabase();
 
         // then
         assertEquals( DbRepresentation.of( leader.defaultDatabase() ), DbRepresentation.of( newDb ) );
@@ -187,7 +187,7 @@ class CoreToCoreCopySnapshotIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParams( params );
+                .withSharedPrimaryParams( params );
 
         var cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
@@ -231,7 +231,7 @@ class CoreToCoreCopySnapshotIT
             CoreClusterMember last = null;
             for ( int i = 0; i < count; i++ )
             {
-                last = cluster.coreTx( ( db, tx ) ->
+                last = cluster.primaryTx( ( db, tx ) ->
                 {
                     Node node = tx.createNode();
                     node.setProperty( "that's a bam", randomAlphanumeric( 1024 ) );

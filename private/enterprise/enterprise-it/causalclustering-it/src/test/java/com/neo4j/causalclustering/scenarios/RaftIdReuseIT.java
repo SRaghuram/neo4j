@@ -45,8 +45,8 @@ class RaftIdReuseIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 // increased to decrease likelihood of unnecessary leadership changes
-                .withSharedCoreParam( CausalClusteringSettings.leader_failure_detection_window, "2s-3s" )
-                .withSharedCoreParam( CausalClusteringSettings.election_failure_detection_window, "2s-3s" )
+                .withSharedPrimaryParam( CausalClusteringSettings.leader_failure_detection_window, "2s-3s" )
+                .withSharedPrimaryParam( CausalClusteringSettings.election_failure_detection_window, "2s-3s" )
                 .withNumberOfReadReplicas( 0 );
 
         cluster = clusterFactory.createCluster( clusterConfig );
@@ -74,7 +74,7 @@ class RaftIdReuseIT
         final MutableLong node2id = new MutableLong();
         final MutableLong node3id = new MutableLong();
 
-        CoreClusterMember clusterMember = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember clusterMember = cluster.primaryTx( ( db, tx ) ->
         {
             Node node1 = tx.createNode();
             Node node2 = tx.createNode();
@@ -113,7 +113,7 @@ class RaftIdReuseIT
         assertEquals( 2, creationLeaderIdGenerator.getDefragCount() );
 
         // Force leader switch
-        cluster.removeCoreMemberWithIndex( creationLeader.index() );
+        cluster.removePrimaryMemberWithIndex( creationLeader.index() );
 
         // waiting for new leader
         CoreClusterMember newLeader = cluster.awaitLeader();
@@ -126,7 +126,7 @@ class RaftIdReuseIT
         assertEquals( 2, idGenerator.getDefragCount() );
 
         // The ids available should be actually reused, so check that a new node gets one of the above deleted ids
-        CoreClusterMember newCreationLeader = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember newCreationLeader = cluster.primaryTx( ( db, tx ) ->
         {
             Node node = tx.createNode();
             assertTrue( node.getId() == first.getValue() || node.getId() == second.getValue(),
@@ -165,7 +165,7 @@ class RaftIdReuseIT
 
         final MutableLong node1id = new MutableLong();
         final MutableLong node2id = new MutableLong();
-        CoreClusterMember reuseLeader = cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember reuseLeader = cluster.primaryTx( ( db, tx ) ->
         {
             Node node1 = tx.createNode();
             Node node2 = tx.createNode();
@@ -194,7 +194,7 @@ class RaftIdReuseIT
 
     private static CoreClusterMember removeTwoNodes( Cluster cluster, MutableLong first, MutableLong second ) throws Exception
     {
-        return cluster.coreTx( ( db, tx ) ->
+        return cluster.primaryTx( ( db, tx ) ->
         {
             Node node1 = tx.getNodeById( first.longValue() );
             node1.delete();
@@ -207,7 +207,7 @@ class RaftIdReuseIT
 
     private static CoreClusterMember createThreeNodes( Cluster cluster, MutableLong first, MutableLong second ) throws Exception
     {
-        return cluster.coreTx( ( db, tx ) ->
+        return cluster.primaryTx( ( db, tx ) ->
         {
             Node node1 = tx.createNode();
             first.setValue( node1.getId() );

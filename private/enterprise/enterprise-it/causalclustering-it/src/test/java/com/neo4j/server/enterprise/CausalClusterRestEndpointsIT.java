@@ -102,7 +102,7 @@ class CausalClusterRestEndpointsIT
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
 
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             assertEventually( canVote( statusEndpoint( core, KNOWN_DB ) ), TRUE, 1, MINUTES );
         }
@@ -222,7 +222,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void writableEndpointsAreReachable() throws TimeoutException
     {
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -269,7 +269,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void shouldRedirectWritableEndpoints() throws TimeoutException
     {
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -302,7 +302,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void readOnlyEndpointsAreReachable() throws TimeoutException
     {
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -349,7 +349,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void shouldRedirectReadOnlyEndpoints() throws TimeoutException
     {
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -399,7 +399,7 @@ class CausalClusterRestEndpointsIT
                 new HamcrestCondition<>( everyItem( greaterThan( 0L ) ) ), 3, MINUTES );
 
         // then cores are valid
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             writeSomeData( cluster, KNOWN_DB );
             assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( coreFieldIs( equalTo( true ) ) ), 1, MINUTES );
@@ -498,7 +498,7 @@ class CausalClusterRestEndpointsIT
         var defaultDbUuid = databaseUuid( DEFAULT_DATABASE_NAME );
         var newDbUuid = databaseUuid( newDatabaseName );
 
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             writeSomeData( cluster, DEFAULT_DATABASE_NAME );
             writeSomeData( cluster, newDatabaseName );

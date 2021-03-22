@@ -61,13 +61,13 @@ class ServerGroupsIT
 
         // then
         var expected = new ArrayList<List<String>>();
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             expected.add( makeCoreGroups( suffix.get(), core.index() ) );
             expected.add( makeReplicaGroups( suffix.get(), core.index() ) );
         }
 
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             assertEventually( core + " should have groups", () -> getServerGroups( core.defaultDatabase() ),
                     new HamcrestCondition<>( new GroupsMatcher( expected ) ), 30, SECONDS );
@@ -76,7 +76,7 @@ class ServerGroupsIT
         // when
         expected.remove( makeCoreGroups( suffix.get(), 1 ) );
         expected.remove( makeReplicaGroups( suffix.get(), 2 ) );
-        cluster.getCoreMemberByIndex( 1 ).shutdown();
+        cluster.getPrimaryMemberByIndex( 1 ).shutdown();
         cluster.getReadReplicaByIndex( 2 ).shutdown();
 
         suffix.set( "after" ); // should update groups of restarted servers
@@ -86,7 +86,7 @@ class ServerGroupsIT
         expected.add( makeReplicaGroups( suffix.get(), 2 ) );
 
         // then
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             assertEventually( core + " should have groups", () -> getServerGroups( core.defaultDatabase() ),
                     new HamcrestCondition<>( new GroupsMatcher( expected ) ), 30, SECONDS );

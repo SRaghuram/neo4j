@@ -43,7 +43,7 @@ public class BoltServerIT
         var sharedParams = Map.of( routing_enabled.name(), Boolean.TRUE.toString() );
         var clusterConfig = ClusterConfig
                 .clusterConfig()
-                .withSharedCoreParams( sharedParams )
+                .withSharedPrimaryParams( sharedParams )
                 .withSharedReadReplicaParams( sharedParams );
 
         cluster = clusterFactory.createCluster( clusterConfig );

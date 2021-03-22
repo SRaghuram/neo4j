@@ -35,21 +35,21 @@ public class ClusterCheckerFactory extends CloseableFactory implements Closeable
 
     public ClusterChecker clusterChecker( Cluster cluster ) throws IOException
     {
-        List<URI> coreUris = cluster.coreMembers()
+        List<URI> primaryURIs = cluster.primaryMembers()
                                     .stream()
                                     .filter( c -> !c.isShutdown() )
                                     .map( c -> URI.create( c.directURI() ) )
                                     .collect( Collectors.toList() );
-        return clusterChecker( coreUris );
+        return clusterChecker( primaryURIs );
     }
 
     public ClusterChecker clusterChecker( Cluster cluster, DriverFactory.InstanceConfig driverConfig ) throws IOException
     {
-        List<URI> coreUris = cluster.coreMembers()
+        List<URI> primaryUris = cluster.primaryMembers()
                                     .stream()
                                     .filter( c -> !c.isShutdown() )
                                     .map( c -> URI.create( c.directURI() ) )
                                     .collect( Collectors.toList() );
-        return clusterChecker( coreUris, driverConfig );
+        return clusterChecker( primaryUris, driverConfig );
     }
 }

@@ -248,7 +248,7 @@ class TransactionLogUpgradeIT
         // Why assert degrees specifically? This particular upgrade: V4_2 -> V4_3_D3 changes how dense node degrees are stored
         // so it's a really good indicator that everything there works
         Map<String,Map<Direction,MutableLong>> referenceActualDegrees = null;
-        for ( ClusterMember member : cluster.coreMembers() )
+        for ( ClusterMember member : cluster.primaryMembers() )
         {
             try ( InternalTransaction tx = member.database( DEFAULT_DATABASE_NAME ).beginTransaction(
                     KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED ) )
@@ -293,7 +293,7 @@ class TransactionLogUpgradeIT
     private long createDenseNode() throws Exception
     {
         MutableLong nodeId = new MutableLong();
-        cluster.coreTx( ( db, transaction ) ->
+        cluster.primaryTx( ( db, transaction ) ->
         {
             Node node = transaction.createNode();
             for ( int i = 0; i < 100; i++ )
@@ -308,7 +308,7 @@ class TransactionLogUpgradeIT
 
     private void addRelationshipToNode( long nodeId ) throws Exception
     {
-        cluster.coreTx( ( db, transaction ) ->
+        cluster.primaryTx( ( db, transaction ) ->
         {
             transaction.getNodeById( nodeId ).createRelationshipTo( transaction.createNode(),
                     RelationshipType.withName( "TYPE_" + ThreadLocalRandom.current().nextInt( 3 ) ) );
@@ -318,7 +318,7 @@ class TransactionLogUpgradeIT
 
     private void doWriteTransaction() throws Exception
     {
-        cluster.coreTx( ( db, transaction ) ->
+        cluster.primaryTx( ( db, transaction ) ->
         {
             transaction.createNode();
             transaction.commit();

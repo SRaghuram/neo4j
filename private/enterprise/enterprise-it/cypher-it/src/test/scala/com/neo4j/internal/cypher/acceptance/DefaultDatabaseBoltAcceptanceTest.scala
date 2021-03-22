@@ -322,7 +322,7 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
       dataMatchesEventually( cluster, SYSTEM_DATABASE_NAME )
       dataMatchesEventually( cluster, fooDb )
 
-      val boltAddress = cluster.getMemberWithAnyRole(fooDb, Role.FOLLOWER).boltAdvertisedAddress()
+      val boltAddress = cluster.getPrimaryWithAnyRole(fooDb, Role.FOLLOWER).boltAdvertisedAddress()
 
       // WHEN
       withDriver(boltAddress, { tx =>

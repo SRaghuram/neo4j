@@ -171,7 +171,7 @@ class PanicIT
     {
         CoreContext( int index, Cluster cluster )
         {
-            super( index, cluster.coreMembers().size(), cluster );
+            super( index, cluster.primaryMembers().size(), cluster );
         }
 
         @Override
@@ -189,7 +189,7 @@ class PanicIT
         @Override
         ClusterMember member()
         {
-            return cluster.getCoreMemberByIndex( index );
+            return cluster.getPrimaryMemberByIndex( index );
         }
     }
 

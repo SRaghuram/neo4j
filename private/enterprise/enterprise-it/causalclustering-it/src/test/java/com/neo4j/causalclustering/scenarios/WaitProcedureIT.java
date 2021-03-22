@@ -175,7 +175,7 @@ public class WaitProcedureIT
             var responses = runProcedure( systemDbDriver, lastCommitTxId, databaseId, DEFAULT_PROCEDURE_TIMEOUT );
             assertThat( databaseStates( cluster, databaseId.name() ) ).allMatch( operatorState -> operatorState == EnterpriseOperatorState.STOPPED );
 
-            assertThat( responses ).hasSize( cluster.coreMembers().size() + cluster.readReplicas().size() )
+            assertThat( responses ).hasSize( cluster.primaryMembers().size() + cluster.readReplicas().size() )
                     .allMatch( response -> response.state() == WaitResponseStates.CaughtUp )
                     .allMatch( WaitResponse::success );
         }

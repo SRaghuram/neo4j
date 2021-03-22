@@ -152,7 +152,7 @@ class IdReuse
             {
                 try
                 {
-                    cluster.coreTx( ( db, tx ) -> {
+                    cluster.primaryTx( ( db, tx ) -> {
                         for ( int j = 0; j < 1_000; j++ )
                         {
                             Node start = tx.createNode();
@@ -185,7 +185,7 @@ class IdReuse
         {
             try
             {
-                cluster.coreTx( ( db, tx ) -> {
+                cluster.primaryTx( ( db, tx ) -> {
                     Node nodeStart = tx.createNode();
                     Node nodeEnd = tx.createNode();
                     nodeStart.createRelationshipTo( nodeEnd, RELATIONSHIP_TYPE );
@@ -261,7 +261,7 @@ class IdReuse
         {
             try
             {
-                cluster.coreTx( ( db, tx ) -> {
+                cluster.primaryTx( ( db, tx ) -> {
                     Node node = tx.getNodeById( rnd.nextInt( idHighRange ) );
                     Iterables.stream( node.getRelationships() ).forEach( Relationship::delete );
                     node.delete();

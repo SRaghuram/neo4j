@@ -183,11 +183,11 @@ public final class CausalClusteringTestHelpers
         {
             try
             {
-                var followers = cluster.coreMembers().stream().filter( c -> c.serverId() != leader.serverId() ).collect( toSet() );
+                var followers = cluster.primaryMembers().stream().filter( c -> c.serverId() != leader.serverId() ).collect( toSet() );
                 for ( CoreClusterMember follower : followers )
                 {
                     transferLeaderTo( databaseName, leader, follower );
-                    return await( () -> cluster.getMemberWithAnyRole( databaseName, Role.LEADER ), not( leader::equals ), 15, SECONDS );
+                    return await( () -> cluster.getPrimaryWithAnyRole( databaseName, Role.LEADER ), not( leader::equals ), 15, SECONDS );
                 }
             }
             catch ( IOException | TimeoutException ignore )
@@ -214,7 +214,7 @@ public final class CausalClusteringTestHelpers
                     return leader;
                 }
                 transferLeaderTo( databaseName, leader, desiredLeader );
-                return await( () -> cluster.getMemberWithAnyRole( databaseName, Role.LEADER ), desiredLeader::equals, 15, SECONDS );
+                return await( () -> cluster.getPrimaryWithAnyRole( databaseName, Role.LEADER ), desiredLeader::equals, 15, SECONDS );
             }
             catch ( TimeoutException | IOException ignore )
             {
@@ -251,7 +251,7 @@ public final class CausalClusteringTestHelpers
         raftServer.stop();
         try
         {
-            var otherMembers = new ArrayList<>( cluster.coreMembers() );
+            var otherMembers = new ArrayList<>( cluster.primaryMembers() );
             otherMembers.remove( leader );
             // trigger an election and await until a new leader is elected
             var follower = randomClusterMember( cluster, leader );
@@ -284,7 +284,7 @@ public final class CausalClusteringTestHelpers
 
     public static void createNode( String databaseName, Cluster cluster ) throws Exception
     {
-        cluster.coreTx( databaseName, ( db, tx ) ->
+        cluster.primaryTx( databaseName, ( db, tx ) ->
         {
             tx.execute( "CREATE (a)" );
             tx.commit();
@@ -620,7 +620,7 @@ public final class CausalClusteringTestHelpers
 
     private static CoreClusterMember randomClusterMember( Cluster cluster, CoreClusterMember except )
     {
-        CoreClusterMember[] members = cluster.coreMembers()
+        CoreClusterMember[] members = cluster.primaryMembers()
                 .stream()
                 .filter( member -> !member.serverId().equals( except.serverId() ) )
                 .toArray( CoreClusterMember[]::new );

@@ -31,8 +31,8 @@ public class ClusterConfig
     private int noReadReplicas = 2;
 
     private DiscoveryServiceType discoveryServiceType = DiscoveryServiceType.AKKA;
-    private final Map<String,String> coreParams = new HashMap<>();
-    private final Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
+    private final Map<String,String> primaryParams = new HashMap<>();
+    private final Map<String,IntFunction<String>> instancePrimaryParams = new HashMap<>();
     private final Map<String,String> readReplicaParams = new HashMap<>();
     private final Map<String,IntFunction<String>> instanceReadReplicaParams = new HashMap<>();
     private String recordFormat = Standard.LATEST_NAME;
@@ -72,27 +72,27 @@ public class ClusterConfig
         return this;
     }
 
-    public ClusterConfig withSharedCoreParams( Map<String,String> params )
+    public ClusterConfig withSharedPrimaryParams( Map<String,String> params )
     {
-        this.coreParams.putAll( params );
+        this.primaryParams.putAll( params );
         return this;
     }
 
-    public ClusterConfig withSharedCoreParam( Setting<?> key, String value )
+    public ClusterConfig withSharedPrimaryParam( Setting<?> key, String value )
     {
-        this.coreParams.put( key.name(), value );
+        this.primaryParams.put( key.name(), value );
         return this;
     }
 
     public ClusterConfig withInstanceCoreParams( Map<String,IntFunction<String>> params )
     {
-        this.instanceCoreParams.putAll( params );
+        this.instancePrimaryParams.putAll( params );
         return this;
     }
 
     public ClusterConfig withInstanceCoreParam( Setting<?> key, IntFunction<String> valueFunction )
     {
-        this.instanceCoreParams.put( key.name(), valueFunction );
+        this.instancePrimaryParams.put( key.name(), valueFunction );
         return this;
     }
 
@@ -150,11 +150,11 @@ public class ClusterConfig
         {
         case CORES:
             return Cluster.createWithCores( parentDir, noCoreMembers, noReadReplicas, discoveryServiceType.factory(),
-                                            coreParams, instanceCoreParams, readReplicaParams, instanceReadReplicaParams,
+                                            primaryParams, instancePrimaryParams, readReplicaParams, instanceReadReplicaParams,
                                             recordFormat, ipFamily, useWildcard );
         case STANDALONE:
             return Cluster.createWithStandalone( parentDir, noReadReplicas, discoveryServiceType.factory(),
-                                                 coreParams, readReplicaParams, instanceReadReplicaParams,
+                                                 primaryParams, readReplicaParams, instanceReadReplicaParams,
                                                  recordFormat, ipFamily, useWildcard );
         default:
             throw new IllegalStateException( "Type " + type + " not supported" );

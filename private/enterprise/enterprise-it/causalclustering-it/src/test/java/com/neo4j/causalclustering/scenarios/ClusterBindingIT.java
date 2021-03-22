@@ -71,8 +71,8 @@ class ClusterBindingIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( CausalClusteringSettings.raft_log_pruning_strategy, "3 entries" )
-                .withSharedCoreParam( CausalClusteringSettings.raft_log_rotation_size, "1K" );
+                .withSharedPrimaryParam( CausalClusteringSettings.raft_log_pruning_strategy, "3 entries" )
+                .withSharedPrimaryParam( CausalClusteringSettings.raft_log_rotation_size, "1K" );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
@@ -86,7 +86,7 @@ class ClusterBindingIT
         // WHEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        var databaseLayouts = databaseLayouts( cluster.coreMembers() );
+        var databaseLayouts = databaseLayouts( cluster.primaryMembers() );
 
         cluster.shutdown();
 
@@ -104,7 +104,7 @@ class ClusterBindingIT
         // WHEN
         cluster.start();
 
-        var databaseLayouts = databaseLayouts( cluster.coreMembers() );
+        var databaseLayouts = databaseLayouts( cluster.primaryMembers() );
 
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
@@ -121,9 +121,9 @@ class ClusterBindingIT
         // GIVEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        var databaseLayout = cluster.getCoreMemberByIndex( 0 ).databaseLayout();
+        var databaseLayout = cluster.getPrimaryMemberByIndex( 0 ).databaseLayout();
 
-        cluster.removeCoreMemberWithIndex( 0 );
+        cluster.removePrimaryMemberWithIndex( 0 );
         changeStoreId( databaseLayout );
 
         // WHEN / THEN
@@ -137,13 +137,13 @@ class ClusterBindingIT
         // GIVEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        var laggingFollower = cluster.getMemberWithAnyRole( Role.FOLLOWER );
+        var laggingFollower = cluster.getPrimaryWithAnyRole( Role.FOLLOWER );
         var laggingFollowerIndex = laggingFollower.index();
-        cluster.removeCoreMemberWithIndex(  laggingFollowerIndex );
+        cluster.removePrimaryMemberWithIndex( laggingFollowerIndex );
 
         DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
-        for ( var db : cluster.coreMembers() )
+        for ( var db : cluster.primaryMembers() )
         {
             db.resolveDependency( DEFAULT_DATABASE_NAME, RaftLogPruner.class ).prune();
         }
@@ -154,11 +154,11 @@ class ClusterBindingIT
         cluster.awaitLeader();
 
         // THEN
-        assertEquals( 3, cluster.healthyCoreMembers().size() );
+        assertEquals( 3, cluster.healthyPrimaryMembers().size() );
 
         dataMatchesEventually( laggingFollower, cluster.allMembers() );
 
-        var databaseLayouts = databaseLayouts( cluster.coreMembers() );
+        var databaseLayouts = databaseLayouts( cluster.primaryMembers() );
         cluster.shutdown();
         assertAllStoresHaveTheSameStoreId( databaseLayouts, fs );
     }
@@ -170,13 +170,13 @@ class ClusterBindingIT
         // GIVEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        var coreMember = cluster.getCoreMemberByIndex( 0 );
-        cluster.removeCoreMemberWithIndex( 0 );
+        var coreMember = cluster.getPrimaryMemberByIndex( 0 );
+        cluster.removePrimaryMemberWithIndex( 0 );
         changeRaftId( coreMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
 
         DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
-        for ( var db : cluster.coreMembers() )
+        for ( var db : cluster.primaryMembers() )
         {
             db.resolveDependency( DEFAULT_DATABASE_NAME, RaftLogPruner.class ).prune();
         }
@@ -192,7 +192,7 @@ class ClusterBindingIT
         // GIVEN
         DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
-        for ( var db : cluster.coreMembers() )
+        for ( var db : cluster.primaryMembers() )
         {
             db.resolveDependency( DEFAULT_DATABASE_NAME, RaftLogPruner.class ).prune();
         }
@@ -203,9 +203,9 @@ class ClusterBindingIT
         cluster.awaitLeader();
 
         // THEN
-        assertEquals( 4, cluster.healthyCoreMembers().size() );
+        assertEquals( 4, cluster.healthyPrimaryMembers().size() );
 
-        var databaseLayouts = databaseLayouts( cluster.coreMembers() );
+        var databaseLayouts = databaseLayouts( cluster.primaryMembers() );
         cluster.shutdown();
         assertAllStoresHaveTheSameStoreId( databaseLayouts, fs );
     }

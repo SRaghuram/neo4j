@@ -46,9 +46,9 @@ class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
     {
         var clusterConfig = clusterConfig()
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
-                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
-                .withSharedCoreParam( CausalClusteringSettings.upstream_selection_strategy, LeaderOnlyStrategy.IDENTITY )
+                .withSharedPrimaryParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
+                .withSharedPrimaryParam( CausalClusteringSettings.multi_dc_license, TRUE )
+                .withSharedPrimaryParam( CausalClusteringSettings.upstream_selection_strategy, LeaderOnlyStrategy.IDENTITY )
                 .withInstanceCoreParam( GraphDatabaseSettings.read_only_database_default, id -> id == 0 ? FALSE : TRUE )
                 .withSharedReadReplicaParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
                 .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE )
@@ -62,14 +62,14 @@ class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
     private long warmUpCluster() throws Exception
     {
         leader = cluster.awaitLeader(); // Make sure we have a cluster leader.
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             // Create some test data to touch a bunch of pages.
             createTestData( tx );
             tx.commit();
         } );
         AtomicLong pagesInMemory = new AtomicLong();
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             // Wait for an initial profile on the leader. This profile might have raced with the 'createTestData'
             // transaction above, so it might be incomplete.
@@ -77,7 +77,7 @@ class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
             // Now we can wait for a clean profile on the leader, and note the count for verifying later.
             pagesInMemory.set( waitForCacheProfile( leader.monitors() ) );
         } );
-        for ( CoreClusterMember member : cluster.coreMembers() )
+        for ( CoreClusterMember member : cluster.primaryMembers() )
         {
             waitForCacheProfile( member.monitors() );
         }

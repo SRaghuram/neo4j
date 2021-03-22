@@ -69,11 +69,11 @@ class LeaderTransferOnSigtermIT
                 clusterConfig()
                         .withNumberOfReadReplicas( 0 )
                         .withNumberOfCoreMembers( 3 )
-                        .withSharedCoreParam( CausalClusteringSettings.leader_failure_detection_window, "60s-70s" )
-                        .withSharedCoreParam( CausalClusteringSettings.election_failure_detection_window, "1s-3s" )
-                        .withSharedCoreParam( CausalClusteringSettings.log_shipping_retry_timeout, "500ms" )
-                        .withSharedCoreParam( CausalClusteringInternalSettings.akka_failure_detector_acceptable_heartbeat_pause, "5s" )
-                        .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, "2" )
+                        .withSharedPrimaryParam( CausalClusteringSettings.leader_failure_detection_window, "60s-70s" )
+                        .withSharedPrimaryParam( CausalClusteringSettings.election_failure_detection_window, "1s-3s" )
+                        .withSharedPrimaryParam( CausalClusteringSettings.log_shipping_retry_timeout, "500ms" )
+                        .withSharedPrimaryParam( CausalClusteringInternalSettings.akka_failure_detector_acceptable_heartbeat_pause, "5s" )
+                        .withSharedPrimaryParam( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, "2" )
         );
         cluster.start();
     }
@@ -118,7 +118,7 @@ class LeaderTransferOnSigtermIT
             var leaderRemovalDeadline = getDeadlineFor( leaderRemovalTimeout );
             var leaderTransferDeadline = getDeadlineFor( leadershipTransferSuccessCriteria );
             var clusterStabilityDeadline = getDeadlineFor( clusterStabilityTimeout );
-            var removeLeader = runWithTestExecutor( () -> cluster.removeCoreMember( leaderToRemove ) );
+            var removeLeader = runWithTestExecutor( () -> cluster.removePrimaryMember( leaderToRemove ) );
 
             // then the call to remove the core succeeds in time
             assertThat( removeLeader ).succeedsWithin( getTimeoutFor( leaderRemovalDeadline ) );
@@ -174,7 +174,7 @@ class LeaderTransferOnSigtermIT
 
         cluster.awaitAllCoresJoinedAllRaftGroups( databases, timeout.toMillis(), MILLISECONDS );
 
-        assertEventually( cluster::healthyCoreMembers,
+        assertEventually( cluster::healthyPrimaryMembers,
                           Conditions.sizeCondition( numberOfCoreMembers ),
                           getTimeoutFor( deadline ).toMillis(), MILLISECONDS );
 
@@ -191,7 +191,7 @@ class LeaderTransferOnSigtermIT
 
     private Duration getFailureDetectionWindowMin()
     {
-        return cluster.coreMembers().stream()
+        return cluster.primaryMembers().stream()
                       .map( c -> c.config().get( CausalClusteringSettings.leader_failure_detection_window ).getMin() )
                       .min( Comparator.naturalOrder() )
                       .get();
@@ -199,7 +199,7 @@ class LeaderTransferOnSigtermIT
 
     private Duration getFailureDetectionWindowMax()
     {
-        return cluster.coreMembers().stream()
+        return cluster.primaryMembers().stream()
                       .map( c -> c.config().get( CausalClusteringSettings.leader_failure_detection_window ).getMax() )
                       .max( Comparator.naturalOrder() )
                       .get();

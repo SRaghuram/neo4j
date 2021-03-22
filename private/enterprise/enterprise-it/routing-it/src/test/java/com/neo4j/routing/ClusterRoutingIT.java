@@ -71,8 +71,8 @@ class ClusterRoutingIT extends ClusterTestSupport
     {
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                                                    .withNumberOfCoreMembers( 2 )
-                                                   .withSharedCoreParam( GraphDatabaseSettings.routing_enabled, "true" )
-                                                   .withSharedCoreParam( GraphDatabaseSettings.log_queries_obfuscate_literals, "true" )
+                                                   .withSharedPrimaryParam( GraphDatabaseSettings.routing_enabled, "true" )
+                                                   .withSharedPrimaryParam( GraphDatabaseSettings.log_queries_obfuscate_literals, "true" )
                                                    .withNumberOfReadReplicas( 1 )
                                                    .withSharedReadReplicaParam( GraphDatabaseSettings.routing_enabled, "true" );
 
@@ -81,7 +81,7 @@ class ClusterRoutingIT extends ClusterTestSupport
 
         readReplicaDriver = getReadReplicaDriver( cluster );
 
-        cluster.coreMembers().forEach( core -> coreDrivers.put( core.index(), driver( core.directURI() ) ) );
+        cluster.primaryMembers().forEach( core -> coreDrivers.put( core.index(), driver( core.directURI() ) ) );
 
         var systemLeader = cluster.awaitLeader( "system" );
         Driver systemLeaderDriver = coreDrivers.get( systemLeader.index() );
@@ -192,7 +192,7 @@ class ClusterRoutingIT extends ClusterTestSupport
     void testWriteWithNoLeader() throws Exception
     {
         var fooLeader = cluster.awaitLeader( "foo" );
-        cluster.removeCoreMember( fooLeader );
+        cluster.removePrimaryMember( fooLeader );
         try
         {
             assertEquals( 1, cluster.numberOfCoreMembersReportedByTopology( "foo" ) );

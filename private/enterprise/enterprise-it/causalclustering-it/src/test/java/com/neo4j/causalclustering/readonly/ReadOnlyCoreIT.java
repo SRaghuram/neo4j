@@ -55,7 +55,7 @@ public class ReadOnlyCoreIT
         final var property = "property";
         final var label = "test";
         assertThrows( RuntimeException.class, () ->
-                cluster.coreTx( DEFAULT_DATABASE_NAME, ( db, tx ) ->
+                cluster.primaryTx( DEFAULT_DATABASE_NAME, ( db, tx ) ->
                 {
                     tx.execute( "CREATE (:test {" + property + ":\"" + label + "\"})" );
                     tx.commit();
@@ -85,13 +85,13 @@ public class ReadOnlyCoreIT
         cluster = clusterFactory.createCluster( config );
         cluster.start();
         cluster.awaitLeader();
-        var newLeader = cluster.getCoreMemberByIndex( 1 ); // We configure member 0 to be read only
+        var newLeader = cluster.getPrimaryMemberByIndex( 1 ); // We configure member 0 to be read only
         switchLeaderTo( cluster, newLeader );
 
         //when
         final var property = "property";
         final var label = "test";
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
                         {
                             tx.execute( "CREATE (:test {" + property + ":\"" + label + "\"})" );
                             tx.commit();
@@ -126,7 +126,7 @@ public class ReadOnlyCoreIT
         final var property = "property";
         final var label = "test";
         assertThrows( RuntimeException.class, () ->
-                cluster.coreTx( DEFAULT_DATABASE_NAME, ( db, tx ) ->
+                cluster.primaryTx( DEFAULT_DATABASE_NAME, ( db, tx ) ->
                 {
                     tx.execute( "CREATE (:test {" + property + ":\"" + label + "\"})" );
                     tx.commit();
@@ -162,7 +162,7 @@ public class ReadOnlyCoreIT
         final var property = "property";
         final var label = "test";
 
-        cluster.coreTx( DEFAULT_DATABASE_NAME, ( db, tx ) ->
+        cluster.primaryTx( DEFAULT_DATABASE_NAME, ( db, tx ) ->
         {
             tx.execute( "CREATE (:test {" + property + ":\"" + label + "\"})" );
             tx.commit();
@@ -203,7 +203,7 @@ public class ReadOnlyCoreIT
         final var label = "test";
 
         assertThrows( RuntimeException.class, () ->
-                cluster.coreTx( fooDB, ( db, tx ) ->
+                cluster.primaryTx( fooDB, ( db, tx ) ->
                 {
                     tx.execute( "CREATE (:test {" + property + ":\"" + label + "\"})" );
                     tx.commit();
@@ -212,7 +212,7 @@ public class ReadOnlyCoreIT
 
     private long countMembers( Cluster cluster, Predicate<GraphDatabaseFacade> countFunction )
     {
-        return cluster.coreMembers()
+        return cluster.primaryMembers()
                       .stream()
                       .map( ClusterMember::defaultDatabase )
                       .filter( countFunction )
@@ -240,14 +240,14 @@ public class ReadOnlyCoreIT
         var config = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( cluster_topology_refresh, "5s" );
+                .withSharedPrimaryParam( cluster_topology_refresh, "5s" );
 
         var dbsStr = String.join( ",", readOnlyDatabases );
 
         if ( all )
         {
-            return config.withSharedCoreParam( GraphDatabaseSettings.read_only_databases, dbsStr )
-                         .withSharedCoreParam( GraphDatabaseSettings.read_only_database_default, String.valueOf( globalReadOnly ) );
+            return config.withSharedPrimaryParam( GraphDatabaseSettings.read_only_databases, dbsStr )
+                         .withSharedPrimaryParam( GraphDatabaseSettings.read_only_database_default, String.valueOf( globalReadOnly ) );
         }
 
         return config.withInstanceCoreParam( GraphDatabaseSettings.read_only_databases, id -> id == 0 ? dbsStr : "" )

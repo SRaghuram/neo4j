@@ -141,7 +141,7 @@ public class Cluster implements ServerAddressResolver
     private final String defaultAdvertisedHost;
 
     private final StandaloneMember standalone;
-    private final Map<Integer,CoreClusterMember> coreMembers = new ConcurrentHashMap<>();
+    private final Map<Integer,CoreClusterMember> primaryMembers = new ConcurrentHashMap<>();
     private final Map<Integer,ReadReplica> readReplicas = new ConcurrentHashMap<>();
     private final Logger log;
     private int highestCoreIndex;
@@ -192,7 +192,7 @@ public class Cluster implements ServerAddressResolver
         List<SocketAddress> initialHosts = initialHosts( 1, standaloneParams, emptyMap() );
         this.standalone = createStandalone( initialHosts, standaloneParams, recordFormat );
         initialHosts.addAll( initialHosts( noOfReadReplicas, readReplicaParams, instanceReadReplicaParams ) );
-        this.coreMembers.put( 0, standalone );
+        this.primaryMembers.put( 0, standalone );
         createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat,
                             index -> initialHosts.get( initialHosts.size() - index - 1 ).getPort() );
         this.log = LoggerFactory.getLogger( this.getClass() );
@@ -221,11 +221,11 @@ public class Cluster implements ServerAddressResolver
         return this;
     }
 
-    public Set<CoreClusterMember> healthyCoreMembers()
+    public Set<CoreClusterMember> healthyPrimaryMembers()
     {
-        return coreMembers.values().stream()
-                .filter( db -> db.defaultDatabase().getDependencyResolver().resolveDependency( DatabaseHealth.class ).isHealthy() )
-                .collect( Collectors.toSet() );
+        return primaryMembers.values().stream()
+                             .filter( db -> db.defaultDatabase().getDependencyResolver().resolveDependency( DatabaseHealth.class ).isHealthy() )
+                             .collect( Collectors.toSet() );
     }
 
     public StandaloneMember getStandaloneMember()
@@ -233,9 +233,9 @@ public class Cluster implements ServerAddressResolver
         return standalone;
     }
 
-    public CoreClusterMember getCoreMemberByIndex( int index )
+    public CoreClusterMember getPrimaryMemberByIndex( int index )
     {
-        return coreMembers.get( index );
+        return primaryMembers.get( index );
     }
 
     public ReadReplica getReadReplicaByIndex( int index )
@@ -268,11 +268,11 @@ public class Cluster implements ServerAddressResolver
     private CoreClusterMember addCoreMemberWithIndex( int index, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams,
             String recordFormat )
     {
-        List<SocketAddress> initialHosts = extractInitialHosts( coreMembers );
+        List<SocketAddress> initialHosts = extractInitialHosts( primaryMembers );
         CoreClusterMember coreClusterMember = createCoreClusterMember( index, PortAuthority.allocatePort(), DEFAULT_CLUSTER_SIZE, initialHosts, recordFormat,
                 extraParams, instanceExtraParams );
 
-        coreMembers.put( index, coreClusterMember );
+        primaryMembers.put( index, coreClusterMember );
         return coreClusterMember;
     }
 
@@ -312,7 +312,7 @@ public class Cluster implements ServerAddressResolver
 
     private ReadReplica addReadReplica( int index, String recordFormat, Monitors monitors )
     {
-        List<SocketAddress> initialHosts = extractInitialHosts( coreMembers );
+        List<SocketAddress> initialHosts = extractInitialHosts( primaryMembers );
         ReadReplica member = createReadReplica( index, PortAuthority.allocatePort(),
                 initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat, monitors );
 
@@ -328,14 +328,14 @@ public class Cluster implements ServerAddressResolver
             {
                 shutdownMembers( List.of( standalone ), errorHandler );
             }
-            shutdownMembers( coreMembers(), errorHandler );
+            shutdownMembers( primaryMembers(), errorHandler );
             shutdownMembers( readReplicas(), errorHandler );
         }
     }
 
-    public void shutdownCoreMembers()
+    public void shutdownPrimaryMembers()
     {
-        shutdownMembers( coreMembers() );
+        shutdownMembers( primaryMembers() );
     }
 
     public void shutdownReadReplicas()
@@ -381,10 +381,10 @@ public class Cluster implements ServerAddressResolver
         return list;
     }
 
-    public void removeCoreMembers( Collection<CoreClusterMember> coreClusterMembers )
+    public void removePrimaryMembers( Collection<CoreClusterMember> primaryClusterMembers )
     {
-        shutdownMembers( coreClusterMembers );
-        coreMembers.values().removeAll( coreClusterMembers );
+        shutdownMembers( primaryClusterMembers );
+        primaryMembers.values().removeAll( primaryClusterMembers );
     }
 
     public void removeReadReplicas( Collection<ReadReplica> readReplicasToRemove )
@@ -393,14 +393,14 @@ public class Cluster implements ServerAddressResolver
         readReplicas.values().removeAll( readReplicasToRemove );
     }
 
-    public void removeCoreMemberWithIndex( int index )
+    public void removePrimaryMemberWithIndex( int index )
     {
-        CoreClusterMember memberToRemove = getCoreMemberByIndex( index );
+        CoreClusterMember memberToRemove = getPrimaryMemberByIndex( index );
 
         if ( memberToRemove != null )
         {
             memberToRemove.shutdown();
-            removeCoreMember( memberToRemove );
+            removePrimaryMember( memberToRemove );
         }
         else
         {
@@ -408,10 +408,10 @@ public class Cluster implements ServerAddressResolver
         }
     }
 
-    public void removeCoreMember( CoreClusterMember memberToRemove )
+    public void removePrimaryMember( CoreClusterMember memberToRemove )
     {
         shutdownMembers( memberToRemove );
-        coreMembers.values().remove( memberToRemove );
+        primaryMembers.values().remove( memberToRemove );
     }
 
     public void removeReadReplicaWithIndex( int index )
@@ -434,9 +434,9 @@ public class Cluster implements ServerAddressResolver
         readReplicas.values().remove( memberToRemove );
     }
 
-    public Set<CoreClusterMember> coreMembers()
+    public Set<CoreClusterMember> primaryMembers()
     {
-        return Set.copyOf( coreMembers.values() );
+        return Set.copyOf( primaryMembers.values() );
     }
 
     public Set<ReadReplica> readReplicas()
@@ -447,7 +447,7 @@ public class Cluster implements ServerAddressResolver
     public Set<ClusterMember> allMembers()
     {
         var result = new HashSet<ClusterMember>();
-        result.addAll( coreMembers.values() );
+        result.addAll( primaryMembers.values() );
         result.addAll( readReplicas.values() );
         return result;
     }
@@ -457,14 +457,14 @@ public class Cluster implements ServerAddressResolver
         return firstOrNull( readReplicas.values() );
     }
 
-    public List<CoreClusterMember> getAllMembersWithRole( Role role )
+    public List<CoreClusterMember> getAllPrimariesWithRole( Role role )
     {
-        return getAllMembersWithRole( DEFAULT_DATABASE_NAME, role );
+        return getAllPrimariesWithRole( DEFAULT_DATABASE_NAME, role );
     }
 
-    public List<CoreClusterMember> getAllMembersWithRole( String databaseName, Role role )
+    public List<CoreClusterMember> getAllPrimariesWithRole( String databaseName, Role role )
     {
-        return getAllActiveMembersWithAnyRole( databaseName, role );
+        return getAllActivePrimariesWithAnyRole( databaseName, role );
     }
 
     /**
@@ -474,24 +474,24 @@ public class Cluster implements ServerAddressResolver
      * @param roles
      * @return null if no members are found matching any of the provided roles.
      */
-    public CoreClusterMember getMemberWithAnyRole( Role... roles )
+    public CoreClusterMember getPrimaryWithAnyRole( Role... roles )
     {
-        return getAnyActiveMemberWithAnyRole( DEFAULT_DATABASE_NAME, roles ).orElse( null );
+        return getAnyActivePrimaryWithAnyRole( DEFAULT_DATABASE_NAME, roles ).orElse( null );
     }
 
-    public CoreClusterMember getMemberWithAnyRole( String databaseName, Role... roles )
+    public CoreClusterMember getPrimaryWithAnyRole( String databaseName, Role... roles )
     {
-        return getAnyActiveMemberWithAnyRole( databaseName, roles ).orElse( null );
+        return getAnyActivePrimaryWithAnyRole( databaseName, roles ).orElse( null );
     }
 
-    private Optional<CoreClusterMember> getAnyActiveMemberWithAnyRole( String databaseName, Role... roles )
+    private Optional<CoreClusterMember> getAnyActivePrimaryWithAnyRole( String databaseName, Role... roles )
     {
-        return getAllActiveMembersWithAnyRole( databaseName, roles ).stream().findFirst();
+        return getAllActivePrimariesWithAnyRole( databaseName, roles ).stream().findFirst();
     }
 
-    private List<CoreClusterMember> getAllActiveMembersWithAnyRole( String databaseName, Role... roles )
+    private List<CoreClusterMember> getAllActivePrimariesWithAnyRole( String databaseName, Role... roles )
     {
-        return getAllMembersWithAnyRole( databaseName, roles ).stream().filter( member ->
+        return getAllPrimariesWithAnyRole( databaseName, roles ).stream().filter( member ->
         {
             try
             {
@@ -506,12 +506,12 @@ public class Cluster implements ServerAddressResolver
         } ).collect( Collectors.toList() );
     }
 
-    private List<CoreClusterMember> getAllMembersWithAnyRole( String databaseName, Role... roles )
+    private List<CoreClusterMember> getAllPrimariesWithAnyRole( String databaseName, Role... roles )
     {
         var roleSet = Arrays.stream( roles ).collect( toSet() );
 
         var list = new ArrayList<CoreClusterMember>();
-        for ( CoreClusterMember member : coreMembers.values() )
+        for ( CoreClusterMember member : primaryMembers.values() )
         {
             try
             {
@@ -570,7 +570,7 @@ public class Cluster implements ServerAddressResolver
     @SuppressWarnings( "SameParameterValue" )
     private CoreClusterMember awaitCoreMemberWithAnyRole( String databaseName, long timeout, TimeUnit timeUnit, Role... roles ) throws TimeoutException
     {
-        return await( () -> getAnyActiveMemberWithAnyRole( databaseName, roles ).orElse( null ), notNull(), timeout, timeUnit );
+        return await( () -> getAnyActivePrimaryWithAnyRole( databaseName, roles ).orElse( null ), notNull(), timeout, timeUnit );
     }
 
     public void awaitAllCoresJoinedAllRaftGroups( Set<String> databases, long timeout, TimeUnit timeUnit ) throws TimeoutException
@@ -585,10 +585,10 @@ public class Cluster implements ServerAddressResolver
 
     private boolean getAllCoresJoinedAllRaftGroups( Set<String> databases )
     {
-        var coreMembers = Set.copyOf( this.coreMembers.values() );
+        var primaryMembers = Set.copyOf( this.primaryMembers.values() );
         var expectedMembersPerDb = databases.stream()
-                .collect( Collectors.toMap( Function.identity(), dbName -> expectedMembers( coreMembers, dbName ) ) );
-        var allCoreDatabasePairs = coreMembers.stream()
+                .collect( Collectors.toMap( Function.identity(), dbName -> expectedMembers( primaryMembers, dbName ) ) );
+        var allCoreDatabasePairs = primaryMembers.stream()
                 .flatMap( core -> databases.stream().map( db -> Pair.of( core, db ) ) );
 
         return allCoreDatabasePairs.map( coreDatabase -> votingMembersContainAllExpected( coreDatabase.first(), coreDatabase.other(), expectedMembersPerDb ) )
@@ -660,7 +660,7 @@ public class Cluster implements ServerAddressResolver
             String databaseName,
             BiFunction<CoreTopologyService,NamedDatabaseId,Topology<?>> topologySelector )
     {
-        return coreMembers
+        return primaryMembers
                 .values()
                 .stream()
                 .filter( c -> c.managementService() != null && c.database( databaseName ) != null )
@@ -677,9 +677,9 @@ public class Cluster implements ServerAddressResolver
     /**
      * Perform a transaction against the core cluster, selecting the target and retrying as necessary.
      */
-    public CoreClusterMember coreTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
+    public CoreClusterMember primaryTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        return coreTx( DEFAULT_DATABASE_NAME, op );
+        return primaryTx( DEFAULT_DATABASE_NAME, op );
     }
 
     /**
@@ -687,46 +687,46 @@ public class Cluster implements ServerAddressResolver
      */
     public void systemTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        coreTx( SYSTEM_DATABASE_NAME, op );
+        primaryTx( SYSTEM_DATABASE_NAME, op );
     }
 
     /**
      * Perform a transaction against the core cluster, selecting the target and retrying as necessary.
      */
-    public CoreClusterMember coreTx( String databaseName, BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
+    public CoreClusterMember primaryTx( String databaseName, BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        return coreTx( databaseName, op, DEFAULT_TIMEOUT_MS, MILLISECONDS );
+        return primaryTx( databaseName, op, DEFAULT_TIMEOUT_MS, MILLISECONDS );
     }
 
     /**
      * Perform a transaction against the leader of the core cluster, retrying as necessary.
      */
     @SuppressWarnings( "SameParameterValue" )
-    public CoreClusterMember coreTx( String databaseName, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
+    public CoreClusterMember primaryTx( String databaseName, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
             throws Exception
     {
-        return coreTx( databaseName, Role.LEADER, op, timeout, timeUnit );
+        return primaryTx( databaseName, Role.LEADER, op, timeout, timeUnit );
     }
 
     /**
      * Perform a transaction against a member with given role of the core cluster, retrying as necessary.
      */
     @SuppressWarnings( "SameParameterValue" )
-    public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
+    public CoreClusterMember primaryTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
             throws Exception
     {
-        return coreTx( databaseName, role, op, timeout, timeUnit, x -> EnterpriseSecurityContext.AUTH_DISABLED );
+        return primaryTx( databaseName, role, op, timeout, timeUnit, x -> EnterpriseSecurityContext.AUTH_DISABLED );
     }
 
     /**
      * Perform a transaction against a member with given role of the core cluster, as the specified user, retrying as necessary.
      */
     @SuppressWarnings( "SameParameterValue" )
-    public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit,
-            String username, String password )
+    public CoreClusterMember primaryTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit,
+                                        String username, String password )
             throws Exception
     {
-        return coreTx( databaseName, role, op, timeout, timeUnit, db ->
+        return primaryTx( databaseName, role, op, timeout, timeUnit, db ->
         {
             var authManager = db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
             return authManager.login( newBasicAuthToken( username, password ) );
@@ -739,8 +739,8 @@ public class Cluster implements ServerAddressResolver
      * Transactions may only successfully be committed against the leader of a cluster, but it is useful to be able to attempt transactions against other
      * members, for the purposes of testing error handling.
      */
-    public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit,
-            ThrowingFunction<GraphDatabaseFacade,LoginContext,InvalidAuthTokenException> securityContextProvider )
+    public CoreClusterMember primaryTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit,
+                                        ThrowingFunction<GraphDatabaseFacade,LoginContext,InvalidAuthTokenException> securityContextProvider )
             throws Exception
     {
         ThrowingSupplier<CoreClusterMember,Exception> supplier = () ->
@@ -815,7 +815,7 @@ public class Cluster implements ServerAddressResolver
                     extraParams,
                     instanceExtraParams
             );
-            coreMembers.put( i, coreClusterMember );
+            primaryMembers.put( i, coreClusterMember );
         }
         highestCoreIndex = noOfCoreMembers - 1;
     }
@@ -921,7 +921,7 @@ public class Cluster implements ServerAddressResolver
 
     public void startCoreMembers() throws InterruptedException, ExecutionException
     {
-        startMembers( coreMembers() );
+        startMembers( primaryMembers() );
     }
 
     public void startReadReplicas() throws InterruptedException, ExecutionException
@@ -955,7 +955,7 @@ public class Cluster implements ServerAddressResolver
 
     public Optional<ClusterMember> randomMember( boolean mustBeStarted )
     {
-        Stream<ClusterMember> members = Stream.concat( coreMembers().stream(), readReplicas().stream() );
+        Stream<ClusterMember> members = Stream.concat( primaryMembers().stream(), readReplicas().stream() );
 
         if ( mustBeStarted )
         {
@@ -968,7 +968,7 @@ public class Cluster implements ServerAddressResolver
 
     public Optional<CoreClusterMember> randomCoreMember( boolean mustBeStarted )
     {
-        Stream<CoreClusterMember> members = coreMembers().stream();
+        Stream<CoreClusterMember> members = primaryMembers().stream();
 
         if ( mustBeStarted )
         {
@@ -992,7 +992,7 @@ public class Cluster implements ServerAddressResolver
     @Override
     public Set<ServerAddress> resolve( ServerAddress ignore )
     {
-        var serverAddresses = coreMembers()
+        var serverAddresses = primaryMembers()
                 .stream()
                 .map( c -> URI.create( c.routingURI() ) )
                 .map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) )

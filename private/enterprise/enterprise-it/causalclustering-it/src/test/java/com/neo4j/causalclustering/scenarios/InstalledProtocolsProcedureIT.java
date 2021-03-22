@@ -56,9 +56,9 @@ public class InstalledProtocolsProcedureIT
     private ClusterFactory clusterFactory;
 
     public final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
-            .withSharedCoreParam( CausalClusteringSettings.leader_failure_detection_window, "2s-3s" )
-            .withSharedCoreParam( CausalClusteringSettings.election_failure_detection_window, "2s-3s" )
-            .withSharedCoreParam( CausalClusteringSettings.compression_implementations, "snappy" )
+            .withSharedPrimaryParam( CausalClusteringSettings.leader_failure_detection_window, "2s-3s" )
+            .withSharedPrimaryParam( CausalClusteringSettings.election_failure_detection_window, "2s-3s" )
+            .withSharedPrimaryParam( CausalClusteringSettings.compression_implementations, "snappy" )
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 0 );
 
@@ -80,7 +80,7 @@ public class InstalledProtocolsProcedureIT
                 .add( COMPRESSION_SNAPPY.implementation() )
                 .toString();
 
-        ProtocolInfo[] expectedProtocolInfos = cluster.coreMembers()
+        ProtocolInfo[] expectedProtocolInfos = cluster.primaryMembers()
                 .stream()
                 .filter( member -> !member.equals( leader ) )
                 .map( member -> new ProtocolInfo( OUTBOUND, localhost( member.raftListenAddress() ), RAFT.canonicalName(), "4.0", modifiers ) )
@@ -97,7 +97,7 @@ public class InstalledProtocolsProcedureIT
     {
         assertEventually( "should see inbound installed protocols on core " + leader.index(),
                 () -> installedProtocols( leader.defaultDatabase(), INBOUND ),
-                new HamcrestCondition<>( hasSize( greaterThanOrEqualTo( cluster.coreMembers().size() - 1 ) ) ),
+                new HamcrestCondition<>( hasSize( greaterThanOrEqualTo( cluster.primaryMembers().size() - 1 ) ) ),
                 60, SECONDS );
     }
 

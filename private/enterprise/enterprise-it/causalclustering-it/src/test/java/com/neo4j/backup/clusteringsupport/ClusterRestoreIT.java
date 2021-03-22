@@ -81,9 +81,9 @@ class ClusterRestoreIT
     {
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig();
 
-        clusterConfig.withSharedCoreParam( GraphDatabaseSettings.auth_enabled, TRUE );
-        clusterConfig.withSharedCoreParam( SecuritySettings.authentication_providers, NATIVE_REALM_NAME );
-        clusterConfig.withSharedCoreParam( SecuritySettings.authorization_providers, NATIVE_REALM_NAME );
+        clusterConfig.withSharedPrimaryParam( GraphDatabaseSettings.auth_enabled, TRUE );
+        clusterConfig.withSharedPrimaryParam( SecuritySettings.authentication_providers, NATIVE_REALM_NAME );
+        clusterConfig.withSharedPrimaryParam( SecuritySettings.authorization_providers, NATIVE_REALM_NAME );
 
         Cluster cluster = clusterFactory.createCluster( clusterConfig );
         try
@@ -176,8 +176,8 @@ class ClusterRestoreIT
             createDatabase( "foo", cluster );
             assertDatabaseEventuallyStarted( "foo", cluster );
 
-            cluster.coreTx( "foo", ( db, tx ) -> randomData( tx ) );
-            cluster.coreTx( DEFAULT_DATABASE_NAME, ( db, tx ) -> randomData( tx ) );
+            cluster.primaryTx( "foo", ( db, tx ) -> randomData( tx ) );
+            cluster.primaryTx( DEFAULT_DATABASE_NAME, ( db, tx ) -> randomData( tx ) );
 
             cluster.systemTx( ( db, tx ) -> newUser( tx, "bat", "man" ) );
 
@@ -239,7 +239,7 @@ class ClusterRestoreIT
 
     void restore( Cluster cluster, String... databaseNames ) throws IOException
     {
-        for ( CoreClusterMember core : cluster.coreMembers() )
+        for ( CoreClusterMember core : cluster.primaryMembers() )
         {
             Path backupPath = backupsDirectory.resolve( SYSTEM_DATABASE_NAME );
             restoreFromBackup( backupPath, fsa, core, SYSTEM_DATABASE_NAME );

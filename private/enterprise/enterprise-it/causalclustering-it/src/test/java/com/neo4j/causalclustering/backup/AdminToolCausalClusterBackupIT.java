@@ -74,7 +74,7 @@ class AdminToolCausalClusterBackupIT
         Path backupDir = testDirectory.directory( "backups", newBackupDirName() );
         String backupAddress = leader.config().get( OnlineBackupSettings.online_backup_listen_address ).toString();
 
-        cluster.coreTx( AdminToolCausalClusterBackupIT::createSomeData );
+        cluster.primaryTx( AdminToolCausalClusterBackupIT::createSomeData );
 
         int exitCode = runBackupToolFromSameJvm( testDir,
                 "--from=" + backupAddress,

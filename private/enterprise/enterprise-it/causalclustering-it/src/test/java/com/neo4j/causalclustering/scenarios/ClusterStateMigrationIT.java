@@ -63,7 +63,7 @@ class ClusterStateMigrationIT
     @Test
     void shouldCreateClusterStateVersion() throws Exception
     {
-        for ( var member : cluster.coreMembers() )
+        for ( var member : cluster.primaryMembers() )
         {
             var versionStorage = clusterStateVersionStorage( member );
             assertTrue( versionStorage.exists() );
@@ -75,7 +75,7 @@ class ClusterStateMigrationIT
     void shouldRecreateClusterStateWhenVersionIsAbsent() throws Exception
     {
         // collect all version files
-        var clusterStateVersionFiles = cluster.coreMembers()
+        var clusterStateVersionFiles = cluster.primaryMembers()
                 .stream()
                 .map( CoreClusterMember::clusterStateLayout )
                 .map( ClusterStateLayout::clusterStateVersionFile )
@@ -92,7 +92,7 @@ class ClusterStateMigrationIT
 
         cluster.start();
 
-        for ( var member : cluster.coreMembers() )
+        for ( var member : cluster.primaryMembers() )
         {
             // version files should exist having been recreated
             var versionStorage = clusterStateVersionStorage( member );
@@ -104,7 +104,7 @@ class ClusterStateMigrationIT
     @Test
     void shouldFailWhenClusterStateVersionIsWrong() throws Exception
     {
-        var follower = cluster.getMemberWithAnyRole( FOLLOWER );
+        var follower = cluster.getPrimaryWithAnyRole( FOLLOWER );
         var followerClusterStateVersionStorage = clusterStateVersionStorage( follower );
 
         follower.shutdown();

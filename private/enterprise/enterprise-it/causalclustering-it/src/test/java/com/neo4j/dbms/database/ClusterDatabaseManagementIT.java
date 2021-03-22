@@ -67,9 +67,9 @@ class ClusterDatabaseManagementIT
     private ClusterFactory clusterFactory;
 
     private final ClusterConfig clusterConfig = clusterConfig()
-            .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
-            .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
-            .withSharedCoreParam( SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME )
+            .withSharedPrimaryParam( GraphDatabaseSettings.auth_enabled, "true" )
+            .withSharedPrimaryParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
+            .withSharedPrimaryParam( SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME )
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 2 );
 
@@ -129,8 +129,8 @@ class ClusterDatabaseManagementIT
         // given
         var modifiedConfig = clusterConfig
                 .withNumberOfCoreMembers( 4 )
-                .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, "3" )
-                .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" );
+                .withSharedPrimaryParam( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, "3" )
+                .withSharedPrimaryParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" );
         var cluster = startCluster( modifiedConfig );
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
 
@@ -347,14 +347,14 @@ class ClusterDatabaseManagementIT
         var modifiedConfig = clusterConfig
                 .withNumberOfCoreMembers( 4 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
-                .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, "3" );
+                .withSharedPrimaryParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
+                .withSharedPrimaryParam( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, "3" );
         var cluster = startCluster( modifiedConfig );
 
         createDatabase( databaseName, cluster );
         assertDatabaseEventuallyStarted( databaseName, cluster );
 
-        cluster.coreTx( databaseName, ( db, tx ) ->
+        cluster.primaryTx( databaseName, ( db, tx ) ->
         {
             tx.createNode( firstLabel );
             tx.commit();
@@ -374,7 +374,7 @@ class ClusterDatabaseManagementIT
         createDatabase( databaseName, cluster );
         assertDatabaseEventuallyStarted( databaseName, remaining );
 
-        cluster.coreTx( databaseName, ( db, tx ) ->
+        cluster.primaryTx( databaseName, ( db, tx ) ->
         {
             tx.createNode( secondLabel );
             tx.commit();
@@ -523,6 +523,6 @@ class ClusterDatabaseManagementIT
 
     private static Set<ClusterMember> oneCoreAndOneReadReplica( Cluster cluster )
     {
-        return asSet( cluster.getCoreMemberByIndex( 0 ), cluster.getReadReplicaByIndex( 0 ) );
+        return asSet( cluster.getPrimaryMemberByIndex( 0 ), cluster.getReadReplicaByIndex( 0 ) );
     }
 }

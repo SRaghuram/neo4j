@@ -79,7 +79,7 @@ class ClusterLabelIdReuseIT
 
     private CoreClusterMember createLabel( String name ) throws Exception
     {
-        return cluster.coreTx( ( db, tx ) ->
+        return cluster.primaryTx( ( db, tx ) ->
         {
             tx.createNode( label( name ) );
             tx.commit();

@@ -15,7 +15,7 @@ public class EmptyBackupStore extends AbstractStoreGenerator
     @Override
     CoreClusterMember createData( Cluster cluster )
     {
-        return cluster.coreMembers().iterator().next();
+        return cluster.primaryMembers().iterator().next();
     }
 
     @Override

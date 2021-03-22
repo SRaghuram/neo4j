@@ -8,7 +8,6 @@ package com.neo4j.dbms.procedures;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.configuration.EnterpriseEditionSettings;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import com.neo4j.dbms.ShowDatabasesHelpers;
 import com.neo4j.dbms.ShowDatabasesHelpers.ShowDatabasesResultRow;
@@ -108,11 +107,11 @@ class ClusteredShowDatabasesIT
         void resetCluster() throws Exception
         {
             // check if additional cores/rrs exist first then remove them
-            var additionalCore = cluster.getCoreMemberByIndex( additionalCoreIndex );
+            var additionalCore = cluster.getPrimaryMemberByIndex( additionalCoreIndex );
             if ( additionalCore != null )
             {
                 var homeDir = additionalCore.homePath();
-                cluster.removeCoreMember( additionalCore );
+                cluster.removePrimaryMember( additionalCore );
                 fs.deleteRecursively( homeDir );
             }
 
@@ -249,7 +248,7 @@ class ClusteredShowDatabasesIT
                               SECONDS );
 
             // when
-            cluster.removeCoreMemberWithIndex( additionalCoreIndex );
+            cluster.removePrimaryMemberWithIndex( additionalCoreIndex );
 
             // then
             var newClusterSize = initialClusterSize - 1;
@@ -568,7 +567,7 @@ class ClusteredShowDatabasesIT
 
     private static NamedDatabaseId getNamedDatabaseId( Cluster cluster, String databaseName )
     {
-        for ( CoreClusterMember coreMember : cluster.coreMembers() )
+        for ( CoreClusterMember coreMember : cluster.primaryMembers() )
         {
             try
             {

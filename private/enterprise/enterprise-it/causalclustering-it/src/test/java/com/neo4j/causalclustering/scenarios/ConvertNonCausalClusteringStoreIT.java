@@ -65,7 +65,7 @@ class ConvertNonCausalClusteringStoreIT
 
         Cluster cluster = createCluster( recordFormat );
 
-        for ( CoreClusterMember core : cluster.coreMembers() )
+        for ( CoreClusterMember core : cluster.primaryMembers() )
         {
             var databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
             final var clusterStateLayout = ClusterStateLayout.of( core.config().get( CausalClusteringSettings.cluster_state_directory ) );
@@ -78,7 +78,7 @@ class ConvertNonCausalClusteringStoreIT
         cluster.start();
 
         // when
-        cluster.coreTx( ( coreDB, tx ) ->
+        cluster.primaryTx( ( coreDB, tx ) ->
         {
             Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
@@ -88,7 +88,7 @@ class ConvertNonCausalClusteringStoreIT
         cluster.addReadReplicaWithIndexAndRecordFormat( 4, recordFormat ).start();
 
         // then
-        for ( final CoreClusterMember server : cluster.coreMembers() )
+        for ( final CoreClusterMember server : cluster.primaryMembers() )
         {
             GraphDatabaseFacade db = server.defaultDatabase();
 

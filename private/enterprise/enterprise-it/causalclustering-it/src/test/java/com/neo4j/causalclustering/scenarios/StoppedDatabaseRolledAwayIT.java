@@ -171,7 +171,7 @@ class StoppedDatabaseRolledAwayIT
             var newMember = cluster.addCoreMemberWithIndex( i + 3 );
             newMember.start();
             // remove an old member
-            cluster.removeCoreMemberWithIndex( i );
+            cluster.removePrimaryMemberWithIndex( i );
             cluster.awaitLeader( SYSTEM_DATABASE_NAME );
             cluster.awaitLeader();
         }
@@ -182,11 +182,11 @@ class StoppedDatabaseRolledAwayIT
         fixDiscoveryAddresses( cluster );
         cluster.shutdownReadReplicas();
         cluster.startReadReplicas();
-        cluster.shutdownCoreMembers();
+        cluster.shutdownPrimaryMembers();
 
         if ( unbind )
         {
-            cluster.coreMembers().forEach( this::unbind );
+            cluster.primaryMembers().forEach( this::unbind );
         }
 
         cluster.readReplicas().forEach( rr -> assertEquals( 1, DataCreator.countNodes( rr ) ) );
@@ -210,9 +210,9 @@ class StoppedDatabaseRolledAwayIT
 
     private void fixDiscoveryAddresses( Cluster cluster )
     {
-        var newDiscoveryAddresses = cluster.coreMembers().stream().map( CoreClusterMember::config )
-                .map( config -> config.get( CausalClusteringSettings.discovery_advertised_address ) ).collect( Collectors.toList() );
-        cluster.coreMembers().forEach( member -> member.config().set( CausalClusteringSettings.initial_discovery_members, newDiscoveryAddresses ) );
+        var newDiscoveryAddresses = cluster.primaryMembers().stream().map( CoreClusterMember::config )
+                                           .map( config -> config.get( CausalClusteringSettings.discovery_advertised_address ) ).collect( Collectors.toList() );
+        cluster.primaryMembers().forEach( member -> member.config().set( CausalClusteringSettings.initial_discovery_members, newDiscoveryAddresses ) );
         cluster.readReplicas().forEach( member -> member.config().set( CausalClusteringSettings.initial_discovery_members, newDiscoveryAddresses ) );
     }
 
@@ -234,7 +234,7 @@ class StoppedDatabaseRolledAwayIT
     private void loadDatabase( Cluster cluster )
     {
         var dump = testDirectory.homePath().resolve( "foo.dump" );
-        cluster.coreMembers().forEach( member ->
+        cluster.primaryMembers().forEach( member ->
         {
             try
             {
@@ -269,7 +269,7 @@ class StoppedDatabaseRolledAwayIT
     private void restoreDatabase( Cluster cluster )
     {
         var backup = testDirectory.homePath().resolve( "backups/foo" );
-        cluster.coreMembers().forEach( member ->
+        cluster.primaryMembers().forEach( member ->
         {
             try
             {
@@ -289,7 +289,7 @@ class StoppedDatabaseRolledAwayIT
 
     private void addData( String databaseName, Cluster cluster ) throws Exception
     {
-        cluster.coreTx( databaseName, ( db, tx ) ->
+        cluster.primaryTx( databaseName, ( db, tx ) ->
         {
             Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "id", UUID.randomUUID().toString() );

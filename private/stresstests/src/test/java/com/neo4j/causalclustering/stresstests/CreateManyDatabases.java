@@ -96,7 +96,7 @@ public class CreateManyDatabases extends Workload
         // check so that we actually can write ...
         for ( String databaseName : allDatabases )
         {
-            cluster.coreTx( databaseName, ( db, tx ) ->
+            cluster.primaryTx( databaseName, ( db, tx ) ->
             {
                 tx.createNode( label( databaseName ) ).setProperty( databaseName, databaseName );
                 tx.commit();
@@ -136,9 +136,9 @@ public class CreateManyDatabases extends Workload
         for ( String createdDatabase : createdDatabases )
         {
             Condition<List<ClusterOverviewHelper.MemberInfo>> expected = new HamcrestCondition<>( Matchers.allOf(
-                    containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
+                    containsAllMemberAddresses( cluster.primaryMembers(), cluster.readReplicas() ),
                     containsRole( LEADER, createdDatabase, 1 ),
-                    containsRole( FOLLOWER, createdDatabase, cluster.coreMembers().size() - 1 ),
+                    containsRole( FOLLOWER, createdDatabase, cluster.primaryMembers().size() - 1 ),
                     containsRole( READ_REPLICA, createdDatabase, cluster.readReplicas().size() )
             ) );
 

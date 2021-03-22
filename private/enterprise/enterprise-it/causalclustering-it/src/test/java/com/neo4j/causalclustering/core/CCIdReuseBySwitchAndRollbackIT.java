@@ -68,7 +68,7 @@ class CCIdReuseBySwitchAndRollbackIT
         cluster = clusterFactory.createCluster( clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( CausalClusteringSettings.leader_balancing, "NO_BALANCING" ) );
+                .withSharedPrimaryParam( CausalClusteringSettings.leader_balancing, "NO_BALANCING" ) );
         cluster.start();
     }
 
@@ -87,7 +87,7 @@ class CCIdReuseBySwitchAndRollbackIT
 
         // Instance A is leader
         var instanceA = cluster.awaitLeader();
-        var allMembers = cluster.coreMembers();
+        var allMembers = cluster.primaryMembers();
         // Relationship R, created and in use
         var node = createNode( instanceA );
         var otherNode = createNode( instanceA );
@@ -194,7 +194,7 @@ class CCIdReuseBySwitchAndRollbackIT
     private static List<RaftLogCommitIndexMonitor> registerMonitors( Cluster cluster )
     {
         var monitors = new ArrayList<RaftLogCommitIndexMonitor>();
-        cluster.coreMembers().forEach( coreClusterMember -> {
+        cluster.primaryMembers().forEach( coreClusterMember -> {
             var monitor = new StubRaftLogCommitIndexMonitor();
             var clusterMonitors = coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( RaftMonitors.class );
             clusterMonitors.addMonitorListener( monitor );

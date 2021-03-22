@@ -78,7 +78,7 @@ class ClusterSeedingIT
 
         if ( backupsOpt.isPresent() )
         {
-            for ( var member : realCluster.coreMembers() )
+            for ( var member : realCluster.primaryMembers() )
             {
                 var backups = backupsOpt.get();
                 restoreFromBackup( backups.systemDb(), testDir.getFileSystem(), member, SYSTEM_DATABASE_NAME );
@@ -87,7 +87,7 @@ class ClusterSeedingIT
         }
 
         // we want the cluster to seed from backup. No instance should delete and re-copy the store.
-        realCluster.coreMembers().forEach( member -> member.monitors().addMonitorListener( fileCopyDetector ) );
+        realCluster.primaryMembers().forEach( member -> member.monitors().addMonitorListener( fileCopyDetector ) );
 
         // when
         realCluster.start();
@@ -98,7 +98,7 @@ class ClusterSeedingIT
             var backups = backupsOpt.get();
             var config = Config.defaults( default_database, backups.defaultDb().getFileName().toString() );
             var expectedDbRepresentation = DbRepresentation.of( DatabaseLayout.ofFlat( backups.defaultDb() ), config );
-            dataMatchesEventually( expectedDbRepresentation, DEFAULT_DATABASE_NAME, realCluster.coreMembers() );
+            dataMatchesEventually( expectedDbRepresentation, DEFAULT_DATABASE_NAME, realCluster.primaryMembers() );
         }
         assertEquals( shouldStoreCopy, fileCopyDetector.anyFileInDirectoryWithName( DEFAULT_DATABASE_NAME ) );
     }

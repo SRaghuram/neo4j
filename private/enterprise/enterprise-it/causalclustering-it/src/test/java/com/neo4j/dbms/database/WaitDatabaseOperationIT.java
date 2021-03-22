@@ -75,7 +75,7 @@ public class WaitDatabaseOperationIT
     {
         var responses = operationFunction.apply( driver, "foo" );
         assertResponsesAreSuccessful( responses );
-        var expectedSize = cluster.readReplicas().size() + cluster.coreMembers().size();
+        var expectedSize = cluster.readReplicas().size() + cluster.primaryMembers().size();
         assertThat( responses.responses() ).hasSize( expectedSize );
     }
 
@@ -124,11 +124,11 @@ public class WaitDatabaseOperationIT
 
             assertResponsesAreSuccessful( responses );
             assertDatabaseHasStarted( dbName, cluster );
-            var idBefore = cluster.getCoreMemberByIndex( 0 ).databaseId( dbName );
+            var idBefore = cluster.getPrimaryMemberByIndex( 0 ).databaseId( dbName );
 
             var responsesAfter = session.writeTransaction( tx -> WaitResponses.create( tx.run( "CREATE OR REPLACE DATABASE " + dbName + " WAIT" ) ) );
 
-            var idAfter = cluster.getCoreMemberByIndex( 0 ).databaseId( dbName );
+            var idAfter = cluster.getPrimaryMemberByIndex( 0 ).databaseId( dbName );
             assertResponsesAreSuccessful( responsesAfter );
             assertDatabaseHasStarted( dbName, cluster );
             assertThat( idAfter ).isNotEqualTo( idBefore );

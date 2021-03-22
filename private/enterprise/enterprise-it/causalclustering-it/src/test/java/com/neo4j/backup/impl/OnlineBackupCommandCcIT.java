@@ -140,7 +140,7 @@ class OnlineBackupCommandCcIT
     {
         // given a cluster with backup switched on
         ClusterConfig clusterConfig = defaultClusterConfig( recordFormat )
-                .withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, TRUE )
+                .withSharedPrimaryParam( OnlineBackupSettings.online_backup_enabled, TRUE )
                 .withInstanceCoreParam( online_backup_listen_address, i -> "localhost:" + PortAuthority.allocatePort() );
 
         Cluster cluster = clusterFactory.createCluster( clusterConfig );
@@ -163,7 +163,7 @@ class OnlineBackupCommandCcIT
     {
         // given a cluster with backup switched off
         ClusterConfig clusterConfig = defaultClusterConfig( recordFormat )
-                .withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, FALSE )
+                .withSharedPrimaryParam( OnlineBackupSettings.online_backup_enabled, FALSE )
                 .withInstanceCoreParam( online_backup_listen_address, i -> "localhost:" + PortAuthority.allocatePort() );
 
         Cluster cluster = clusterFactory.createCluster( clusterConfig );
@@ -377,8 +377,8 @@ class OnlineBackupCommandCcIT
         return ClusterConfig.clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withSharedCoreParam( cluster_topology_refresh, "5s" )
-                .withSharedCoreParam( record_format, recordFormat )
+                .withSharedPrimaryParam( cluster_topology_refresh, "5s" )
+                .withSharedPrimaryParam( record_format, recordFormat )
                 .withSharedReadReplicaParam( record_format, recordFormat );
     }
 
@@ -387,7 +387,7 @@ class OnlineBackupCommandCcIT
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withSharedCoreParam( record_format, recordFormat )
+                .withSharedPrimaryParam( record_format, recordFormat )
                 .withSharedReadReplicaParam( record_format, recordFormat )
                 .withIpFamily( IPV6 )
                 .useWildcard( false );
@@ -403,7 +403,7 @@ class OnlineBackupCommandCcIT
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( record_format, recordFormat )
+                .withSharedPrimaryParam( record_format, recordFormat )
                 .withSharedReadReplicaParam( record_format, recordFormat )
                 .withIpFamily( IPV4 )
                 .useWildcard( false );
@@ -422,7 +422,7 @@ class OnlineBackupCommandCcIT
         Arrays.fill( data, (byte) 42 );
         for ( int txId = 0; txId < numberOfTransactions; txId++ )
         {
-            cluster.coreTx( ( coreGraphDatabase, transaction ) ->
+            cluster.primaryTx( ( coreGraphDatabase, transaction ) ->
             {
                 Node node = transaction.createNode();
                 node.setProperty( "data", data );
@@ -500,7 +500,7 @@ class OnlineBackupCommandCcIT
 
     private static void createIndexes( Cluster cluster ) throws Exception
     {
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             tx.schema().indexFor( label( "Person" ) ).on( "id" ).create();
             tx.schema().indexFor( label( "Person" ) ).on( "first_name" ).on( "last_name" ).create();
@@ -512,7 +512,7 @@ class OnlineBackupCommandCcIT
     {
         try
         {
-            cluster.coreTx( ( db, tx ) ->
+            cluster.primaryTx( ( db, tx ) ->
             {
                 Node node = tx.createNode( label( "Person" ) );
                 node.setProperty( "id", ThreadLocalRandom.current().nextLong() );

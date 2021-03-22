@@ -289,11 +289,11 @@ class CustomSecurityInitializationIT
     void shouldDoCustomInitializationClustered( String authEnabled ) throws Exception
     {
         var clusterConfig = ClusterConfig.clusterConfig()
-                .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, authEnabled )
-                .withSharedCoreParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
+                .withSharedPrimaryParam( GraphDatabaseSettings.auth_enabled, authEnabled )
+                .withSharedPrimaryParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
                 .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
-        for ( ClusterMember member : cluster.coreMembers() )
+        for ( ClusterMember member : cluster.primaryMembers() )
         {
             Path home = member.databaseLayout().getNeo4jLayout().homeDirectory();
             org.apache.commons.io.FileUtils.forceMkdir( home.toFile() );
@@ -316,11 +316,11 @@ class CustomSecurityInitializationIT
         TreeSet<String> users = new TreeSet<>();
         users.add( "neo4j" );
         var clusterConfig = ClusterConfig.clusterConfig()
-                .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
-                .withSharedCoreParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
+                .withSharedPrimaryParam( GraphDatabaseSettings.auth_enabled, "true" )
+                .withSharedPrimaryParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
                 .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
-        for ( ClusterMember member : cluster.coreMembers() )
+        for ( ClusterMember member : cluster.primaryMembers() )
         {
             Path home = member.databaseLayout().getNeo4jLayout().homeDirectory();
             org.apache.commons.io.FileUtils.forceMkdir( home.toFile() );
@@ -344,10 +344,10 @@ class CustomSecurityInitializationIT
     {
         TreeSet<String> users = new TreeSet<>();
         users.add( "neo4j" );
-        var clusterConfig = ClusterConfig.clusterConfig().withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" ).withSharedCoreParam(
+        var clusterConfig = ClusterConfig.clusterConfig().withSharedPrimaryParam( GraphDatabaseSettings.auth_enabled, "true" ).withSharedPrimaryParam(
                 GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME ).withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
-        for ( ClusterMember member : cluster.coreMembers() )
+        for ( ClusterMember member : cluster.primaryMembers() )
         {
             Path home = member.databaseLayout().getNeo4jLayout().homeDirectory();
             org.apache.commons.io.FileUtils.forceMkdir( home.toFile() );
@@ -357,7 +357,7 @@ class CustomSecurityInitializationIT
         }
         assertThrows( Exception.class, () -> cluster.start() );
 
-        for ( ClusterMember member : cluster.coreMembers() )
+        for ( ClusterMember member : cluster.primaryMembers() )
         {
             Path home = member.databaseLayout().getNeo4jLayout().homeDirectory();
             // change the role name to be migrated to be show that migration happens now
@@ -381,11 +381,11 @@ class CustomSecurityInitializationIT
     void shouldLogInitializationClustered() throws Exception
     {
         var clusterConfig = ClusterConfig.clusterConfig()
-                                         .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
-                                         .withSharedCoreParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
+                                         .withSharedPrimaryParam( GraphDatabaseSettings.auth_enabled, "true" )
+                                         .withSharedPrimaryParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
                                          .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
-        for ( ClusterMember member : cluster.coreMembers() )
+        for ( ClusterMember member : cluster.primaryMembers() )
         {
             Path home = member.databaseLayout().getNeo4jLayout().homeDirectory();
             org.apache.commons.io.FileUtils.forceMkdir( home.toFile() );
@@ -409,8 +409,8 @@ class CustomSecurityInitializationIT
     void shouldFailOnMissingCustomInitializationClustered()
     {
         var clusterConfig = ClusterConfig.clusterConfig()
-                                         .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
-                                         .withSharedCoreParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
+                                         .withSharedPrimaryParam( GraphDatabaseSettings.auth_enabled, "true" )
+                                         .withSharedPrimaryParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
                                          .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
         Exception exception = assertThrows( Exception.class, () -> cluster.start() );

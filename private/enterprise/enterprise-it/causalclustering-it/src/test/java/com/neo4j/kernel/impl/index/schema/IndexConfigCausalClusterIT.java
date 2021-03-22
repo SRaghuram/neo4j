@@ -65,7 +65,7 @@ class IndexConfigCausalClusterIT
     {
         // Make sure spatial settings are indeed unique per core member.
         Set<Integer> existingSettingsValues = new HashSet<>();
-        for ( CoreClusterMember coreMember : cluster.coreMembers() )
+        for ( CoreClusterMember coreMember : cluster.primaryMembers() )
         {
             final int maxXAsInt = coreMember.config().get( configuredSetting ).get( 0 ).intValue();
             assertTrue( existingSettingsValues.add( maxXAsInt ),
@@ -73,18 +73,18 @@ class IndexConfigCausalClusterIT
         }
 
         // Create index and make sure it propagates to all cores.
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             IndexDefinitionImpl indexDefinition = (IndexDefinitionImpl) tx.schema().indexFor( LABEL_ONE ).on( prop ).create();
             index = indexDefinition.getIndexReference();
             tx.commit();
         } );
 
-        DataMatching.dataMatchesEventually( cluster.awaitLeader(), cluster.coreMembers() );
+        DataMatching.dataMatchesEventually( cluster.awaitLeader(), cluster.primaryMembers() );
 
         // Validate index has the same config on all cores even though they are configured with different settings.
         Map<String,Value> first = null;
-        for ( CoreClusterMember coreMember : cluster.coreMembers() )
+        for ( CoreClusterMember coreMember : cluster.primaryMembers() )
         {
             if ( first == null )
             {

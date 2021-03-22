@@ -61,13 +61,13 @@ class CausalClusterMetricIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( noCoreMembers )
                 .withNumberOfReadReplicas( 1 )
-                .withSharedCoreParam( MetricsSettings.metrics_enabled, TRUE )
+                .withSharedPrimaryParam( MetricsSettings.metrics_enabled, TRUE )
                 .withSharedReadReplicaParam( MetricsSettings.metrics_enabled, TRUE )
-                .withSharedCoreParam( MetricsSettings.csv_enabled, TRUE )
+                .withSharedPrimaryParam( MetricsSettings.csv_enabled, TRUE )
                 .withSharedReadReplicaParam( MetricsSettings.csv_enabled, TRUE )
-                .withSharedCoreParam( MetricsSettings.metrics_filter, "*" )
+                .withSharedPrimaryParam( MetricsSettings.metrics_filter, "*" )
                 .withSharedReadReplicaParam( MetricsSettings.metrics_filter, "*" )
-                .withSharedCoreParam( MetricsSettings.csv_interval, "100ms" )
+                .withSharedPrimaryParam( MetricsSettings.csv_interval, "100ms" )
                 .withSharedReadReplicaParam( MetricsSettings.csv_interval, "100ms" );
 
         cluster = clusterFactory.createCluster( clusterConfig );
@@ -126,7 +126,7 @@ class CausalClusterMetricIT
     void shouldMonitorRaft() throws Exception
     {
         // when
-        var coreMember = cluster.coreTx( ( db, tx ) ->
+        var coreMember = cluster.primaryTx( ( db, tx ) ->
         {
             var node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
@@ -134,7 +134,7 @@ class CausalClusterMetricIT
         } );
 
         // then
-        for ( var db : cluster.coreMembers() )
+        for ( var db : cluster.primaryMembers() )
         {
             assertAllNodesVisible( db.defaultDatabase() );
         }
@@ -159,7 +159,7 @@ class CausalClusterMetricIT
         assertEventually( "tx pull requests received eventually accurate", () ->
         {
             long total = 0;
-            for ( var member : cluster.coreMembers() )
+            for ( var member : cluster.primaryMembers() )
             {
                 total += readLongCounterValue( raftMetricsFile( member, "catchup.tx_pull_requests_received" ) );
             }

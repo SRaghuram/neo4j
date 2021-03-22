@@ -43,7 +43,7 @@ class ClusterDatabaseManagementWithReducedAvailabilityIT
     {
         ClusterConfig clusterConfig = ClusterConfig
                 .clusterConfig()
-                .withSharedCoreParam( BoltConnector.enabled, "false" )
+                .withSharedPrimaryParam( BoltConnector.enabled, "false" )
                 .withSharedReadReplicaParam( BoltConnector.enabled, "false" )
                 .withNumberOfCoreMembers( initialCores )
                 .withNumberOfReadReplicas( initialReplicas );
@@ -177,7 +177,7 @@ class ClusterDatabaseManagementWithReducedAvailabilityIT
     private static Set<ClusterMember> shutdownMembers( Cluster cluster, int coresToShutdown, int replicasToShutdown )
     {
         Set<ClusterMember> deadMembers = concat(
-                cluster.coreMembers().stream().limit( coresToShutdown ),
+                cluster.primaryMembers().stream().limit( coresToShutdown ),
                 cluster.readReplicas().stream().limit( replicasToShutdown ) )
                 .collect( toSet() );
         deadMembers.forEach( ClusterMember::shutdown );

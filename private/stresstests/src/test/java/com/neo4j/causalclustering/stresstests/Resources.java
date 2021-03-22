@@ -61,7 +61,7 @@ class Resources
                 .withNumberOfCoreMembers( numberOfCores )
                 .withNumberOfReadReplicas( numberOfReadReplicas )
                 .withDiscoveryServiceType( DiscoveryServiceType.AKKA )
-                .withSharedCoreParams( coreParams )
+                .withSharedPrimaryParams( coreParams )
                 .withSharedReadReplicaParams( readReplicaParams )
                 .withRecordFormat( Standard.LATEST_NAME )
                 .withIpFamily( IpFamily.IPV4 )

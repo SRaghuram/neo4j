@@ -50,7 +50,7 @@ class ClusterCompressionIT
 
         // then
         assertEquals( numberOfNodes, DataCreator.countNodes( leader ) );
-        dataMatchesEventually( leader, cluster.coreMembers() );
+        dataMatchesEventually( leader, cluster.primaryMembers() );
     }
 
     private ClusterConfig newClusterConfig( ModifierProtocol modifierProtocol )
@@ -58,7 +58,7 @@ class ClusterCompressionIT
         return clusterConfig()
                 .withNumberOfCoreMembers( 2 )
                 .withNumberOfReadReplicas( 1 )
-                .withSharedCoreParam( compression_implementations, modifierProtocol.implementation() )
+                .withSharedPrimaryParam( compression_implementations, modifierProtocol.implementation() )
                 .withSharedReadReplicaParam( compression_implementations, modifierProtocol.implementation() );
     }
 }

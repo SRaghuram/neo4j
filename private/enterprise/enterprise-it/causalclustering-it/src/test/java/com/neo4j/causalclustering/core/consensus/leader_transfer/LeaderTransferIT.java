@@ -65,10 +65,10 @@ class LeaderTransferIT
     {
         var cluster = clusterFactory.createCluster(
                 clusterConfig()
-                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( DEFAULT_DATABASE_NAME ).leadership_priority_group, "prio" )
-                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).leadership_priority_group, "prio" )
-                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( databaseFoo ).leadership_priority_group, priFoo )
-                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( databaseBar ).leadership_priority_group, prioBar )
+                        .withSharedPrimaryParam( new LeadershipPriorityGroupSetting( DEFAULT_DATABASE_NAME ).leadership_priority_group, "prio" )
+                        .withSharedPrimaryParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).leadership_priority_group, "prio" )
+                        .withSharedPrimaryParam( new LeadershipPriorityGroupSetting( databaseFoo ).leadership_priority_group, priFoo )
+                        .withSharedPrimaryParam( new LeadershipPriorityGroupSetting( databaseBar ).leadership_priority_group, prioBar )
                         .withNumberOfCoreMembers( 3 )
                         .withInstanceCoreParam( CausalClusteringSettings.server_groups, value ->
                         {
@@ -84,7 +84,7 @@ class LeaderTransferIT
                             }
                             return "";
                         } )
-                        .withSharedCoreParam( CausalClusteringInternalSettings.leader_transfer_interval, "5s" ) );
+                        .withSharedPrimaryParam( CausalClusteringInternalSettings.leader_transfer_interval, "5s" ) );
 
         cluster.start();
         return cluster;
@@ -116,8 +116,8 @@ class LeaderTransferIT
         assertDatabaseEventuallyStarted( databaseFoo, cluster );
         assertDatabaseEventuallyStarted( databaseBar, cluster );
 
-        assertLeaderIsOnCorrectMember( cluster, databaseBar, cluster.getCoreMemberByIndex( BAR_MEMBER_ID ) );
-        assertLeaderIsOnCorrectMember( cluster, databaseFoo, cluster.getCoreMemberByIndex( FOO_MEMBER_ID ) );
+        assertLeaderIsOnCorrectMember( cluster, databaseBar, cluster.getPrimaryMemberByIndex( BAR_MEMBER_ID ) );
+        assertLeaderIsOnCorrectMember( cluster, databaseFoo, cluster.getPrimaryMemberByIndex( FOO_MEMBER_ID ) );
     }
 
     @Test
@@ -127,9 +127,9 @@ class LeaderTransferIT
         var config = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( CausalClusteringSettings.default_leadership_priority_group, "default_prio" )
-                .withSharedCoreParam( CausalClusteringInternalSettings.leader_transfer_interval, "5s" )
-                .withSharedCoreParam( CausalClusteringSettings.leader_balancing, "equal_balancing" );
+                .withSharedPrimaryParam( CausalClusteringSettings.default_leadership_priority_group, "default_prio" )
+                .withSharedPrimaryParam( CausalClusteringInternalSettings.leader_transfer_interval, "5s" )
+                .withSharedPrimaryParam( CausalClusteringSettings.leader_balancing, "equal_balancing" );
         var cluster = clusterFactory.createCluster( config );
 
         cluster.start();
@@ -170,9 +170,9 @@ class LeaderTransferIT
         var config = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).leadership_priority_group, "prio" )
-                .withSharedCoreParam( CausalClusteringInternalSettings.leader_transfer_interval, "5s" )
-                .withSharedCoreParam( CausalClusteringSettings.leader_balancing, "equal_balancing" );
+                .withSharedPrimaryParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).leadership_priority_group, "prio" )
+                .withSharedPrimaryParam( CausalClusteringInternalSettings.leader_transfer_interval, "5s" )
+                .withSharedPrimaryParam( CausalClusteringSettings.leader_balancing, "equal_balancing" );
         var cluster = clusterFactory.createCluster( config );
         cluster.start();
 
@@ -223,7 +223,7 @@ class LeaderTransferIT
     private static boolean hasAnyLeaderships( Cluster cluster, CoreClusterMember member, List<String> dbNames )
     {
         return dbNames.stream()
-                      .map( dbName -> cluster.getMemberWithAnyRole( dbName, Role.LEADER ) )
+                      .map( dbName -> cluster.getPrimaryWithAnyRole( dbName, Role.LEADER ) )
                       .anyMatch( m -> Objects.equals( member, m ) );
     }
 }

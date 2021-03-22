@@ -56,7 +56,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     @Test
     void shouldExposeRoutingProceduresOnCores()
     {
-        assertAll( cluster.coreMembers().stream().map( this::assertRoutingProceduresAvailable ) );
+        assertAll( cluster.primaryMembers().stream().map( this::assertRoutingProceduresAvailable ) );
     }
 
     @Test
@@ -70,7 +70,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     {
         String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-        assertAll( cluster.coreMembers().stream().map( core -> assertRoutingProceduresAvailable( core, databaseName ) ) );
+        assertAll( cluster.primaryMembers().stream().map( core -> assertRoutingProceduresAvailable( core, databaseName ) ) );
     }
 
     @Test
@@ -86,7 +86,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     {
         String unknownDatabaseName = "non-existing-core-database";
 
-        assertAll( cluster.coreMembers().stream().map( core ->
+        assertAll( cluster.primaryMembers().stream().map( core ->
                 () -> assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, core.defaultDatabase() ) ) );
     }
 
@@ -109,7 +109,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
         stopDatabase( databaseName, cluster );
         assertDatabaseEventuallyStopped( databaseName, cluster );
 
-        assertAll( cluster.coreMembers().stream().map( this::assertRoutingProceduresAvailable ) );
+        assertAll( cluster.primaryMembers().stream().map( this::assertRoutingProceduresAvailable ) );
     }
 
     @Test
@@ -117,7 +117,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     {
         String unknownDatabaseName = "non-existing-core-database";
 
-        assertAll( cluster.coreMembers().stream().map( core ->
+        assertAll( cluster.primaryMembers().stream().map( core ->
                 () -> assertRoutingDriverFailsForUnknownDatabase( core.boltAdvertisedAddress(), unknownDatabaseName ) ) );
     }
 
@@ -133,7 +133,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     @Test
     void shouldAllowRoutingDriverToReadAndWriteWhenCreatedWithCoreAddress()
     {
-        assertAll( cluster.coreMembers()
+        assertAll( cluster.primaryMembers()
                 .stream()
                 .map( member -> () -> assertPossibleToReadAndWriteUsingRoutingDriver( member.boltAdvertisedAddress() ) ) );
     }
@@ -158,9 +158,9 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     void allowingLeaderAsReadEndpointDynamicallyShouldReturnAllMembersAsReadEndpoints()
     {
         setAllowReadFromLeader( true );
-        assertAll( cluster.coreMembers().stream().map( this::assertRoutingProceduresAvailableWithAllowReadFromLeader ) );
+        assertAll( cluster.primaryMembers().stream().map( this::assertRoutingProceduresAvailableWithAllowReadFromLeader ) );
         setAllowReadFromLeader( false );
-        assertAll( cluster.coreMembers().stream().map( this::assertRoutingProceduresAvailable ) );
+        assertAll( cluster.primaryMembers().stream().map( this::assertRoutingProceduresAvailable ) );
     }
 
     private Executable assertRoutingProceduresAvailable( CoreClusterMember coreMember )
@@ -186,12 +186,12 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
 
             var writers = singletonList( boltAddress( leader ) );
 
-            var readers = Stream.concat( cluster.coreMembers().stream(), cluster.readReplicas().stream() )
+            var readers = Stream.concat( cluster.primaryMembers().stream(), cluster.readReplicas().stream() )
                     .filter( member -> allowReadFromLeader || !member.equals( leader ) ) // leader is a writer and router, not a reader (unless enabled)
                     .map( this::boltAddress )
                     .collect( toList() );
 
-            var routers = cluster.coreMembers()
+            var routers = cluster.primaryMembers()
                     .stream()
                     .map( this::boltAddress )
                     .collect( toList() );

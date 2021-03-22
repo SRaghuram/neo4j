@@ -54,9 +54,9 @@ class ClusterOverviewIT
     private static final String DB = DEFAULT_DATABASE_NAME;
 
     private final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
-            .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
+            .withSharedPrimaryParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
             .withSharedReadReplicaParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
-            .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
+            .withSharedPrimaryParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
             .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() );
 
     @Nested
@@ -67,7 +67,7 @@ class ClusterOverviewIT
         private ClusterFactory clusterFactory;
 
         private Cluster cluster;
-        private int initialCoreMembers;
+        private int initialPrimaryMembers;
         private int initialReadReplicas;
 
         @BeforeAll
@@ -80,7 +80,7 @@ class ClusterOverviewIT
         @BeforeEach
         void countInitialMembers()
         {
-            initialCoreMembers = cluster.coreMembers().size();
+            initialPrimaryMembers = cluster.primaryMembers().size();
             initialReadReplicas = cluster.readReplicas().size();
         }
 
@@ -89,9 +89,9 @@ class ClusterOverviewIT
         {
             // when
             Matcher<List<ClusterOverviewHelper.MemberInfo>> expected = Matchers.allOf(
-                    ClusterOverviewHelper.containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
+                    ClusterOverviewHelper.containsAllMemberAddresses( cluster.primaryMembers(), cluster.readReplicas() ),
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
-                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialCoreMembers - 1 ),
+                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialPrimaryMembers - 1 ),
                     ClusterOverviewHelper.containsRole( READ_REPLICA, DB, initialReadReplicas ) );
 
             // then
@@ -102,13 +102,13 @@ class ClusterOverviewIT
         void shouldDiscoverReadReplicasAfterRestartingCores() throws Exception
         {
             // when
-            cluster.shutdownCoreMembers();
+            cluster.shutdownPrimaryMembers();
             cluster.startCoreMembers();
 
             Matcher<List<ClusterOverviewHelper.MemberInfo>> expected = Matchers.allOf(
-                    ClusterOverviewHelper.containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
+                    ClusterOverviewHelper.containsAllMemberAddresses( cluster.primaryMembers(), cluster.readReplicas() ),
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
-                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialCoreMembers - 1 ),
+                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialPrimaryMembers - 1 ),
                     ClusterOverviewHelper.containsRole( READ_REPLICA, DB, initialReadReplicas ) );
 
             // then
@@ -120,7 +120,7 @@ class ClusterOverviewIT
         {
             // when
             int extraCoreMembers = 2;
-            int finalCoreMembers = initialCoreMembers + extraCoreMembers;
+            int finalCoreMembers = initialPrimaryMembers + extraCoreMembers;
 
             CoreClusterMember[] newCoreMembers =
                     IntStream.range( 0, extraCoreMembers ).mapToObj( ignored -> cluster.newCoreMember() ).toArray( CoreClusterMember[]::new );
@@ -128,7 +128,7 @@ class ClusterOverviewIT
             Cluster.startMembers( newCoreMembers );
 
             Matcher<List<ClusterOverviewHelper.MemberInfo>> expected = Matchers.allOf(
-                    ClusterOverviewHelper.containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
+                    ClusterOverviewHelper.containsAllMemberAddresses( cluster.primaryMembers(), cluster.readReplicas() ),
                     ClusterOverviewHelper.containsRole( READ_REPLICA, DB, initialReadReplicas ),
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, DB, finalCoreMembers - 1 ) );
@@ -150,9 +150,9 @@ class ClusterOverviewIT
             Cluster.startMembers( newReadReplicas );
 
             Matcher<List<ClusterOverviewHelper.MemberInfo>> expected = Matchers.allOf(
-                    ClusterOverviewHelper.containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
+                    ClusterOverviewHelper.containsAllMemberAddresses( cluster.primaryMembers(), cluster.readReplicas() ),
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
-                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialCoreMembers - 1 ),
+                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialPrimaryMembers - 1 ),
                     ClusterOverviewHelper.containsRole( READ_REPLICA, DB, finalReadReplicas ) );
 
             // then
@@ -178,20 +178,20 @@ class ClusterOverviewIT
         {
             // given
             int coresToRemove = 2;
-            assertTrue( initialCoreMembers > coresToRemove, "Expected at least " + initialCoreMembers + " cores. Found " + initialCoreMembers );
+            assertTrue( initialPrimaryMembers > coresToRemove, "Expected at least " + initialPrimaryMembers + " cores. Found " + initialPrimaryMembers );
 
             ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
-                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialCoreMembers - 1 ) ) ) );
+                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialPrimaryMembers - 1 ) ) ) );
 
             // when
-            List<CoreClusterMember> coreMembersToRemove = cluster.coreMembers().stream().skip( initialCoreMembers - coresToRemove ).collect( toList() );
-            cluster.removeCoreMembers( coreMembersToRemove );
+            List<CoreClusterMember> primaryToRemove = cluster.primaryMembers().stream().skip( initialPrimaryMembers - coresToRemove ).collect( toList() );
+            cluster.removePrimaryMembers( primaryToRemove );
 
             // then
             ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
-                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialCoreMembers - 1 - coresToRemove ) ) ),
+                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialPrimaryMembers - 1 - coresToRemove ) ) ),
                     asSet( 0, 1 ), Collections.emptySet() );
         }
     }
@@ -209,7 +209,7 @@ class ClusterOverviewIT
         {
             Cluster cluster = clusterFactory.createCluster( clusterConfig.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 6 ) );
             cluster.start();
-            int coreMembers = cluster.coreMembers().size();
+            int coreMembers = cluster.primaryMembers().size();
             int readReplicas = cluster.readReplicas().size();
 
             ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( Matchers.allOf(
@@ -217,7 +217,7 @@ class ClusterOverviewIT
                     ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 1 ),
                     ClusterOverviewHelper.containsRole( READ_REPLICA, DB, readReplicas ) ) ) );
 
-            cluster.removeCoreMemberWithIndex( getRunningCoreIndex( cluster ) );
+            cluster.removePrimaryMemberWithIndex( getRunningCoreIndex( cluster ) );
 
             ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
@@ -240,8 +240,8 @@ class ClusterOverviewIT
             cluster.start();
 
             CoreClusterMember leader = cluster.awaitLeader();
-            List<CoreClusterMember> followers = cluster.getAllMembersWithRole( Role.FOLLOWER );
-            cluster.removeCoreMembers( followers );
+            List<CoreClusterMember> followers = cluster.getAllPrimariesWithRole( Role.FOLLOWER );
+            cluster.removePrimaryMembers( followers );
 
             ClusterOverviewHelper.assertEventualOverview( new HamcrestCondition<>( ClusterOverviewHelper.containsRole( LEADER, DB, 0 ) ), leader );
         }
@@ -254,7 +254,7 @@ class ClusterOverviewIT
             Cluster cluster = clusterFactory.createCluster( clusterConfig
                     .withNumberOfCoreMembers( coreMembers )
                     .withNumberOfReadReplicas( readReplicas )
-                    .withSharedCoreParam( CausalClusteringSettings.enable_pre_voting, FALSE ) ); // triggering elections doesn't work otherwise
+                    .withSharedPrimaryParam( CausalClusteringSettings.enable_pre_voting, FALSE ) ); // triggering elections doesn't work otherwise
             cluster.start();
 
             CoreClusterMember leader = cluster.awaitLeader();
@@ -276,6 +276,6 @@ class ClusterOverviewIT
 
     private static int getRunningCoreIndex( Cluster cluster )
     {
-        return cluster.coreMembers().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Unable to find a running core" ) ).index();
+        return cluster.primaryMembers().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Unable to find a running core" ) ).index();
     }
 }

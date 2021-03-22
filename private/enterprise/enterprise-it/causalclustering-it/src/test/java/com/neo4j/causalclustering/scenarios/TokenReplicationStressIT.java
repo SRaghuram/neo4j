@@ -77,8 +77,8 @@ class TokenReplicationStressIT
         cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig()
                                                              .withNumberOfCoreMembers( 3 )
                                                              .withNumberOfReadReplicas( 0 )
-                                                             .withSharedCoreParam( leader_failure_detection_window, "2s-3s" )
-                                                             .withSharedCoreParam( election_failure_detection_window, "2s-3s" ) );
+                                                             .withSharedPrimaryParam( leader_failure_detection_window, "2s-3s" )
+                                                             .withSharedPrimaryParam( election_failure_detection_window, "2s-3s" ) );
 
         cluster.start();
         assertDatabaseEventuallyStarted( DEFAULT_DATABASE_NAME, cluster );
@@ -294,7 +294,7 @@ class TokenReplicationStressIT
 
     private static void verifyTokens( String tokenType, Cluster cluster, Function<CoreClusterMember,List<String>> tokensExtractor )
     {
-        List<List<String>> tokensFromAllMembers = cluster.coreMembers()
+        List<List<String>> tokensFromAllMembers = cluster.primaryMembers()
                 .stream()
                 .map( tokensExtractor )
                 .collect( toList() );

@@ -43,7 +43,7 @@ public class DataCreator
 
     public static CoreClusterMember createDataInOneTransaction( Cluster cluster, int size ) throws Exception
     {
-        return cluster.coreTx( ( db, tx ) ->
+        return cluster.primaryTx( ( db, tx ) ->
         {
             for ( int i = 0; i < size; i++ )
             {
@@ -68,7 +68,7 @@ public class DataCreator
         CoreClusterMember last = null;
         for ( int i = 0; i < numberOfNodes; i++ )
         {
-            last = cluster.coreTx( ( db, tx ) ->
+            last = cluster.primaryTx( ( db, tx ) ->
             {
                 Node node = tx.createNode( label );
                 node.setProperty( propertyPair.get().first(), propertyPair.get().other() );
@@ -83,7 +83,7 @@ public class DataCreator
         CoreClusterMember last = null;
         for ( int i = 0; i < numberOfNodes; i++ )
         {
-            last = cluster.coreTx( ( db, tx ) ->
+            last = cluster.primaryTx( ( db, tx ) ->
             {
                 tx.createNode();
                 tx.commit();
@@ -111,7 +111,7 @@ public class DataCreator
 
     public static void createSchema( Cluster cluster ) throws Exception
     {
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             tx.schema().constraintFor( LABEL ).assertPropertyIsUnique( NODE_PROPERTY_1 ).create();
             tx.commit();

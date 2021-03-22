@@ -83,7 +83,7 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
       r.columnAs[String]("state").forEachRemaining(state => state shouldBe "CaughtUp")
       tx.commit()
     }
-    cluster.coreTx(SYSTEM_DATABASE_NAME, Role.LEADER, work, 3, TimeUnit.MINUTES, "joe", "soap")
+    cluster.primaryTx(SYSTEM_DATABASE_NAME, Role.LEADER, work, 3, TimeUnit.MINUTES, "joe", "soap")
 
     // THEN
     assertDatabaseHasStarted("db1", cluster)

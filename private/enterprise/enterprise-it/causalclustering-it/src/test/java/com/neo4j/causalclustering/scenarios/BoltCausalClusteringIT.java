@@ -104,7 +104,7 @@ class BoltCausalClusteringIT
         void shouldExecuteReadAndWritesWhenDriverSuppliedWithAddressOfLeader() throws Exception
         {
             //given
-            cluster.coreTx( ( db, tx ) ->
+            cluster.primaryTx( ( db, tx ) ->
             {
                 Iterators.count( tx.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
                 tx.commit();
@@ -116,7 +116,7 @@ class BoltCausalClusteringIT
             // then
             assertEquals( 1, count );
 
-            cluster.coreTx( ( db, tx ) ->
+            cluster.primaryTx( ( db, tx ) ->
             {
                 Iterators.count( tx.execute( "DROP CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
                 tx.commit();
@@ -127,7 +127,7 @@ class BoltCausalClusteringIT
         void shouldExecuteReadAndWritesWhenDriverSuppliedWithAddressOfFollower() throws Exception
         {
             //given
-            cluster.coreTx( ( db, tx ) ->
+            cluster.primaryTx( ( db, tx ) ->
             {
                 Iterators.count( tx.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
                 tx.commit();
@@ -139,7 +139,7 @@ class BoltCausalClusteringIT
             // then
             assertEquals( 1, count );
 
-            cluster.coreTx( ( db, tx ) ->
+            cluster.primaryTx( ( db, tx ) ->
             {
                 Iterators.count( tx.execute( "DROP CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
                 tx.commit();
@@ -435,11 +435,11 @@ class BoltCausalClusteringIT
                     .clusterConfig()
                     .withNumberOfCoreMembers( 3 )
                     .withNumberOfReadReplicas( 1 )
-                    .withSharedCoreParam( cluster_topology_refresh, "5s" )
+                    .withSharedPrimaryParam( cluster_topology_refresh, "5s" )
                     .withSharedReadReplicaParam( cluster_topology_refresh, "5s" )
-                    .withSharedCoreParam( cluster_allow_reads_on_followers, "false" )
+                    .withSharedPrimaryParam( cluster_allow_reads_on_followers, "false" )
                     .withSharedReadReplicaParam( GraphDatabaseSettings.bookmark_ready_timeout, "1s" )
-                    .withSharedCoreParam( GraphDatabaseSettings.routing_ttl, "1s" ) );
+                    .withSharedPrimaryParam( GraphDatabaseSettings.routing_ttl, "1s" ) );
             cluster.start();
 
             try ( Driver driver = makeDriver( cluster ) )
@@ -510,7 +510,7 @@ class BoltCausalClusteringIT
                             GraphDatabaseSettings.check_point_interval_time.name(), "100ms", CausalClusteringSettings.cluster_allow_reads_on_followers.name(),
                             FALSE );
 
-            Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withSharedCoreParams( params ).withNumberOfReadReplicas( 1 ) );
+            Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withSharedPrimaryParams( params ).withNumberOfReadReplicas( 1 ) );
             cluster.start();
 
             int happyCount;

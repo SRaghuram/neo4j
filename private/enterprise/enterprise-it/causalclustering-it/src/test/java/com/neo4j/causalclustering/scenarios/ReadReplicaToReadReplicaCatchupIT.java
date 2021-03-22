@@ -53,8 +53,8 @@ class ReadReplicaToReadReplicaCatchupIT
                 .withClusterType( clusterType )
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
-                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
+                .withSharedPrimaryParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
+                .withSharedPrimaryParam( CausalClusteringSettings.multi_dc_license, TRUE )
                 .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE );
         cluster = clusterFactory.start( clusterConfig );
     }
@@ -66,7 +66,7 @@ class ReadReplicaToReadReplicaCatchupIT
         // given
         int numberOfNodesToCreate = 100;
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             tx.schema().constraintFor( label( "Foo" ) ).assertPropertyIsUnique( "foobar" ).create();
             tx.commit();
@@ -81,7 +81,7 @@ class ReadReplicaToReadReplicaCatchupIT
 
         checkDataHasReplicatedToReadReplicas( cluster, numberOfNodesToCreate );
 
-        for ( CoreClusterMember coreClusterMember : cluster.coreMembers() )
+        for ( CoreClusterMember coreClusterMember : cluster.primaryMembers() )
         {
             coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( CatchupServerProvider.class ).catchupServer().stop();
         }
@@ -107,7 +107,7 @@ class ReadReplicaToReadReplicaCatchupIT
         int numberOfNodes = 1;
         int firstReadReplicaLocalIndex = 101;
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.primaryTx( ( db, tx ) ->
         {
             tx.schema().constraintFor( label( "Foo" ) ).assertPropertyIsUnique( "foobar" ).create();
             tx.commit();

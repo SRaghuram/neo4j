@@ -62,7 +62,7 @@ class SystemGraphSecurityReplicationIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withSharedCoreParams( params )
+                .withSharedPrimaryParams( params )
                 .withSharedReadReplicaParams( params );
 
         cluster = clusterFactory.createCluster( clusterConfig );
@@ -74,7 +74,7 @@ class SystemGraphSecurityReplicationIT
     {
         var expectedRoles = Set.of( ADMIN, ARCHITECT, EDITOR, PUBLISHER, READER, PUBLIC );
 
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             await( () -> getAllRoleNames( core.managementService() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
         }
@@ -97,7 +97,7 @@ class SystemGraphSecurityReplicationIT
             tx.commit();
         } );
 
-        for ( var core : cluster.coreMembers() )
+        for ( var core : cluster.primaryMembers() )
         {
             await( () -> userCanLogin( username, password, core.defaultDatabase() ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
         }
