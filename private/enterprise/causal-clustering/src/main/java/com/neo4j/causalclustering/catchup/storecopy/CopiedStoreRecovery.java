@@ -60,7 +60,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
     {
         StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck( fs, databaseLayout, config, pageCache, NullLogService.getInstance(),
                 databaseTracers.getPageCacheTracer() );
-        return canRecoverRemoteStore( storeVersionCheck, remoteStoreVersion );
+        return canRecoverRemoteStore( storeVersionCheck, remoteStoreVersion, config );
     }
 
     public synchronized void recoverCopiedStore( Config config, DatabaseLayout databaseLayout ) throws DatabaseShutdownException, IOException
@@ -77,7 +77,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         if ( storeVersion.isPresent() )
         {
             //It is ok to have recover an older version of the store. In that case we will migrate it after recovery. Minor migrations are fast
-            if ( !canRecoverRemoteStore( storeVersionCheck, storeVersionCheck.versionInformation( storeVersion.get() ) ) )
+            if ( !canRecoverRemoteStore( storeVersionCheck, storeVersionCheck.versionInformation( storeVersion.get() ), config ) )
             {
                 throw new RuntimeException( failedToStartMessage( config ) );
             }
@@ -97,10 +97,9 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         }
     }
 
-    private boolean canRecoverRemoteStore( StoreVersionCheck storeVersionCheck, StoreVersion remoteStoreVersion )
+    private boolean canRecoverRemoteStore( StoreVersionCheck storeVersionCheck, StoreVersion remoteStoreVersion, Config config )
     {
-        String storeVersion = storeVersionCheck.configuredVersion(); //When can this be null? Kept for compatibility reasons
-        return storeVersion == null || StoreValidation.validRemoteToUseStoreFrom( storageEngineFactory.versionInformation( storeVersion ), remoteStoreVersion );
+        return StoreValidation.validRemoteToUseStoreFrom( storeVersionCheck, remoteStoreVersion, config, storageEngineFactory );
     }
 
     private Optional<String> getStoreVersion( StoreVersionCheck storeVersionCheck, PageCacheTracer pageCacheTracer )

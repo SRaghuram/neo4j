@@ -5,6 +5,7 @@
  */
 package com.neo4j.upgrade;
 
+import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
@@ -105,6 +106,31 @@ class StoreCopyOnUpgradeIT
     void shouldHandleStoreCopyOfOldStoreToNewVersion( MemberFactory factory, boolean seed, String unusedDisplayName ) throws Exception
     {
         ClusterMember member = addAndStartMemberWithNewVersionUnderLoad( factory, seed, WithExtraAdditiveCapability.NAME );
+        try
+        {
+            assertDatabaseHasStarted( DEFAULT_DATABASE_NAME, cluster );
+        }
+        catch ( AssertionError e )
+        {
+            Path logFile = member.config().get( GraphDatabaseSettings.store_internal_log_path );
+            e.initCause( new Exception( cropLogToMessage( logFile, "Exception" ) ) ); //Decorate failure with exceptions from debug log
+            throw e;
+        }
+    }
+
+    @ParameterizedTest( name = "{2}" )
+    @MethodSource( "shouldHandleStoreCopyOfOldStoreToNewVersionArgs" )
+    void shouldHandleMultipleDatabasesOfDifferentVersion( MemberFactory factory, boolean seed, String unusedDisplayName ) throws Exception
+    {
+        String latestOfCurrentFormat = ""; //Empty means latest of what ever format you are on, with default for new db's
+        CoreClusterMember newCore = cluster.newCoreMemberWithRecordFormat( latestOfCurrentFormat );
+        newCore.start();
+
+        //Switch leader to ensure the new DB will be default format
+        CausalClusteringTestHelpers.switchLeaderTo( cluster, newCore );
+        cluster.systemTx( ( db, tx ) -> tx.execute( "CREATE DATABASE DBOnDefaultFormat" ) );
+
+        ClusterMember member = addAndStartMemberWithNewVersionUnderLoad( factory, seed, latestOfCurrentFormat );
         try
         {
             assertDatabaseHasStarted( DEFAULT_DATABASE_NAME, cluster );
