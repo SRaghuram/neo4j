@@ -57,21 +57,16 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
       eventuallyConsistent -> false),
     "indexProvider" -> fulltextProvider)
 
-  private val label = "Label"
   private val label2 = "Label2"
   private val labelWhitespace = "Label 1"
   private val labelWhitespace2 = "Label 2"
   private val labelBackticks = "`Label``3`"
   private val labelBackticks2 = "Label`4``"
 
-  private val relType = "relType"
   private val relType2 = "relType2"
   private val relTypeWhitespace = "reltype 3"
   private val relTypeBackticks = "`rel`type`"
 
-  private val prop = "prop"
-  private val prop2 = "prop2"
-  private val prop3 = "prop3"
   private val propWhitespace = "prop 1"
   private val propWhitespace2 = "prop 2"
   private val propBackticks = "`prop`4"

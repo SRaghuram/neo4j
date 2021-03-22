@@ -15,144 +15,144 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should create relationship property existence constraint (old syntax)") {
     // WHEN
-    executeSingle("CREATE CONSTRAINT ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    executeSingle(s"CREATE CONSTRAINT ON ()-[r:$stableEntity]-() ASSERT EXISTS (r.$stableProp)")
 
     // THEN
 
     // get by schema
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("constraint_6c4e7adb")
+    graph.getRelationshipConstraint(stableEntity, stableProp).getName should be("constraint_782743d3")
 
     // get by name
-    val (relType, properties) = graph.getConstraintSchemaByName("constraint_6c4e7adb")
-    relType should be("HasPet")
-    properties should be(Seq("since"))
+    val (relType, properties) = graph.getConstraintSchemaByName("constraint_782743d3")
+    relType should be(stableEntity)
+    properties should be(Seq(stableProp))
   }
 
   test("should create relationship property existence constraint (new syntax)") {
     // WHEN
-    executeSingle("CREATE CONSTRAINT ON ()-[r:HasPet]-() ASSERT r.since Is NOT NULL")
+    executeSingle(s"CREATE CONSTRAINT ON ()-[r:$stableEntity]-() ASSERT r.$stableProp Is NOT NULL")
 
     // THEN
 
     // get by schema
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("constraint_6c4e7adb")
+    graph.getRelationshipConstraint(stableEntity, stableProp).getName should be("constraint_782743d3")
 
     // get by name
-    val (relType, properties) = graph.getConstraintSchemaByName("constraint_6c4e7adb")
-    relType should be("HasPet")
-    properties should be(Seq("since"))
+    val (relType, properties) = graph.getConstraintSchemaByName("constraint_782743d3")
+    relType should be(stableEntity)
+    properties should be(Seq(stableProp))
   }
 
   test("should create named relationship property existence constraint (old syntax)") {
     // WHEN
-    executeSingle("CREATE CONSTRAINT my_constraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT EXISTS (r.$prop)")
 
     // THEN
 
     // get by schema
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("my_constraint")
+    graph.getRelationshipConstraint(relType, prop).getName should be(constraintName)
 
     // get by name
-    val (relType, properties) = graph.getConstraintSchemaByName("my_constraint")
-    relType should be("HasPet")
-    properties should be(Seq("since"))
+    val (actualRelType, properties) = graph.getConstraintSchemaByName(constraintName)
+    actualRelType should be(relType)
+    properties should be(Seq(prop))
   }
 
   test("should create named relationship property existence constraint (new syntax)") {
     // WHEN
-    executeSingle("CREATE CONSTRAINT my_constraint ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+    executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT r.$prop IS NOT NULL")
 
     // THEN
 
     // get by schema
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("my_constraint")
+    graph.getRelationshipConstraint(relType, prop).getName should be(constraintName)
 
     // get by name
-    val (relType, properties) = graph.getConstraintSchemaByName("my_constraint")
-    relType should be("HasPet")
-    properties should be(Seq("since"))
+    val (actualRelType, properties) = graph.getConstraintSchemaByName(constraintName)
+    actualRelType should be(relType)
+    properties should be(Seq(prop))
   }
 
   test("should create relationship property existence constraint if not existing") {
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+    val result = executeSingle(s"CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:$stableEntity]-() ASSERT r.$stableProp IS NOT NULL")
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 1)
 
     // get by schema
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("constraint_6c4e7adb")
+    graph.getRelationshipConstraint(stableEntity, stableProp).getName should be("constraint_782743d3")
 
     // get by name
-    val (relType, properties) = graph.getConstraintSchemaByName("constraint_6c4e7adb")
-    relType should be("HasPet")
-    properties should be(Seq("since"))
+    val (relType, properties) = graph.getConstraintSchemaByName("constraint_782743d3")
+    relType should be(stableEntity)
+    properties should be(Seq(stableProp))
   }
 
   test("should create named relationship property existence constraint if not existing") {
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+    val result = executeSingle(s"CREATE CONSTRAINT $constraintName IF NOT EXISTS ON ()-[r:$relType]-() ASSERT r.$prop IS NOT NULL")
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 1)
 
     // get by schema
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("myConstraint")
+    graph.getRelationshipConstraint(relType, prop).getName should be(constraintName)
 
     // get by name
-    val (relType, properties) = graph.getConstraintSchemaByName("myConstraint")
-    relType should be("HasPet")
-    properties should be(Seq("since"))
+    val (actualRelType, properties) = graph.getConstraintSchemaByName(constraintName)
+    actualRelType should be(relType)
+    properties should be(Seq(prop))
   }
 
   test("should not create relationship property existence constraint if already existing") {
     // GIVEN
-    executeSingle("CREATE CONSTRAINT existingConstraint ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+    executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT r.$prop IS NOT NULL")
 
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
-    val result2 = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)") // old syntax
+    val result = executeSingle(s"CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:$relType]-() ASSERT r.$prop IS NOT NULL")
+    val result2 = executeSingle(s"CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:$relType]-() ASSERT EXISTS (r.$prop)") // old syntax
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 0)
     assertStats(result2, existenceConstraintsAdded = 0)
 
     // get by schema
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("existingConstraint")
+    graph.getRelationshipConstraint(relType, prop).getName should be(constraintName)
 
     // get by name
-    val (relType, properties) = graph.getConstraintSchemaByName("existingConstraint")
-    relType should be("HasPet")
-    properties should be(Seq("since"))
+    val (actualRelType, properties) = graph.getConstraintSchemaByName(constraintName)
+    actualRelType should be(relType)
+    properties should be(Seq(prop))
   }
 
   test("should not create named relationship property existence constraint if already existing") {
     // GIVEN
-    executeSingle("CREATE CONSTRAINT existingConstraint ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+    executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT r.$prop IS NOT NULL")
 
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
-    val result2 = executeSingle("CREATE CONSTRAINT existingConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.age IS NOT NULL")
+    val result = executeSingle(s"CREATE CONSTRAINT $constraintName2 IF NOT EXISTS ON ()-[r:$relType]-() ASSERT r.$prop IS NOT NULL")
+    val result2 = executeSingle(s"CREATE CONSTRAINT $constraintName IF NOT EXISTS ON ()-[r:$relType]-() ASSERT r.$prop2 IS NOT NULL")
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 0)
     assertStats(result2, existenceConstraintsAdded = 0)
 
     // get by schema
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("existingConstraint")
+    graph.getRelationshipConstraint(relType, prop).getName should be(constraintName)
 
     // get by name
-    val (relType, properties) = graph.getConstraintSchemaByName("existingConstraint")
-    relType should be("HasPet")
-    properties should be(Seq("since"))
+    val (actualRelType, properties) = graph.getConstraintSchemaByName(constraintName)
+    actualRelType should be(relType)
+    properties should be(Seq(prop))
   }
 
   test("should create relationship property existence constraint on same schema as existing node key constraint") {
     // GIVEN
-    graph.createNodeKeyConstraint("Type", "prop")
+    graph.createNodeKeyConstraint(relType, prop)
 
     // WHEN (close as can get to same schema)
-    val res = executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
@@ -160,21 +160,21 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should create named relationship property existence constraint on the same schema as existing named node key constraint") {
     // GIVEN
-    graph.createNodeKeyConstraintWithName("constraint1", "Type", "prop")
+    graph.createNodeKeyConstraintWithName(constraintName, relType, prop)
 
     // WHEN (close as can get to same schema)
-    val res = executeSingle("CREATE CONSTRAINT constraint2 ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName2 ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
   }
 
-  test("should create relationship property existence constraint when existing node key constraint (diff name and same schema)") {
+  test("should create relationship property existence constraint when existing node key constraint (diff name and same schema, IF NOT EXISTS)") {
     // GIVEN
-    graph.createNodeKeyConstraintWithName("constraint1", "Type", "prop")
+    graph.createNodeKeyConstraintWithName(constraintName, relType, prop)
 
-    // WHEN
-    val res = executeSingle("CREATE CONSTRAINT constraint2 IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    // WHEN (close as can get to same schema)
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName2 IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
@@ -182,10 +182,10 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should create relationship property existence constraint on same schema as existing uniqueness constraint") {
     // GIVEN
-    graph.createUniqueConstraint("Type", "prop")
+    graph.createUniqueConstraint(relType, prop)
 
     // WHEN (close as can get to same schema)
-    val res = executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
@@ -193,21 +193,21 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should create named relationship property existence constraint on the same schema as existing named uniqueness constraint") {
     // GIVEN
-    graph.createUniqueConstraintWithName("constraint1", "Type", "prop")
+    graph.createUniqueConstraintWithName(constraintName, relType, prop)
 
     // WHEN (close as can get to same schema)
-    val res = executeSingle("CREATE CONSTRAINT constraint2 ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName2 ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
   }
 
-  test("should create relationship property existence constraint when existing uniqueness constraint (diff name and same schema)") {
+  test("should create relationship property existence constraint when existing uniqueness constraint (diff name and same schema, IF NOT EXISTS)") {
     // GIVEN
-    graph.createUniqueConstraintWithName("constraint1", "Type", "prop")
+    graph.createUniqueConstraintWithName(constraintName, relType, prop)
 
-    // WHEN
-    val res = executeSingle("CREATE CONSTRAINT constraint2 IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    // WHEN (close as can get to same schema)
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName2 IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
@@ -215,10 +215,10 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should create relationship property existence constraint on same schema as existing node property existence constraint") {
     // GIVEN
-    graph.createNodeExistenceConstraint("Type", "prop")
+    graph.createNodeExistenceConstraint(relType, prop)
 
     // WHEN (close as can get to same schema)
-    val res = executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
@@ -226,21 +226,21 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should create named relationship property existence constraint on the same schema as existing named node property existence constraint") {
     // GIVEN
-    graph.createNodeExistenceConstraintWithName("constraint1", "Type", "prop")
+    graph.createNodeExistenceConstraintWithName(constraintName, relType, prop)
 
     // WHEN (close as can get to same schema)
-    val res = executeSingle("CREATE CONSTRAINT constraint2 ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName2 ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
   }
 
-  test("should create relationship property existence constraint when existing node property existence constraint (diff name and same schema)") {
+  test("should create relationship property existence constraint when existing node property existence constraint (diff name and same schema, IF NOT EXISTS)") {
     // GIVEN
-    graph.createNodeExistenceConstraintWithName("constraint1", "Type", "prop")
+    graph.createNodeExistenceConstraintWithName(constraintName, relType, prop)
 
-    // WHEN
-    val res = executeSingle("CREATE CONSTRAINT constraint2 IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    // WHEN (close as can get to same schema)
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName2 IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
@@ -248,10 +248,10 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should not create relationship property existence constraint when existing node key constraint (same name and schema, IF NOT EXISTS)") {
     // GIVEN
-    graph.createNodeKeyConstraintWithName("constraint", "Type", "prop")
+    graph.createNodeKeyConstraintWithName(constraintName, relType, prop)
 
-    // WHEN
-    val res = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    // WHEN (close as can get to same schema)
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 0)
@@ -259,10 +259,10 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should not create relationship property existence constraint when existing node key constraint (same name and diff schema, IF NOT EXISTS)") {
     // GIVEN
-    graph.createNodeKeyConstraintWithName("constraint", "Type", "prop1")
+    graph.createNodeKeyConstraintWithName(constraintName, relType, prop)
 
     // WHEN
-    val res = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop2) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 0)
@@ -270,10 +270,10 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should not create relationship property existence constraint when existing uniqueness constraint (same name and schema, IF NOT EXISTS)") {
     // GIVEN
-    graph.createUniqueConstraintWithName("constraint", "Type", "prop")
+    graph.createUniqueConstraintWithName(constraintName, relType, prop)
 
-    // WHEN
-    val res = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    // WHEN (close as can get to same schema)
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 0)
@@ -281,10 +281,10 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should not create relationship property existence constraint when existing uniqueness constraint (same name and diff schema, IF NOT EXISTS)") {
     // GIVEN
-    graph.createUniqueConstraintWithName("constraint", "Type", "prop1")
+    graph.createUniqueConstraintWithName(constraintName, relType, prop)
 
     // WHEN
-    val res = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop2) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 0)
@@ -292,10 +292,10 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should not create relationship property existence constraint when existing node property existence constraint (same name and schema, IF NOT EXISTS)") {
     // GIVEN
-    graph.createNodeExistenceConstraintWithName("constraint", "Type", "prop")
+    graph.createNodeExistenceConstraintWithName(constraintName, relType, prop)
 
-    // WHEN
-    val res = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    // WHEN (close as can get to same schema)
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 0)
@@ -303,10 +303,10 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should not create relationship property existence constraint when existing node property existence constraint (same name and diff schema, IF NOT EXISTS)") {
     // GIVEN
-    graph.createNodeExistenceConstraintWithName("constraint", "Type", "prop1")
+    graph.createNodeExistenceConstraintWithName(constraintName, relType, prop)
 
     // WHEN
-    val res = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop2) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 0)
@@ -314,11 +314,11 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should create relationship property existence constraint on same schema as existing node index") {
     // GIVEN
-    graph.createNodeIndex("Type", "prop")
+    graph.createNodeIndex(relType, prop)
     graph.awaitIndexesOnline()
 
     // WHEN (close as can get to same schema)
-    val res = executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
@@ -326,11 +326,11 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should create relationship property existence constraint on same schema as existing node index with IF NOT EXISTS") {
     // GIVEN
-    graph.createNodeIndex("Type", "prop")
+    graph.createNodeIndex(relType, prop)
     graph.awaitIndexesOnline()
 
     // WHEN (close as can get to same schema)
-    val res = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
@@ -338,11 +338,11 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should create relationship property existence constraint on same schema as existing relationship property index") {
     // GIVEN
-    graph.createRelationshipIndex("Type", "prop")
+    graph.createRelationshipIndex(relType, prop)
     graph.awaitIndexesOnline()
 
     // WHEN
-    val res = executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
@@ -350,11 +350,11 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should create named relationship property existence constraint on same schema as existing named node index") {
     // GIVEN
-    graph.createNodeIndexWithName("my_index", "Type", "prop")
+    graph.createNodeIndexWithName(indexName, relType, prop)
     graph.awaitIndexesOnline()
 
     // WHEN (close as can get to same schema)
-    val res = executeSingle("CREATE CONSTRAINT my_constraint ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
@@ -362,11 +362,11 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should create named relationship property existence constraint on same schema as existing named relationship property index") {
     // GIVEN
-    graph.createRelationshipIndexWithName("my_index", "Type", "prop")
+    graph.createRelationshipIndexWithName(indexName, relType, prop)
     graph.awaitIndexesOnline()
 
     // WHEN
-    val res = executeSingle("CREATE CONSTRAINT my_constraint ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    val res = executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     // THEN
     assertStats(res, existenceConstraintsAdded = 1)
@@ -376,22 +376,22 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
     val errorMessage = "Failed to create relationship property existence constraint: `OR REPLACE` cannot be used together with this command."
 
     val error1 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+      executeSingle(s"CREATE OR REPLACE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT r.$prop IS NOT NULL")
     }
     error1.getMessage should startWith (errorMessage)
 
     val error2 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+      executeSingle(s"CREATE OR REPLACE CONSTRAINT ON ()-[r:$relType]-() ASSERT r.$prop IS NOT NULL")
     }
     error2.getMessage should startWith (errorMessage)
 
     val error3 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+      executeSingle(s"CREATE OR REPLACE CONSTRAINT $constraintName IF NOT EXISTS ON ()-[r:$relType]-() ASSERT r.$prop IS NOT NULL")
     }
     error3.getMessage should startWith (errorMessage)
 
     val error4 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+      executeSingle(s"CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON ()-[r:$relType]-() ASSERT r.$prop IS NOT NULL")
     }
     error4.getMessage should startWith (errorMessage)
   }
@@ -399,7 +399,7 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
   test("should fail to create relationship property existence constraint with OPTIONS") {
     // WHEN
     val error = the[SyntaxException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL OPTIONS {}")
+      executeSingle(s"CREATE CONSTRAINT ON ()-[r:$relType]-() ASSERT r.$prop IS NOT NULL OPTIONS {}")
     }
     // THEN
     error.getMessage should startWith ("Failed to create relationship property existence constraint: `OPTIONS` cannot be used together with this command.")
@@ -407,183 +407,183 @@ class CreateRelationshipPropertyExistenceConstraintCommandsAcceptanceTest extend
 
   test("should fail to create multiple relationship property existence constraints with same schema") {
     // GIVEN
-    executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    executeSingle(s"CREATE CONSTRAINT ON ()-[r:$stableEntity]-() ASSERT (r.$stableProp) IS NOT NULL")
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT ON ()-[r:$stableEntity]-() ASSERT (r.$stableProp) IS NOT NULL")
       // THEN
-    } should have message "An equivalent constraint already exists, 'Constraint( id=1, name='constraint_3e723b4d', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:Type {prop}]- )'."
+    } should have message s"An equivalent constraint already exists, 'Constraint( id=1, name='constraint_782743d3', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:$stableEntity {$stableProp}]- )'."
   }
 
   test("should fail to create multiple named relationship property existence constraints with same name and schema") {
     // GIVEN
-    executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
       // THEN
-    } should have message "An equivalent constraint already exists, 'Constraint( id=1, name='constraint', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:Type {prop}]- )'."
+    } should have message s"An equivalent constraint already exists, 'Constraint( id=1, name='$constraintName', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:$relType {$prop}]- )'."
   }
 
   test("should fail to create multiple named relationship property existence constraints with different name and same schema") {
     // GIVEN
-    executeSingle("CREATE CONSTRAINT constraint1 ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+    executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT constraint2 ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName2 ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
       // THEN
-    } should have message "Constraint already exists: Constraint( id=1, name='constraint1', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:Type {prop}]- )"
+    } should have message s"Constraint already exists: Constraint( id=1, name='$constraintName', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:$relType {$prop}]- )"
   }
 
   test("should fail to create multiple named relationship property existence constraints with same name") {
     // GIVEN
-    executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Type]-() ASSERT (r.prop1) IS NOT NULL")
+    executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop2) IS NOT NULL")
       // THEN
-    } should have message "There already exists a constraint called 'constraint'."
+    } should have message s"There already exists a constraint called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint on same name and schema as existing node key constraint") {
     // GIVEN
-    graph.createNodeKeyConstraintWithName("constraint", "Type", "prop")
+    graph.createNodeKeyConstraintWithName(constraintName, relType, prop)
 
     the[CypherExecutionException] thrownBy {
       // WHEN (close as can get to same schema)
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
       // THEN
-    } should have message "There already exists a constraint called 'constraint'."
+    } should have message s"There already exists a constraint called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint with same name as existing node key constraint") {
     // GIVEN
-    graph.createNodeKeyConstraintWithName("constraint", "Type", "prop1")
+    graph.createNodeKeyConstraintWithName(constraintName, relType, prop)
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop2) IS NOT NULL")
       // THEN
-    } should have message "There already exists a constraint called 'constraint'."
+    } should have message s"There already exists a constraint called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint on same name and schema as existing uniqueness constraint") {
     // GIVEN
-    graph.createUniqueConstraintWithName("constraint", "Type", "prop")
+    graph.createUniqueConstraintWithName(constraintName, relType, prop)
 
     the[CypherExecutionException] thrownBy {
       // WHEN (close as can get to same schema)
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
       // THEN
-    } should have message "There already exists a constraint called 'constraint'."
+    } should have message s"There already exists a constraint called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint with same name as existing uniqueness constraint") {
     // GIVEN
-    graph.createUniqueConstraintWithName("constraint", "Type", "prop1")
+    graph.createUniqueConstraintWithName(constraintName, relType, prop)
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop2) IS NOT NULL")
       // THEN
-    } should have message "There already exists a constraint called 'constraint'."
+    } should have message s"There already exists a constraint called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint on same name and schema as existing node property existence constraint") {
     // GIVEN
-    graph.createNodeExistenceConstraintWithName("constraint", "Type", "prop")
+    graph.createNodeExistenceConstraintWithName(constraintName, relType, prop)
 
     the[CypherExecutionException] thrownBy {
       // WHEN (close as can get to same schema)
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
       // THEN
-    } should have message "There already exists a constraint called 'constraint'."
+    } should have message s"There already exists a constraint called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint with same name as existing node property existence constraint") {
     // GIVEN
-    graph.createNodeExistenceConstraintWithName("constraint", "Type", "prop1")
+    graph.createNodeExistenceConstraintWithName(constraintName, relType, prop)
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop2) IS NOT NULL")
       // THEN
-    } should have message "There already exists a constraint called 'constraint'."
+    } should have message s"There already exists a constraint called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint with same name as existing node index") {
     // GIVEN
-    graph.createNodeIndexWithName("mine", "Type", "prop1")
+    graph.createNodeIndexWithName(constraintName, relType, prop)
     graph.awaitIndexesOnline()
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop2) IS NOT NULL")
       // THEN
-    } should have message "There already exists an index called 'mine'."
+    } should have message s"There already exists an index called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint with same name as existing node index with IF NOT EXISTS") {
     // GIVEN
-    graph.createNodeIndexWithName("mine", "Type", "prop1")
+    graph.createNodeIndexWithName(constraintName, relType, prop)
     graph.awaitIndexesOnline()
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop2) IS NOT NULL")
       // THEN
-    } should have message "There already exists an index called 'mine'."
+    } should have message s"There already exists an index called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint with same name and schema as existing node index") {
     // GIVEN
-    graph.createNodeIndexWithName("mine", "Type", "prop")
+    graph.createNodeIndexWithName(constraintName, relType, prop)
     graph.awaitIndexesOnline()
 
     the[CypherExecutionException] thrownBy {
       // WHEN (close as can get to same schema)
-      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
       // THEN
-    } should have message "There already exists an index called 'mine'."
+    } should have message s"There already exists an index called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint with same name as existing relationship property index") {
     // GIVEN
-    graph.createRelationshipIndexWithName("mine", "Type", "prop1")
+    graph.createRelationshipIndexWithName(constraintName, relType, prop)
     graph.awaitIndexesOnline()
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop2) IS NOT NULL")
       // THEN
-    } should have message "There already exists an index called 'mine'."
+    } should have message s"There already exists an index called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint with same name as existing relationship property index with IF NOT EXISTS") {
     // GIVEN
-    graph.createRelationshipIndexWithName("mine", "Type", "prop1")
+    graph.createRelationshipIndexWithName(constraintName, relType, prop)
     graph.awaitIndexesOnline()
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName IF NOT EXISTS ON ()-[r:$relType]-() ASSERT (r.$prop2) IS NOT NULL")
       // THEN
-    } should have message "There already exists an index called 'mine'."
+    } should have message s"There already exists an index called '$constraintName'."
   }
 
   test("should fail to create relationship property existence constraint with same name and schema as existing relationship property index") {
     // GIVEN
-    graph.createRelationshipIndexWithName("mine", "Type", "prop")
+    graph.createRelationshipIndexWithName(constraintName, relType, prop)
     graph.awaitIndexesOnline()
 
     the[CypherExecutionException] thrownBy {
       // WHEN (close as can get to same schema)
-      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
+      executeSingle(s"CREATE CONSTRAINT $constraintName ON ()-[r:$relType]-() ASSERT (r.$prop) IS NOT NULL")
       // THEN
-    } should have message "There already exists an index called 'mine'."
+    } should have message s"There already exists an index called '$constraintName'."
   }
 }

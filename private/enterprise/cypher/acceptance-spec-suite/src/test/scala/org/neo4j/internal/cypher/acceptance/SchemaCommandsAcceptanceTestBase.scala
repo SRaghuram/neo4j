@@ -36,4 +36,20 @@ abstract class SchemaCommandsAcceptanceTestBase extends ExecutionEngineFunSuite 
   val wgs3dMax: String = SPATIAL_WGS84_3D_MAX.getSettingName
   val eventuallyConsistent: String = FULLTEXT_EVENTUALLY_CONSISTENT.getSettingName
   val analyzer: String = FULLTEXT_ANALYZER.getSettingName
+
+  val indexName = "my_index"
+  val constraintName = "my_constraint"
+  val constraintName2 = "my_second_constraint"
+
+  val label = "Label"
+  val relType = "relType"
+  val prop = "prop"
+  val prop2 = "prop2"
+  val prop3 = "prop3"
+  val prop4 = "prop4"
+
+  // When using generated names they need to stable and not change, otherwise the tests will fail:
+  val stableEntity = "NeedStableLabelRelTypeAndProperties"
+  val stableProp = "forGeneratedNames"
+  val stableProp2 = "muchStableWowStable"
 }
