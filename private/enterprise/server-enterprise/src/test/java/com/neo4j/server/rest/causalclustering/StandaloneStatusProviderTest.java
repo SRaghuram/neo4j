@@ -11,7 +11,7 @@ import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
-import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseStatusUtil.readReplicaStatusMockBuilder;
+import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseStatusUtil.standaloneStatusMockBuilder;
 import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -21,39 +21,33 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
-class ReadReplicaStatusProviderTest
+class StandaloneStatusProviderTest
 {
-    private final ServerId coreId1 = new ServerId( randomUUID() );
-    private final ServerId coreId2 = new ServerId( randomUUID() );
-    private final ServerId readReplicaId = new ServerId( randomUUID() );
+    private final ServerId myself = new ServerId( randomUUID() );
 
     private final NamedDatabaseId databaseId = randomNamedDatabaseId();
 
-    private final GraphDatabaseAPI db = readReplicaStatusMockBuilder()
+    private final GraphDatabaseAPI db = standaloneStatusMockBuilder()
             .databaseId( databaseId )
             .healthy( true )
-            .myself( readReplicaId )
-            .core( coreId1 )
-            .leader( coreId2 )
-            .appliedCommandIndex( 42 )
-            .throughput( 42 )
+            .myself( myself )
             .build();
 
     @Test
     void shouldReturnStatus()
     {
-        var provider = new ReadReplicaDatabaseStatusProvider( db );
+        var provider = new StandaloneDatabaseStatusProvider( db );
 
         var status = provider.currentStatus();
 
-        assertEquals( 42L, status.getLastAppliedRaftIndex() );
+        assertEquals( 0L, status.getLastAppliedRaftIndex() );
         assertFalse( status.isParticipatingInRaftGroup() );
         assertThat( status.getVotingMembers(), empty() );
         assertTrue( status.isHealthy() );
-        assertEquals( readReplicaId.uuid().toString(), status.getMemberId() );
-        assertEquals( coreId2.uuid().toString(), status.getLeader() );
+        assertEquals( myself.uuid().toString(), status.getMemberId() );
+        assertEquals( myself.uuid().toString(), status.getLeader() );
         assertNull( status.getMillisSinceLastLeaderMessage() );
-        assertEquals( 42.0, status.getRaftCommandsPerSecond() );
+        assertNull( status.getRaftCommandsPerSecond() );
         assertFalse( status.isCore() );
     }
 }

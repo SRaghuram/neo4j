@@ -63,6 +63,8 @@ public class ClusteringDatabaseEndpointsFactory
             return new CoreDatabaseEndpoints( output, db, clusterService );
         case READ_REPLICA:
             return new ReadReplicaDatabaseEndpoints( output, db, clusterService );
+        case ENTERPRISE:
+            return new StandaloneDatabaseEndpoints( output, db, clusterService );
         default:
             return new FixedResponse( FORBIDDEN );
         }

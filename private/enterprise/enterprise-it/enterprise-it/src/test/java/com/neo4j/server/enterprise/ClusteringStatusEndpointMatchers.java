@@ -20,8 +20,6 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
-import org.neo4j.function.ThrowingSupplier;
-
 import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryCombinedStatusEndpoint;
 import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryStatusEndpoint;
 import static java.lang.String.format;
@@ -194,6 +192,11 @@ class ClusteringStatusEndpointMatchers
     static Callable<Boolean> canVote( Callable<Map<String,Object>> statusDescription )
     {
         return () -> Boolean.parseBoolean( statusDescription.call().get( FIELD_PARTICIPATING ).toString() );
+    }
+
+    static Callable<Boolean> databaseHealthy( Callable<Map<String,Object>> statusDescription )
+    {
+        return () -> Boolean.parseBoolean( statusDescription.call().get( FIELD_HEALTHY ).toString() );
     }
 
     static <T> Callable<Collection<T>> asCollection( Callable<T> supplier )

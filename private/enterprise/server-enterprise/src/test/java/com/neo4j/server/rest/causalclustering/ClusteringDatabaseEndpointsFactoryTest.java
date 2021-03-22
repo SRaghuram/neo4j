@@ -25,12 +25,12 @@ import org.neo4j.server.rest.repr.OutputFormat;
 
 import static javax.ws.rs.core.Response.Status.FORBIDDEN;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
+import static javax.ws.rs.core.Response.Status.OK;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -68,15 +68,35 @@ class ClusteringDatabaseEndpointsFactoryTest
     }
 
     @Test
-    void shouldBuildStatusForCommunityStandalone()
+    void shouldBuildStatusForEnterpriseStandalone()
     {
-        testBuildStatusForStandalone( COMMUNITY );
+        var dbService = databaseServiceMock( ENTERPRISE );
+        var databaseStateService = databaseStateServiceStub();
+
+        var status = buildStatus( dbService, KNOWN_DB, databaseStateService );
+
+        assertThat( status, instanceOf( StandaloneDatabaseEndpoints.class ) );
+
+        assertEquals( OK.getStatusCode(), status.available().getStatus() );
+        assertEquals( NOT_FOUND.getStatusCode(), status.readonly().getStatus() );
+        assertEquals( OK.getStatusCode(), status.writable().getStatus() );
     }
 
     @Test
-    void shouldBuildStatusForEnterpriseStandalone()
+    void shouldBuildStatusForCommunityStandalone()
     {
-        testBuildStatusForStandalone( ENTERPRISE );
+        var dbService = databaseServiceMock( COMMUNITY );
+        var databaseStateService = databaseStateServiceStub();
+
+        var status = buildStatus( dbService, KNOWN_DB, databaseStateService );
+
+        assertThat( status, instanceOf( FixedResponse.class ) );
+
+        assertEquals( FORBIDDEN.getStatusCode(), status.discover().getStatus() );
+        assertEquals( FORBIDDEN.getStatusCode(), status.available().getStatus() );
+        assertEquals( FORBIDDEN.getStatusCode(), status.readonly().getStatus() );
+        assertEquals( FORBIDDEN.getStatusCode(), status.writable().getStatus() );
+        assertEquals( FORBIDDEN.getStatusCode(), status.description().getStatus() );
     }
 
     @Test
@@ -200,22 +220,6 @@ class ClusteringDatabaseEndpointsFactoryTest
                    ", entity=" + entity +
                    '}';
         }
-    }
-
-    private static void testBuildStatusForStandalone( DbmsInfo standaloneInfo )
-    {
-        var dbService = databaseServiceMock( standaloneInfo );
-        var databaseStateService = databaseStateServiceStub();
-
-        var status = buildStatus( dbService, KNOWN_DB, databaseStateService );
-
-        assertThat( status, instanceOf( FixedResponse.class ) );
-
-        assertEquals( FORBIDDEN.getStatusCode(), status.discover().getStatus() );
-        assertEquals( FORBIDDEN.getStatusCode(), status.available().getStatus() );
-        assertEquals( FORBIDDEN.getStatusCode(), status.readonly().getStatus() );
-        assertEquals( FORBIDDEN.getStatusCode(), status.writable().getStatus() );
-        assertEquals( FORBIDDEN.getStatusCode(), status.description().getStatus() );
     }
 
     private static DatabaseStateService databaseStateServiceStub()

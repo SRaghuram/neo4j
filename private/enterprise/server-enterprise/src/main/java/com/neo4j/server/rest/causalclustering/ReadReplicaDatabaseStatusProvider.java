@@ -47,7 +47,7 @@ class ReadReplicaDatabaseStatusProvider
         var healthy = databaseHealth.isHealthy();
         var myId = topologyService.serverId();
         var leaderId = ofNullable( topologyService.getLeader( databaseId ) ).map( LeaderInfo::memberId ).map( Id::uuid ).orElse( null );
-        var lastAppliedRaftIndex = commandIndexTracker.getAppliedCommandIndex();
+        var lastAppliedRaftIndex  = commandIndexTracker.getAppliedCommandIndex();
         var raftCommandsPerSecond = throughputMonitor.throughput().orElse( null );
         return new ClusteringDatabaseStatusResponse( lastAppliedRaftIndex, false, Set.of(), healthy, myId.uuid(), leaderId,
                                                      MILLIS_SINCE_LAST_LEADER_MESSAGE, raftCommandsPerSecond, false, topologyService.isHealthy() );

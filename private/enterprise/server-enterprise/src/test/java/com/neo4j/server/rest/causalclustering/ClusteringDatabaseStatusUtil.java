@@ -21,9 +21,8 @@ import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.identity.ServerId;
@@ -31,6 +30,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.util.Id;
 
 import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -43,81 +43,96 @@ final class ClusteringDatabaseStatusUtil
     {
     }
 
-    static CoreStatusMockBuilder coreStatusMockBuilder()
+    static StatusMockBuilder coreStatusMockBuilder()
     {
-        return new CoreStatusMockBuilder();
+        return new StatusMockBuilder( DbmsInfo.CORE );
     }
 
-    static ReadReplicaStatusMockBuilder readReplicaStatusMockBuilder()
+    static StatusMockBuilder readReplicaStatusMockBuilder()
     {
-        return new ReadReplicaStatusMockBuilder();
+        return new StatusMockBuilder( DbmsInfo.READ_REPLICA );
     }
 
-    static class CoreStatusMockBuilder
+    static StatusMockBuilder standaloneStatusMockBuilder()
+    {
+        return new StatusMockBuilder( DbmsInfo.ENTERPRISE );
+    }
+
+    static class StatusMockBuilder
     {
         private NamedDatabaseId databaseId;
-        private RaftMemberId memberId;
-        private RaftMemberId leaderId;
+        private Id myself;
+        private Id leader;
         private boolean healthy;
         private boolean available;
         private Duration durationSinceLastMessage;
         private long appliedCommandIndex;
         private double throughput;
         private Role role;
+        private DbmsInfo dbmsInfo;
+        private Map<Id,RoleInfo> coreRoles = new HashMap<>();
 
-        private CoreStatusMockBuilder()
+        private StatusMockBuilder( DbmsInfo dbmsInfo )
         {
+            this.dbmsInfo = dbmsInfo;
         }
 
-        CoreStatusMockBuilder databaseId( NamedDatabaseId databaseId )
+        StatusMockBuilder databaseId( NamedDatabaseId databaseId )
         {
             this.databaseId = databaseId;
             return this;
         }
 
-        CoreStatusMockBuilder memberId( RaftMemberId memberId )
+        StatusMockBuilder myself( Id myself )
         {
-            this.memberId = memberId;
+            this.myself = myself;
             return this;
         }
 
-        CoreStatusMockBuilder leaderId( RaftMemberId leaderId )
+        StatusMockBuilder leader( Id leader )
         {
-            this.leaderId = leaderId;
+            this.leader = leader;
+            this.coreRoles.put( leader, RoleInfo.LEADER );
             return this;
         }
 
-        CoreStatusMockBuilder healthy( boolean healthy )
+        StatusMockBuilder core( Id core )
+        {
+            this.coreRoles.put( core, RoleInfo.FOLLOWER );
+            return this;
+        }
+
+        StatusMockBuilder healthy( boolean healthy )
         {
             this.healthy = healthy;
             return this;
         }
 
-        CoreStatusMockBuilder available( boolean available )
+        StatusMockBuilder available( boolean available )
         {
             this.available = available;
             return this;
         }
 
-        CoreStatusMockBuilder durationSinceLastMessage( Duration durationSinceLastMessage )
+        StatusMockBuilder durationSinceLastMessage( Duration durationSinceLastMessage )
         {
             this.durationSinceLastMessage = durationSinceLastMessage;
             return this;
         }
 
-        CoreStatusMockBuilder appliedCommandIndex( long appliedCommandIndex )
+        StatusMockBuilder appliedCommandIndex( long appliedCommandIndex )
         {
             this.appliedCommandIndex = appliedCommandIndex;
             return this;
         }
 
-        CoreStatusMockBuilder throughput( double throughput )
+        StatusMockBuilder throughput( double throughput )
         {
             this.throughput = throughput;
             return this;
         }
 
-        CoreStatusMockBuilder role( Role role )
+        StatusMockBuilder role( Role role )
         {
             this.role = role;
             return this;
@@ -130,33 +145,31 @@ final class ClusteringDatabaseStatusUtil
             when( db.databaseId() ).thenReturn( databaseId );
             when( db.databaseName() ).thenReturn( databaseId.name() );
             when( db.isAvailable( anyLong() ) ).thenReturn( available );
-            when( db.dbmsInfo() ).thenReturn( DbmsInfo.CORE );
+            when( db.dbmsInfo() ).thenReturn( dbmsInfo );
 
             var resolver = mock( DependencyResolver.class );
             when( db.getDependencyResolver() ).thenReturn( resolver );
 
             var raftMembershipManager = mock( RaftMembershipManager.class );
-            when( raftMembershipManager.votingMembers() ).thenReturn( Set.of( memberId, leaderId ) );
+            when( raftMembershipManager.votingMembers() )
+                    .thenReturn( coreRoles.keySet().stream().map( id -> new RaftMemberId( id.uuid() ) ).collect( Collectors.toSet() ) );
             when( resolver.resolveDependency( RaftMembershipManager.class ) ).thenReturn( raftMembershipManager );
 
             var databaseHealth = mock( DatabaseHealth.class );
             when( databaseHealth.isHealthy() ).thenReturn( healthy );
             when( resolver.resolveDependency( DatabaseHealth.class ) ).thenReturn( databaseHealth );
 
-            var topologyService = mock( TopologyService.class );
-            when( resolver.resolveDependency( TopologyService.class ) ).thenReturn( topologyService );
-
             var raftMachine = mock( RaftMachine.class );
-            when( raftMachine.memberId() ).thenReturn( memberId );
-            when( raftMachine.getLeaderInfo() ).thenReturn( Optional.of( new LeaderInfo( leaderId, 1 ) ) );
+            when( raftMachine.memberId() ).thenReturn( new RaftMemberId( myself.uuid() ) );
+            when( raftMachine.getLeaderInfo() ).thenReturn( Optional.ofNullable( leader ).map( l -> new LeaderInfo( new RaftMemberId( l.uuid() ), 1 ) ) );
             when( resolver.resolveDependency( RaftMachine.class ) ).thenReturn( raftMachine );
 
             var durationSinceLastMessageMonitor = mock( DurationSinceLastMessageMonitor.class );
             when( durationSinceLastMessageMonitor.durationSinceLastMessage() ).thenReturn( durationSinceLastMessage );
             when( resolver.resolveDependency( DurationSinceLastMessageMonitor.class ) ).thenReturn( durationSinceLastMessageMonitor );
 
-            var commandIndexTracker = mock( CommandIndexTracker.class );
-            when( commandIndexTracker.getAppliedCommandIndex() ).thenReturn( appliedCommandIndex );
+            var commandIndexTracker = new CommandIndexTracker();
+            commandIndexTracker.setAppliedCommandIndex( appliedCommandIndex );
             when( resolver.resolveDependency( CommandIndexTracker.class ) ).thenReturn( commandIndexTracker );
 
             var throughputMonitor = mock( ThroughputMonitor.class );
@@ -167,122 +180,26 @@ final class ClusteringDatabaseStatusUtil
             when( roleProvider.currentRole() ).thenReturn( role );
             when( resolver.resolveDependency( RoleProvider.class ) ).thenReturn( roleProvider );
 
-            return db;
-        }
-    }
-
-    static class ReadReplicaStatusMockBuilder
-    {
-        private NamedDatabaseId databaseId;
-        private boolean healthy;
-        private boolean available;
-        private ServerId readReplicaId;
-        private Map<ServerId,RoleInfo> coreRoles = new HashMap<>();
-        private long appliedCommandIndex;
-        private double throughput;
-        private RaftMemberId leaderId;
-
-        private ReadReplicaStatusMockBuilder()
-        {
-        }
-
-        ReadReplicaStatusMockBuilder databaseId( NamedDatabaseId databaseId )
-        {
-            this.databaseId = databaseId;
-            return this;
-        }
-
-        ReadReplicaStatusMockBuilder healthy( boolean healthy )
-        {
-            this.healthy = healthy;
-            return this;
-        }
-
-        ReadReplicaStatusMockBuilder available( boolean available )
-        {
-            this.available = available;
-            return this;
-        }
-
-        ReadReplicaStatusMockBuilder readReplicaId( ServerId readReplicaId )
-        {
-            this.readReplicaId = readReplicaId;
-            return this;
-        }
-
-        ReadReplicaStatusMockBuilder coreRole( ServerId coreId, RoleInfo role )
-        {
-            this.coreRoles.put( coreId, role );
-            return this;
-        }
-
-        ReadReplicaStatusMockBuilder leader( RaftMemberId leaderId )
-        {
-            this.leaderId = leaderId;
-            return this;
-        }
-
-        ReadReplicaStatusMockBuilder appliedCommandIndex( long appliedCommandIndex )
-        {
-            this.appliedCommandIndex = appliedCommandIndex;
-            return this;
-        }
-
-        ReadReplicaStatusMockBuilder throughput( double throughput )
-        {
-            this.throughput = throughput;
-            return this;
-        }
-
-        GraphDatabaseAPI build()
-        {
-            var db = mock( GraphDatabaseAPI.class );
-
-            when( db.databaseId() ).thenReturn( databaseId );
-            when( db.databaseName() ).thenReturn( databaseId.name() );
-            when( db.isAvailable( anyLong() ) ).thenReturn( available );
-            when( db.dbmsInfo() ).thenReturn( DbmsInfo.READ_REPLICA );
-
-            var resolver = mock( DependencyResolver.class );
-            when( db.getDependencyResolver() ).thenReturn( resolver );
-
-            var databaseHealth = mock( DatabaseHealth.class );
-            when( databaseHealth.isHealthy() ).thenReturn( healthy );
-            when( resolver.resolveDependency( DatabaseHealth.class ) ).thenReturn( databaseHealth );
+            var allCoreServers = coreRoles.entrySet()
+                    .stream()
+                    .collect( toMap( entry -> new ServerId( entry.getKey().uuid() ), entry -> TestTopology.addressesForCore( entry.hashCode() ) ) );
 
             var topologyService = mock( TopologyService.class );
-            when( topologyService.serverId() ).thenReturn( readReplicaId );
-
-            var allCoreServers = coreRoles.entrySet()
-                                          .stream()
-                                          .collect( toMap( Entry::getKey, entry -> TestTopology.addressesForCore( entry.hashCode() ) ) );
-
+            when( resolver.resolveDependency( TopologyService.class ) ).thenReturn( topologyService );
             when( topologyService.allCoreServers() ).thenReturn( allCoreServers );
+            when( topologyService.serverId() ).thenReturn( new ServerId( myself.uuid() ) );
 
             for ( var entry : coreRoles.entrySet() )
             {
+                var server = new ServerId( entry.getKey().uuid() );
                 var raftMember = new RaftMemberId( entry.getKey().uuid() );
-                when( topologyService.lookupRole( databaseId, entry.getKey() ) ).thenReturn( entry.getValue() );
-                when( topologyService.resolveServerForRaftMember( raftMember ) ).thenReturn( entry.getKey() );
-                if ( entry.getValue() == RoleInfo.LEADER && leaderId == null )
+                when( topologyService.lookupRole( databaseId, server ) ).thenReturn( entry.getValue() );
+                when( topologyService.resolveServerForRaftMember( raftMember ) ).thenReturn( server );
+                if ( entry.getValue() == RoleInfo.LEADER  )
                 {
                     when( topologyService.getLeader( databaseId ) ).thenReturn( new LeaderInfo( raftMember, 1 ) );
                 }
             }
-            if ( leaderId != null )
-            {
-                when( topologyService.getLeader( databaseId ) ).thenReturn( new LeaderInfo( leaderId, 1 ) );
-            }
-
-            when( resolver.resolveDependency( TopologyService.class ) ).thenReturn( topologyService );
-
-            var commandIndexTracker = mock( CommandIndexTracker.class );
-            when( commandIndexTracker.getAppliedCommandIndex() ).thenReturn( appliedCommandIndex );
-            when( resolver.resolveDependency( CommandIndexTracker.class ) ).thenReturn( commandIndexTracker );
-
-            var throughputMonitor = mock( ThroughputMonitor.class );
-            when( throughputMonitor.throughput() ).thenReturn( Optional.of( throughput ) );
-            when( resolver.resolveDependency( ThroughputMonitor.class ) ).thenReturn( throughputMonitor );
 
             return db;
         }

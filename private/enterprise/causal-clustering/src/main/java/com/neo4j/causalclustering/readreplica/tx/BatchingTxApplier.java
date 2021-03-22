@@ -108,11 +108,13 @@ public class BatchingTxApplier
     private void commit( TransactionChain transactionChain ) throws TransactionFailureException
     {
         commitProcess.commit( transactionChain.first, NULL, EXTERNAL );
+        // additional header is filled only if the transaction is coming from a CORE machine
         var additionalHeader = transactionChain.last.transactionRepresentation().additionalHeader();
-        var lastAppliedRaftLogIndex = ( additionalHeader.length == 0 ) ?
-                transactionChain.last.transactionId() :
-                LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader( additionalHeader );
-        commandIndexTracker.setAppliedCommandIndex( lastAppliedRaftLogIndex );
+        if ( additionalHeader.length > 0 )
+        {
+            var lastAppliedRaftIndex = LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader( additionalHeader );
+            commandIndexTracker.setAppliedCommandIndex( lastAppliedRaftIndex );
+        }
     }
 
     /**

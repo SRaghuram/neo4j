@@ -6,7 +6,6 @@
 package com.neo4j.server.rest.causalclustering;
 
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
@@ -16,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,9 +30,11 @@ import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.rest.domain.JsonHelper;
 import org.neo4j.server.rest.domain.JsonParseException;
+import org.neo4j.util.Id;
 
 import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseStatusUtil.coreStatusMockBuilder;
 import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseStatusUtil.readReplicaStatusMockBuilder;
+import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseStatusUtil.standaloneStatusMockBuilder;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.Duration.ofMillis;
 import static java.util.Comparator.naturalOrder;
@@ -56,18 +58,21 @@ class ClusteringDbmsStatusTest
     private final CoreServerIdentity coreA = new InMemoryCoreServerIdentity();
     private final CoreServerIdentity coreB = new InMemoryCoreServerIdentity();
     private final ServerId readReplicaId = IdFactory.randomServerId();
+    private final ServerId standaloneId = IdFactory.randomServerId();
 
     NamedDatabaseId fooDb = databaseIdRepository.getRaw( "foo" );
     NamedDatabaseId barDb = databaseIdRepository.getRaw( "bar" );
     NamedDatabaseId bazDb = databaseIdRepository.getRaw( "baz" );
+    NamedDatabaseId qooDb = databaseIdRepository.getRaw( "qoo" );
 
     private final GraphDatabaseAPI coreDb1;
 
     {
         coreDb1 = coreStatusMockBuilder()
                     .databaseId( fooDb )
-                    .memberId( coreA.raftMemberId( fooDb ) )
-                    .leaderId( coreB.raftMemberId( fooDb ) )
+                    .myself( coreA.raftMemberId( fooDb ) )
+                    .core( coreA.raftMemberId( fooDb ) )
+                    .leader( coreB.raftMemberId( fooDb ) )
                     .healthy( true )
                     .available( true )
                     .durationSinceLastMessage( ofMillis( 1 ) )
@@ -82,8 +87,9 @@ class ClusteringDbmsStatusTest
     {
         coreDb2 = coreStatusMockBuilder()
                     .databaseId( barDb )
-                    .memberId( coreB.raftMemberId( barDb ) )
-                    .leaderId( coreA.raftMemberId( barDb ) )
+                    .myself( coreB.raftMemberId( barDb ) )
+                    .core( coreB.raftMemberId( barDb ) )
+                    .leader( coreA.raftMemberId( barDb ) )
                     .healthy( true )
                     .available( true )
                     .durationSinceLastMessage( ofMillis( 4 ) )
@@ -100,24 +106,35 @@ class ClusteringDbmsStatusTest
                     .databaseId( bazDb )
                     .healthy( false )
                     .available( true )
-                    .readReplicaId( readReplicaId )
-                    .coreRole( coreA.serverId(), RoleInfo.FOLLOWER )
-                    .coreRole( coreB.serverId(), RoleInfo.LEADER )
+                    .myself( readReplicaId )
                     .leader( coreB.raftMemberId( bazDb ) )
                     .appliedCommandIndex( 7 )
                     .throughput( 8 )
                     .build();
     }
 
+    private final GraphDatabaseAPI standaloneDb;
+
+    {
+        standaloneDb = standaloneStatusMockBuilder()
+                .databaseId( qooDb )
+                .healthy( true )
+                .available( true )
+                .myself( standaloneId )
+                .leader( standaloneId )
+                .build();
+    }
+
     @BeforeEach
     void beforeEach()
     {
-        var databaseNames = List.of( coreDb1.databaseName(), coreDb2.databaseName(), readReplicaDb.databaseName() );
+        var databaseNames = List.of( coreDb1.databaseName(), coreDb2.databaseName(), readReplicaDb.databaseName(), standaloneDb.databaseName() );
         when( managementService.listDatabases() ).thenReturn( databaseNames );
 
         when( managementService.database( coreDb1.databaseName() ) ).thenReturn( coreDb1 );
         when( managementService.database( coreDb2.databaseName() ) ).thenReturn( coreDb2 );
         when( managementService.database( readReplicaDb.databaseName() ) ).thenReturn( readReplicaDb );
+        when( managementService.database( standaloneDb.databaseName() ) ).thenReturn( standaloneDb );
     }
 
     @Test
@@ -125,7 +142,7 @@ class ClusteringDbmsStatusTest
     {
         var json = produceJson();
 
-        verifyDatabaseNames( json, coreDb1, coreDb2, readReplicaDb );
+        verifyDatabaseNames( json, coreDb1, coreDb2, readReplicaDb, standaloneDb );
     }
 
     @Test
@@ -133,7 +150,7 @@ class ClusteringDbmsStatusTest
     {
         var json = produceJson();
 
-        verifyDatabaseUuids( json, coreDb1, coreDb2, readReplicaDb );
+        verifyDatabaseUuids( json, coreDb1, coreDb2, readReplicaDb, standaloneDb );
     }
 
     @Test
@@ -173,6 +190,17 @@ class ClusteringDbmsStatusTest
         verifyMillisSinceLastLeaderMessage( status3, null );
         verifyRaftCommandsPerSecond( status3, 8.0 );
         verifyCore( status3, false );
+
+        var status4 = findDatabaseStatus( json, standaloneDb );
+        verifyLastAppliedRaftIndex( status4, 0 );
+        verifyParticipatingInRaftGroup( status4, false );
+        verifyVotingMembers( status4 );
+        verifyHealthy( status4, true );
+        verifyMemberId( status4, standaloneId.uuid() );
+        verifyLeader( status4, standaloneId );
+        verifyMillisSinceLastLeaderMessage( status4, null );
+        verifyRaftCommandsPerSecond( status4, null );
+        verifyCore( status4, false );
     }
 
     @Test
@@ -182,8 +210,8 @@ class ClusteringDbmsStatusTest
 
         var json = produceJson();
 
-        verifyDatabaseNames( json, coreDb1, readReplicaDb );
-        verifyDatabaseUuids( json, coreDb1, readReplicaDb );
+        verifyDatabaseNames( json, coreDb1, readReplicaDb, standaloneDb );
+        verifyDatabaseUuids( json, coreDb1, readReplicaDb, standaloneDb );
     }
 
     @Test
@@ -193,24 +221,23 @@ class ClusteringDbmsStatusTest
 
         var json = produceJson();
 
-        verifyDatabaseNames( json, coreDb1, readReplicaDb );
-        verifyDatabaseUuids( json, coreDb1, readReplicaDb );
+        verifyDatabaseNames( json, coreDb1, readReplicaDb, standaloneDb );
+        verifyDatabaseUuids( json, coreDb1, readReplicaDb, standaloneDb );
     }
 
     @Test
     void shouldFailForDatabaseWithIllegalType()
     {
-        var illegalInfos = Stream.of( DbmsInfo.values() )
-                                 .filter( info -> info != DbmsInfo.CORE && info != DbmsInfo.READ_REPLICA )
-                                 .collect( toList() );
+        var legalTypes = EnumSet.of( DbmsInfo.CORE, DbmsInfo.READ_REPLICA, DbmsInfo.ENTERPRISE );
+        var illegalInfos = EnumSet.complementOf( legalTypes );
 
         for ( var illegalInfo : illegalInfos )
         {
             NamedDatabaseId qux = databaseIdRepository.getRaw( "qux" );
             var db = coreStatusMockBuilder()
                     .databaseId( qux )
-                    .memberId( coreA.raftMemberId( qux ) )
-                    .leaderId( coreB.raftMemberId( qux ) )
+                    .myself( coreA.raftMemberId( qux ) )
+                    .leader( coreB.raftMemberId( qux ) )
                     .available( true )
                     .build();
 
@@ -307,7 +334,7 @@ class ClusteringDbmsStatusTest
         assertEquals( expected.toString(), value );
     }
 
-    private static void verifyLeader( Map<String,Object> status, RaftMemberId expected )
+    private static void verifyLeader( Map<String,Object> status, Id expected )
     {
         var value = status.get( "leader" );
         assertThat( value, instanceOf( String.class ) );

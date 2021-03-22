@@ -33,7 +33,7 @@ class StatusDescriptionFieldMatcher<T> extends TypeSafeMatcher<Map<String,Object
         Object field = item.get( fieldName );
         if ( field == null )
         {
-            return false;
+            return matcher.matches( null );
         }
         T value = converter.apply( field );
         return matcher.matches( value );

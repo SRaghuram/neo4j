@@ -28,8 +28,9 @@ class CoreDatabaseStatusProviderTest
     private final RaftMemberId leaderId = IdFactory.randomRaftMemberId();
 
     private final GraphDatabaseAPI db = coreStatusMockBuilder()
-            .memberId( memberId )
-            .leaderId( leaderId )
+            .myself( memberId )
+            .core( memberId )
+            .leader( leaderId )
             .databaseId( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) )
             .healthy( true )
             .durationSinceLastMessage( ofMillis( 42 ) )

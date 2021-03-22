@@ -14,7 +14,6 @@ import javax.ws.rs.core.StreamingOutput;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.rest.domain.JsonHelper;
 
@@ -80,18 +79,18 @@ public class ClusteringDbmsStatus implements StreamingOutput
     private static ClusteringDatabaseStatusResponse buildClusterStatus( GraphDatabaseAPI db )
     {
         var dbInfo = db.dbmsInfo();
-        if ( dbInfo == DbmsInfo.CORE )
+        switch ( dbInfo )
         {
+        case CORE:
             var coreStatus = new CoreDatabaseStatusProvider( db );
             return coreStatus.currentStatus();
-        }
-        else if ( dbInfo == DbmsInfo.READ_REPLICA )
-        {
+        case READ_REPLICA:
             var readReplicaStatus = new ReadReplicaDatabaseStatusProvider( db );
             return readReplicaStatus.currentStatus();
-        }
-        else
-        {
+        case ENTERPRISE:
+            var standaloneStatus = new StandaloneDatabaseStatusProvider( db );
+            return standaloneStatus.currentStatus();
+        default:
             throw new IllegalStateException( "Not possible to get status for " + dbInfo );
         }
     }
