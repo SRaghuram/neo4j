@@ -909,6 +909,71 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
+  test( "should create role with old name after rename")
+  {
+    // GIVEN
+    execute("CREATE ROLE foo")
+
+    // WHEN
+    execute("RENAME ROLE foo TO bar")
+    execute("CREATE ROLE foo")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
+  }
+
+  test( "should rename role to old name after rename")
+  {
+    // GIVEN
+    execute("CREATE ROLE foo")
+    execute("CREATE ROLE baz")
+
+    // WHEN
+    execute("RENAME ROLE foo TO bar")
+    execute("RENAME ROLE baz TO foo")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
+  }
+
+  test( "should keep track of privileges when renaming roles")
+  {
+    // GIVEN
+    execute("CREATE ROLE foo")
+    execute("GRANT STOP ON DATABASE * TO foo")
+
+    execute("CREATE ROLE bar")
+    execute("GRANT SHOW USER ON DBMS TO bar")
+
+    // WHEN
+    execute("RENAME ROLE foo TO baz")
+    execute("GRANT START ON DATABASE * TO baz")
+
+    execute("RENAME ROLE bar TO foo")
+    execute("CREATE ROLE bar")
+
+    // THEN
+    val commands = execute("SHOW PRIVILEGES AS COMMANDS WHERE command contains 'foo' OR command contains 'bar' OR command contains 'baz'")
+    commands.toSet should be(Set(
+      Map("command" -> "GRANT STOP ON DATABASE * TO `baz`"),
+      Map("command" -> "GRANT SHOW USER ON DBMS TO `foo`"),
+      Map("command" -> "GRANT START ON DATABASE * TO `baz`")
+    ))
+  }
+
+  test( "should not create role with new name after rename")
+  {
+    // GIVEN
+    execute("CREATE ROLE foo")
+    execute("RENAME ROLE foo TO bar")
+
+    // WHEN .. THEN
+    val exception = the[InvalidArgumentException] thrownBy execute("CREATE ROLE bar")
+    exception.getMessage should startWith("Failed to create the specified role 'bar': Role already exists.")
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("bar").map))
+  }
+
   // Tests for dropping roles
 
   test("should drop role") {
