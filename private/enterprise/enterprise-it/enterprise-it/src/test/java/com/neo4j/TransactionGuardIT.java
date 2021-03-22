@@ -89,15 +89,14 @@ class TransactionGuardIT
     @Inject
     private PageCache pageCache;
 
-    private static final FakeClock fakeClock = Clocks.fakeClock();
-    private static GraphDatabaseAPI databaseWithTimeout;
-    private static GraphDatabaseAPI databaseWithoutTimeout;
-    private static TestWebContainer testWebContainer;
-    private static int boltPortDatabaseWithTimeout;
     private static final String DEFAULT_TIMEOUT = "2s";
-    private static final KernelTransactionTimeoutMonitorSupplier monitorSupplier = new
-            KernelTransactionTimeoutMonitorSupplier();
-    private static final IdInjectionFunctionAction getIdInjectionFunction = new IdInjectionFunctionAction( monitorSupplier );
+    private final FakeClock fakeClock = Clocks.fakeClock();
+    private GraphDatabaseAPI databaseWithTimeout;
+    private GraphDatabaseAPI databaseWithoutTimeout;
+    private TestWebContainer testWebContainer;
+    private int boltPortDatabaseWithTimeout;
+    private final KernelTransactionTimeoutMonitorSupplier monitorSupplier = new KernelTransactionTimeoutMonitorSupplier();
+    private final IdInjectionFunctionAction getIdInjectionFunction = new IdInjectionFunctionAction( monitorSupplier, fakeClock );
     private DatabaseManagementService customManagementService;
 
     @AfterEach
@@ -442,6 +441,7 @@ class TransactionGuardIT
                 BoltConnector.listen_address, new SocketAddress( "localhost", 0 ),
                 BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED,
                 HttpConnector.enabled, true,
+                HttpConnector.listen_address, new SocketAddress( "localhost", 0 ),
                 HttpConnector.advertised_address, new SocketAddress( "localhost", 0 ),
                 OnlineBackupSettings.online_backup_enabled, false,
                 GraphDatabaseSettings.auth_enabled, false );
@@ -498,8 +498,8 @@ class TransactionGuardIT
     {
         return IdContextFactoryBuilder.of( fileSystem, JobSchedulerFactory.createScheduler(), Config.defaults(), PageCacheTracer.NULL )
                 .withIdGenerationFactoryProvider(
-                        any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( fileSystem, immediate(), DEFAULT_DATABASE_NAME ) ) )
-                .build();
+                        any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( fileSystem, immediate(), DEFAULT_DATABASE_NAME ),
+                                getIdInjectionFunction ) ).build();
     }
 
     private static class KernelTransactionTimeoutMonitorSupplier implements Supplier<KernelTransactionMonitor>
@@ -526,10 +526,12 @@ class TransactionGuardIT
     private static class IdInjectionFunctionAction
     {
         private final Supplier<KernelTransactionMonitor> monitorSupplier;
+        private final FakeClock fakeClock;
 
-        IdInjectionFunctionAction( Supplier<KernelTransactionMonitor> monitorSupplier )
+        IdInjectionFunctionAction( Supplier<KernelTransactionMonitor> monitorSupplier, FakeClock fakeClock )
         {
             this.monitorSupplier = monitorSupplier;
+            this.fakeClock = fakeClock;
         }
 
         void tickAndCheck()
@@ -546,18 +548,20 @@ class TransactionGuardIT
     private static class TerminationIdGeneratorFactory implements IdGeneratorFactory
     {
         private final IdGeneratorFactory delegate;
+        private final IdInjectionFunctionAction getIdInjectionFunction;
 
-        TerminationIdGeneratorFactory( IdGeneratorFactory delegate )
+        TerminationIdGeneratorFactory( IdGeneratorFactory delegate, IdInjectionFunctionAction getIdInjectionFunction )
         {
             this.delegate = delegate;
+            this.getIdInjectionFunction = getIdInjectionFunction;
         }
 
         @Override
         public IdGenerator open( PageCache pageCache, Path filename, IdType idType, LongSupplier highIdSupplier, long maxId, boolean readOnly, Config config,
                 PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions ) throws IOException
         {
-            return new TerminationIdGenerator(
-                    delegate.open( pageCache, filename, idType, highIdSupplier, maxId, readOnly, config, cursorTracer, openOptions ) );
+            return new TerminationIdGenerator( delegate.open( pageCache, filename, idType, highIdSupplier, maxId, readOnly, config, cursorTracer, openOptions ),
+                    getIdInjectionFunction );
         }
 
         @Override
@@ -565,7 +569,8 @@ class TransactionGuardIT
                 Config config, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions ) throws IOException
         {
             return new TerminationIdGenerator(
-                    delegate.create( pageCache, filename, idType, highId, throwIfFileExists, maxId, readOnly, config, cursorTracer, openOptions ) );
+                    delegate.create( pageCache, filename, idType, highId, throwIfFileExists, maxId, readOnly, config, cursorTracer, openOptions ),
+                    getIdInjectionFunction );
         }
 
         @Override
@@ -595,9 +600,12 @@ class TransactionGuardIT
 
     private static final class TerminationIdGenerator extends IdGenerator.Delegate
     {
-        TerminationIdGenerator( IdGenerator delegate )
+        private final IdInjectionFunctionAction getIdInjectionFunction;
+
+        TerminationIdGenerator( IdGenerator delegate, IdInjectionFunctionAction getIdInjectionFunction )
         {
             super( delegate );
+            this.getIdInjectionFunction = getIdInjectionFunction;
         }
 
         @Override
