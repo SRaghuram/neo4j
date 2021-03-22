@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.bookmark;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -16,6 +17,8 @@ import java.util.stream.Collectors;
 import org.neo4j.bolt.runtime.BoltResponseHandler;
 import org.neo4j.bolt.runtime.Bookmark;
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.fabric.bolt.FabricBookmark;
 import org.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
@@ -42,9 +45,17 @@ class FabricDatabaseBookmarkManagerTest
     private final Location.Remote.External location2 = new Location.Remote.External( 2, location2Uuid, createUri( "bolt://somewhere:1002" ), null );
 
     private final TransactionIdTracker transactionIdTracker = mock( TransactionIdTracker.class );
-    private final LocalGraphTransactionIdTracker localGraphTransactionIdTracker =
-            new LocalGraphTransactionIdTracker( transactionIdTracker, null, Duration.ofSeconds( 1 ) );
-    private final TransactionBookmarkManager bookmarkManager = new TransactionBookmarkManagerImpl( localGraphTransactionIdTracker, false );
+    private TransactionBookmarkManager bookmarkManager;
+
+    @BeforeEach
+    void beforeEach()
+    {
+        var config = Config.newBuilder()
+                           .set( GraphDatabaseSettings.bookmark_ready_timeout, Duration.ofSeconds( 1 ) )
+                           .build();
+        var localGraphTransactionIdTracker = new LocalGraphTransactionIdTracker( transactionIdTracker, null, config );
+        bookmarkManager = new TransactionBookmarkManagerImpl( localGraphTransactionIdTracker, false );
+    }
 
     @Test
     void testBasicRemoteBookmarkHandling()

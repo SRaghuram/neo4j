@@ -14,6 +14,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.fabric.bolt.FabricBookmark;
 import org.neo4j.fabric.bolt.FabricBookmarkParser;
 import org.neo4j.fabric.bookmark.TransactionBookmarkManagerImpl;
@@ -138,8 +140,12 @@ class TransactionBookmarkManagerTest
         var b1 = fabricBookmark( internal1Uuid, 1001L );
         var b2 = fabricBookmark( NAMED_SYSTEM_DATABASE_ID.databaseId().uuid(), 1002L );
 
+        var config = Config.newBuilder()
+                           .set( GraphDatabaseSettings.bookmark_ready_timeout, Duration.ofSeconds( 1 ) )
+                           .build();
+
         var transactionIdTracker = mock( TransactionIdTracker.class );
-        var localGraphTransactionIdTracker = new LocalGraphTransactionIdTracker( transactionIdTracker, null, Duration.ofSeconds( 1 ) );
+        var localGraphTransactionIdTracker = new LocalGraphTransactionIdTracker( transactionIdTracker, null, config );
         var bookmarkManager = new TransactionBookmarkManagerImpl( localGraphTransactionIdTracker, true );
         bookmarkManager.processSubmittedByClient( List.of( b1, b2 ) );
 
