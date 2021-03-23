@@ -86,23 +86,23 @@ class EnterpriseIOControllerIT
         }
 
         @Override
-        public PagedFile map( Path path, int pageSize ) throws IOException
+        public PagedFile map( Path path, int pageSize, String databaseName ) throws IOException
         {
-            return new PageFileWrapper( super.map( path, pageSize ), IOController.DISABLED, disabledIOController, ioControllerChecks );
+            return new PageFileWrapper( super.map( path, pageSize, databaseName ), IOController.DISABLED, disabledIOController, ioControllerChecks );
         }
 
         @Override
-        public PagedFile map( Path path, int pageSize, ImmutableSet<OpenOption> openOptions ) throws IOException
+        public PagedFile map( Path path, int pageSize, String databaseName, ImmutableSet<OpenOption> openOptions ) throws IOException
         {
-            return new PageFileWrapper( super.map( path, pageSize, openOptions ), IOController.DISABLED, disabledIOController,
+            return new PageFileWrapper( super.map( path, pageSize, databaseName, openOptions ), IOController.DISABLED, disabledIOController,
                     ioControllerChecks );
         }
 
         @Override
-        public PagedFile map( Path path, VersionContextSupplier versionContextSupplier, int pageSize, ImmutableSet<OpenOption> openOptions, String databaseName,
+        public PagedFile map( Path path, VersionContextSupplier versionContextSupplier, int pageSize, String databaseName, ImmutableSet<OpenOption> openOptions,
                 IOController ioController ) throws IOException
         {
-            return new PageFileWrapper( super.map( path, versionContextSupplier, pageSize, openOptions, databaseName, ioController ), ioController,
+            return new PageFileWrapper( super.map( path, versionContextSupplier, pageSize, databaseName, openOptions, ioController ), ioController,
                     disabledIOController, ioControllerChecks );
         }
     }
