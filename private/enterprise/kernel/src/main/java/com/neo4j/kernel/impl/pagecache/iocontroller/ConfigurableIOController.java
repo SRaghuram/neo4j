@@ -23,7 +23,7 @@ import static java.lang.Math.min;
 
 public class ConfigurableIOController implements IOController
 {
-    private static final AtomicLongFieldUpdater<ConfigurableIOController> stateUpdater =
+    private static final AtomicLongFieldUpdater<ConfigurableIOController> controllerStateUpdater =
             AtomicLongFieldUpdater.newUpdater( ConfigurableIOController.class, "controllerState" );
 
     private static final int NO_LIMIT = 0;
@@ -70,24 +70,24 @@ public class ConfigurableIOController implements IOController
         {
             do
             {
-                oldState = stateUpdater.get( this );
+                oldState = controllerStateUpdater.get( this );
                 int disabledCounter = getDisabledCounter( oldState );
                 disabledCounter |= 1; // Raise the "permanently disabled" bit.
                 newState = composeState( disabledCounter, NO_LIMIT );
             }
-            while ( !stateUpdater.compareAndSet( this, oldState, newState ) );
+            while ( !controllerStateUpdater.compareAndSet( this, oldState, newState ) );
         }
         else
         {
             do
             {
-                oldState = stateUpdater.get( this );
+                oldState = controllerStateUpdater.get( this );
                 int disabledCounter = getDisabledCounter( oldState );
                 disabledCounter &= 0xFFFFFFFE; // Mask off "permanently disabled" bit.
                 int iopq = iops / QUANTUMS_PER_SECOND;
                 newState = composeState( disabledCounter, iopq );
             }
-            while ( !stateUpdater.compareAndSet( this, oldState, newState ) );
+            while ( !controllerStateUpdater.compareAndSet( this, oldState, newState ) );
         }
     }
 
@@ -127,14 +127,13 @@ public class ConfigurableIOController implements IOController
     public void maybeLimitIO( int recentlyCompletedIOs, Flushable flushable, FlushEventOpportunity flushEvent )
     {
         flushEvent.reportIO( recentlyCompletedIOs );
-        long state = stateUpdater.get( this );
+        long state = controllerStateUpdater.get( this );
         if ( getDisabledCounter( state ) > 0 )
         {
-            ioState = 0;
             return;
         }
 
-        long now = clock.millis() & TIME_MASK;
+        long now = currentTimeMillis() & TIME_MASK;
         long previousState = ioState;
         long then = previousState & TIME_MASK;
 
@@ -164,12 +163,12 @@ public class ConfigurableIOController implements IOController
         long newState;
         do
         {
-            currentState = stateUpdater.get( this );
+            currentState = controllerStateUpdater.get( this );
             // Increment by two to leave "permanently disabled bit" alone.
             int disabledCounter = getDisabledCounter( currentState ) + 2;
             newState = composeState( disabledCounter, getIOPQ( currentState ) );
         }
-        while ( !stateUpdater.compareAndSet( this, currentState, newState ) );
+        while ( !controllerStateUpdater.compareAndSet( this, currentState, newState ) );
     }
 
     @Override
@@ -185,13 +184,14 @@ public class ConfigurableIOController implements IOController
         long newState;
         do
         {
-            currentState = stateUpdater.get( this );
+            currentState = controllerStateUpdater.get( this );
             // Decrement by two to leave "permanently disabled bit" alone.
             int disabledCounter = getDisabledCounter( currentState ) - 2;
             newState = composeState( disabledCounter, getIOPQ( currentState ) );
         }
-        while ( !stateUpdater.compareAndSet( this, currentState, newState ) );
+        while ( !controllerStateUpdater.compareAndSet( this, currentState, newState ) );
         externalIO.reset();
+        ioState = 0;
     }
 
     @Override
