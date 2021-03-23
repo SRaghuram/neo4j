@@ -366,7 +366,8 @@ class CoreDatabaseFactory
         topologyComponents.add( TopologyPublisher.from( namedDatabaseId, topologyService::onDatabaseStart, topologyService::onDatabaseStop ) );
         topologyComponents.add( new RaftCoreTopologyConnector( topologyService, raftContext.raftGroup().raftMachine(), namedDatabaseId ) );
 
-        var panicHandler = new CorePanicHandlers( raftGroup.raftMachine(), kernelDatabase, applicationProcess, internalOperator, panicService );
+        var panicHandler = new CorePanicHandlers( raftGroup.raftMachine(), kernelDatabase, applicationProcess,
+                                                  internalOperator, panicService, downloadService, debugLog );
 
         var tempBootstrapDir = new TempBootstrapDir( fileSystem, kernelDatabase.getDatabaseLayout() );
         var raftStarter = new RaftStarter( kernelDatabase, raftContext.raftBinder(), messageHandler, snapshotService, downloadService, internalOperator,

@@ -5,9 +5,11 @@
  */
 package com.neo4j.causalclustering.error_handling;
 
+import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import org.neo4j.kernel.database.Database;
+import org.neo4j.logging.Log;
 
 @FunctionalInterface
 public interface DatabasePanicEventHandler
@@ -32,6 +34,11 @@ public interface DatabasePanicEventHandler
     static DatabasePanicEventHandler stopDatabase( ClusterInternalDbmsOperator internalOperator )
     {
         return new StopDatabaseHandler( internalOperator );
+    }
+
+    static DatabasePanicEventHandler stopSnapshotDownloadsHandler( CoreDownloaderService coreDownloaderService, Log log )
+    {
+        return new StopSnapshotDownloadsHandler( coreDownloaderService, log );
     }
 
     static DatabasePanicEventHandler panicDbmsIfSystemDatabasePanics( Panicker panicker )

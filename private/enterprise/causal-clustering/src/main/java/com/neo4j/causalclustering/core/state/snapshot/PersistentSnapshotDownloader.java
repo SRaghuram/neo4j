@@ -60,7 +60,8 @@ class PersistentSnapshotDownloader implements Runnable
     {
         INITIATED,
         RUNNING,
-        COMPLETED
+        COMPLETED,
+        PANICKED
     }
 
     @Override
@@ -123,6 +124,7 @@ class PersistentSnapshotDownloader implements Runnable
             {
                 log.error( "Unrecoverable error when downloading core snapshot and store.", e );
                 panicker.panic( new DatabasePanicEvent( context.databaseId(), SNAPSHOT_FAILED, e ) );
+                state = State.PANICKED;
             }
             else
             {
@@ -133,12 +135,16 @@ class PersistentSnapshotDownloader implements Runnable
         {
             log.error( "Unrecoverable error when downloading core snapshot and store.", e );
             panicker.panic( new DatabasePanicEvent( context.databaseId(), SNAPSHOT_FAILED, e ) );
+            state = State.PANICKED;
         }
         finally
         {
-            applicationProcess.resumeApplier( DOWNLOAD_SNAPSHOT );
-            coreSnapshotMonitor.downloadSnapshotComplete( databaseId );
-            state = State.COMPLETED;
+            if ( state != State.PANICKED )
+            {
+                applicationProcess.resumeApplier( DOWNLOAD_SNAPSHOT );
+                coreSnapshotMonitor.downloadSnapshotComplete( databaseId );
+                state = State.COMPLETED;
+            }
         }
     }
 
@@ -211,6 +217,6 @@ class PersistentSnapshotDownloader implements Runnable
 
     boolean hasCompleted()
     {
-        return state == State.COMPLETED;
+        return state == State.COMPLETED || state == State.PANICKED;
     }
 }

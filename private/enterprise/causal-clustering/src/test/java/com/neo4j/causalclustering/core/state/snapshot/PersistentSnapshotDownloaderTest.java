@@ -299,6 +299,22 @@ class PersistentSnapshotDownloaderTest
     }
 
     @Test
+    void shouldNotResumeApplicationProcessOnPanic() throws SnapshotFailedException
+    {
+        var snapshotFailedException = new SnapshotFailedException( "Unrecoverable", SnapshotFailedException.Status.UNRECOVERABLE );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow(
+                snapshotFailedException );
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
+
+        // when
+        persistentSnapshotDownloader.run();
+
+        // then
+        verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, SNAPSHOT_FAILED, snapshotFailedException ) );
+        verify( applicationProcess, never() ).resumeApplier( any() );
+    }
+
+    @Test
     void shouldNotStartDatabaseServiceWhenStoppedDuringDownload() throws Throwable
     {
         when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow( RETRYABLE_EXCEPTION );

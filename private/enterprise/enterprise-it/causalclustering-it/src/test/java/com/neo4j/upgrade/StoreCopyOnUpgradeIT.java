@@ -167,8 +167,8 @@ class StoreCopyOnUpgradeIT
     private static Stream<Arguments> shouldNotHandleStoreCopyOfOldStoreToNewVersionCrossStoreFamilyArgs()
     {
         return Stream.of(
-//                Arguments.of( MemberFactory.CORE, false, ERR_DIFFERENT_FORMAT, "Core without seed" ), //Enters infinite start loop on expected exception
-//                Arguments.of( MemberFactory.CORE, true, ERR_DIFFERENT_FORMAT, "Core with seed" ), //Enters infinite start loop on expected exception
+                Arguments.of( MemberFactory.CORE, false, ERR_DIFFERENT_FORMAT, "Core without seed" ),
+                Arguments.of( MemberFactory.CORE, true, ERR_DIFFERENT_FORMAT, "Core with seed" ),
                 Arguments.of( MemberFactory.READ_REPLICA, false, ERR_STORE_VERSION_MISMATCH, "Read replica without seed" ),
                 Arguments.of( MemberFactory.READ_REPLICA, true, ERR_STOREID_MISMATCH, "Read replica with seed" ) );
     }
