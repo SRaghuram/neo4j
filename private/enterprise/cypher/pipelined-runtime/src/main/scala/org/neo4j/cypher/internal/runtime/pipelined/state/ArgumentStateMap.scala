@@ -155,8 +155,9 @@ trait ArgumentStateMap[S <: ArgumentState] {
 
   /**
    * Like [[takeOneIfCompletedOrElsePeek]] but restricted to a single, specific argument.
+   * Additionally, rather than calling peek on the state controller, trackedPeek will be called.
    */
-  def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[S]
+  def takeIfCompletedOrElseTrackedPeek(argumentId: Long): ArgumentStateWithCompleted[S]
 
   /**
    * The semantics of this call differ depending on whether this ASM is ordered.

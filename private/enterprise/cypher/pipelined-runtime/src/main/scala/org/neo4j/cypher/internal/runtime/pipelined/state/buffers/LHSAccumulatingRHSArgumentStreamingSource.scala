@@ -74,7 +74,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
 
   private def tryTakeRhs(lhsAcc: LHS_ACC): MorselData = {
     val argumentRowId = lhsAcc.argumentRowId
-    val rhsBuffer = rhsArgumentStateMap.takeIfCompletedOrElsePeek(argumentRowId)
+    val rhsBuffer = rhsArgumentStateMap.takeIfCompletedOrElseTrackedPeek(argumentRowId)
     if (rhsBuffer != null) {
       rhsBuffer match {
         case ArgumentStateWithCompleted(completedArgumentState, true) =>

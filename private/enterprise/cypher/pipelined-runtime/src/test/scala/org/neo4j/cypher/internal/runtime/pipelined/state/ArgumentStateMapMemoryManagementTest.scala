@@ -155,14 +155,14 @@ class ArgumentStateMapMemoryManagementTest extends MorselUnitTest {
     // Phase 1
     val taken1 = new ArrayBuffer[TestArgumentState]()
     args1.foreach { arg =>
-      val peeked: ArgumentStateMap.ArgumentStateWithCompleted[TestArgumentState] = asm.takeIfCompletedOrElsePeek(arg)
+      val peeked: ArgumentStateMap.ArgumentStateWithCompleted[TestArgumentState] = asm.takeIfCompletedOrElseTrackedPeek(arg)
       peeked should not be null
       peeked.isCompleted shouldBe false
 
       val state = asm.decrement(arg)
       state should not be null
 
-      val taken = asm.takeIfCompletedOrElsePeek(arg)
+      val taken = asm.takeIfCompletedOrElseTrackedPeek(arg)
       taken should not be null
       taken.isCompleted shouldBe true
 
@@ -178,14 +178,14 @@ class ArgumentStateMapMemoryManagementTest extends MorselUnitTest {
     // Phase 2
     val taken2 = new ArrayBuffer[TestArgumentState]()
     args2.foreach { arg =>
-      val peeked: ArgumentStateMap.ArgumentStateWithCompleted[TestArgumentState] = asm.takeIfCompletedOrElsePeek(arg)
+      val peeked: ArgumentStateMap.ArgumentStateWithCompleted[TestArgumentState] = asm.takeIfCompletedOrElseTrackedPeek(arg)
       peeked should not be null
       peeked.isCompleted shouldBe false
 
       val state = asm.decrement(arg)
       state should not be null
 
-      val taken = asm.takeIfCompletedOrElsePeek(arg)
+      val taken = asm.takeIfCompletedOrElseTrackedPeek(arg)
       taken should not be null
       taken.isCompleted shouldBe true
 

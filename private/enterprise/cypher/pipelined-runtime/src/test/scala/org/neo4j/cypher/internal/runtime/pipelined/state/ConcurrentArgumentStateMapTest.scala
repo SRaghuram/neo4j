@@ -17,12 +17,12 @@ abstract class AbstractArgumentStateMapTest extends CypherFunSuite {
   test("should takeIfCompletedOrElsePeek with tracking enabled") {
     val asm = argumentStateMap(true)
     asm.initiate(argumentId, mock[MorselReadCursor], Array.emptyLongArray, initialCount = 1) // complete = false (count = 1, peekers = 0)
-    asm.takeIfCompletedOrElsePeek(argumentId) shouldBe ArgumentStateWithCompleted[TestArgumentState](asm.peek(argumentId), isCompleted = false) // complete = false (count = 1, peekers = 1)
+    asm.takeIfCompletedOrElseTrackedPeek(argumentId) shouldBe ArgumentStateWithCompleted[TestArgumentState](asm.peek(argumentId), isCompleted = false) // complete = false (count = 1, peekers = 1)
     asm.decrement(argumentId)
-    asm.takeIfCompletedOrElsePeek(argumentId) shouldBe null // complete = false (count = 0, peekers = 1)
+    asm.takeIfCompletedOrElseTrackedPeek(argumentId) shouldBe null // complete = false (count = 0, peekers = 1)
     asm.untrackPeek(argumentId)
     val state = asm.peek(argumentId)
-    asm.takeIfCompletedOrElsePeek(argumentId) shouldBe ArgumentStateWithCompleted[TestArgumentState](state, isCompleted = true) // complete = true (count = 0, peekers = 0)
+    asm.takeIfCompletedOrElseTrackedPeek(argumentId) shouldBe ArgumentStateWithCompleted[TestArgumentState](state, isCompleted = true) // complete = true (count = 0, peekers = 0)
   }
 }
 

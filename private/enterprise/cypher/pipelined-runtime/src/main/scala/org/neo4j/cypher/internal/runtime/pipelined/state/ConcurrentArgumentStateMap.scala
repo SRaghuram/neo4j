@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.PeekTrackingConcurrentStateController
+import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.PeekTrackingConcurrentStateController.PEEKER_TAKEN
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
@@ -171,6 +172,9 @@ object ConcurrentArgumentStateMap {
 
   object PeekTrackingConcurrentStateController {
     private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[PeekTrackingConcurrentStateController[ArgumentState]])
+    // NOTE: the correctness of this state controller implementation depends on PEEKER_TAKEN being a large negative number
+    //       do not change it without careful consideration
+    private val PEEKER_TAKEN = -1000000
   }
 
   /**
@@ -190,7 +194,10 @@ object ConcurrentArgumentStateMap {
 
     override def takeCompleted(): STATE = {
       if (count.compareAndSet(0, TAKEN)) {
-        if (peekerCount.compareAndSet(0, TAKEN)) {
+        // NOTE: this CAS is _only_ safe because TAKEN is a large negative number.
+        //       e.g., peekerCount may be incremented (in trackedPeek) _after_ it has been taken TAKEN,
+        //       but because TAKEN is a large negative number, it will still be true that peekerCount < 0.
+        if (peekerCount.compareAndSet(0, PEEKER_TAKEN)) {
           val returnState = state
           state = null.asInstanceOf[STATE]
           returnState
@@ -218,7 +225,10 @@ object ConcurrentArgumentStateMap {
     override def peek: STATE = state
 
     override def trackedPeek: STATE = {
-      if (count.get() > 0) { // check count to avoid toggling peeker count between 0 & >0 unnecessarily when many threads are contending for state
+      // check count to avoid toggling peeker count between 0 & >=1 unnecessarily when many threads are contending for state
+      // removing this check would not impact the correctness of this state controller,
+      // but it might lead to starvation as threads be racing to take the completed state
+      if (count.get() > 0) {
         if (peekerCount.incrementAndGet() > 0) {
           state
         } else {

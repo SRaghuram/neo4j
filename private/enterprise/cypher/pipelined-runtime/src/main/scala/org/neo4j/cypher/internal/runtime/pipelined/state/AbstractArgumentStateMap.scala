@@ -113,17 +113,17 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     }
   }
 
-  override def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[STATE] = {
+  override def takeIfCompletedOrElseTrackedPeek(argumentId: Long): ArgumentStateWithCompleted[STATE] = {
     val controller = getController(argumentId)
-    takeIfCompletedOrElsePeek(controller, doIncrementIfPeek = true)
+    takeIfCompletedOrElsePeek(controller, doTrackedPeek = true)
   }
 
   override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
     val controller = getFirstController
-    takeIfCompletedOrElsePeek(controller, doIncrementIfPeek = false)
+    takeIfCompletedOrElsePeek(controller, doTrackedPeek = false)
   }
 
-  private[this] def takeIfCompletedOrElsePeek(controller: CONTROLLER, doIncrementIfPeek: Boolean): ArgumentStateWithCompleted[STATE] = {
+  private[this] def takeIfCompletedOrElsePeek(controller: CONTROLLER, doTrackedPeek: Boolean): ArgumentStateWithCompleted[STATE] = {
     if (controller != null) {
       val completedState = controller.takeCompleted()
       if (completedState != null) {
@@ -132,7 +132,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
         ArgumentStateWithCompleted(completedState, isCompleted = true)
       } else {
-        val peekedState = if (doIncrementIfPeek) controller.trackedPeek else controller.peek
+        val peekedState = if (doTrackedPeek) controller.trackedPeek else controller.peek
         if (peekedState != null) {
           ArgumentStateWithCompleted(peekedState, isCompleted = false)
         } else {
