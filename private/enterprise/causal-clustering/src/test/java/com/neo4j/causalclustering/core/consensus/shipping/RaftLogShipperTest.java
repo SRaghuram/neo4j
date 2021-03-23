@@ -30,8 +30,8 @@ import java.util.Collection;
 
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.LogAssertions;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
@@ -44,8 +44,6 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createScheduler;
 
 @ExtendWith( LifeExtension.class )
@@ -66,8 +64,7 @@ class RaftLogShipperTest
     private long retryTimeMillis;
     private int catchupBatchSize = 64;
     private int maxAllowedShippingLag = 256;
-    private LogProvider logProvider;
-    private Log log;
+    private AssertableLogProvider logProvider;
 
     private RaftLogShipper logShipper;
 
@@ -89,10 +86,8 @@ class RaftLogShipperTest
         leaderTerm = 0;
         leaderCommit = 0;
         retryTimeMillis = 100000;
-        logProvider = mock( LogProvider.class );
+        logProvider = new AssertableLogProvider( true );
         timerService = new TimerService( scheduler, logProvider );
-        log = mock( Log.class );
-        when( logProvider.getLog( RaftLogShipper.class ) ).thenReturn( log );
     }
 
     @AfterEach
@@ -363,5 +358,37 @@ class RaftLogShipperTest
         logShipper.onMatch( 0, new LeaderContext( 0, 0 ) );
 
         assertThat( outbound.sentTo( follower ), Matchers.hasRaftLogEntries( asList( entry1, entry2, entry3 ) ) );
+    }
+
+    @Test
+    void shouldLogMatchIndexNotProgressing()
+    {
+        // given
+        var matchIndex = 1337L;
+        startLogShipper();
+        logShipper.onMatch( matchIndex, null );
+        logProvider.clear();
+
+        // when
+        logShipper.onMatch( matchIndex, null );
+
+        // then
+        LogAssertions.assertThat( logProvider ).containsMessages( "match index not progressing" );
+    }
+
+    @Test
+    void shouldNotLogWhenHandlingMessagesOutOfOrder()
+    {
+        // given
+        var matchIndex = 42L;
+        startLogShipper();
+        logShipper.onMatch( matchIndex, null );
+        logProvider.clear();
+
+        // when
+        logShipper.onMatch( matchIndex - 1, null );
+
+        // then
+        LogAssertions.assertThat( logProvider ).doesNotHaveAnyLogs();
     }
 }

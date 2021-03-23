@@ -163,13 +163,18 @@ public class RaftLogShipper
     public synchronized void onMatch( long newMatchIndex, LeaderContext leaderContext )
     {
         boolean progress = newMatchIndex > matchIndex;
-        if ( newMatchIndex > matchIndex )
+        if ( progress )
         {
             matchIndex = newMatchIndex;
         }
-        else
+        else if ( newMatchIndex == matchIndex )
         {
-            log.warn( "%s: match index not progressing. This should be transient.", statusAsString() );
+            /* Since AppendEntry responses are not sent in strict order anymore they will sometimes be handled
+             * by the leader out of order. That means that the newMatchIndex will be less than matchIndex. Since
+             * this is expected to happen occasionally nothing is logged. If however newMatchIndex == matchIndex
+             * that means that we have received multiple responses with the same match index and we are not
+             * progressing. */
+            log.info( "%s: match index not progressing. This should be transient.", statusAsString() );
         }
 
         switch ( mode )
