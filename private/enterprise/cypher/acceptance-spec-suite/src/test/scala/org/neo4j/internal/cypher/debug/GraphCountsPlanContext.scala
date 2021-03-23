@@ -107,9 +107,9 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
   override def indexesGetForLabel(labelId: Int): Iterator[IndexDescriptor] = {
     indexes
       .filter(_.labels.contains(getLabelName(labelId)))
-      .map(x => IndexDescriptor(LabelId(labelId),
-        x.properties.map(propertyName => PropertyKeyId(getPropertyKeyId(propertyName))),
-                                orderCapability = orderCapability, valueCapability = valueCapability)
+      .map(x => IndexDescriptor.forLabel(LabelId(labelId), x.properties.map(propertyName => PropertyKeyId(getPropertyKeyId(propertyName))))
+        .withOrderCapability(orderCapability)
+        .withValueCapability(valueCapability)
       ).toIterator
   }
 
@@ -143,9 +143,9 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
   override def indexGetForLabelAndProperties(labelName: String, propertyKeys: Seq[String]): Option[IndexDescriptor] =
     indexes
       .filter(x => x.labels.contains(labelName) && x.properties == propertyKeys)
-      .map(x => IndexDescriptor(LabelId(getLabelId(labelName)),
-        x.properties.map(propertyName => PropertyKeyId(getPropertyKeyId(propertyName))),
-                                orderCapability = orderCapability, valueCapability = valueCapability)
+      .map(x => IndexDescriptor.forLabel(LabelId(getLabelId(labelName)), x.properties.map(propertyName => PropertyKeyId(getPropertyKeyId(propertyName))))
+        .withOrderCapability(orderCapability)
+        .withValueCapability(valueCapability)
       ).headOption
 
   override def indexExistsForLabelAndProperties(labelName: String, propertyKey: Seq[String]): Boolean = {
@@ -222,20 +222,30 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
 
     override def uniqueValueSelectivity(index: IndexDescriptor): Option[Selectivity] =
       indexes.find(x =>
-        x.labels.contains(getLabelName(index.label)) &&
+        x.labels.contains(getLabelNameForIndex(index)) &&
           x.properties == index.properties.map(x => getPropertyKeyName(x.id))
       ).map(x => if(x.estimatedUniqueSize == 0L) Selectivity.ZERO else Selectivity(1.0 / x.estimatedUniqueSize))
 
     override def indexPropertyExistsSelectivity(index: IndexDescriptor): Option[Selectivity] = {
-      val labelCardinality = nodesWithLabelCardinality(Some(index.label))
+      val labelCardinality = entityCardinality(index)
       indexes.find(x =>
-        x.labels.contains(getLabelName(index.label)) &&
+        x.labels.contains(getLabelNameForIndex(index)) &&
           x.properties == index.properties.map(x => getPropertyKeyName(x.id))
       ).map(x => Selectivity(x.totalSize / labelCardinality.amount))
     }
+
+    private def getLabelNameForIndex(index: IndexDescriptor): String = index.entityType match {
+      case IndexDescriptor.EntityType.Node(label) => getLabelName(label)
+      case IndexDescriptor.EntityType.Relationship(_) => throw new UnsupportedOperationException("GraphCounts don't support relationship indexes yet")
+    }
+
+    private def entityCardinality(index: IndexDescriptor): Cardinality = index.entityType match {
+      case IndexDescriptor.EntityType.Node(label) => nodesWithLabelCardinality(Some(label))
+      case IndexDescriptor.EntityType.Relationship(_) => throw new UnsupportedOperationException("GraphCounts don't support relationship indexes yet")
+    }
   }
 
-  override val txIdProvider = LastCommittedTxIdProvider(tc.graph)
+  override val txIdProvider: () => Long = LastCommittedTxIdProvider(tc.graph)
 
   override def notificationLogger(): InternalNotificationLogger = logger
 
