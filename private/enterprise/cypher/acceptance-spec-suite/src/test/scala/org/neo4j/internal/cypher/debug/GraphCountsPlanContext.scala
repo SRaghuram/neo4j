@@ -143,6 +143,10 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
     indexesGetForLabel(labelId).nonEmpty
   }
 
+  override def indexExistsForRelType(relTypeId: Int): Boolean = {
+    indexesGetForRelType(relTypeId).nonEmpty
+  }
+
   override def indexGetForLabelAndProperties(labelName: String, propertyKeys: Seq[String]): Option[IndexDescriptor] =
     indexes
       .filter(x => x.labels.contains(labelName) && x.properties == propertyKeys)
