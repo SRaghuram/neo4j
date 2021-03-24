@@ -117,6 +117,16 @@ public class DeprecationAcceptanceTest
         assertNotificationsInSupportedVersions( "explain REVOKE ALL ON HOME GRAPH FROM role", containsNoItem( deprecatedDefaultGraphWarning ) );
     }
 
+    @Test
+    void deprecatedCatalogKeywordForAdminCommands()
+    {
+        // technically deprecated in both community and enterprise, but needs to be run against system database
+        assertNotificationsInSupportedVersions( "EXPLAIN CATALOG SHOW USERS", containsItem( deprecatedCatalogSyntax ));
+        assertNotificationsInSupportedVersions( "EXPLAIN CATALOG CREATE ROLE foo", containsItem( deprecatedCatalogSyntax ));
+        assertNotificationsInSupportedVersions( "EXPLAIN CATALOG DROP DATABASE foo IF EXISTS", containsItem( deprecatedCatalogSyntax ));
+        assertNotificationsInSupportedVersions( "EXPLAIN CATALOG SHOW PRIVILEGES AS COMMANDS", containsItem( deprecatedCatalogSyntax ));
+    }
+
     // MATCHERS & HELPERS
 
     void assertNotificationsInSupportedVersions( String query, Matcher<Iterable<Notification>> matchesExpectation )
@@ -144,6 +154,9 @@ public class DeprecationAcceptanceTest
 
     private final Matcher<Notification> deprecatedDefaultGraphWarning =
             deprecation( "The `ON DEFAULT GRAPH` syntax is deprecated, use `ON HOME GRAPH` instead" );
+
+    private final Matcher<Notification> deprecatedCatalogSyntax =
+            deprecation( "The optional `CATALOG` prefix for administration commands has been deprecated and should be omitted." );
 
     private static Matcher<Notification> deprecation( String message )
     {

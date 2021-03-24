@@ -129,6 +129,14 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
     }
   }
 
+  test("Should show correct plan using CATALOG") {
+    managementCommands.foreach { command =>
+      withClue(s"Command: $command $doubleNewLine") {
+        assertAdminCommandPlan(execute(s"EXPLAIN CATALOG $command").executionPlanString())
+      }
+    }
+  }
+
   private def assertAdminCommandPlan(plan: String): Unit =
     plan should be(
       "Compiler CYPHER 4.3" + doubleNewLine +
