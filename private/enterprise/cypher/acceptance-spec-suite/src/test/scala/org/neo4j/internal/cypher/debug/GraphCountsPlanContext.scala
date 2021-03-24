@@ -155,6 +155,9 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
         .withValueCapability(valueCapability)
       ).headOption
 
+  override def indexGetForRelTypeAndProperties(relTypeName: String, propertyKeys: Seq[String]): Option[IndexDescriptor] =
+    None
+
   override def indexExistsForLabelAndProperties(labelName: String, propertyKey: Seq[String]): Boolean = {
     indexGetForLabelAndProperties(labelName, propertyKey).isDefined
   }
