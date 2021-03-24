@@ -847,7 +847,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(defaultRoles)
   }
 
-  test("should not rename to existing name") {
+  test("should fail to rename to existing name") {
     // WHEN
     execute("CREATE ROLE foo")
     val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE foo TO reader")
@@ -858,7 +858,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
-  test("should not rename to existing name using if exists") {
+  test("should fail to rename to existing name using if exists") {
     // WHEN
     execute("CREATE ROLE foo")
     val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE foo IF EXISTS TO reader")
@@ -869,7 +869,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
-  test("should not rename from reserved name") {
+  test("should fail to rename from reserved name") {
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute(s"RENAME ROLE $PUBLIC TO PRIVATE")
     exception.getMessage should startWith(s"Failed to rename the specified role '$PUBLIC': 'PUBLIC' is a reserved role.")
@@ -879,7 +879,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(defaultRoles)
   }
 
-    test("should not rename from reserved name using if exists") {
+    test("should fail to rename from reserved name using if exists") {
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute(s"RENAME ROLE $PUBLIC IF EXISTS TO PRIVATE")
     exception.getMessage should startWith(s"Failed to rename the specified role '$PUBLIC': '$PUBLIC' is a reserved role.")
@@ -889,7 +889,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(defaultRoles)
   }
 
-  test("should not rename to reserved name") {
+  test("should fail to rename to reserved name") {
     // WHEN
     execute("CREATE ROLE foo")
     val exception = the[InvalidArgumentException] thrownBy execute(s"RENAME ROLE foo TO $PUBLIC")
@@ -899,7 +899,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
-  test("should not rename to reserved name using if exists") {
+  test("should fail to rename to reserved name using if exists") {
     // WHEN
     execute("CREATE ROLE foo")
     val exception = the[InvalidArgumentException] thrownBy execute(s"RENAME ROLE foo IF EXISTS TO $PUBLIC")
@@ -932,6 +932,37 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
+  }
+
+  test("should keep track of user to role mappings when renaming roles") {
+    // GIVEN
+    execute("CREATE USER alice SET PASSWORD 'secret'")
+    execute("CREATE ROLE foo")
+    execute("GRANT ROLE foo TO alice")
+
+    execute("CREATE USER bob SET PASSWORD '123abc'")
+    execute("CREATE ROLE bar")
+    execute("GRANT ROLE bar to bob")
+
+    execute("CREATE USER charlie SET PASSWORD 'abc123'")
+
+    // WHEN
+    execute("RENAME ROLE foo TO baz")
+    execute("GRANT ROLE baz TO charlie")
+
+    execute("RENAME ROLE bar TO foo")
+    execute("CREATE ROLE bar")
+
+    // THEN
+    val mappings = execute("SHOW ROLES WITH USERS")
+    mappings.toSet should be(defaultRolesWithUsers ++ publicRole("alice", "bob", "charlie") ++
+      Set(
+        role("foo").member("bob").map,
+        role("bar").noMember().map,
+        role("baz").member("alice").map,
+        role("baz").member("charlie").map
+      )
+    )
   }
 
   test( "should keep track of privileges when renaming roles") {

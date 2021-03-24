@@ -1001,6 +1001,36 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin(newUsername, newPassword, AuthenticationResult.FAILURE)
   }
 
+  test("should keep track of user to role mappings when renaming users") {
+    // GIVEN
+    execute("CREATE USER alice SET PASSWORD 'secret'")
+    execute("CREATE ROLE foo")
+    execute("GRANT ROLE foo TO alice")
+
+    execute("CREATE USER bob SET PASSWORD '123abc'")
+    execute("CREATE ROLE bar")
+    execute("GRANT ROLE bar to bob")
+
+    execute("CREATE ROLE baz")
+
+    // WHEN
+    execute("RENAME USER alice TO charlie")
+    execute("GRANT ROLE baz TO charlie")
+
+    execute("RENAME USER bob TO alice")
+    execute("CREATE USER bob SET PASSWORD 'pwd'")
+
+    // THEN
+    val mappings = execute("SHOW ROLES WITH USERS")
+    mappings.toSet should be(defaultRolesWithUsers ++ publicRole("alice", "bob", "charlie") ++
+      Set(
+        role("foo").member("charlie").map,
+        role("bar").member("alice").map,
+        role("baz").member("charlie").map
+      )
+    )
+  }
+
   test("should rename current user") {
     // GIVEN
     execute(alterDefaultUserQuery)
@@ -1047,7 +1077,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet should be(Set(defaultUser))
   }
 
-  test("should not rename to existing name") {
+  test("should fail to rename to existing name") {
     // GIVEN
     prepareUser(username, password)
     execute(s"CREATE USER $newUsername SET PASSWORD '$newPassword'")
@@ -1063,7 +1093,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin(newUsername, newPassword, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  test("should not rename to existing name using if exists") {
+  test("should fail to rename to existing name using if exists") {
     // GIVEN
     prepareUser(username, password)
     execute(s"CREATE USER $newUsername SET PASSWORD '$newPassword'")
