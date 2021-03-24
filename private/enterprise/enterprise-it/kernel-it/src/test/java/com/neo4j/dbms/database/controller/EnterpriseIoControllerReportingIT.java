@@ -56,7 +56,7 @@ class EnterpriseIoControllerReportingIT
 
         var controller = MonitoringController.MONITORING_CONTROLLER;
         var completed = new AtomicBoolean();
-        while ( true )
+        while ( !completed.get() )
         {
             try ( Transaction transaction = databaseService.beginTx() )
             {
@@ -67,7 +67,6 @@ class EnterpriseIoControllerReportingIT
             if ( controller.getExternalIOs() > 0 )
             {
                 completed.set( true );
-                return;
             }
         }
     }
