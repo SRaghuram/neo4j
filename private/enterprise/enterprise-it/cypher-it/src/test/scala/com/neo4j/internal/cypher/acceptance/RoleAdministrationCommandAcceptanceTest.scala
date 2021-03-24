@@ -285,7 +285,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // WHEN
     val exception = the[SyntaxException] thrownBy {
-      execute("SHOW ALL ROLES WHERE role='PUBLIC' RETURN role")
+      execute(s"SHOW ALL ROLES WHERE role='$PUBLIC' RETURN role")
     }
 
     // THEN
@@ -413,8 +413,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should not create role with reserved name") {
     // WHEN
-    val exception = the[InvalidArgumentException] thrownBy execute("CREATE ROLE PUBLIC")
-    exception.getMessage should startWith("Failed to create the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+    val exception = the[InvalidArgumentException] thrownBy execute(s"CREATE ROLE $PUBLIC")
+    exception.getMessage should startWith(s"Failed to create the specified role '$PUBLIC': '$PUBLIC' is a reserved role.")
 
     // THEN
     val result = execute("SHOW ROLES")
@@ -424,7 +424,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   test("should not create role with reserved name using parameter") {
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute("CREATE ROLE $role", Map("role" -> PUBLIC))
-    exception.getMessage should startWith("Failed to create the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+    exception.getMessage should startWith(s"Failed to create the specified role '$PUBLIC': '$PUBLIC' is a reserved role.")
 
     // THEN
     val result = execute("SHOW ROLES")
@@ -871,8 +871,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should not rename from reserved name") {
     // WHEN
-    val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE PUBLIC TO PRIVATE")
-    exception.getMessage should startWith("Failed to rename the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+    val exception = the[InvalidArgumentException] thrownBy execute(s"RENAME ROLE $PUBLIC TO PRIVATE")
+    exception.getMessage should startWith(s"Failed to rename the specified role '$PUBLIC': 'PUBLIC' is a reserved role.")
 
     // THEN
     val result = execute("SHOW ROLES")
@@ -881,8 +881,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     test("should not rename from reserved name using if exists") {
     // WHEN
-    val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE PUBLIC IF EXISTS TO PRIVATE")
-    exception.getMessage should startWith("Failed to rename the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+    val exception = the[InvalidArgumentException] thrownBy execute(s"RENAME ROLE $PUBLIC IF EXISTS TO PRIVATE")
+    exception.getMessage should startWith(s"Failed to rename the specified role '$PUBLIC': '$PUBLIC' is a reserved role.")
 
     // THEN
     val result = execute("SHOW ROLES")
@@ -892,8 +892,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   test("should not rename to reserved name") {
     // WHEN
     execute("CREATE ROLE foo")
-    val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE foo TO PUBLIC")
-    exception.getMessage should startWith("Failed to rename the specified role 'foo' to 'PUBLIC': 'PUBLIC' is a reserved role.")
+    val exception = the[InvalidArgumentException] thrownBy execute(s"RENAME ROLE foo TO $PUBLIC")
+    exception.getMessage should startWith(s"Failed to rename the specified role 'foo' to '$PUBLIC': '$PUBLIC' is a reserved role.")
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
@@ -902,8 +902,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   test("should not rename to reserved name using if exists") {
     // WHEN
     execute("CREATE ROLE foo")
-    val exception = the[InvalidArgumentException] thrownBy execute("RENAME ROLE foo IF EXISTS TO PUBLIC")
-    exception.getMessage should startWith("Failed to rename the specified role 'foo' to 'PUBLIC': 'PUBLIC' is a reserved role.")
+    val exception = the[InvalidArgumentException] thrownBy execute(s"RENAME ROLE foo IF EXISTS TO $PUBLIC")
+    exception.getMessage should startWith(s"Failed to rename the specified role 'foo' to '$PUBLIC': '$PUBLIC' is a reserved role.")
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
@@ -1000,8 +1000,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should not drop role with reserved name") {
     // WHEN
-    val exception = the[InvalidArgumentException] thrownBy execute("DROP ROLE PUBLIC")
-    exception.getMessage should startWith("Failed to delete the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+    val exception = the[InvalidArgumentException] thrownBy execute(s"DROP ROLE $PUBLIC")
+    exception.getMessage should startWith(s"Failed to delete the specified role '$PUBLIC': '$PUBLIC' is a reserved role.")
 
     // THEN
     val result = execute("SHOW ROLES")
@@ -1011,7 +1011,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   test("should not drop role with reserved name using parameter") {
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute("DROP ROLE $role", Map("role" -> PUBLIC))
-    exception.getMessage should startWith("Failed to delete the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+    exception.getMessage should startWith(s"Failed to delete the specified role '$PUBLIC': '$PUBLIC' is a reserved role.")
 
     // THEN
     val result = execute("SHOW ROLES")
@@ -1152,7 +1152,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should not fail granting reserved role to user") {
     // WHEN
-    execute("GRANT ROLE PUBLIC TO neo4j")
+    execute(s"GRANT ROLE $PUBLIC TO neo4j")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(defaultUser)
@@ -1171,7 +1171,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE ROLE custom")
 
     // WHEN
-    execute("GRANT ROLE PUBLIC, custom TO neo4j")
+    execute(s"GRANT ROLE $PUBLIC, custom TO neo4j")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq(ADMIN, "custom")))
@@ -1443,9 +1443,9 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER user SET PASSWORD 'neo'")
 
     // WHEN
-    val exception = the[InvalidArgumentException] thrownBy execute("REVOKE ROLE PUBLIC FROM user")
+    val exception = the[InvalidArgumentException] thrownBy execute(s"REVOKE ROLE $PUBLIC FROM user")
     // THEN
-    exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+    exception.getMessage should startWith(s"Failed to revoke the specified role '$PUBLIC': '$PUBLIC' is a reserved role.")
 
     // THEN
     execute("SHOW POPULATED ROLES WITH USERS").toSet should be(
@@ -1460,7 +1460,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute("REVOKE ROLE $role FROM user", Map("role" -> PUBLIC))
     // THEN
-    exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+    exception.getMessage should startWith(s"Failed to revoke the specified role '$PUBLIC': '$PUBLIC' is a reserved role.")
 
     // THEN
     execute("SHOW POPULATED ROLES WITH USERS").toSet should be(
@@ -1473,9 +1473,9 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     setupUserWithCustomRole("user", "neo")
 
     // WHEN
-    val exception = the[InvalidArgumentException] thrownBy execute("REVOKE ROLE PUBLIC, custom FROM user")
+    val exception = the[InvalidArgumentException] thrownBy execute(s"REVOKE ROLE $PUBLIC, custom FROM user")
     // THEN
-    exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+    exception.getMessage should startWith(s"Failed to revoke the specified role '$PUBLIC': '$PUBLIC' is a reserved role.")
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(publicRole("user") ++ defaultRolesWithUsers + role("custom").member("user").map)

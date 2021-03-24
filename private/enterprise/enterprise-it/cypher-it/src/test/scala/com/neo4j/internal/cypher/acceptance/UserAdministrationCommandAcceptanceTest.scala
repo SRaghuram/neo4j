@@ -5,6 +5,7 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.CacheCounts
@@ -28,7 +29,6 @@ import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
   private val newUsername = "oof"
-  private val reservedRoleName = "PUBLIC"
 
   test("GraphStatistics should tell us if a query contains system updates or not") {
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -373,7 +373,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     executeOnSystem("joe", "soap", "SHOW CURRENT USER", resultHandler = (row, _) => {
       // THEN
       row.get("user") should be("joe")
-      row.get("roles") should be(Array("custom", "PUBLIC"))
+      row.get("roles") should be(Array("custom", PUBLIC))
       row.get("passwordChangeRequired") shouldBe false
       row.get("suspended") shouldBe false
       row.get("home") shouldBe null
@@ -405,7 +405,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       resultHandler = (row, _) => {
         // THEN
         row.get("user") should be("joe")
-        row.get("roles") should be(Array("custom", "PUBLIC"))
+        row.get("roles") should be(Array("custom", PUBLIC))
         row.get("passwordChangeRequired") shouldBe false
         row.get("suspended") shouldBe false
         row.get("home") shouldBe null
@@ -441,7 +441,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       resultHandler = (row, _) => {
         // THEN
         row.get("user") should be("joe")
-        row.get("roles") should be(Array("custom", "PUBLIC"))
+        row.get("roles") should be(Array("custom", PUBLIC))
         row.get("passwordChangeRequired") shouldBe false
         row.get("suspended") shouldBe false
         row.get("home") shouldBe "foo"
@@ -1081,13 +1081,13 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should rename user from reserved role name") {
     // GIVEN
-    prepareUser(reservedRoleName, password)
+    prepareUser(PUBLIC, password)
 
     // WHEN
-    execute(s"RENAME USER $reservedRoleName TO $newUsername")
+    execute(s"RENAME USER $PUBLIC TO $newUsername")
 
     // THEN
-    testUserLogin(reservedRoleName, password, AuthenticationResult.FAILURE)
+    testUserLogin(PUBLIC, password, AuthenticationResult.FAILURE)
     testUserLogin(newUsername, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
@@ -1096,11 +1096,11 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     prepareUser(username, password)
 
     // WHEN
-    execute(s"RENAME USER $username TO $reservedRoleName")
+    execute(s"RENAME USER $username TO $PUBLIC")
 
     // THEN
     testUserLogin(username, password, AuthenticationResult.FAILURE)
-    testUserLogin(reservedRoleName, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+    testUserLogin(PUBLIC, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
   // Tests for dropping users
@@ -1791,7 +1791,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
     execute("CREATE DATABASE bar")
-    execute("GRANT ACCESS ON DATABASE bar to PUBLIC")
+    execute(s"GRANT ACCESS ON DATABASE bar to $PUBLIC")
 
     // WHEN
     execute(s"ALTER USER foo SET HOME DATABASE bar")
@@ -1809,7 +1809,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
     execute("CREATE DATABASE bar")
-    execute("GRANT ACCESS ON DATABASE bar to PUBLIC")
+    execute(s"GRANT ACCESS ON DATABASE bar to $PUBLIC")
 
     // WHEN
     execute(s"ALTER USER foo SET HOME DATABASE $$db", Map("db" -> "bar"))
