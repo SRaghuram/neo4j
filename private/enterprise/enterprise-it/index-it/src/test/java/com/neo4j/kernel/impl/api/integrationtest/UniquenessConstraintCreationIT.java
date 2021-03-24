@@ -42,7 +42,6 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.values.storable.Values;
 
-import static java.util.Collections.emptySet;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -174,7 +173,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
 
         // then
         KernelTransaction transaction = newTransaction();
-        assertEquals( asSet( uniqueIndex ), asSet( transaction.schemaRead().indexesGetAll() ) );
+        assertThat( asSet( transaction.schemaRead().indexesGetAll() ) ).contains( uniqueIndex );
         commit();
     }
 
@@ -183,16 +182,20 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         // given
         KernelTransaction transaction = newTransaction( LoginContext.AUTH_DISABLED );
+
+        var indexesBefore = asSet( transaction.schemaRead().indexesGetAll() );
+
         ConstraintDescriptor constraint = transaction.schemaWrite().uniquePropertyConstraintCreate( uniqueForSchema( schema ).withName( "constraint name" ) );
         IndexDescriptor uniqueIndex = kernelTransaction.schemaRead().indexGetForName( constraint.getName() );
-        assertEquals( asSet( uniqueIndex ), asSet( transaction.schemaRead().indexesGetAll() ) );
+        assertThat( uniqueIndex ).isNotEqualTo( IndexDescriptor.NO_INDEX );
+        assertThat( asSet( transaction.schemaRead().indexesGetAll() ) ).contains( uniqueIndex );
 
         // when
         rollback();
 
         // then
         transaction = newTransaction();
-        assertEquals( emptySet(), asSet( transaction.schemaRead().indexesGetAll() ) );
+        assertThat( asSet( transaction.schemaRead().indexesGetAll() ) ).containsExactlyElementsOf( indexesBefore );
         commit();
     }
 
@@ -296,9 +299,13 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         // given
         KernelTransaction transaction = newTransaction( LoginContext.AUTH_DISABLED );
+
+        var indexesBefore = asSet( transaction.schemaRead().indexesGetAll() );
+
         ConstraintDescriptor constraint = transaction.schemaWrite().uniquePropertyConstraintCreate( uniqueForSchema( schema ).withName( "constraint name" ) );
         IndexDescriptor uniqueIndex = kernelTransaction.schemaRead().indexGetForName( constraint.getName() );
-        assertEquals( asSet( uniqueIndex ), asSet( transaction.schemaRead().indexesGetAll() ) );
+        assertThat( uniqueIndex ).isNotEqualTo( IndexDescriptor.NO_INDEX );
+        assertThat( asSet( transaction.schemaRead().indexesGetAll() ) ).contains( uniqueIndex );
         commit();
 
         // when
@@ -308,7 +315,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
 
         // then
         transaction = newTransaction();
-        assertEquals( emptySet(), asSet( transaction.schemaRead().indexesGetAll() ) );
+        assertThat( asSet( transaction.schemaRead().indexesGetAll() ) ).containsExactlyElementsOf( indexesBefore );
         commit();
     }
 

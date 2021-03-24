@@ -13,10 +13,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -26,13 +24,11 @@ import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
-import org.neo4j.graphdb.schema.ConstraintDefinition;
-import org.neo4j.graphdb.schema.IndexDefinition;
-import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.schema.ConstraintDescriptor;
+import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -42,13 +38,11 @@ import org.neo4j.kernel.api.exceptions.schema.NoSuchConstraintException;
 import org.neo4j.kernel.impl.api.integrationtest.KernelIntegrationTest;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
-import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.internal.helpers.collection.Iterables.asList;
 import static org.neo4j.internal.helpers.collection.Iterators.asCollection;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
@@ -359,6 +353,8 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
     @Test
     void shouldNotDropConstraintThatDoesNotExist() throws Exception
     {
+        Set<IndexDescriptor> indexesBefore = indexes();
+
         // given
         Constraint constraint = newConstraintObject( schema );
 
@@ -372,17 +368,15 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         }
 
         // then
-        {
-            KernelTransaction transaction = newTransaction();
-            assertEquals( emptySet(), asSet( transaction.schemaRead().indexesGetAll() ) );
-            commit();
-        }
+        assertThat( indexes() ).containsExactlyElementsOf( indexesBefore );
     }
 
     @ParameterizedTest
     @EnumSource( SchemaHelper.class )
-    void shouldNotLeaveAnyStateBehindAfterFailingToCreateConstraint( SchemaHelper helper )
+    void shouldNotLeaveAnyStateBehindAfterFailingToCreateConstraint( SchemaHelper helper ) throws Exception
     {
+        Set<IndexDescriptor> indexesBefore = indexes();
+
         // given
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
@@ -403,11 +397,10 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         }
 
         // then
+        assertThat( indexes() ).containsExactlyElementsOf( indexesBefore );
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            assertEquals( Collections.<ConstraintDefinition>emptyList(), asList( tx.schema().getConstraints() ) );
-            assertEquals( Collections.<IndexDefinition, Schema.IndexState>emptyMap(), indexesWithState( tx.schema() ) );
-            tx.commit();
+            assertThat( tx.schema().getConstraints() ).isEmpty();
         }
     }
 
@@ -486,14 +479,12 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         }
     }
 
-    private static Map<IndexDefinition,Schema.IndexState> indexesWithState( Schema schema )
+    private Set<IndexDescriptor> indexes() throws TransactionFailureException
     {
-        Map<IndexDefinition,Schema.IndexState> result = new HashMap<>();
-        for ( IndexDefinition definition : schema.getIndexes() )
+        try ( KernelTransaction transaction = newTransaction() )
         {
-            result.put( definition, schema.getIndexState( definition ) );
+            return asSet( transaction.schemaRead().indexesGetAll() );
         }
-        return result;
     }
 
     private class SchemaStateCheck implements Function<String,Integer>
