@@ -111,9 +111,8 @@ class ReadReplicaDatabaseFactory
                 () -> new IllegalStateException( format( "No per database catchup components exist for database %s.", namedDatabaseId.name() ) ) );
 
         var backoffStrategy = constant( 1, SECONDS );
-        var bootstrap = new ReadReplicaBootstrap( databaseContext, upstreamDatabaseStrategySelector, internalLogProvider,
-                userLogProvider, topologyService, catchupComponentsSupplier, clusterInternalOperator, databaseStartAborter, backoffStrategy,
-                commandIndexTracker, systemDbmsModel );
+        var bootstrap = new ReadReplicaBootstrap( databaseContext, upstreamDatabaseStrategySelector, internalLogProvider, userLogProvider, topologyService,
+                catchupComponentsSupplier, clusterInternalOperator, databaseStartAborter, backoffStrategy, systemDbmsModel );
 
         var raftIdCheck = new RaftIdCheck( raftIdStorage, namedDatabaseId );
 

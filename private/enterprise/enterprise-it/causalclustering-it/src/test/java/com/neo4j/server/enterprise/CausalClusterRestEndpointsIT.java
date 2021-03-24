@@ -524,34 +524,6 @@ class CausalClusterRestEndpointsIT
         assertDatabaseEventuallyDoesNotExist( newDatabaseName, cluster );
     }
 
-    @Test
-    void newReplicaShouldHaveCorrectCombinedStatusEndpoint() throws Exception
-    {
-        var newDatabaseName = "foo";
-        createDatabase( newDatabaseName, cluster );
-        assertDatabaseEventuallyStarted( newDatabaseName, cluster );
-
-        var systemDbUuid = databaseUuid( SYSTEM_DATABASE_NAME );
-        var defaultDbUuid = databaseUuid( DEFAULT_DATABASE_NAME );
-        var newDbUuid = databaseUuid( newDatabaseName );
-
-        writeSomeData( cluster, DEFAULT_DATABASE_NAME );
-        writeSomeData( cluster, newDatabaseName );
-
-        var newReplica = cluster.addReadReplicaWithIndex( 9 );
-        newReplica.start();
-
-        assertEventually( combinedStatusEndpoint( newReplica ), statuses -> statuses.size() == 3, 1, MINUTES );
-        verifyCombinedStatusEndpointOnReadReplica( newReplica, SYSTEM_DATABASE_NAME, systemDbUuid );
-        verifyCombinedStatusEndpointOnReadReplica( newReplica, DEFAULT_DATABASE_NAME, defaultDbUuid );
-        verifyCombinedStatusEndpointOnReadReplica( newReplica, newDatabaseName, newDbUuid );
-
-        cluster.removeReadReplica( newReplica );
-
-        dropDatabase( newDatabaseName, cluster );
-        assertDatabaseEventuallyDoesNotExist( newDatabaseName, cluster );
-    }
-
     private static void verifyCombinedStatusEndpointOnCore( ClusterMember core, String databaseName, UUID databaseUuid ) throws Exception
     {
         var coreStatus = ClusteringStatusEndpointMatchers.statusFromCombinedEndpoint( core, databaseName, databaseUuid );

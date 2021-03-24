@@ -116,7 +116,7 @@ class ReadReplicaBootstrapTest
     {
         return new ReadReplicaBootstrap( databaseContext, selectionStrategy, nullLogProvider(), nullLogProvider(), topologyService,
                                          () -> catchupComponents, new ClusterInternalDbmsOperator( nullLogProvider() ), aborter, timeoutStrategy,
-                                         new CommandIndexTracker(), systemDbmsModel );
+                                         systemDbmsModel );
     }
 
     @Test

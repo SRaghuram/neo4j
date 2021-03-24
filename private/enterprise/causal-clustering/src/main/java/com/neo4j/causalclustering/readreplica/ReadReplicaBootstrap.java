@@ -48,13 +48,12 @@ class ReadReplicaBootstrap
     private final TopologyService topologyService;
     private final Supplier<CatchupComponents> catchupComponentsSupplier;
     private final ReadReplicaDatabaseContext databaseContext;
-    private final LastTxMonitor lastTxIdMonitor;
     private final ClusterSystemGraphDbmsModel systemDbmsModel;
 
     ReadReplicaBootstrap( ReadReplicaDatabaseContext databaseContext, UpstreamDatabaseStrategySelector selectionStrategy, LogProvider debugLogProvider,
                           LogProvider userLogProvider, TopologyService topologyService, Supplier<CatchupComponents> catchupComponentsSupplier,
                           ClusterInternalDbmsOperator internalOperator, DatabaseStartAborter databaseStartAborter, TimeoutStrategy syncRetryStrategy,
-                          CommandIndexTracker commandIndexTracker, ClusterSystemGraphDbmsModel systemDbmsModel )
+                          ClusterSystemGraphDbmsModel systemDbmsModel )
     {
         this.databaseContext = databaseContext;
         this.catchupComponentsSupplier = catchupComponentsSupplier;
@@ -65,7 +64,6 @@ class ReadReplicaBootstrap
         this.userLog = userLogProvider.getLog( getClass() );
         this.topologyService = topologyService;
         this.internalOperator = internalOperator;
-        this.lastTxIdMonitor = new LastTxMonitor( commandIndexTracker );
         this.systemDbmsModel = systemDbmsModel;
     }
 
@@ -170,7 +168,7 @@ class ReadReplicaBootstrap
     private void syncStoreWithUpstream( ReadReplicaDatabaseContext databaseContext, ServerId sourceServer )
             throws IOException, StoreIdDownloadFailedException, StoreCopyFailedException, DatabaseShutdownException, CatchupAddressResolutionException
     {
-        CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponentsSupplier.get();
+        CatchupComponents catchupComponents = catchupComponentsSupplier.get();
 
         debugLog.info( "Finding store ID of upstream server %s", sourceServer );
         var sourceAddress = topologyService.lookupCatchupAddress( sourceServer );
@@ -227,10 +225,9 @@ class ReadReplicaBootstrap
     {
         debugLog.info( "Copying store from upstream servers" );
         databaseContext.delete();
-        databaseContext.monitors().addMonitorListener( lastTxIdMonitor );
+
         var provider = new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategy );
         catchupComponents.storeCopyProcess().replaceWithStoreFrom( provider, expectedStoreId );
-        databaseContext.monitors().removeMonitorListener( lastTxIdMonitor );
 
         debugLog.info( "Restarting local database after copy." );
     }
@@ -247,21 +244,5 @@ class ReadReplicaBootstrap
         var storeFilesDatabaseId = databaseContext.readDatabaseIdFromDisk();
         return storeFilesDatabaseId.map( databaseId -> databaseId.equals( databaseIdReadFromSystemDatabase ) )
                                    .orElse( false );
-    }
-
-    private static final class LastTxMonitor extends StoreCopyClientMonitor.Adapter
-    {
-        private final CommandIndexTracker commandIndexTracker;
-
-        private LastTxMonitor( CommandIndexTracker commandIndexTracker )
-        {
-            this.commandIndexTracker = commandIndexTracker;
-        }
-
-        @Override
-        public void finishReceivingTransactions( long endTxId )
-        {
-            commandIndexTracker.setAppliedCommandIndex( endTxId );
-        }
     }
 }
