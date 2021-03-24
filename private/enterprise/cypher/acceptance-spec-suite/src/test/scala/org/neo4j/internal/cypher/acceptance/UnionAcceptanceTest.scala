@@ -189,4 +189,154 @@ class UnionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonS
     }
     result.size should be(120)
   }
+
+  test("union subQuery with renaming") {
+    val nodeA = createLabeledNode(Map("name" -> "A"), "Person")
+    val nodeB = createLabeledNode(Map("name" -> "B"), "Person")
+    relate(nodeA, nodeB)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """
+        |MATCH (x {name:'A'})
+        |CALL {
+        |  WITH x RETURN x AS y
+        |  UNION
+        |  WITH x MATCH (x)-[]-(y) RETURN y
+        |}
+        |WITH y AS z
+        |RETURN z.name, id(z)
+        |ORDER BY z.name asc""".stripMargin)
+
+    result.executionPlanDescription() should not(includeSomewhere .aPlan("Filter").containingArgumentForCachedProperty(".*", ".*"))
+    result.toList should equal(List(Map("z.name" -> "A", "id(z)" -> nodeA.getId), Map("z.name" -> "B", "id(z)" -> nodeB.getId)))
+  }
+
+  test("union subQuery identical renaming with caching") {
+    val nodeA = createLabeledNode(Map("name" -> "A"), "Person")
+    val nodeB = createLabeledNode(Map("name" -> "B"), "Person")
+    relate(nodeA, nodeB)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """
+        |MATCH (x {name:'A'})
+        |CALL {
+        |  WITH x RETURN x as y
+        |  UNION
+        |  WITH x RETURN x as y
+        |}
+        |WITH y AS z
+        |RETURN z.name, id(z)
+        |ORDER BY z.name asc""".stripMargin)
+
+    result.executionPlanDescription() should includeSomewhere .aPlan("Filter").containingArgumentForCachedProperty("x", "name")
+    result.executionPlanDescription() should includeSomewhere .aPlan("Projection").containingArgumentForCachedProperty("z", "name")
+    result.toList should equal(List(Map("z.name" -> "A", "id(z)" -> nodeA.getId)))
+  }
+
+  test("union subQuery with renaming without cached projection property") {
+    val nodeA = createLabeledNode(Map("name" -> "A"), "Person")
+    val nodeB = createLabeledNode(Map("name" -> "B"), "Person")
+    relate(nodeA, nodeB)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """
+        |MATCH (x {name:'A'})
+        |CALL {
+        |  WITH x MATCH (x)-[]-(y) where y.name='B' RETURN y
+        |  UNION
+        |  WITH x MATCH (x)-[]-(z) where x.name='A' RETURN x as y
+        |}
+        |WITH y AS z
+        |RETURN z.name, id(z)
+        |ORDER BY z.name asc""".stripMargin)
+    result.executionPlanDescription() should not(includeSomewhere .aPlan("Projection").containingArgumentForCachedProperty("z", "name"))
+    result.executionPlanDescription() should includeSomewhere .aPlan("Filter").containingArgumentForCachedProperty("x", "name")
+    result.toList should equal(List(Map("z.name" -> "A", "id(z)" -> nodeA.getId), Map("z.name" -> "B", "id(z)" -> nodeB.getId)))
+  }
+
+  test("union subQuery with rename with reverse order") {
+    val nodeA = createLabeledNode(Map("name" -> "A"), "Person")
+    val nodeB = createLabeledNode(Map("name" -> "B"), "Person")
+    relate(nodeA, nodeB)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """
+        |MATCH (x {name:'A'})
+        |CALL {
+        |  WITH x MATCH (x)-[]-(y) RETURN y
+        |  UNION
+        |  WITH x RETURN x AS y
+        |}
+        |WITH y AS z
+        |RETURN z.name, id(z)
+        |ORDER BY z.name asc""".stripMargin)
+
+    result.executionPlanDescription() should not(includeSomewhere .aPlan("Filter").containingArgumentForCachedProperty(".*", ".*"))
+    result.toList should equal(List(Map("z.name" -> "A", "id(z)" -> nodeA.getId), Map("z.name" -> "B", "id(z)" -> nodeB.getId)))
+  }
+
+  test("union subQuery without renaming") {
+    val nodeA = createLabeledNode(Map("name" -> "A"), "Person")
+    val nodeB = createLabeledNode(Map("name" -> "B"), "Person")
+    relate(nodeA, nodeB)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """
+        |MATCH (x {name:'A'})
+        |CALL {
+        |  WITH x RETURN x AS y
+        |  UNION
+        |  WITH x MATCH (x)-[]-(y) RETURN y
+        |}
+        |WITH y
+        |RETURN y.name, id(y)
+        |ORDER BY y.name asc""".stripMargin)
+
+    result.executionPlanDescription() should not(includeSomewhere .aPlan("Filter").containingArgumentForCachedProperty(".*", ".*"))
+    result.toList should equal(List(Map("y.name" -> "A", "id(y)" -> 0), Map("y.name" -> "B", "id(y)" -> 1)))
+  }
+
+  test("union subQuery with renaming and without caching") {
+    val nodeA = createLabeledNode(Map("name" -> "A"), "Person")
+    val nodeB = createLabeledNode(Map("name" -> "B"), "Person")
+    relate(nodeA, nodeB)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """
+        |MATCH (x)
+        |CALL {
+        |  WITH x RETURN x AS y
+        |  UNION
+        |  WITH x MATCH (x)-[]-(y) RETURN y
+        |}
+        |WITH y as z
+        |RETURN z.name, id(z)
+        |ORDER BY z.name asc""".stripMargin)
+
+    result.executionPlanDescription() should not(includeSomewhere .aPlan("Filter").containingArgumentForCachedProperty(".*", ".*"))
+    result.toList should equal(List(Map("z.name" -> "A", "id(z)" -> nodeA.getId),
+      Map("z.name" -> "A", "id(z)" -> 0),
+      Map("z.name" -> "B", "id(z)" -> 1),
+      Map("z.name" -> "B", "id(z)" -> 1)))
+  }
+
+  test("recursive union subQueries") {
+    val nodeA = createLabeledNode(Map("name" -> "A"), "Person")
+    val nodeB = createLabeledNode(Map("name" -> "B"), "Person")
+    val nodeC = createLabeledNode(Map("name" -> "C"), "Person")
+    relate(nodeA, nodeB, "KNOWS")
+    relate(nodeB, nodeC, "LIKES")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """
+        |MATCH (x {name:'B'})
+        |CALL {
+        |  WITH x CALL {
+        |     WITH x RETURN x as y
+        |     UNION
+        |     WITH x MATCH (x)-[:LIKES]-(y) RETURN y
+        |  } WITH y RETURN y
+        |  UNION
+        |  WITH x MATCH (y)-[:KNOWS]-(a) RETURN y
+        |}
+        |WITH y
+        |RETURN y.name, id(y)
+        |ORDER BY y.name asc""".stripMargin)
+
+    result.executionPlanDescription() should not(includeSomewhere .aPlan("Filter").containingArgumentForCachedProperty(".*", ".*"))
+    result.toList should equal(List(Map("y.name" -> "A", "id(y)" -> nodeA.getId), Map("y.name" -> "B", "id(y)" -> nodeB.getId), Map("y.name" -> "C", "id(y)" -> nodeC.getId)))
+  }
 }
