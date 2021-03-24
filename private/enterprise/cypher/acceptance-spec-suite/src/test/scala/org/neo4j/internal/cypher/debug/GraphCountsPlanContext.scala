@@ -113,6 +113,9 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
       ).toIterator
   }
 
+  override def indexesGetForRelType(relTypeId: Int): Iterator[IndexDescriptor] =
+    Iterator.empty
+
   private def typeToValueCategory(in: CypherType): ValueCategory = in match {
     case _: IntegerType |
          _: FloatType =>
