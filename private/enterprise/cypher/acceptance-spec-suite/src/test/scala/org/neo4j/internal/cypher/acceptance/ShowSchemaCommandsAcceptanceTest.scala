@@ -133,7 +133,7 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     result.toList should be(List(defaultBtreeRelBriefOutput(1L)))
   }
 
-  test("should show indexes in alphabetic order") {
+  test("should show indexes in default alphabetic order") {
     // GIVEN
     graph.createNodeIndexWithName("poppy", label, propWhitespace)
     graph.createNodeIndexWithName("benny", label2, prop, prop2)
@@ -510,7 +510,7 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     result.toList should be(List(defaultBtreeRelBriefOutput(2L)))
   }
 
-  test("should show indexes with where in alphabetic order") {
+  test("should show indexes with where in default alphabetic order") {
     // GIVEN
     graph.createNodeIndexWithName("poppy", label, propWhitespace)
     graph.createNodeIndexWithName("benny", label2, prop, prop2)
@@ -675,7 +675,7 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     result.toList should be(List(defaultUniquenessBriefConstraintOutput(2L)))
   }
 
-  test("should show constraints in alphabetic order") {
+  test("should show constraints in default alphabetic order") {
     // GIVEN
     graph.createNodeKeyConstraintWithName("poppy", label2, prop)
     graph.createNodeKeyConstraintWithName("benny", label2, prop, prop2)
@@ -1039,7 +1039,7 @@ class ShowSchemaCommandsAcceptanceTest extends SchemaCommandsAcceptanceTestBase 
     result.toList should be(List(defaultUniquenessBriefConstraintOutput(2L)))
   }
 
-  test("should show constraints with where in alphabetic order") {
+  test("should show constraints with where in default alphabetic order") {
     // GIVEN
     graph.createUniqueConstraintWithName("poppy", label, propWhitespace)
     graph.createNodeKeyConstraintWithName("benny", label2, prop, prop2)
