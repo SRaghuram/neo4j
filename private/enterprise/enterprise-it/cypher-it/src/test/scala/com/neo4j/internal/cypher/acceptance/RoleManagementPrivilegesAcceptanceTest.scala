@@ -9,7 +9,7 @@ import org.neo4j.graphdb.security.AuthorizationViolationException
 
 import scala.collection.mutable
 
-class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
+class RoleManagementPrivilegesAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   // Privilege tests
 
