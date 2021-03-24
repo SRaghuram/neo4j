@@ -512,6 +512,15 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
+  test("should create user with username and password as same parameter") {
+    // WHEN
+    execute("CREATE USER $user SET PASSWORD $user CHANGE REQUIRED", Map("user" -> "foo"))
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("foo"))
+    testUserLogin("foo", "foo", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
   test("should not use query cache when creating multiple users with parameterized passwords") {
     // GIVEN
     execute("SHOW USERS").toSet shouldBe Set(defaultUser)
@@ -1349,6 +1358,18 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     testUserLogin("foo", "baz", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+  }
+
+  test("should alter user password with username and password as same parameter") {
+    // GIVEN
+    prepareUser("foo", "bar")
+
+    // WHEN
+    execute("ALTER USER $user SET PLAINTEXT PASSWORD $user", Map("user" -> "foo"))
+
+    // THEN
+    testUserLogin("foo", "foo", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
   }
 
