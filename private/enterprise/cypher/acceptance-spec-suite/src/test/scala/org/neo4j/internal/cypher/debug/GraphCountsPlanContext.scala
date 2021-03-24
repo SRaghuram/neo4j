@@ -162,6 +162,10 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
     indexGetForLabelAndProperties(labelName, propertyKey).isDefined
   }
 
+  override def indexExistsForRelTypeAndProperties(relTypeName: String, propertyKey: Seq[String]): Boolean = {
+    indexGetForRelTypeAndProperties(relTypeName, propertyKey).isDefined
+  }
+
   override def hasPropertyExistenceConstraint(labelName: String, propertyKey: String): Boolean = {
     try {
       val labelId = getLabelId(labelName)
