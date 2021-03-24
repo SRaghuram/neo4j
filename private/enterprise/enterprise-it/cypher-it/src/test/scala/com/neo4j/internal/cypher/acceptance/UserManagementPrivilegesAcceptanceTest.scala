@@ -569,7 +569,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     } should have message PERMISSION_DENIED_DROP_USER
   }
 
-  test("should deny user management when denied user management privilege") {
+  test("should deny user management when denied user management privilege and granted sub-privileges") {
     // GIVEN
     setupUserWithCustomAdminRole("foo", "bar")
 
@@ -580,6 +580,36 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT ALTER USER ON DBMS TO custom")
     execute("GRANT SHOW USER ON DBMS TO custom")
     execute("DENY USER MANAGEMENT ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
+    } should have message PERMISSION_DENIED_CREATE_USER
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "DROP USER neo4j")
+    } should have message PERMISSION_DENIED_DROP_USER
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "ALTER USER foo SET PASSWORD 'abc'")
+    } should have message PERMISSION_DENIED_SET_PASSWORDS
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "RENAME USER alice TO Bob")
+    } should have message PERMISSION_DENIED_RENAME_USER
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW USERS")
+    } should have message PERMISSION_DENIED_SHOW_USER
+  }
+
+  test("should deny user management when granted user management privilege and denied sub-privileges") {
+    // GIVEN
+    setupUserWithCustomAdminRole("foo", "bar")
+
+    // WHEN
+    execute("DENY CREATE USER ON DBMS TO custom")
+    execute("DENY RENAME USER ON DBMS TO custom")
+    execute("DENY DROP USER ON DBMS TO custom")
+    execute("DENY ALTER USER ON DBMS TO custom")
+    execute("DENY SHOW USER ON DBMS TO custom")
+    execute("GRANT USER MANAGEMENT ON DBMS TO custom")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {

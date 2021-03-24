@@ -69,7 +69,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val PERMISSION_DENIED_DROP_ROLE: String = "Permission denied for DROP ROLE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_CREATE_OR_DROP_ROLE: String = "Permission denied for CREATE ROLE and/or DROP ROLE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_CREATE_USER: String = "Permission denied for CREATE USER." + helpfulCheckUserPrivilegeErrorText
-    val PERMISSION_DENIED_RENAME_USER: String = "Permission denied for RENAME USER." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_RENAME_USER: String = "Permission denied for RENAME USER." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_DROP_USER: String = "Permission denied for DROP USER." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_CREATE_OR_DROP_USER: String = "Permission denied for CREATE USER and/or DROP USER." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_SHOW_ROLE: String = "Permission denied for SHOW ROLE." + helpfulCheckUserPrivilegeErrorText
@@ -91,8 +91,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   val defaultUsername: String = "neo4j"
   val defaultUser: Map[String, Any] = adminUser(defaultUsername)
-  val alterDefaultUserQuery = s"ALTER USER $defaultUsername SET PASSWORD '$password' CHANGE NOT REQUIRED"
   val defaultUserActive: Map[String, Any] = adminUser(defaultUsername, passwordChangeRequired = false)
+  val alterDefaultUserQuery = s"ALTER USER $defaultUsername SET PASSWORD '$password' CHANGE NOT REQUIRED"
   val onlineStatus: String = DatabaseStatus.Online.stringValue()
   val offlineStatus: String = DatabaseStatus.Offline.stringValue()
 

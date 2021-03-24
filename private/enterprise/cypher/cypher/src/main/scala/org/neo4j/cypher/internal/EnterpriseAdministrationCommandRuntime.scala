@@ -291,7 +291,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         }
       )(sourcePlan, normalExecutionEngine)
 
-
     // ALTER USER foo [SET [PLAINTEXT | ENCRYPTED] PASSWORD pw] [CHANGE [NOT] REQUIRED] [SET STATUS ACTIVE]
     case AlterUser(source, userName, isEncryptedPassword, password, requirePasswordChange, suspended, defaultDatabase) => context =>
       val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context))
@@ -393,16 +392,17 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     // RENAME ROLE foo [IF EXISTS] TO bar
     case RenameRole(source, fromRoleName, toRoleName) => context =>
       if (blockRename) {
-        throw new UnsupportedOperationException("Changing role name is not supported when using an authentication or authentication provider apart from native.")
+        throw new UnsupportedOperationException("Changing role name is not supported when using an authentication or authorization provider apart from native.")
       }
       val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context))
       makeRenameExecutionPlan("Role", fromRoleName, toRoleName,
-      params => {
+        params => {
           val toName = runtimeValue(toRoleName, params)
           val fromName = runtimeValue(fromRoleName, params)
           NameValidator.assertValidRoleName(toName)
           NameValidator.assertUnreservedRoleName("rename", fromName, Some(toName))
-        })(sourcePlan, normalExecutionEngine)
+        }
+      )(sourcePlan, normalExecutionEngine)
 
     // DROP ROLE foo [IF EXISTS]
     case DropRole(source, roleName) => context =>

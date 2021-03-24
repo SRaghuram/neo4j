@@ -909,8 +909,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
-  test( "should create role with old name after rename")
-  {
+  test( "should create role with old name after rename") {
     // GIVEN
     execute("CREATE ROLE foo")
 
@@ -922,8 +921,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
   }
 
-  test( "should rename role to old name after rename")
-  {
+  test( "should rename role to old name after rename") {
     // GIVEN
     execute("CREATE ROLE foo")
     execute("CREATE ROLE baz")
@@ -936,8 +934,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
   }
 
-  test( "should keep track of privileges when renaming roles")
-  {
+  test( "should keep track of privileges when renaming roles") {
     // GIVEN
     execute("CREATE ROLE foo")
     execute("GRANT STOP ON DATABASE * TO foo")
@@ -961,8 +958,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     ))
   }
 
-  test( "should not create role with new name after rename")
-  {
+  test( "should not create role with new name after rename") {
     // GIVEN
     execute("CREATE ROLE foo")
     execute("RENAME ROLE foo TO bar")

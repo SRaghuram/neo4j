@@ -226,7 +226,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
             catch ( DatabaseException e )
             {
                 assertThat( e.getMessage(),
-                            equalTo( "Changing role name is not supported when using an authentication or authentication provider apart from native." ) );
+                            equalTo( "Changing role name is not supported when using an authentication or authorization provider apart from native." ) );
             }
 
             // then
@@ -252,7 +252,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
             catch ( DatabaseException e )
             {
                 assertThat( e.getMessage(),
-                            equalTo( "Changing role name is not supported when using an authentication or authentication provider apart from native." ) );
+                            equalTo( "Changing role name is not supported when using an authentication or authorization provider apart from native." ) );
             }
         }
     }
