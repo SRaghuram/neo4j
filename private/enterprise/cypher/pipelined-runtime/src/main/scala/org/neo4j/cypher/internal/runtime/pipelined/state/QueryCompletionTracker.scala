@@ -404,31 +404,35 @@ abstract class AbstractConcurrentQueryCompletionTracker(
 
   override final def decrement(key: QueryTrackerKey): Unit = {
     val newCount = decrementCount(key)
-    postDecrement(key, newCount)
+    postDecrement(newCount)
   }
 
   override final def decrementBy(key: QueryTrackerKey, n: Long): Unit = {
     if (n != 0) {
       val newCount = decrementCountBy(key, n)
-      postDecrement(key, newCount)
+      postDecrement(newCount)
     }
   }
 
-  private def postDecrement(key: QueryTrackerKey, newCount: Long): Unit = {
-    verifyCount(key, newCount)
-    if (isCountComplete(newCount) && !_hasEnded) {
-      reportQueryEndToSubscriber()
-      thawTransactionLocks()
-
-      // IMPORTANT: update _hasEnded before releasing waiters, to coordinate properly with await().
-      _hasEnded = true
-      if (!_cancelledOrFailed) {
-        _hasSucceeded = true
+  private def postDecrement(newTotalCount: Long): Unit = {
+    if (newTotalCount <= 0) {
+      if (newTotalCount < 0) {
+        error(new ReferenceCountingException("Cannot count below 0, but got count " + newTotalCount))
       }
+      if (!_hasEnded) {
+        reportQueryEndToSubscriber()
+        thawTransactionLocks()
 
-      waiters.forEach(waitState => waitState.latch.countDown())
-      waiters.clear()
-      tracer.stopQuery()
+        // IMPORTANT: update _hasEnded before releasing waiters, to coordinate properly with await().
+        _hasEnded = true
+        if (!_cancelledOrFailed) {
+          _hasSucceeded = true
+        }
+
+        waiters.forEach(waitState => waitState.latch.countDown())
+        waiters.clear()
+        tracer.stopQuery()
+      }
     }
   }
 
@@ -564,8 +568,6 @@ abstract class AbstractConcurrentQueryCompletionTracker(
    */
   protected def count(): Long
 
-  protected def verifyCount(key: QueryTrackerKey, newCount: Long): Unit
-
   /**
    * Decrements count and returns the new count. Note, the returned count can be key count or total count depending on implementation.
    */
@@ -576,12 +578,6 @@ abstract class AbstractConcurrentQueryCompletionTracker(
    */
   protected def decrementCountBy(key: QueryTrackerKey, n: Long): Long
 
-  /**
-   * Returns true if counting is complete.
-   *
-   * @param countAfterDecrement last return value from decrementCount/decrementCountBy, can be total count or key count depending on implementation
-   */
-  protected def isCountComplete(countAfterDecrement: Long): Boolean
 }
 
 /**
@@ -625,16 +621,6 @@ class ConcurrentQueryCompletionTracker(
     _count.get()
   }
 
-  override protected def verifyCount(key: QueryTrackerKey, newCount: Long): Unit = {
-    if (newCount < 0) {
-      error(new ReferenceCountingException("Cannot count below 0, but got count " + newCount))
-    }
-  }
-
-  override def isCountComplete(countAfterDecrement: Long): Boolean = {
-    countAfterDecrement <= 0
-  }
-
   override def toString: String = super.toString
 }
 
@@ -650,7 +636,7 @@ class ConcurrentDebugQueryCompletionTracker(
   queryContext: QueryContext,
   tracer: QueryExecutionTracer,
   resources: QueryResources
-) extends AbstractConcurrentQueryCompletionTracker(subscriber, queryContext, tracer, resources) {
+) extends ConcurrentQueryCompletionTracker(subscriber, queryContext, tracer, resources) {
 
   // Count of "things" that haven't been closed yet
   private val counts = new ConcurrentHashMap[QueryTrackerKey, Long]()
@@ -660,9 +646,7 @@ class ConcurrentDebugQueryCompletionTracker(
   }
 
   override def incrementBy(key: QueryTrackerKey, n: Long): Unit = {
-    if (hasEnded) {
-      throw new ReferenceCountingException(s"Increment called even though query has ended. That should not happen. Current count: ${count}", allErrors())
-    }
+    super.incrementBy(key, n)
     if (n != 0) {
       val newCount = counts.compute(key, (_, currentValue) => {
         if (currentValue != null.asInstanceOf[Long]) {
@@ -680,35 +664,25 @@ class ConcurrentDebugQueryCompletionTracker(
   }
 
   override def decrementCountBy(key: QueryTrackerKey, n: Long): Long = {
-    val newCount = counts.compute(key, (_, currentValue) => {
+    val newTotalCount = super.decrementCountBy(key, n)
+    val newKeyCount = counts.compute(key, (_, currentValue) => {
       if (currentValue != null.asInstanceOf[Long]) {
         currentValue - n
       } else {
         -n
       }
     })
-    debug("Decremented %s by %d to %d", key, n, newCount)
-    newCount
+    debug("Decremented %s by %d to %d", key, n, newKeyCount)
+    verifyCount(key, newKeyCount)
+    newTotalCount
   }
 
-  override protected def count(): Long = {
-    counts.values().asScala.sum
-  }
-
-  override protected def verifyCount(key: QueryTrackerKey, newCount: Long): Unit = {
+  private def verifyCount(key: QueryTrackerKey, newCount: Long): Unit = {
     // Note, this is more strict than the production implementation
     if (newCount < 0) {
-      debugPrintCounts()
-      error(new ReferenceCountingException(s"Cannot count below 0, but got count $newCount for key '$key'"))
+      val keyValueString = counts.entrySet().asScala.map( entry => s"key: ${entry.getKey}, count: ${entry.getValue}" ).mkString("\n")
+      error(new ReferenceCountingException(s"Cannot count below 0, but got count $newCount for key '$key'. Counts: \n$keyValueString"))
     }
-  }
-
-  override def isCountComplete(keyCountAfterDecrement: Long): Boolean = {
-    counts.values().stream().allMatch(count => count <= 0)
-  }
-
-  private def debugPrintCounts(): Unit = {
-    counts.entrySet().asScala.foreach { case entry => debug(s"key: ${entry.getKey}, count: ${entry.getValue}") }
   }
 
   override def toString: String = super.toString
