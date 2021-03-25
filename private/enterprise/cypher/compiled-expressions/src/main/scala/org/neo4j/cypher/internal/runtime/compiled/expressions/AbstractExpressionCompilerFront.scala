@@ -2473,9 +2473,26 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)
       }
 
+    case functions.ToStringOrNull =>
+      for (in <- compileExpression(c.args.head, id)) yield {
+        IntermediateExpression(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("toStringOrNull"), in.ir), in.fields, in.variables, in.nullChecks)
+      }
+
     case functions.ToString =>
       for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(invokeStatic(method[CypherFunctions, TextValue, AnyValue]("toString"), in.ir), in.fields, in.variables, in.nullChecks)
+      }
+
+    case functions.ToStringList =>
+      for (in <- compileExpression(c.args.head, id)) yield {
+        val variableName = namer.nextVariableName()
+        val lazySet = oneTime(declareAndAssign(variableName,
+          noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("toStringList"), in.ir))))
+
+        val ops = block(lazySet, load[AnyValue](variableName))
+        val nullChecks = block(lazySet, equal(variableName, noValue))
+
+        IntermediateExpression(ops, in.fields, in.variables, Set(nullChecks), requireNullCheck = false)
       }
 
     case functions.Properties =>

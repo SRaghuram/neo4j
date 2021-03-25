@@ -1065,6 +1065,41 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     a[ParameterWrongTypeException] should be thrownBy evaluate(compiled, params(intArray(Array(1, 2, 3))))
   }
 
+  test("toStringOrNull function") {
+    val compiled = compile(function("toStringOrNull", parameter(0)))
+
+    evaluate(compiled, params(doubleValue(3.2))) should equal(stringValue("3.2"))
+    evaluate(compiled, params(Values.TRUE)) should equal(stringValue("true"))
+    evaluate(compiled, params(stringValue("hello"))) should equal(stringValue("hello"))
+    evaluate(compiled, params(pointValue(Cartesian, 0.0, 0.0))) should
+      equal(stringValue("point({x: 0.0, y: 0.0, crs: 'cartesian'})"))
+    evaluate(compiled, params(durationValue(Duration.ofHours(3)))) should
+      equal(stringValue("PT3H"))
+    evaluate(compiled, params(temporalValue(localTime(20, 0, 0, 0)))) should
+      equal(stringValue("20:00:00"))
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled, params(intArray(Array(1, 2, 3)))) should equal(NO_VALUE)
+    evaluate(compiled, params(VirtualValues.EMPTY_LIST)) should equal(NO_VALUE)
+    evaluate(compiled, params(VirtualValues.EMPTY_MAP)) should equal(NO_VALUE)
+  }
+
+  test("toStringList function") {
+    val compiled = compile(function("toStringList", parameter(0)))
+
+    evaluate(compiled, params(list(doubleValue(3.2)))) should equal(list(stringValue("3.2")))
+    evaluate(compiled, params(list(intValue(3)))) should equal(list(stringValue("3")))
+    evaluate(compiled, params(list(stringValue("3"), intValue(2), doubleValue(1.2)))) should equal(
+      list(stringValue("3"), stringValue("2"), stringValue("1.2")))
+    evaluate(compiled, params(list(stringValue("three")))) should equal(list(stringValue("three")))
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled, params(list(booleanValue(true)))) should equal(list(stringValue("true")))
+    evaluate(compiled, params(list(stringValue("1"), stringValue("2wo"), stringValue("three")))) should
+      equal(list(stringValue("1"), stringValue("2wo"), stringValue("three")))
+    evaluate(compiled, params(list(doubleValue(3.2), VirtualValues.EMPTY_MAP))) should equal(list(stringValue("3.2"), NO_VALUE))
+    evaluate(compiled, params(list(VirtualValues.EMPTY_LIST))) should equal(list(NO_VALUE))
+    evaluate(compiled, params(list(NO_VALUE))) should equal(list(NO_VALUE))
+  }
+
   test("properties function on node") {
     val compiled = compile(function("properties", parameter(0)))
     val mapValue = VirtualValues.map(Array("prop"), Array(longValue(42)))

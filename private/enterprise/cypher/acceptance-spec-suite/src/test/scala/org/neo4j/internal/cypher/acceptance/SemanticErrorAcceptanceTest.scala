@@ -129,6 +129,13 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     )
   }
 
+  test("cant use toStringList() on nodes") {
+    executeAndEnsureError(
+      "MATCH (n) RETURN toStringList(n)",
+      "Type mismatch: expected List<T> but was Node (line 1, column 31 (offset: 30))"
+    )
+  }
+
   test("cant use LENGTH on nodes") {
     executeAndEnsureError(
       "match (n) where id(n) = 0 return length(n)",
