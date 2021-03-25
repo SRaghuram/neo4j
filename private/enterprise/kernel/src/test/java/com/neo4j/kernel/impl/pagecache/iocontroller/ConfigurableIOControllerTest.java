@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.ObjLongConsumer;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
@@ -331,6 +332,32 @@ class ConfigurableIOControllerTest
         limiter.disable();
         limiter.enable();
 
+        assertEquals( 0, limiter.getExternalIO() );
+    }
+
+    @Test
+    void ignoreExternalIOWhenDisabled()
+    {
+        Config config = Config.defaults( GraphDatabaseSettings.check_point_iops_limit, 100 );
+        createIOLimiter( config );
+        var pageCacheTracer = new DefaultPageCacheTracer();
+        var flushEvent = pageCacheTracer.beginCacheFlush();
+        var flushOpportunity = flushEvent.flushEventOpportunity();
+
+        limiter.reportIO( 400 );
+        limiter.maybeLimitIO( 1, FLUSHABLE, flushOpportunity );
+        assertEquals( 1, pageCacheTracer.ioLimitedTimes() );
+        assertEquals( 0, limiter.getExternalIO() );
+
+        config.set( GraphDatabaseInternalSettings.io_controller_consider_external_io, false );
+        limiter.reportIO( 400 );
+        limiter.maybeLimitIO( 1, FLUSHABLE, flushOpportunity );
+        assertEquals( 1, pageCacheTracer.ioLimitedTimes() );
+        assertEquals( 400, limiter.getExternalIO() );
+
+        config.set( GraphDatabaseInternalSettings.io_controller_consider_external_io, true );
+        limiter.maybeLimitIO( 1, FLUSHABLE, flushOpportunity );
+        assertEquals( 2, pageCacheTracer.ioLimitedTimes() );
         assertEquals( 0, limiter.getExternalIO() );
     }
 

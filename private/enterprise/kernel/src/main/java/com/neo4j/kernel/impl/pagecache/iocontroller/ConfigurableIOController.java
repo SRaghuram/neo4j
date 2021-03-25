@@ -20,6 +20,7 @@ import org.neo4j.time.SystemNanoClock;
 import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.Math.min;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.io_controller_consider_external_io;
 
 public class ConfigurableIOController implements IOController
 {
@@ -32,6 +33,7 @@ public class ConfigurableIOController implements IOController
     private static final long TIME_MASK = (1L << TIME_BITS) - 1;
     private static final int QUANTUMS_PER_SECOND = (int) (TimeUnit.SECONDS.toMillis( 1 ) / QUANTUM_MILLIS);
 
+    private final Config config;
     private final ObjLongConsumer<Object> pauseNanos;
     private final SystemNanoClock clock;
 
@@ -54,6 +56,7 @@ public class ConfigurableIOController implements IOController
     @VisibleForTesting
     ConfigurableIOController( Config config, ObjLongConsumer<Object> pauseNanos, SystemNanoClock clock )
     {
+        this.config = config;
         this.pauseNanos = pauseNanos;
         this.clock = clock;
         Integer iops = config.get( GraphDatabaseSettings.check_point_iops_limit );
@@ -144,7 +147,8 @@ public class ConfigurableIOController implements IOController
             return;
         }
 
-        long ioSum = (previousState >> TIME_BITS) + recentlyCompletedIOs + externalIO.sumThenReset();
+        long externalIops = config.get( io_controller_consider_external_io ) ? externalIO.sumThenReset() : 0;
+        long ioSum = (previousState >> TIME_BITS) + recentlyCompletedIOs + externalIops;
         if ( ioSum < getIOPQ( state ) )
         {
             ioState = then + (ioSum << TIME_BITS);
