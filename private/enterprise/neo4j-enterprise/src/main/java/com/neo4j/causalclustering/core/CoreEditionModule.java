@@ -7,18 +7,14 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerProvider;
-import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
-import com.neo4j.configuration.TransactionStreamingStrategy;
-import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
+import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.DefaultRaftMembershipResolver;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
-import com.neo4j.causalclustering.core.replication.ReplicationBenchmarkProcedure;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
 import com.neo4j.causalclustering.core.state.DiscoveryModule;
@@ -27,9 +23,6 @@ import com.neo4j.causalclustering.diagnostics.RaftMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DefaultDiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
-import com.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
-import com.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedure;
 import com.neo4j.causalclustering.error_handling.DbmsPanicker;
 import com.neo4j.causalclustering.error_handling.DefaultPanicService;
 import com.neo4j.causalclustering.error_handling.PanicService;
@@ -78,14 +71,8 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
-import com.neo4j.dbms.procedures.ClusterSetDefaultDatabaseProcedure;
-import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
-import com.neo4j.dbms.procedures.QuarantineProcedure;
-import com.neo4j.dbms.procedures.wait.WaitProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
-import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
-import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
@@ -103,7 +90,6 @@ import java.util.stream.Stream;
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.DatabaseStateService;
@@ -162,7 +148,6 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
     private final PipelineBuilders pipelineBuilders;
     private final Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> clientInstalledProtocols;
-    private final Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> serverInstalledProtocols;
     private final ApplicationSupportedProtocols supportedRaftProtocols;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
     private final InstalledProtocolHandler serverInstalledProtocolHandler;
@@ -251,7 +236,6 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         this.clientInstalledProtocols = combineInstalledProtocols( raftDataChannelPoolService::installedProtocols,
                                                                    raftControlChannelPoolService::installedProtocols );
         serverInstalledProtocolHandler = new InstalledProtocolHandler();
-        serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
         this.raftSender = new RaftSender( logProvider, raftDataChannelPoolService, raftControlChannelPoolService );
 
@@ -314,21 +298,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     @Override
     public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures, DatabaseManager<?> databaseManager ) throws KernelException
     {
-        globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
-        globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
-        globalProcedures.register( new ClusterOverviewProcedure( topologyService, databaseManager.databaseIdRepository() ) );
-        globalProcedures.register( new CoreRoleProcedure( databaseManager ) );
-        globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService ) );
-        globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
-        globalProcedures.register( new QuarantineProcedure( quarantineOperator,
-                globalModule.getGlobalClock(), globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() ) );
-        globalProcedures.register(
-                WaitProcedure.clustered( topologyService, identityModule, globalModule.getGlobalClock(),
-                                         catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
-                                         new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
-        globalProcedures.register( new ClusterSetDefaultDatabaseProcedure( databaseManager.databaseIdRepository(), topologyService ) );
-        globalProcedures.registerComponent( DatabaseManager.class, ignored -> databaseManager , false );
-        globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );
+        new CoreProceduresInstaller( globalProcedures, databaseManager, reconcilerModule, globalModule, identityModule, serverInstalledProtocolHandler,
+                catchupComponentsProvider.catchupClientFactory(), topologyService, clientInstalledProtocols,
+                quarantineOperator ).register();
     }
 
     @Override

@@ -89,6 +89,10 @@ public class AkkaStandaloneTopologyService extends AkkaTopologyService
     @Override
     public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
+        if ( myIdentity.serverId().equals( serverId ) )
+        {
+            return RoleInfo.LEADER;
+        }
         return globalTopologyState.role( namedDatabaseId, serverId );
     }
 

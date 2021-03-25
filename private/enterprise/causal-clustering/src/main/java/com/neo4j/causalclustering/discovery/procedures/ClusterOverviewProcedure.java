@@ -6,36 +6,27 @@
 package com.neo4j.causalclustering.discovery.procedures;
 
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
-import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.configuration.ServerGroupName;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 
 import org.neo4j.collection.RawIterator;
-import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.ListValueBuilder;
 import org.neo4j.values.virtual.MapValueBuilder;
 
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 import static org.neo4j.internal.helpers.collection.Iterators.asRawIterator;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
 import static org.neo4j.values.storable.Values.utf8Value;
@@ -43,15 +34,12 @@ import static org.neo4j.values.storable.Values.utf8Value;
 /**
  * Overview procedure with added support for server groups.
  */
-public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
+public abstract class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
 {
     private static final String[] PROCEDURE_NAMESPACE = {"dbms", "cluster"};
     public static final String PROCEDURE_NAME = "overview";
 
-    private final TopologyService topologyService;
-    private final DatabaseIdRepository databaseIdRepository;
-
-    public ClusterOverviewProcedure( TopologyService topologyService, DatabaseIdRepository databaseIdRepository )
+    public ClusterOverviewProcedure()
     {
         super( procedureSignature( new QualifiedName( PROCEDURE_NAMESPACE, PROCEDURE_NAME ) )
                 .out( "id", Neo4jTypes.NTString )
@@ -61,53 +49,18 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
                 .description( "Overview of all currently accessible cluster members, their databases and roles." )
                 .systemProcedure()
                 .build() );
-        this.topologyService = topologyService;
-        this.databaseIdRepository = databaseIdRepository;
     }
 
     @Override
     public RawIterator<AnyValue[],ProcedureException> apply( Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
     {
-        var resultRows = new ArrayList<ResultRow>();
-
-        for ( var entry : topologyService.allCoreServers().entrySet() )
-        {
-            var row = buildResultRowForCore( entry.getKey(), entry.getValue() );
-            resultRows.add( row );
-        }
-
-        for ( var entry : topologyService.allReadReplicas().entrySet() )
-        {
-            var row = buildResultRowForReadReplica( entry.getKey(), entry.getValue() );
-            resultRows.add( row );
-        }
-
-        var resultStream = resultRows.stream()
-                .sorted()
+        var resultStream = produceResultRows().stream().sorted()
                 .map( ClusterOverviewProcedure::formatResultRow );
 
         return asRawIterator( resultStream );
     }
 
-    private ResultRow buildResultRowForCore( ServerId serverId, CoreServerInfo coreInfo )
-    {
-        return buildResultRow( serverId, coreInfo, databaseId -> topologyService.lookupRole( databaseId, serverId ) );
-    }
-
-    private ResultRow buildResultRowForReadReplica( ServerId serverId, ReadReplicaInfo readReplicaInfo )
-    {
-        return buildResultRow( serverId, readReplicaInfo, ignore -> RoleInfo.READ_REPLICA );
-    }
-
-    private ResultRow buildResultRow( ServerId serverId, DiscoveryServerInfo serverInfo, Function<NamedDatabaseId,RoleInfo> result )
-    {
-        var databases = serverInfo.startedDatabaseIds()
-                .stream()
-                .flatMap( databaseId -> databaseIdRepository.getById( databaseId ).stream() )
-                .collect( toMap( identity(), result ) );
-
-        return new ResultRow( serverId.uuid(), serverInfo.connectors(), databases, serverInfo.groups() );
-    }
+    protected abstract List<ResultRow> produceResultRows();
 
     private static AnyValue[] formatResultRow( ResultRow row )
     {

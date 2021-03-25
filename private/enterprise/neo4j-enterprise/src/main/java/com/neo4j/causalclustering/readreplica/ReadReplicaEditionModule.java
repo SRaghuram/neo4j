@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
-import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
 import com.neo4j.causalclustering.common.PipelineBuilders;
@@ -16,9 +15,6 @@ import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.member.DefaultServerSnapshot;
-import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
-import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
-import com.neo4j.causalclustering.discovery.procedures.ReadReplicaToggleProcedure;
 import com.neo4j.causalclustering.error_handling.DbmsPanicker;
 import com.neo4j.causalclustering.error_handling.DefaultPanicService;
 import com.neo4j.causalclustering.error_handling.PanicService;
@@ -35,13 +31,8 @@ import com.neo4j.dbms.QuarantineOperator;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
-import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
-import com.neo4j.dbms.procedures.QuarantineProcedure;
-import com.neo4j.dbms.procedures.wait.WaitProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
-import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
-import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
@@ -106,12 +97,14 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     private final DiscoveryServiceFactory discoveryServiceFactory;
     private final SslPolicyLoader sslPolicyLoader;
     private final SecurityLog securityLog;
+    private final InstalledProtocolHandler installedProtocolHandler;
 
     private TopologyService topologyService;
     private ReadReplicaDatabaseFactory readReplicaDatabaseFactory;
     private QuarantineOperator quarantineOperator;
     private ClusteredDbmsReconcilerModule reconcilerModule;
     private DatabaseStartAborter databaseStartAborter;
+
     private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
     private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
@@ -166,6 +159,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         securityLog = new SecurityLog( globalModule.getGlobalConfig(), globalModule.getFileSystem() );
         globalModule.getGlobalLife().add( securityLog );
+
+        installedProtocolHandler = new InstalledProtocolHandler();
     }
 
     private void addThroughputMonitorService()
@@ -187,18 +182,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     @Override
     public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures, DatabaseManager<?> databaseManager ) throws KernelException
     {
-        globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
-        globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
-        globalProcedures.register( new ReadReplicaRoleProcedure( databaseManager ) );
-        globalProcedures.register( new ReadReplicaToggleProcedure( databaseManager ) );
-        globalProcedures.register( new ClusterOverviewProcedure( topologyService, databaseManager.databaseIdRepository() ) );
-        globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService ) );
-        globalProcedures.register( new QuarantineProcedure( quarantineOperator,
-                globalModule.getGlobalClock(), globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() ) );
-        globalProcedures.register(
-                WaitProcedure.clustered( topologyService, identityModule, globalModule.getGlobalClock(),
-                        catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
-                        new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
+        new ReadReplicaProceduresInstaller( globalProcedures, databaseManager, reconcilerModule, globalModule, identityModule, installedProtocolHandler,
+                catchupComponentsProvider.catchupClientFactory(), topologyService, quarantineOperator ).register();
     }
 
     @Override
@@ -260,10 +245,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         var backupTransactionStreamStrategy = ConfigurableTransactionStreamingStrategy.create( globalConfig );
         var backupServerHandler = backupServerHandler( databaseManager, reconcilerModule.databaseStateService(), fileSystem, maxChunkSize, logProvider,
                 globalModule.getGlobalDependencies(), backupTransactionStreamStrategy );
-        var installedProtocolsHandler = new InstalledProtocolHandler();
 
-        var catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );
-        var backupServerOptional = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, backupServerHandler );
+        var catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolHandler, catchupServerHandler );
+        var backupServerOptional = catchupComponentsProvider.createBackupServer( installedProtocolHandler, backupServerHandler );
 
         var catchupComponentsRepository = new CatchupComponentsRepository( databaseManager );
 

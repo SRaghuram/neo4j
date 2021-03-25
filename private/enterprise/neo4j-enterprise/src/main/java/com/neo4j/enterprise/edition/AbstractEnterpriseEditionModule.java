@@ -36,9 +36,9 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 
-import static org.neo4j.scheduler.JobMonitoringParams.systemJob;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
+import static org.neo4j.scheduler.JobMonitoringParams.systemJob;
 
 public interface AbstractEnterpriseEditionModule
 {

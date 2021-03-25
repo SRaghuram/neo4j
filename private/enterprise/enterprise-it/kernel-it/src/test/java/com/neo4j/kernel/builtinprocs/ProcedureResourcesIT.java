@@ -335,6 +335,7 @@ class ProcedureResourcesIT
             proc.withParam( "\"" + indexName + "\"" );
             break;
         case "dbms.database.state":
+        case "dbms.cluster.role":
             proc.withParam( "\"" + SYSTEM_DATABASE_NAME + "\"" );
             break;
         case "dbms.upgradeStatusDetails":

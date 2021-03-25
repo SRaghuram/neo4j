@@ -5,10 +5,11 @@
  */
 package com.neo4j.enterprise.edition;
 
+import com.neo4j.causalclustering.catchup.CatchupClientFactory;
+import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.ConfigurableTransactionStreamingStrategy;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
@@ -29,10 +30,9 @@ import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphDbmsModel;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.TopologyPublisher;
-import com.neo4j.dbms.database.StandaloneEnterpriseDatabaseContext;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
-import com.neo4j.dbms.procedures.wait.WaitProcedure;
+import com.neo4j.dbms.database.StandaloneEnterpriseDatabaseContext;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.fabric.localdb.FabricSystemGraphComponent;
@@ -41,8 +41,6 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
-import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
-import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
@@ -50,7 +48,6 @@ import com.neo4j.server.security.enterprise.systemgraph.EnterpriseDefaultDatabas
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -61,7 +58,6 @@ import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -69,7 +65,6 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.dbms.database.SystemGraphComponents;
-import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.dbms.identity.StandaloneIdentityModule;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.fabric.FabricDatabaseManager;
@@ -113,8 +108,13 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     private final PanicService panicService;
     private final StandaloneIdentityModule identityModule;
     private final SecurityLog securityLog;
+    private final InstalledProtocolHandler installedProtocolHandler;
+
     private DatabaseStartAborter databaseStartAborter;
+    private StandaloneDbmsReconcilerModule reconcilerModule;
+
     private TopologyService topologyService;
+    private CatchupClientFactory catchupClientFactory;
 
     public EnterpriseEditionModule( GlobalModule globalModule )
     {
@@ -138,6 +138,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         dependencies.satisfyDependency( identityModule );
         securityLog = new SecurityLog( globalModule.getGlobalConfig(), globalModule.getFileSystem() );
         globalModule.getGlobalLife().add( securityLog );
+        installedProtocolHandler = new InstalledProtocolHandler();
     }
 
     @Override
@@ -149,13 +150,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     @Override
     public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures, DatabaseManager<?> databaseManager ) throws KernelException
     {
-        super.registerEditionSpecificProcedures( globalProcedures, databaseManager );
-        globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
-        globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
-        globalProcedures.register(
-                WaitProcedure.standalone( new ServerId( new UUID( 0, 1 ) ), globalModule.getGlobalConfig().get( BoltConnector.advertised_address ),
-                        globalModule.getGlobalClock(), globalModule.getLogService().getInternalLogProvider(),
-                        new InfoProvider( databaseManager, databaseStateService ) ) );
+        new EnterpriseProceduresInstaller( globalProcedures, databaseManager, reconcilerModule, globalModule, identityModule,
+                installedProtocolHandler, catchupClientFactory, topologyService ).register();
         fabricServicesBootstrap.registerProcedures( globalProcedures );
     }
 
@@ -203,7 +199,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 .orElseThrow()
                 .databaseFacade();
         var dbmsModel = new EnterpriseSystemGraphDbmsModel( systemDbSupplier );
-        StandaloneDbmsReconcilerModule reconcilerModule = new StandaloneDbmsReconcilerModule( globalModule, databaseManager, reconciledTxTracker, dbmsModel );
+        reconcilerModule = new StandaloneDbmsReconcilerModule( globalModule, databaseManager, reconciledTxTracker, dbmsModel );
         databaseStateService = reconcilerModule.databaseStateService();
         databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
                 Duration.ofSeconds( 5 ) );
@@ -322,7 +318,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 backupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, internalLogProvider,
                         globalModule.getGlobalDependencies(),
                         backupStrategyProvider ),
-                new InstalledProtocolHandler(),
+                installedProtocolHandler,
                 jobScheduler,
                 portRegister,
                 globalModule.getCentralBufferMangerHolder().getNettyBufferAllocator() );
@@ -335,7 +331,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     private void initDiscoveryAndCatchupIfNeeded( MultiDatabaseManager<StandaloneEnterpriseDatabaseContext> databaseManager,
             StandaloneDbmsReconcilerModule reconcilerModule )
     {
-        if ( globalModule.getGlobalConfig().get( EnterpriseEditionSettings.enable_clustering_in_standalone ) )
+        if ( clusteringEnabled( globalModule.getGlobalConfig() ) )
         {
             createTopologyService( reconcilerModule );
             createCatchupService( databaseManager );
@@ -368,7 +364,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 .catchupProtocols( supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration() )
                 .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
                 .pipelineBuilder( pipelineBuilders.server() )
-                .installedProtocolsHandler( new InstalledProtocolHandler() )
+                .installedProtocolsHandler( installedProtocolHandler )
                 .listenAddress( config.get( CausalClusteringSettings.transaction_listen_address ) )
                 .scheduler( globalModule.getJobScheduler() )
                 .config( config )
@@ -379,6 +375,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 .serverName( "catchup-server" )
                 .handshakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .build();
+
+        catchupClientFactory = new CatchupComponentsProvider( globalModule, pipelineBuilders ).catchupClientFactory();
 
         globalModule.getGlobalLife().add( catchupServer );
         // used by ReadReplicaHierarchicalCatchupIT
@@ -392,5 +390,10 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
             return TopologyPublisher.NOOP;
         }
         return TopologyPublisher.from( namedDatabaseId, topologyService::onDatabaseStart, topologyService::onDatabaseStop );
+    }
+
+    public static boolean clusteringEnabled( Config config )
+    {
+        return config.get( EnterpriseEditionSettings.enable_clustering_in_standalone );
     }
 }

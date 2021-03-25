@@ -54,7 +54,7 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.internal.kernel.api.procs.FieldSignature.outputField;
 import static org.neo4j.values.storable.Values.stringValue;
 
-class ClusterOverviewProcedureTest
+class TopologyBasedClusterOverviewProcedureTest
 {
     private static final TestDatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
 
@@ -62,7 +62,7 @@ class ClusterOverviewProcedureTest
     void shouldHaveCorrectSignature()
     {
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        ClusterOverviewProcedure procedure = new ClusterOverviewProcedure( topologyService, DATABASE_ID_REPOSITORY );
+        ClusterOverviewProcedure procedure = new TopologyBasedClusterOverviewProcedure( topologyService, DATABASE_ID_REPOSITORY );
 
         ProcedureSignature signature = procedure.signature();
 
@@ -119,7 +119,7 @@ class ClusterOverviewProcedureTest
             when( topologyService.lookupRole( namedDatabaseId, follower2 ) ).thenReturn( FOLLOWER );
         }
 
-        ClusterOverviewProcedure procedure = new ClusterOverviewProcedure( topologyService, DATABASE_ID_REPOSITORY );
+        ClusterOverviewProcedure procedure = new TopologyBasedClusterOverviewProcedure( topologyService, DATABASE_ID_REPOSITORY );
 
         // when
         final RawIterator<AnyValue[],ProcedureException> members = procedure.apply( null, new AnyValue[0], null );
@@ -134,32 +134,32 @@ class ClusterOverviewProcedureTest
         assertFalse( members.hasNext() );
     }
 
-    private static Set<NamedDatabaseId> databaseIds( String... names )
+    static Set<NamedDatabaseId> databaseIds( String... names )
     {
         return Arrays.stream( names )
                 .map( DATABASE_ID_REPOSITORY::getRaw )
                 .collect( toSet() );
     }
 
-    private static Set<DatabaseId> toRaw( Set<NamedDatabaseId> namedDatabaseIds )
+    static Set<DatabaseId> toRaw( Set<NamedDatabaseId> namedDatabaseIds )
     {
         return namedDatabaseIds.stream().map( NamedDatabaseId::databaseId ).collect( Collectors.toSet() );
     }
 
-    private static Map<NamedDatabaseId,RoleInfo> databasesWithRole( Set<NamedDatabaseId> namedDatabaseIds, RoleInfo role )
+    static Map<NamedDatabaseId,RoleInfo> databasesWithRole( Set<NamedDatabaseId> namedDatabaseIds, RoleInfo role )
     {
         return namedDatabaseIds.stream()
                 .collect( toMap( identity(), ignore -> role ) );
     }
 
-    private static class IsRecord extends TypeSafeMatcher<AnyValue[]>
+    static class IsRecord extends TypeSafeMatcher<AnyValue[]>
     {
         private final UUID serverId;
         private final int boltPort;
         private final Map<NamedDatabaseId,RoleInfo> databases;
         private final Set<String> groups;
 
-        private IsRecord( ServerId serverId, int boltPort, Map<NamedDatabaseId,RoleInfo> databases, Set<String> groups )
+        IsRecord( ServerId serverId, int boltPort, Map<NamedDatabaseId,RoleInfo> databases, Set<String> groups )
         {
             this.serverId = serverId.uuid();
             this.boltPort = boltPort;
