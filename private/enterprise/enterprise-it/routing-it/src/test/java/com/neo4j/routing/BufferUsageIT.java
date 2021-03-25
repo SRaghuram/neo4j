@@ -76,7 +76,7 @@ class BufferUsageIT
         boltServerNettyPoolStatsBefore = getStats( BoltServer.NETTY_BUF_ALLOCATOR );
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                                                    .withNumberOfCoreMembers( 2 )
-                                                   .withSharedCoreParam( GraphDatabaseInternalSettings.neo_network_buffer_pool, "true" )
+                                                   .withSharedPrimaryParam( GraphDatabaseInternalSettings.neo_network_buffer_pool, "true" )
                                                    .withNumberOfReadReplicas( 1 )
                                                    .withSharedReadReplicaParam( GraphDatabaseInternalSettings.neo_network_buffer_pool, "true" );
 
@@ -85,7 +85,7 @@ class BufferUsageIT
 
         cluster.awaitLeader();
 
-        CoreClusterMember coreClusterMember = cluster.coreMembers().stream().findAny().get();
+        CoreClusterMember coreClusterMember = cluster.primaryMembers().stream().findAny().get();
         coreDriver = getDriver( coreClusterMember.routingURI() );
         replicaDriver = getDriver( cluster.findAnyReadReplica().directURI() );
     }
@@ -144,7 +144,7 @@ class BufferUsageIT
 
     private void pokeCoreBackUpSocket() throws IOException
     {
-        CoreClusterMember coreClusterMember = cluster.coreMembers().stream().findAny().get();
+        CoreClusterMember coreClusterMember = cluster.primaryMembers().stream().findAny().get();
         int port = backupPort( coreClusterMember.defaultDatabase() );
         pokeBackUpSocket( port );
     }
