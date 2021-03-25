@@ -49,6 +49,8 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InternalException
+import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.kernel.api.Write
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.NoValue
 import org.neo4j.values.storable.Values
@@ -239,14 +241,15 @@ class DetachAnyDeleter(state: QueryState, stats: MutableQueryStatistics, profile
 }
 
 abstract class BaseDeleter(
-  private[this] val state: QueryState,
+  state: QueryState,
   private[this] val stats: MutableQueryStatistics,
   private[this] val profileEvent: OperatorProfileEvent
 ) extends Deleter {
+  private[this] val write: Write = state.query.transactionalContext.dataWrite
+  private[this] val read: Read = state.query.transactionalContext.dataRead
 
   def deleteNode(deleteMe: NodeValue): Unit = {
-    // Note, delete operation checks if node is deleted in transaction further down
-    if (state.query.nodeOps.delete(deleteMe.id())) {
+    if (write.nodeDelete(deleteMe.id())) {
       stats.deleteNode()
       if (profileEvent != null) {
         profileEvent.dbHit()
@@ -256,8 +259,8 @@ abstract class BaseDeleter(
 
   def detachDeleteNode(node: NodeValue): Unit = {
     val id = node.id()
-    if (!state.query.nodeOps.isDeletedInThisTx(id)) {
-      val deletedRelationships = state.query.detachDeleteNode(id)
+    if (!read.nodeDeletedInTransaction(id)) {
+      val deletedRelationships = write.nodeDetachDelete(id)
       stats.deleteRelationships(deletedRelationships)
       stats.deleteNode()
       if (profileEvent != null) {
@@ -267,8 +270,7 @@ abstract class BaseDeleter(
   }
 
   def deleteRelationship(relationship: RelationshipValue): Unit = {
-    val id = relationship.id()
-    if (state.query.relationshipOps.delete(id)) {
+    if (write.relationshipDelete(relationship.id())) {
       stats.deleteRelationship()
       if (profileEvent != null) {
         profileEvent.dbHit()
