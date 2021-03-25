@@ -10,7 +10,7 @@ import java.util.Collections
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import cypher.features.ScenarioTestHelper.createTests
-import cypher.features.ScenarioTestHelper.printComputedBlacklist
+import cypher.features.ScenarioTestHelper.printComputedDenylist
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DynamicTest
@@ -32,8 +32,8 @@ class ParallelRuntimeAcceptanceTests extends EnterpriseBaseAcceptanceTest {
   }
 
   @Disabled
-  def generateBlacklistCostParallel(): Unit = {
-    printComputedBlacklist(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def generateDenylistCostParallel(): Unit = {
+    printComputedDenylist(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

@@ -9,7 +9,7 @@ import java.util
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import cypher.features.ScenarioTestHelper.createTests
-import cypher.features.ScenarioTestHelper.printComputedBlacklist
+import cypher.features.ScenarioTestHelper.printComputedDenylist
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DynamicTest
@@ -25,8 +25,8 @@ class SlottedWithCompiledExpressionsAcceptanceTests extends EnterpriseBaseAccept
   }
 
   @Disabled
-  def generateBlacklistSlotted(): Unit = {
-    printComputedBlacklist(scenarios, SlottedWithCompiledExpressionsTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def generateDenylistSlotted(): Unit = {
+    printComputedDenylist(scenarios, SlottedWithCompiledExpressionsTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

@@ -9,7 +9,7 @@ import java.util
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import cypher.features.ScenarioTestHelper.createTests
-import cypher.features.ScenarioTestHelper.printComputedBlacklist
+import cypher.features.ScenarioTestHelper.printComputedDenylist
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DynamicTest
@@ -25,8 +25,8 @@ class DefaultAcceptanceTests extends EnterpriseBaseAcceptanceTest {
   }
 
   @Disabled
-  def generateBlacklistDefault(): Unit = {
-    printComputedBlacklist(scenarios, DefaultTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def generateDenylistDefault(): Unit = {
+    printComputedDenylist(scenarios, DefaultTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }
