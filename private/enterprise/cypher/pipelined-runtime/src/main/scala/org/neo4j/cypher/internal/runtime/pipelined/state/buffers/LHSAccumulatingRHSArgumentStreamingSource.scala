@@ -23,14 +23,17 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryTrackerKey
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSArgumentStreamingSource.emptyRHSTrackerKey
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSArgumentStreamingSource.putMorselTrackerKey
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSArgumentStreamingSource.emptyRhs
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSArgumentStreamingSource.rhsSinkPut
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSStreamingSource.rhsSinkInitialize
 
 object LHSAccumulatingRHSArgumentStreamingSource {
-  final val emptyRHSTrackerKey: QueryTrackerKey =
+  private[buffers] final val emptyRhs: QueryTrackerKey =
     if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - Empty RHS") else null.asInstanceOf[QueryTrackerKey]
-  final val putMorselTrackerKey: QueryTrackerKey =
+  private[buffers] final val rhsSinkPut: QueryTrackerKey =
     if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - RHS Morsel") else null.asInstanceOf[QueryTrackerKey]
+  private[buffers] final val rhsSinkInitialize: QueryTrackerKey =
+    if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - RHS Accumulator Init") else null.asInstanceOf[QueryTrackerKey]
 }
 
 class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
@@ -130,7 +133,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
         decrementCount += 1
       }
     })
-    tracker.decrementBy(emptyRHSTrackerKey, decrementCount)
+    tracker.decrementBy(emptyRhs, decrementCount)
 
     var i = 0
     rhsArgumentStateMap.clearAll(buffer => {
@@ -142,7 +145,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
         i += 1
       }
     })
-    tracker.decrementBy(putMorselTrackerKey, i)
+    tracker.decrementBy(rhsSinkPut, i)
   }
 
   override def toString: String = s"${getClass.getSimpleName}(lhs:$lhsArgumentStateMapId, rhs:$rhsArgumentStateMapId)"
@@ -152,7 +155,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
     val argumentRowId = accumulator.argumentRowId
 
     val nbrOfMorsels = morselData.morsels.size
-    tracker.decrementBy(putMorselTrackerKey, nbrOfMorsels)
+    tracker.decrementBy(rhsSinkPut, nbrOfMorsels)
     val nbrOfTrackerDecrements = morselData.argumentStream match {
       case _: EndOfStream =>
         checkOnlyWhenAssertionsAreEnabled(rhsArgumentStateMap.peek(argumentRowId) == null, "RHS accumulator should have already been removed in take()")
@@ -160,7 +163,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
         val lhsAccumulator = lhsArgumentStateMap.remove(argumentRowId)
         lhsAccumulator.close()
         // We still need to decrement away the extra increment that came from LHSSink.decrement()
-        tracker.decrementBy(emptyRHSTrackerKey, 1)
+        tracker.decrementBy(emptyRhs, 1)
         nbrOfMorsels /*Count Type: RHS Put per Morsel*/ + 1 /*Count Type: Empty RHS*/
       case _ =>
         rhsArgumentStateMap.untrackPeek(argumentRowId)
@@ -227,9 +230,7 @@ class LeftOuterLhsAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[
 
   override def decrement(argumentRowId: Long): Unit = {
     if (lhsArgumentStateMap.decrement(argumentRowId) != null) {
-      // Increment tracker here, we need this for the empty RHS case
-      // Count Type: Empty RHS
-      tracker.increment(emptyRHSTrackerKey)
+      tracker.increment(emptyRhs)
     }
   }
 }
@@ -253,9 +254,14 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
     if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
-    // there is no need to take a lock in this case, because we are sure the argument state is thread safe when needed (is created by state factory)
+
+    val argumentCount = data.length
+
+    // increment tracker _before_ putting morsel into accumulator, to avoid race where the morsel could be taken _and_ closed _before_ we get to increment
+    tracker.incrementBy(rhsSinkPut, argumentCount)
+
     var i = 0
-    while (i < data.length) {
+    while (i < argumentCount) {
       val argumentValue = data(i)
       rhsArgumentStateMap.update(argumentValue.argumentRowId, acc => {
         acc.put(argumentValue.value, resources)
@@ -264,15 +270,9 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
       })
       i += 1
     }
-    // Count Type: RHS Put per Morsel
-    // Increment tracker by 1 for each buffered "argument morsel"
-    tracker.incrementBy(putMorselTrackerKey, i)
   }
 
   override def canPut: Boolean = true
-
-  private[this] val initTrackerKey@org.neo4j.cypher.internal.runtime.pipelined.state.QueryTrackerKey(key) =
-    if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey(s"LHSAccumulatingRHSArgumentStreamingSource - RHS Accumulator Init") else null.asInstanceOf[QueryTrackerKey]
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.DEBUG_BUFFERS) {
@@ -286,9 +286,9 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
                                                                                               acc.increment(argumentRowId)
                                                                                               acc.increment(argumentRowId)
                                                                                             })
+    // increment tracker _before_ initializing accumulator
+    tracker.increment(rhsSinkInitialize)
     rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
-    // Count Type: RHS Accumulator Init
-    tracker.increment(initTrackerKey)
   }
 
   override def increment(argumentRowId: Long): Unit = {
@@ -302,8 +302,7 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
       // Decrement for an ArgumentID in RHS's accumulator
       val argumentRowIdsForReducers = completedBuffer.argumentRowIdsForReducers
       forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
-      // Count Type: RHS Accumulator Init
-      tracker.decrement(initTrackerKey)
+      tracker.decrement(rhsSinkInitialize)
     }
   }
 }

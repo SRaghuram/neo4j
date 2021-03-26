@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.QueryTrackerKey
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.JoinBuffer.removeArgumentStatesIfRhsBufferIsEmpty
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSStreamingSource.rhsSinkInitialize
 
 /**
  * This buffer receives data from two sides. It will accumulate the data from the LHS using an [[ArgumentStateMap]].
@@ -71,7 +72,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.JoinBuffer.remo
  **/
 
 object LHSAccumulatingRHSStreamingSource {
-  def rhsTrackerKey(id: ArgumentStateMapId): QueryTrackerKey = QueryTrackerKey(s"LHSAccumulatingRHSStreamingSource - RHS $id")
+  private[buffers] def rhsSinkPut(id: ArgumentStateMapId): QueryTrackerKey = QueryTrackerKey(s"LHSAccumulatingRHSStreamingSource - RHS $id")
+  private[buffers] val rhsSinkInitialize: QueryTrackerKey = QueryTrackerKey("LHSAccumulatingRHSStreamingSource - Initialize for an ArgumentID in RHS's accumulator")
 }
 
 class LHSAccumulatingRHSStreamingSource[ACC_DATA <: AnyRef,
@@ -86,7 +88,7 @@ class LHSAccumulatingRHSStreamingSource[ACC_DATA <: AnyRef,
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
   private[this] val rhsTrackerKey: QueryTrackerKey =
-    if (DebugSupport.DEBUG_TRACKER) LHSAccumulatingRHSStreamingSource.rhsTrackerKey(rhsArgumentStateMapId) else null.asInstanceOf[QueryTrackerKey]
+    if (DebugSupport.DEBUG_TRACKER) LHSAccumulatingRHSStreamingSource.rhsSinkPut(rhsArgumentStateMapId) else null.asInstanceOf[QueryTrackerKey]
 
   checkOnlyWhenAssertionsAreEnabled {
     tracker.addCompletionAssertion { () =>
@@ -239,8 +241,8 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
                                                         with AccumulatingBuffer {
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId)
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
-  private[this] val rhsTrackerKey: QueryTrackerKey =
-    if (DebugSupport.DEBUG_TRACKER) LHSAccumulatingRHSStreamingSource.rhsTrackerKey(rhsArgumentStateMapId) else null.asInstanceOf[QueryTrackerKey]
+  private[this] val rhsSinkPut: QueryTrackerKey =
+    if (DebugSupport.DEBUG_TRACKER) LHSAccumulatingRHSStreamingSource.rhsSinkPut(rhsArgumentStateMapId) else null.asInstanceOf[QueryTrackerKey]
 
   override val argumentSlotOffset: Int = rhsArgumentStateMap.argumentSlotOffset
 
@@ -250,9 +252,13 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
     if (DebugSupport.DEBUG_BUFFERS) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
-    // there is no need to take a lock in this case, because we are sure the argument state is thread safe when needed (is created by state factory)
+    val argumentCount = data.length
+
+    // increment tracker _before_ putting morsel into accumulator, to avoid race where the morsel could be taken _and_ closed _before_ we get to increment
+    tracker.incrementBy(rhsSinkPut, argumentCount)
+
     var i = 0
-    while (i < data.length) {
+    while (i < argumentCount) {
       val argumentValue = data(i)
       rhsArgumentStateMap.update(argumentValue.argumentRowId, acc => {
         acc.put(argumentValue.value, resources)
@@ -261,13 +267,9 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
       })
       i += 1
     }
-    tracker.incrementBy(rhsTrackerKey, i)
   }
 
   override def canPut: Boolean = true
-
-  private[this] val argumentIdTrackerKey: QueryTrackerKey =
-    if (DebugSupport.DEBUG_TRACKER) QueryTrackerKey("LHSAccumulatingRHSStreamingSource - Increment for an ArgumentID in RHS's accumulator") else null.asInstanceOf[QueryTrackerKey]
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.DEBUG_BUFFERS) {
@@ -275,8 +277,9 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
     }
     // Increment for an ArgumentID in RHS's accumulator
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
+    // increment tracker _before_ initializing accumulator
+    tracker.increment(rhsSinkInitialize)
     rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
-    tracker.increment(argumentIdTrackerKey)
   }
 
   override def increment(argumentRowId: Long): Unit = {
@@ -296,7 +299,7 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
       // Decrement for an ArgumentID in RHS's accumulator
       val argumentRowIdsForReducers = maybeBuffer.argumentRowIdsForReducers
       forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
-      tracker.decrement(argumentIdTrackerKey)
+      tracker.decrement(rhsSinkInitialize)
     }
   }
 }
