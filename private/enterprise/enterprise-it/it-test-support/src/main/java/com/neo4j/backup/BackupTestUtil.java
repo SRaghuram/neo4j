@@ -16,9 +16,6 @@ import picocli.CommandLine;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 import org.neo4j.cli.AdminTool;
 import org.neo4j.cli.ExecutionContext;
@@ -32,11 +29,11 @@ import org.neo4j.test.ProcessStreamHandler;
 import org.neo4j.test.StreamConsumer;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.backupAddress;
+import static org.apache.commons.lang3.ArrayUtils.addAll;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.graphdb.Label.label;
-import static org.neo4j.test.proc.ProcessUtil.getClassPath;
-import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
+import static org.neo4j.test.proc.ProcessUtil.start;
 
 public final class BackupTestUtil
 {
@@ -92,19 +89,17 @@ public final class BackupTestUtil
     public static int runBackupToolFromOtherJvmToGetExitCode( Path neo4jHome, PrintStream outPrintStream, PrintStream errPrintStream,
             boolean debug, String... args ) throws Exception
     {
-        List<String> allArgs =
-                new ArrayList<>( Arrays.asList( getJavaExecutable().toString(), "-cp", getClassPath(), AdminTool.class.getName() ) );
-        allArgs.add( "backup" );
-        allArgs.addAll( Arrays.asList( args ) );
-
-        ProcessBuilder processBuilder = new ProcessBuilder().command( allArgs.toArray( new String[0] ) );
-        processBuilder.environment().put( "NEO4J_HOME", neo4jHome.toAbsolutePath().toString() );
-        processBuilder.environment().put( "NEO4J_CONF", neo4jHome.toAbsolutePath().toString() );
-        if ( debug )
+        var arguments = addAll( new String[]{AdminTool.class.getName(), "backup"}, args );
+        var process = start( builder ->
         {
-            processBuilder.environment().put( "NEO4J_DEBUG", "anything_works" );
-        }
-        Process process = processBuilder.start();
+            builder.environment().put( "NEO4J_HOME", neo4jHome.toAbsolutePath().toString() );
+            builder.environment().put( "NEO4J_CONF", neo4jHome.toAbsolutePath().toString() );
+            if ( debug )
+            {
+                builder.environment().put( "NEO4J_DEBUG", "anything_works" );
+            }
+        }, arguments );
+
         ProcessStreamHandler processStreamHandler =
                 new ProcessStreamHandler( process, false, "", StreamConsumer.IGNORE_FAILURES, outPrintStream, errPrintStream );
         return processStreamHandler.waitForResult();

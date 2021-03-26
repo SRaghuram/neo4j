@@ -57,8 +57,7 @@ import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.io.compress.ZipUtils.zip;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
-import static org.neo4j.test.proc.ProcessUtil.getClassPath;
-import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
+import static org.neo4j.test.proc.ProcessUtil.start;
 
 @TestDirectoryExtension
 @ExtendWith( RandomExtension.class )
@@ -178,14 +177,12 @@ class RestartableImportIT
 
     private Process startImportInSeparateProcess( Path databaseDirectory, RecordFormats format, File reportFile ) throws IOException
     {
-        ProcessBuilder pb = new ProcessBuilder( getJavaExecutable().toString(), "-cp", getClassPath(),
-                getClass().getCanonicalName(), databaseDirectory.toAbsolutePath().toString(), Long.toString( random.seed() ), format.storeVersion() );
         Path wd = Path.of( "target/test-classes" ).toAbsolutePath();
         Files.createDirectories( wd );
-        return pb.directory( wd.toFile() )
-                 .redirectErrorStream( true )
-                 .redirectOutput( appendTo( reportFile ) )
-                 .start();
+        return start( pb -> pb.directory( wd.toFile() )
+                .redirectErrorStream( true )
+                .redirectOutput( appendTo( reportFile ) ),
+                getClass().getCanonicalName(), databaseDirectory.toAbsolutePath().toString(), Long.toString( random.seed() ), format.storeVersion() );
     }
 
     private static SimpleRandomizedInput input( long seed )

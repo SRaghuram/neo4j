@@ -291,7 +291,7 @@ public abstract class SubProcess<T, P> implements Serializable
         try
         {
             String java = getJavaExecutable().toString();
-            process = start( inheritOutput, java, "-ea", "-Xmx1G", "-Djava.awt.headless=true", "-cp", classPath(), SubProcess.class.getName(),
+            process = start( inheritOutput, java, "-ea", "-Xmx1G", "-cp", classPath(), SubProcess.class.getName(),
                     serialize( callback ) );
             pid = getPid( process );
             // if IO was not inherited by current process we need to pipe error and input stream to corresponding
