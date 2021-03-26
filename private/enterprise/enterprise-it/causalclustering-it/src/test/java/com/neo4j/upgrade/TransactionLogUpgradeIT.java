@@ -216,7 +216,7 @@ class TransactionLogUpgradeIT
             @Override
             public boolean getAsBoolean()
             {
-                if ( isKernelVersion( KernelVersion.V4_3_D3 ) )
+                if ( isKernelVersion( KernelVersion.V4_3_D4 ) )
                 {
                     // Notice the time of upgrade...
                     timeOfUpgrade.compareAndSet( 0, currentTimeMillis() );
