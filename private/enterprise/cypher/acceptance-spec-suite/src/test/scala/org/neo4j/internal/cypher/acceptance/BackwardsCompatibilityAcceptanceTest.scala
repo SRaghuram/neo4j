@@ -694,4 +694,14 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     // THEN
     exception.getMessage should include("Using YIELD or WHERE to list constraints is not supported in this Cypher version.")
   }
+
+  test("SHOW INDEXES should not support FULLTEXT with Cypher 4.2") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.2 SHOW FULLTEXT INDEXES")
+    }
+
+    // THEN
+    exception.getMessage should include("Using `FULLTEXT` when listing indexes is not supported in this Cypher version.")
+  }
 }

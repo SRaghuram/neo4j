@@ -146,6 +146,17 @@ class ShowIndexCommandsAcceptanceTest extends ShowSchemaCommandsAcceptanceTestBa
     result.toList should be(List(defaultBtreeNodeBriefOutput(1L), defaultBtreeRelBriefOutput(2L)))
   }
 
+  test("show fulltext indexes should show only fulltext indexes") {
+    // GIVEN
+    createDefaultIndexes()
+
+    // WHEN
+    val result = executeSingle("SHOW FULLTEXT INDEXES")
+
+    // THEN
+    result.toList should be(List(defaultFulltextNodeBriefOutput(3L), defaultFulltextRelBriefOutput(4L)))
+  }
+
   test("should show btree node index with yield *") {
     // GIVEN
     createDefaultBtreeNodeIndex()
@@ -394,6 +405,17 @@ class ShowIndexCommandsAcceptanceTest extends ShowSchemaCommandsAcceptanceTestBa
     result.toList should be(List(defaultBtreeRelVerboseOutput(2L).filterKeys(k => Seq("name").contains(k))))
   }
 
+  test("should show index with yield, where and return for fulltext index") {
+    // GIVEN
+    createDefaultIndexes()
+
+    // WHEN
+    val result = executeSingle("SHOW FULLTEXT INDEXES YIELD name, entityType WHERE entityType = 'RELATIONSHIP' RETURN name")
+
+    // THEN
+    result.toList should be(List(defaultFulltextRelVerboseOutput(2L).filterKeys(k => Seq("name").contains(k))))
+  }
+
   test("should show index with full yield") {
     createDefaultBtreeNodeIndex()
     createDefaultConstraints()
@@ -581,6 +603,14 @@ class ShowIndexCommandsAcceptanceTest extends ShowSchemaCommandsAcceptanceTestBa
 
     // THEN
     result.executionPlanString() should include ("allIndexes, defaultColumns")
+  }
+
+  test("show index plan SHOW FULLTEXT INDEXES") {
+    // WHEN
+    val result = executeSingle("EXPLAIN SHOW FULLTEXT INDEXES")
+
+    // THEN
+    result.executionPlanString() should include ("fulltextIndexes, defaultColumns")
   }
 
   test("show index plan SHOW INDEXES with WHERE") {
