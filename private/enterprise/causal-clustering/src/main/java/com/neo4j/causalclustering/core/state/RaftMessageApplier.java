@@ -11,8 +11,8 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.ConsensusOutcome;
 import com.neo4j.causalclustering.core.consensus.outcome.SnapshotRequirement;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
-import com.neo4j.causalclustering.error_handling.DatabasePanicReason;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.dbms.error_handling.DatabasePanicReason;
+import com.neo4j.dbms.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 

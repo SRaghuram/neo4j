@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.error_handling;
+package com.neo4j.dbms.error_handling;
 
 /**
  * Panic an individual database. A panic indicates that we have encountered an error that we do not expect the to be able to recover from.

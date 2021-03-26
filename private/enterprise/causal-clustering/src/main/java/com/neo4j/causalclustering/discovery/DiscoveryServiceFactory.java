@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 
 import java.time.Clock;

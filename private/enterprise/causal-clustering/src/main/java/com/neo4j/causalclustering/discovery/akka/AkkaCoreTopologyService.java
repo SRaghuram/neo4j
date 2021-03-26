@@ -19,7 +19,7 @@ import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMess
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;

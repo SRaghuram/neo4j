@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.common;
 
-import com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler;
-import com.neo4j.causalclustering.error_handling.PanicService;
+import com.neo4j.dbms.error_handling.DatabasePanicEventHandler;
+import com.neo4j.dbms.error_handling.PanicService;
 
 import java.util.List;
 

@@ -3,9 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.error_handling;
-
-import java.util.Objects;
+package com.neo4j.dbms.error_handling;
 
 /**
  * Panic the Database Management System (DBMS). A panic indicates that we have encountered an error that we do not expect the Database Management System to be

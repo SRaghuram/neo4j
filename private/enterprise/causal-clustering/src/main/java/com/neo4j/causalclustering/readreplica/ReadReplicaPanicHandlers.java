@@ -6,24 +6,34 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.common.DatabasePanicHandlers;
-import com.neo4j.causalclustering.error_handling.PanicService;
+import com.neo4j.dbms.DatabaseStartAborter;
+import com.neo4j.dbms.error_handling.DatabasePanicEventHandler;
+import com.neo4j.dbms.error_handling.MarkUnhealthyHandler;
+import com.neo4j.dbms.error_handling.PanicService;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.error_handling.RaiseAvailabilityGuardHandler;
+import com.neo4j.dbms.error_handling.StopDatabaseHandler;
 
 import java.util.List;
 
 import org.neo4j.kernel.database.Database;
 
-import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.markUnhealthy;
-import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.raiseAvailabilityGuard;
-import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.stopDatabase;
-
 public class ReadReplicaPanicHandlers extends DatabasePanicHandlers
 {
-    public ReadReplicaPanicHandlers( PanicService panicService, Database kernelDatabase, ClusterInternalDbmsOperator clusterInternalOperator )
+    public ReadReplicaPanicHandlers( PanicService panicService, Database kernelDatabase, ClusterInternalDbmsOperator clusterInternalOperator,
+            DatabaseStartAborter databaseStartAborter )
     {
-        super( panicService, kernelDatabase.getNamedDatabaseId(), List.of(
-                raiseAvailabilityGuard( kernelDatabase ),
-                markUnhealthy( kernelDatabase ),
-                stopDatabase( clusterInternalOperator ) ) );
+        super( panicService, kernelDatabase.getNamedDatabaseId(), panicEventHandlers( kernelDatabase, clusterInternalOperator, databaseStartAborter ) );
+    }
+
+    private static List<DatabasePanicEventHandler> panicEventHandlers( Database kernelDatabase, ClusterInternalDbmsOperator clusterInternalOperator,
+            DatabaseStartAborter databaseStartAborter )
+    {
+        return List.of(
+                RaiseAvailabilityGuardHandler.factory( kernelDatabase ),
+                MarkUnhealthyHandler.factory( kernelDatabase ),
+                databaseStartAborter,
+                StopDatabaseHandler.factory( clusterInternalOperator )
+        );
     }
 }

@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.error_handling.PanicService;
+import com.neo4j.dbms.error_handling.PanicService;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.readreplica.tx.AsyncTxApplier;
 import com.neo4j.causalclustering.readreplica.tx.BatchingTxApplierFactory;
@@ -118,10 +118,10 @@ class ReadReplicaDatabaseFactory
 
         var topologyPublisher = TopologyPublisher.from( namedDatabaseId, topologyService::onDatabaseStart, topologyService::onDatabaseStop );
 
-        var panicHandler = new ReadReplicaPanicHandlers( panicService, kernelDatabase, clusterInternalOperator );
+        var panicHandler = new ReadReplicaPanicHandlers( panicService, kernelDatabase, clusterInternalOperator, databaseStartAborter );
 
         return ReadReplicaDatabase.create( catchupPollingProcess, catchupJobScheduler, kernelDatabase, clusterComponents, bootstrap, panicHandler, raftIdCheck,
-                topologyPublisher );
+                topologyPublisher, databaseStartAborter );
     }
 
     private CatchupPollingProcess createCatchupPollingProcess( ReadReplicaDatabaseContext databaseContext,

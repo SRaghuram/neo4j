@@ -22,7 +22,7 @@ import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
 import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.dbms.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.identity.IdFactory;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;

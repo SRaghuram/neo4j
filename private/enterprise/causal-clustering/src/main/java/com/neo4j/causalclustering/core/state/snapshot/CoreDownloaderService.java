@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.error_handling.Panicker;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 
@@ -86,7 +86,7 @@ public class CoreDownloaderService extends LifecycleAdapter
         /* We prevent aborts while running so that the kernel cannot abort recovering
            the database. This can otherwise happen during the restart of the kernel database
            in the PersistentSnapshotDownloader and will cause subsequent issues. */
-        databaseStartAborter.setAbortable( context.databaseId(), STORE_COPY, false );
+        databaseStartAborter.preventUserAborts( context.databaseId(), STORE_COPY );
     }
 
     @Override
@@ -99,7 +99,7 @@ public class CoreDownloaderService extends LifecycleAdapter
             currentJob.stop();
         }
 
-        databaseStartAborter.setAbortable( context.databaseId(), STORE_COPY, true );
+        databaseStartAborter.allowUserAborts( context.databaseId(), STORE_COPY );
     }
 
     public synchronized Optional<JobHandle<?>> downloadJob()

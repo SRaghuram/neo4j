@@ -3,11 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.error_handling;
+package com.neo4j.dbms.error_handling;
 
 import org.neo4j.kernel.database.Database;
 
-class RaiseAvailabilityGuardHandler implements DatabasePanicEventHandler
+public final class RaiseAvailabilityGuardHandler implements DatabasePanicEventHandler
 {
     private static final String PANIC_REQUIREMENT_MESSAGE = "Clustering components have encountered a critical error: ";
 
@@ -16,6 +16,11 @@ class RaiseAvailabilityGuardHandler implements DatabasePanicEventHandler
     RaiseAvailabilityGuardHandler( Database db )
     {
         this.db = db;
+    }
+
+    public static DatabasePanicEventHandler factory( Database db )
+    {
+        return new RaiseAvailabilityGuardHandler( db );
     }
 
     @Override

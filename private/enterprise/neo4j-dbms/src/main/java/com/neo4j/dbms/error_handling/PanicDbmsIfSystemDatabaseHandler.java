@@ -3,15 +3,20 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.error_handling;
+package com.neo4j.dbms.error_handling;
 
-class PanicDbmsIfSystemDatabaseHandler implements DatabasePanicEventHandler
+public final class PanicDbmsIfSystemDatabaseHandler implements DatabasePanicEventHandler
 {
     private final Panicker panicker;
 
     PanicDbmsIfSystemDatabaseHandler( Panicker panicker )
     {
         this.panicker = panicker;
+    }
+
+    public static DatabasePanicEventHandler factory( Panicker panicker )
+    {
+        return new PanicDbmsIfSystemDatabaseHandler( panicker );
     }
 
     @Override

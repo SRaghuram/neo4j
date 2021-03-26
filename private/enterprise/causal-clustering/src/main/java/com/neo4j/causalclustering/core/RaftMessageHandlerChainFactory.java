@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessage
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.RaftMessageApplier;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.dbms.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 

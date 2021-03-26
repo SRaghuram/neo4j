@@ -19,7 +19,7 @@ import com.neo4j.causalclustering.discovery.akka.AkkaActorSystemRestartStrategy;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.configuration.MinFormationMembers;
 import org.junit.jupiter.api.BeforeAll;

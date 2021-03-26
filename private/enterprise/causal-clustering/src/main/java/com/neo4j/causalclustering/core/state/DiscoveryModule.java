@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.member.DefaultServerSnapshot;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
 

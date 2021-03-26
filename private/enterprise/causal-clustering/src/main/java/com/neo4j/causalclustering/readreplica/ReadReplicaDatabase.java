@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.common.ClusteredDatabase;
+import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.TopologyPublisher;
 
 import java.util.List;
@@ -30,9 +31,10 @@ class ReadReplicaDatabase extends ClusteredDatabase
 {
     static ReadReplicaDatabase create( CatchupPollingProcess catchupPollingProcess, CatchupJobScheduler catchupJobScheduler, Database kernelDatabase,
             Lifecycle clusterComponents, ReadReplicaBootstrap bootstrap, ReadReplicaPanicHandlers panicHandler, RaftIdCheck raftIdCheck,
-            TopologyPublisher topologyPublisher )
+            TopologyPublisher topologyPublisher, DatabaseStartAborter databaseStartAborter )
     {
         return builder( ReadReplicaDatabase::new )
+                .withComponent( onInit( () -> databaseStartAborter.resetFor( kernelDatabase.getNamedDatabaseId() ) ) )
                 .withComponent( panicHandler )
                 .withComponent( onInit( raftIdCheck::perform ) )
                 .withComponent( clusterComponents )

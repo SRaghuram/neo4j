@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
-import com.neo4j.dbms.database.EnterpriseDatabase;
+import com.neo4j.dbms.DatabaseStartAborter;
 
 import java.util.List;
 
@@ -18,6 +18,7 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 
+import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onInit;
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onStart;
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onStop;
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.simpleLife;
@@ -36,10 +37,10 @@ class CoreDatabase extends ClusteredDatabase
 {
     static CoreDatabase create( RaftMachine raftMachine, Database kernelDatabase, CommandApplicationProcess commandApplicationProcess,
             LifecycleMessageHandler<?> raftMessageHandler, CoreDownloaderService downloadService, RecoveryFacade recoveryFacade,
-            CorePanicHandlers panicHandler, RaftStarter raftStarter, Lifecycle topologyComponents )
+            CorePanicHandlers panicHandler, RaftStarter raftStarter, Lifecycle topologyComponents, DatabaseStartAborter databaseStartAborter )
     {
         return builder( CoreDatabase::new )
-
+                .withComponent( onInit( () -> databaseStartAborter.resetFor( kernelDatabase.getNamedDatabaseId() ) ) )
                 .withComponent( panicHandler )
                 .withComponent( onStart( () -> recoveryFacade.recovery( kernelDatabase.getDatabaseLayout() ) ) )
                 .withComponent( topologyComponents )

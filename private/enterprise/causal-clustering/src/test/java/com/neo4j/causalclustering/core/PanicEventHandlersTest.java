@@ -6,9 +6,10 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.common.DatabasePanicHandlers;
-import com.neo4j.causalclustering.error_handling.DatabasePanicReason;
-import com.neo4j.causalclustering.error_handling.DefaultPanicService;
-import com.neo4j.causalclustering.error_handling.PanicService;
+import com.neo4j.dbms.error_handling.DatabasePanicReason;
+import com.neo4j.dbms.error_handling.DefaultPanicService;
+import com.neo4j.dbms.error_handling.PanicDbmsIfSystemDatabaseHandler;
+import com.neo4j.dbms.error_handling.PanicService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,6 @@ import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 
-import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.panicDbmsIfSystemDatabasePanics;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
@@ -93,7 +93,7 @@ public class PanicEventHandlersTest
                                                                        list.add( info.getCause() );
                                                                        return list;
                                                                    } ),
-                                                           panicDbmsIfSystemDatabasePanics( panicService.panicker() )
+                                                           PanicDbmsIfSystemDatabaseHandler.factory( panicService.panicker() )
             ) );
         }
     }

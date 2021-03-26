@@ -3,19 +3,25 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.error_handling;
+package com.neo4j.dbms.error_handling;
 
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import org.neo4j.internal.helpers.Exceptions;
+import org.neo4j.kernel.database.Database;
 
-public class StopDatabaseHandler implements DatabasePanicEventHandler
+public final class StopDatabaseHandler implements DatabasePanicEventHandler
 {
     private final ClusterInternalDbmsOperator internalOperator;
 
     StopDatabaseHandler( ClusterInternalDbmsOperator internalOperator )
     {
         this.internalOperator = internalOperator;
+    }
+
+    public static DatabasePanicEventHandler factory( ClusterInternalDbmsOperator internalOperator )
+    {
+        return new StopDatabaseHandler( internalOperator );
     }
 
     @Override

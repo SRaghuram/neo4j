@@ -37,8 +37,8 @@ import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplica
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
-import com.neo4j.causalclustering.error_handling.DbmsPanicEvent;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.error_handling.DbmsPanicEvent;
+import com.neo4j.dbms.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Clock;
@@ -65,7 +65,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.util.VisibleForTesting;
 
 import static akka.actor.ActorRef.noSender;
-import static com.neo4j.causalclustering.error_handling.DbmsPanicReason.IrrecoverableDiscoveryFailure;
+import static com.neo4j.dbms.error_handling.DbmsPanicReason.IrrecoverableDiscoveryFailure;
 
 public abstract class AkkaTopologyService extends SafeLifecycle implements TopologyService, Restartable
 {

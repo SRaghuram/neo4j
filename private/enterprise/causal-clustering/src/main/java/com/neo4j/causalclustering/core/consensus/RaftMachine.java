@@ -16,8 +16,8 @@ import com.neo4j.causalclustering.core.consensus.state.ExposedRaftState;
 import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContext;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
-import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
-import com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler;
+import com.neo4j.dbms.error_handling.DatabasePanicEvent;
+import com.neo4j.dbms.error_handling.DatabasePanicEventHandler;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;

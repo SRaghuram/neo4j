@@ -5,10 +5,10 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
-import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.error_handling.DatabasePanicEventHandler;
+import com.neo4j.dbms.error_handling.DatabasePanicker;
+import com.neo4j.dbms.error_handling.PanicService;
+import com.neo4j.dbms.error_handling.Panicker;
 
 import java.util.List;
 

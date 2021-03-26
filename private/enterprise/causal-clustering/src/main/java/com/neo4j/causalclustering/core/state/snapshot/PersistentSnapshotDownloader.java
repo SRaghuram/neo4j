@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.error_handling.DatabasePanicEvent;
+import com.neo4j.dbms.error_handling.Panicker;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 
 import org.neo4j.internal.helpers.TimeoutStrategy;
@@ -18,7 +18,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
-import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.SNAPSHOT_FAILED;
+import static com.neo4j.dbms.error_handling.DatabasePanicReason.SNAPSHOT_FAILED;
 
 class PersistentSnapshotDownloader implements Runnable
 {

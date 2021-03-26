@@ -5,6 +5,9 @@
  */
 package com.neo4j.dbms;
 
+import com.neo4j.dbms.database.EnterpriseDatabase;
+import com.neo4j.dbms.error_handling.DatabasePanicEvent;
+import com.neo4j.dbms.error_handling.DatabasePanicEventHandler;
 import org.eclipse.collections.api.multimap.set.MutableSetMultimap;
 import org.eclipse.collections.impl.factory.Multimaps;
 
@@ -13,23 +16,32 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.dbms.OperatorState;
 import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 /**
- * Component which polls the system database to see if a given database should still be started.
  * This utility is not used to STOP a database under normal circumstances. That is still handled by
  * the {@link DbmsReconciler}. Instead it is used for bailing out of blocking logic taking place
- * during e.g. {@link Database#start()}.
+ * during e.g. {@link EnterpriseDatabase#start()}.
+ *
+ * There are two classes of abort:
+ *
+ * - An abort caused by a change to a Database's state in the system database. I.e. a user has changed
+ *   the desired state of the database from {@code online} to {@code offline} whilst the database is
+ *   still starting. This is known as a user abort
+ * - An abort caused by a {@link DatabasePanicEvent}. This is known as a system abort
+ *
+ * The first class of aborts may be prevented/ignored under certain circumstances.
+ * Aborts due to panics are *never* ignored.
  */
-public class DatabaseStartAborter implements DatabaseStartupController
+public class DatabaseStartAborter implements DatabaseStartupController, DatabasePanicEventHandler
 {
     public enum PreventReason
     {
@@ -53,27 +65,37 @@ public class DatabaseStartAborter implements DatabaseStartupController
         this.ttl = ttl;
     }
 
-    public void setAbortable( NamedDatabaseId databaseId, PreventReason reason, boolean abortable )
+    public void preventUserAborts( NamedDatabaseId namedDatabaseId, PreventReason reason )
     {
-        if ( abortable )
-        {
-            abortPreventionSets.remove( databaseId, reason );
-        }
-        else
-        {
-            abortPreventionSets.put( databaseId, reason );
-        }
+        abortPreventionSets.put( namedDatabaseId, reason );
     }
 
-    private boolean isAbortable( NamedDatabaseId databaseId )
+    public void allowUserAborts( NamedDatabaseId namedDatabaseId, PreventReason reason )
     {
-        return !abortPreventionSets.containsKey( databaseId );
+        abortPreventionSets.remove( namedDatabaseId, reason );
+    }
+
+    private boolean mayUserAbort( NamedDatabaseId namedDatabaseId )
+    {
+        return !abortPreventionSets.containsKey( namedDatabaseId );
+    }
+
+    @Override
+    public void onPanic( DatabasePanicEvent panic )
+    {
+        cachedDesiredStates.put( panic.databaseId(), CachedDesiredState.panickedState( clock.instant() ) );
+    }
+
+    public void resetFor( NamedDatabaseId namedDatabaseId )
+    {
+        cachedDesiredStates.remove( namedDatabaseId );
+        abortPreventionSets.removeAll( namedDatabaseId );
     }
 
     /**
-     * Checks the desired state of the given database against the system database and the global availability guard, to see if the start currently being
-     * executed should be aborted. The results of these checks are cached for the duration of the ttl, to avoid spamming the system database with read
-     * queries when starting many databases.
+     * Checks the desired state of the given database against the system database, the global availability guard and any record of a previous panic.
+     * These checks determine if the {@link EnterpriseDatabase#start()} currently being executed should be aborted.
+     * Results are cached for the duration of the instance's ttl, to avoid spamming the system database with read queries when starting many databases.
      *
      * Note that for the system database only the global availability guard is checked. It is assumed that if you wish to fully stop the system database
      * you must also stop the neo4j process.
@@ -84,29 +106,24 @@ public class DatabaseStartAborter implements DatabaseStartupController
     @Override
     public boolean shouldAbort( NamedDatabaseId namedDatabaseId )
     {
-        if ( !isAbortable( namedDatabaseId ) )
+        if ( Objects.equals( namedDatabaseId, NAMED_SYSTEM_DATABASE_ID ) )
         {
-            return false;
-        }
-        else if ( globalAvailabilityGuard.isShutdown() )
-        {
-            return true;
-        }
-        else if ( Objects.equals( namedDatabaseId, NAMED_SYSTEM_DATABASE_ID ) )
-        {
-            return false;
+            return shouldAbortSystem();
         }
 
-        var desiredState = cachedDesiredStates.compute( namedDatabaseId, ( id, cachedState ) ->
-        {
-            if ( cachedState == null || cachedState.isTimeToDie() )
-            {
-                return getFreshDesiredState( namedDatabaseId );
-            }
-            return cachedState;
-        } );
+        var desiredState = getDesiredState( namedDatabaseId );
 
-        return desiredState.state() == EnterpriseOperatorState.STOPPED || desiredState.state() == EnterpriseOperatorState.DROPPED;
+        return desiredState.shouldAbortDueToPanic() ||
+               mayUserAbort( namedDatabaseId ) &&
+               ( globalAvailabilityGuard.isShutdown() || desiredState.shouldAbort() );
+    }
+
+    private boolean shouldAbortSystem()
+    {
+        var isPanicked =  Optional.ofNullable( cachedDesiredStates.get( NAMED_SYSTEM_DATABASE_ID ) )
+                                  .map( CachedDesiredState::shouldAbortDueToPanic )
+                                  .orElse( false );
+        return isPanicked || globalAvailabilityGuard.isShutdown();
     }
 
     /**
@@ -117,33 +134,65 @@ public class DatabaseStartAborter implements DatabaseStartupController
         cachedDesiredStates.remove( namedDatabaseId );
     }
 
+    private CachedDesiredState getDesiredState( NamedDatabaseId namedDatabaseId )
+    {
+        return cachedDesiredStates.compute( namedDatabaseId, ( id, cachedState ) ->
+        {
+            if ( cachedState == null || cachedState.isTimeToDie( clock, ttl ) )
+            {
+                return getFreshDesiredState( namedDatabaseId );
+            }
+            return cachedState;
+        } );
+    }
+
     private CachedDesiredState getFreshDesiredState( NamedDatabaseId namedDatabaseId )
     {
         var message = String.format( "Failed to check if starting %s should abort as it doesn't exist in the system db!", namedDatabaseId );
         var state = dbmsModel.getStatus( namedDatabaseId ).orElseThrow( () -> new IllegalStateException( message ) );
-        return new CachedDesiredState( clock.instant(), state );
+        return CachedDesiredState.state( clock.instant(), state );
     }
 
-    private class CachedDesiredState
+    private static class CachedDesiredState
     {
         private final OperatorState state;
         private final Instant createdAt;
+        private final boolean panickedTombstone;
 
-        private CachedDesiredState( Instant createdAt, OperatorState state )
+        static CachedDesiredState state( Instant createdAt, OperatorState state )
+        {
+            return new CachedDesiredState( createdAt, state, false );
+        }
+
+        static CachedDesiredState panickedState( Instant createdAt )
+        {
+            return new CachedDesiredState( createdAt, null, true );
+        }
+
+        private CachedDesiredState( Instant createdAt, OperatorState state, boolean panickedTombstone )
         {
             this.state = state;
             this.createdAt = createdAt;
+            this.panickedTombstone = panickedTombstone;
         }
 
-        OperatorState state()
+        boolean shouldAbortDueToPanic()
         {
-            return state;
+            return panickedTombstone;
         }
 
-        boolean isTimeToDie()
+        boolean shouldAbort()
+        {
+            return panickedTombstone ||
+                   state == EnterpriseOperatorState.STOPPED ||
+                   state == EnterpriseOperatorState.DROPPED ||
+                   state == EnterpriseOperatorState.DROPPED_DUMPED;
+        }
+
+        boolean isTimeToDie( Clock clock, Duration ttl )
         {
             var elapsed = Duration.between( this.createdAt, clock.instant() );
-            return elapsed.compareTo( ttl ) >= 0;
+            return  !panickedTombstone && elapsed.compareTo( ttl ) >= 0; // panicked states never expire
         }
     }
 }

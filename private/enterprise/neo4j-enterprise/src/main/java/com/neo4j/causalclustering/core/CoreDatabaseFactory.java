@@ -52,9 +52,9 @@ import com.neo4j.causalclustering.core.state.snapshot.StoreDownloader;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
-import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.error_handling.DatabasePanicker;
+import com.neo4j.dbms.error_handling.PanicService;
+import com.neo4j.dbms.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.CoreIdentityModule;
 import com.neo4j.causalclustering.identity.RaftBinder;
@@ -367,14 +367,14 @@ class CoreDatabaseFactory
         topologyComponents.add( new RaftCoreTopologyConnector( topologyService, raftContext.raftGroup().raftMachine(), namedDatabaseId ) );
 
         var panicHandler = new CorePanicHandlers( raftGroup.raftMachine(), kernelDatabase, applicationProcess,
-                                                  internalOperator, panicService, downloadService, debugLog );
+                                                  internalOperator, panicService, databaseStartAborter );
 
         var tempBootstrapDir = new TempBootstrapDir( fileSystem, kernelDatabase.getDatabaseLayout() );
         var raftStarter = new RaftStarter( kernelDatabase, raftContext.raftBinder(), messageHandler, snapshotService, downloadService, internalOperator,
                 databaseStartAborter, raftContext.raftIdStorage(), bootstrapSaver, tempBootstrapDir, raftComponents );
 
         return CoreDatabase.create( raftGroup.raftMachine(), kernelDatabase, applicationProcess, messageHandler, downloadService, recoveryFacade,
-                panicHandler, raftStarter, topologyComponents );
+                panicHandler, raftStarter, topologyComponents, databaseStartAborter );
     }
 
     private RaftBinder createRaftBinder( NamedDatabaseId namedDatabaseId, Config config, Monitors monitors, SimpleStorage<RaftGroupId> raftIdStorage,
