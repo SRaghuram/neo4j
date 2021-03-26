@@ -16,20 +16,20 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
 
-import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D4;
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D3;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.RENAME_ROLE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_USER_HOME_DATABASE;
 
 /**
- * This is the EnterpriseSecurityComponent version for Neo4j 4.3-drop4.
+ * This is the EnterpriseSecurityComponent version for Neo4j 4.3-drop03.
  */
-public class EnterpriseSecurityComponentVersion_10_43D4 extends SupportedEnterpriseSecurityComponentVersion
+public class EnterpriseSecurityComponentVersion_10_43D3 extends SupportedEnterpriseSecurityComponentVersion
 {
     private final KnownEnterpriseSecurityComponentVersion previous;
 
-    public EnterpriseSecurityComponentVersion_10_43D4( Log log, KnownEnterpriseSecurityComponentVersion previous )
+    public EnterpriseSecurityComponentVersion_10_43D3( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( ENTERPRISE_SECURITY_43D4, log );
+        super( ENTERPRISE_SECURITY_43D3, log );
         this.previous = previous;
     }
 

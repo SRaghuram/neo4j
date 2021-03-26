@@ -53,7 +53,7 @@ public enum EnterpriseSecurityGraphComponentVersion implements ComponentVersion
      * Version 9 (Neo4j 4.3.0-Drop01):
      *   - Split out Admin privilege into it's component privileges to allow it to be recreated
      *
-     * Version 10 (Neo4j 4.3.0-Drop04):
+     * Version 10 (Neo4j 4.3.0-Drop03):
      *   - Added support for set user home database
      *   - Added privilege for renaming role names
      */
@@ -67,7 +67,7 @@ public enum EnterpriseSecurityGraphComponentVersion implements ComponentVersion
     ENTERPRISE_SECURITY_42D7( 7, SECURITY_PRIVILEGE_COMPONENT, ComponentVersion.Neo4jVersions.VERSION_42D7 ),
     ENTERPRISE_SECURITY_42P1( 8, SECURITY_PRIVILEGE_COMPONENT, ComponentVersion.Neo4jVersions.VERSION_42P1 ),
     ENTERPRISE_SECURITY_43D1( 9, SECURITY_PRIVILEGE_COMPONENT, ComponentVersion.Neo4jVersions.VERSION_43D1 ),
-    ENTERPRISE_SECURITY_43D4( 10, SECURITY_PRIVILEGE_COMPONENT, ComponentVersion.Neo4jVersions.VERSION_43D4 ),
+    ENTERPRISE_SECURITY_43D3( 10, SECURITY_PRIVILEGE_COMPONENT, ComponentVersion.Neo4jVersions.VERSION_43D3 ),
 
     ENTERPRISE_SECURITY_UNKNOWN_VERSION( UNKNOWN_VERSION, SECURITY_PRIVILEGE_COMPONENT, String.format( "no '%s' graph found", SECURITY_PRIVILEGE_COMPONENT ) ),
     ENTERPRISE_SECURITY_FUTURE_VERSION( Integer.MIN_VALUE, SECURITY_PRIVILEGE_COMPONENT, "Unrecognized future version" ),
@@ -78,7 +78,7 @@ public enum EnterpriseSecurityGraphComponentVersion implements ComponentVersion
     // Static variables for SECURITY_PRIVILEGE_COMPONENT versions
     public static final int FIRST_VALID_ENTERPRISE_SECURITY_COMPONENT_VERSION = ENTERPRISE_SECURITY_35.getVersion();
     public static final int FIRST_RUNTIME_SUPPORTED_ENTERPRISE_SECURITY_COMPONENT_VERSION = ENTERPRISE_SECURITY_40.getVersion();
-    public static final int LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION = ENTERPRISE_SECURITY_43D4.getVersion();
+    public static final int LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION = ENTERPRISE_SECURITY_43D3.getVersion();
 
     private final String componentName;
     private final int version;

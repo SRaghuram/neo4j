@@ -5,9 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import java.nio.file.Path
-import java.util
-
 import com.neo4j.dbms.EnterpriseSystemGraphComponent
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
@@ -21,7 +18,7 @@ import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphC
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D7
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42P1
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1
-import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D4
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D3
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.collection.Dependencies
 import org.neo4j.configuration.Config
@@ -37,6 +34,9 @@ import org.scalactic.source
 import org.scalatest.FunSuiteLike
 import org.scalatest.Tag
 import org.scalatest.mockito.MockitoSugar
+
+import java.nio.file.Path
+import java.util
 
 trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLike {
   self: AdministrationCommandAcceptanceTestBase =>
@@ -103,7 +103,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
         granted(constraintManagement).role("admin").map,
         granted(adminAction("admin")).role("admin").map
       )
-      case ENTERPRISE_SECURITY_43D1 | ENTERPRISE_SECURITY_43D4 => defaultRolePrivileges
+      case ENTERPRISE_SECURITY_43D1 | ENTERPRISE_SECURITY_43D3 => defaultRolePrivileges
       case _                                                   => throw new IllegalArgumentException(s"Unsupported version: $version")
     }
     adminPrivileges.foldLeft(Set.empty[Map[String, AnyRef]]) {
