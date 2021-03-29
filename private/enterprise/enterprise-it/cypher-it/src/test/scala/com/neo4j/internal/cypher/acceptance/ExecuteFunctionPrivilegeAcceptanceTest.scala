@@ -7,7 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.TRUE
 
-import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.Node
@@ -22,82 +22,82 @@ import org.neo4j.procedure.UserAggregationResult
 import org.neo4j.procedure.UserAggregationUpdate
 import org.neo4j.procedure.UserFunction
 
-class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
+class ExecuteFunctionPrivilegeAcceptanceTest extends ExecutePrivilegeAcceptanceTestBase {
 
   override protected def onNewGraphDatabase(): Unit = {
     val globalProcedures: GlobalProcedures = graphOps.asInstanceOf[GraphDatabaseAPI].getDependencyResolver.resolveDependency(classOf[GlobalProcedures])
     globalProcedures.registerFunction(classOf[TestFunction])
     globalProcedures.registerAggregationFunction(classOf[TestFunction])
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"REVOKE ACCESS ON HOME DATABASE FROM ${PredefinedRoles.PUBLIC}")
-    execute(s"REVOKE EXECUTE FUNCTION * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
-    execute(s"REVOKE EXECUTE PROCEDURE * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
-    execute("SHOW ROLE PUBLIC PRIVILEGES").toSet should be(grantedFromConfig("public.function", "PUBLIC"))
+    execute(s"REVOKE ACCESS ON HOME DATABASE FROM $PUBLIC")
+    execute(s"REVOKE EXECUTE FUNCTION * ON DBMS FROM $PUBLIC")
+    execute(s"REVOKE EXECUTE PROCEDURE * ON DBMS FROM $PUBLIC")
+    execute(s"SHOW ROLE $PUBLIC PRIVILEGES").toSet should be(grantedFromConfig("public.function", PUBLIC))
   }
 
   //noinspection ScalaDeprecation
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.auth_enabled -> TRUE,
-    GraphDatabaseSettings.procedure_roles -> "test.safe.read.property:funcRole,default;test.safe.read.sum.*:funcRole;public.function:PUBLIC",
-    GraphDatabaseSettings.default_allowed -> "default"
+    GraphDatabaseSettings.procedure_roles -> s"test.safe.read.property:$roleName2,$defaultRole;test.safe.read.sum.*:$roleName2;public.function:$PUBLIC",
+    GraphDatabaseSettings.default_allowed -> defaultRole
   )
 
   // Privilege tests
 
   test("should grant execute function privileges") {
     // GIVEN
-    execute("CREATE ROLE custom")
+    execute(s"CREATE ROLE $roleName")
 
     executeFunctionPrivileges.foreach {
       case (command, action) =>
         withClue(s"$command: \n") {
           // WHEN
-          execute(s"GRANT $command * ON DBMS TO custom")
-          execute(s"GRANT $command test.func, math.*, apoc.*.math.co? ON DBMS TO custom")
+          execute(s"GRANT $command * ON DBMS TO $roleName")
+          execute(s"GRANT $command test.func, math.*, apoc.*.math.co? ON DBMS TO $roleName")
 
           // THEN
-          execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            granted(action).function("*").role("custom").map,
-            granted(action).function("test.func").role("custom").map,
-            granted(action).function("math.*").role("custom").map,
-            granted(action).function("apoc.*.math.co?").role("custom").map
+          execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
+            granted(action).function("*").role(roleName).map,
+            granted(action).function("test.func").role(roleName).map,
+            granted(action).function("math.*").role(roleName).map,
+            granted(action).function("apoc.*.math.co?").role(roleName).map
           ))
 
           // WHEN
-          execute(s"REVOKE GRANT $command * ON DBMS FROM custom")
-          execute(s"REVOKE GRANT $command test.func, math.*, apoc.*.math.co? ON DBMS FROM custom")
+          execute(s"REVOKE GRANT $command * ON DBMS FROM $roleName")
+          execute(s"REVOKE GRANT $command test.func, math.*, apoc.*.math.co? ON DBMS FROM $roleName")
 
           // THEN
-          execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+          execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set.empty)
         }
     }
   }
 
   test("should deny execute function privileges") {
     // GIVEN
-    execute("CREATE ROLE custom")
+    execute(s"CREATE ROLE $roleName")
 
     executeFunctionPrivileges.foreach {
       case (command, action) =>
         withClue(s"$command: \n") {
           // WHEN
-          execute(s"DENY $command * ON DBMS TO custom")
-          execute(s"DENY $command test.func, math.*, apoc.*.math.co? ON DBMS TO custom")
+          execute(s"DENY $command * ON DBMS TO $roleName")
+          execute(s"DENY $command test.func, math.*, apoc.*.math.co? ON DBMS TO $roleName")
 
           // THEN
-          execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            denied(action).function("*").role("custom").map,
-            denied(action).function("test.func").role("custom").map,
-            denied(action).function("math.*").role("custom").map,
-            denied(action).function("apoc.*.math.co?").role("custom").map
+          execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set(
+            denied(action).function("*").role(roleName).map,
+            denied(action).function("test.func").role(roleName).map,
+            denied(action).function("math.*").role(roleName).map,
+            denied(action).function("apoc.*.math.co?").role(roleName).map
           ))
 
           // WHEN
-          execute(s"REVOKE DENY $command * ON DBMS FROM custom")
-          execute(s"REVOKE DENY $command test.func, math.*, apoc.*.math.co? ON DBMS FROM custom")
+          execute(s"REVOKE DENY $command * ON DBMS FROM $roleName")
+          execute(s"REVOKE DENY $command test.func, math.*, apoc.*.math.co? ON DBMS FROM $roleName")
 
           // THEN
-          execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+          execute(s"SHOW ROLE $roleName PRIVILEGES").toSet should be(Set.empty)
         }
     }
   }
@@ -108,53 +108,53 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
   test("should execute builtin function without any function privileges") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "RETURN toLower('A')", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "RETURN toLower('A')", resultHandler = (row, _) => {
       row.get("toLower('A')") should equal("a")
     }) should be(1)
   }
 
   test("should execute builtin (user defined) function without any function privileges") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "RETURN date('2020-09-25').year AS year", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "RETURN date('2020-09-25').year AS year", resultHandler = (row, _) => {
       row.get("year") should equal(2020)
     }) should be(1)
   }
 
   test("should execute builtin function with DENY") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
-    execute("DENY EXECUTE FUNCTION toLower ON DBMS TO custom")
+    setupUserAndGraph()
+    execute(s"DENY EXECUTE FUNCTION toLower ON DBMS TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "RETURN toLower('A')", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "RETURN toLower('A')", resultHandler = (row, _) => {
       row.get("toLower('A')") should equal("a")
     }) should be(1)
   }
 
   test("should execute builtin (user defined) function with DENY") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
-    execute("DENY EXECUTE FUNCTION * ON DBMS TO custom")
+    setupUserAndGraph()
+    execute(s"DENY EXECUTE FUNCTION * ON DBMS TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "RETURN date('2020-09-25').year AS year", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "RETURN date('2020-09-25').year AS year", resultHandler = (row, _) => {
       row.get("year") should equal(2020)
     }) should be(1)
   }
 
   test("should fail execute user defined function without any function privileges") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDBMSDefault("foo", "bar", "RETURN test.function() AS result")
+      executeOnDBMSDefault(username, password, "RETURN test.function() AS result")
     }).getMessage should include(FAIL_EXECUTE_FUNC)
   }
 
@@ -162,26 +162,26 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     function => {
       test(s"should execute user defined function with execute function $function") {
         // GIVEN
-        setupUserAndGraph("foo", "bar")
+        setupUserAndGraph()
 
         // WHEN
-        execute(s"GRANT EXECUTE FUNCTION $function ON DBMS TO custom")
+        execute(s"GRANT EXECUTE FUNCTION $function ON DBMS TO $roleName")
 
         // THEN
-        executeOnDBMSDefault("foo", "bar", "RETURN test.function() AS result", resultHandler = (row, _) => {
+        executeOnDBMSDefault(username, password, "RETURN test.function() AS result", resultHandler = (row, _) => {
           row.get("result") should equal("OK")
         }) should be(1)
       }
 
       test(s"should execute user defined function with execute boosted function $function") {
         // GIVEN
-        setupUserAndGraph("foo", "bar")
+        setupUserAndGraph()
 
         // WHEN
-        execute(s"GRANT EXECUTE BOOSTED FUNCTION $function ON DBMS TO custom")
+        execute(s"GRANT EXECUTE BOOSTED FUNCTION $function ON DBMS TO $roleName")
 
         // THEN
-        executeOnDBMSDefault("foo", "bar", "RETURN test.function() AS result", resultHandler = (row, _) => {
+        executeOnDBMSDefault(username, password, "RETURN test.function() AS result", resultHandler = (row, _) => {
           row.get("result") should equal("OK")
         }) should be(1)
       }
@@ -196,145 +196,145 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     case (granted, denied) =>
       test(s"should fail execute user defined function with granted $granted and denied $denied *") {
         // GIVEN
-        setupUserAndGraph("foo", "bar")
+        setupUserAndGraph()
 
         // WHEN
-        execute(s"GRANT $granted FUNCTION * ON DBMS TO custom")
-        execute(s"DENY $denied FUNCTION * ON DBMS TO custom")
+        execute(s"GRANT $granted FUNCTION * ON DBMS TO $roleName")
+        execute(s"DENY $denied FUNCTION * ON DBMS TO $roleName")
 
         // THEN
         (the[AuthorizationViolationException] thrownBy {
-          executeOnDBMSDefault("foo", "bar", "RETURN test.function() AS result")
+          executeOnDBMSDefault(username, password, "RETURN test.function() AS result")
         }).getMessage should include(FAIL_EXECUTE_FUNC)
       }
 
       test(s"should fail execute user defined function with granted $granted and denied $denied specific function") {
         // GIVEN
-        setupUserAndGraph("foo", "bar")
+        setupUserAndGraph()
 
         // WHEN
-        execute(s"GRANT $granted FUNCTION * ON DBMS TO custom")
-        execute(s"DENY $denied FUNCTION test.function ON DBMS TO custom")
+        execute(s"GRANT $granted FUNCTION * ON DBMS TO $roleName")
+        execute(s"DENY $denied FUNCTION test.function ON DBMS TO $roleName")
 
         // THEN
         (the[AuthorizationViolationException] thrownBy {
-          executeOnDBMSDefault("foo", "bar", "RETURN test.function() AS result")
+          executeOnDBMSDefault(username, password, "RETURN test.function() AS result")
         }).getMessage should include(FAIL_EXECUTE_FUNC)
       }
   }
 
   test("should get default result when executing user defined function without privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES A TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
       row.get("result") should equal("N/A")
     }) should be(1)
   }
 
   test("should get default result when executing user defined function with deny privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
-    execute("DENY EXECUTE BOOSTED FUNCTION test.safe.* ON DBMS TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES A TO $roleName")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO $roleName")
+    execute(s"DENY EXECUTE BOOSTED FUNCTION test.safe.* ON DBMS TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
       row.get("result") should equal("N/A")
     }) should be(1)
   }
 
   test("should get actual result when executing user defined function with privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT MATCH {prop} ON GRAPH * NODES A TO custom")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT MATCH {prop} ON GRAPH * NODES A TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
 
   test("should get actual result when executing boosted user defined function without privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute(s"GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES A TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
 
   test("should fail execute user defined function without privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES A TO $roleName")
 
     // THEN
     (the[QueryExecutionException] thrownBy {
-      executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result")
+      executeOnDBMSDefault(username, password, "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result")
     }).getMessage should include("No such property")
   }
 
   test("should fail execute user defined function with deny privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
-    execute("DENY EXECUTE BOOSTED FUNCTION test.* ON DBMS TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES A TO $roleName")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO $roleName")
+    execute(s"DENY EXECUTE BOOSTED FUNCTION test.* ON DBMS TO $roleName")
 
     // THEN
     (the[QueryExecutionException] thrownBy {
-      executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result")
+      executeOnDBMSDefault(username, password, "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result")
     }).getMessage should include("No such property")
   }
 
   test("should get result when executing user defined function with privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT MATCH {prop} ON GRAPH * NODES A TO custom")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT MATCH {prop} ON GRAPH * NODES A TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
 
   test("should get result when executing boosted user defined function without privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute(s"GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES A TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
@@ -343,32 +343,32 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
   test("should execute builtin aggregation function without any function privileges") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS x RETURN sum(x)", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "UNWIND [1,2,3] AS x RETURN sum(x)", resultHandler = (row, _) => {
       row.get("sum(x)") should equal(6)
     }) should be(1)
   }
 
   test("should execute builtin aggregation function with DENY") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
-    execute("DENY EXECUTE FUNCTION sum ON DBMS TO custom")
+    setupUserAndGraph()
+    execute(s"DENY EXECUTE FUNCTION sum ON DBMS TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS x RETURN sum(x)", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "UNWIND [1,2,3] AS x RETURN sum(x)", resultHandler = (row, _) => {
       row.get("sum(x)") should equal(6)
     }) should be(1)
   }
 
   test("should fail execute user defined aggregation function without any function privileges") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
+      executeOnDBMSDefault(username, password, "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
     }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
   }
 
@@ -376,26 +376,26 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     function => {
       test(s"should execute user defined aggregation function with execute function $function") {
         // GIVEN
-        setupUserAndGraph("foo", "bar")
+        setupUserAndGraph()
 
         // WHEN
-        execute(s"GRANT EXECUTE FUNCTION $function ON DBMS TO custom")
+        execute(s"GRANT EXECUTE FUNCTION $function ON DBMS TO $roleName")
 
         // THEN
-        executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result", resultHandler = (row, _) => {
+        executeOnDBMSDefault(username, password, "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result", resultHandler = (row, _) => {
           row.get("result") should equal(3)
         }) should be(1)
       }
 
       test(s"should execute user defined aggregation function with execute boosted function $function") {
         // GIVEN
-        setupUserAndGraph("foo", "bar")
+        setupUserAndGraph()
 
         // WHEN
-        execute(s"GRANT EXECUTE BOOSTED FUNCTION $function ON DBMS TO custom")
+        execute(s"GRANT EXECUTE BOOSTED FUNCTION $function ON DBMS TO $roleName")
 
         // THEN
-        executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result", resultHandler = (row, _) => {
+        executeOnDBMSDefault(username, password, "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result", resultHandler = (row, _) => {
           row.get("result") should equal(3)
         }) should be(1)
       }
@@ -410,145 +410,145 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     case (granted, denied) =>
       test(s"should fail execute user defined aggregation function with granted $granted and denied $denied *") {
         // GIVEN
-        setupUserAndGraph("foo", "bar")
+        setupUserAndGraph()
 
         // WHEN
-        execute(s"GRANT $granted FUNCTION * ON DBMS TO custom")
-        execute(s"DENY $denied FUNCTION * ON DBMS TO custom")
+        execute(s"GRANT $granted FUNCTION * ON DBMS TO $roleName")
+        execute(s"DENY $denied FUNCTION * ON DBMS TO $roleName")
 
         // THEN
         (the[AuthorizationViolationException] thrownBy {
-          executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
+          executeOnDBMSDefault(username, password, "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
         }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
       }
 
       test(s"should fail execute user defined aggregation function with granted $granted and denied $denied specific function") {
         // GIVEN
-        setupUserAndGraph("foo", "bar")
+        setupUserAndGraph()
 
         // WHEN
-        execute(s"GRANT $granted FUNCTION * ON DBMS TO custom")
-        execute(s"DENY $denied FUNCTION test.return.latest ON DBMS TO custom")
+        execute(s"GRANT $granted FUNCTION * ON DBMS TO $roleName")
+        execute(s"DENY $denied FUNCTION test.return.latest ON DBMS TO $roleName")
 
         // THEN
         (the[AuthorizationViolationException] thrownBy {
-          executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
+          executeOnDBMSDefault(username, password, "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
         }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
       }
   }
 
   test("should get default result when executing user defined aggregation function without privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(0)
     }) should be(1)
   }
 
   test("should get default result when executing user defined aggregation function with deny privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
-    execute("DENY EXECUTE BOOSTED FUNCTION test.safe.* ON DBMS TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO $roleName")
+    execute(s"DENY EXECUTE BOOSTED FUNCTION test.safe.* ON DBMS TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(0)
     }) should be(1)
   }
 
   test("should get actual result when executing user defined aggregation function with privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT MATCH {prop} ON GRAPH * NODES B TO custom")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT MATCH {prop} ON GRAPH * NODES B TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
 
   test("should get actual result when executing boosted user defined aggregation function without privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
+    execute(s"GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
 
   test("should fail execute user defined aggregation function without privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName")
 
     // THEN
     (the[QueryExecutionException] thrownBy {
-      executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
+      executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
     }).getMessage should include("No such property")
   }
 
   test("should fail execute user defined aggregation function with deny privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
-    execute("DENY EXECUTE BOOSTED FUNCTION test.read.* ON DBMS TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO $roleName")
+    execute(s"DENY EXECUTE BOOSTED FUNCTION test.read.* ON DBMS TO $roleName")
 
     // THEN
     (the[QueryExecutionException] thrownBy {
-      executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
+      executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
     }).getMessage should include("No such property")
   }
 
   test("should get result when executing user defined aggregation function with privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    execute("GRANT MATCH {prop} ON GRAPH * NODES B TO custom")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT MATCH {prop} ON GRAPH * NODES B TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
 
   test("should get result when executing boosted user defined aggregation function without privilege required inside") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
+    execute(s"GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
@@ -557,44 +557,44 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
   test("should execute any function boosted with ALL ON DBMS") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
-    execute("GRANT ALL ON DBMS TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName")
+    execute(s"GRANT ALL ON DBMS TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
 
   test("should execute function without boosting when granted all on dbms denied execute boosted") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
-    execute("GRANT ALL ON DBMS TO custom")
-    execute("DENY EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName")
+    execute(s"GRANT ALL ON DBMS TO $roleName")
+    execute(s"DENY EXECUTE BOOSTED FUNCTION * ON DBMS TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(0)
     }) should be(1)
   }
 
   test("should fail execute function when denied all on dbms granted execute") {
     // GIVEN
-    setupUserAndGraph("foo", "bar")
+    setupUserAndGraph()
 
     // WHEN
-    execute("GRANT EXECUTE FUNCTION test.function ON DBMS TO custom")
-    execute("DENY ALL ON DBMS TO custom")
+    execute(s"GRANT EXECUTE FUNCTION test.function ON DBMS TO $roleName")
+    execute(s"DENY ALL ON DBMS TO $roleName")
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDBMSDefault("foo", "bar", "RETURN test.function()")
+      executeOnDBMSDefault(username, password, "RETURN test.function()")
     }).getMessage should include(FAIL_EXECUTE_FUNC)
   }
 
@@ -602,80 +602,80 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
   test("executing function with boosted privileges from procedure_roles config") {
     // GIVEN
-    setupUserAndGraph(rolename = "funcRole")
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO funcRole")
+    setupUserAndGraph(rolename = roleName2)
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName2")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
 
   test("should not be boosted when not matching procedure_roles config") {
     // GIVEN
-    setupUserAndGraph(rolename = "funcRole")
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO funcRole")
+    setupUserAndGraph(rolename = roleName2)
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName2")
 
     // THEN
     withClue("Without EXECUTE privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDBMSDefault("joe", "soap", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
+        executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
       }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
     }
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO funcRole")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName2")
 
     // THEN
     withClue("With EXECUTE privilege") {
       (the[QueryExecutionException] thrownBy {
-      executeOnDBMSDefault("joe", "soap", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
+      executeOnDBMSDefault(username, password, "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
       }).getMessage should include("No such property")
     }
   }
 
   test("executing function with boosted privileges from procedure_roles and default_allowed config") {
     // GIVEN
-    setupUserAndGraph(rolename = "default")
-    execute("GRANT TRAVERSE ON GRAPH * NODES A TO default")
+    setupUserAndGraph(rolename = defaultRole)
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES A TO $defaultRole")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
 
   test("executing function with boosted privileges from default_allowed config") {
     // GIVEN
-    setupUserAndGraph(rolename = "default")
-    execute("GRANT TRAVERSE ON GRAPH * NODES A TO default")
+    setupUserAndGraph(rolename = defaultRole)
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES A TO $defaultRole")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
 
   test("should not be boosted for default_allowed when function matching procedure_roles config") {
     // GIVEN
-    setupUserAndGraph(rolename = "default")
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO default")
+    setupUserAndGraph(rolename = defaultRole)
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $defaultRole")
 
     // THEN
     withClue("Without EXECUTE privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDBMSDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
+        executeOnDBMSDefault(username, password, "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
       }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
     }
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO default")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $defaultRole")
 
     // THEN
     withClue("With EXECUTE privilege") {
-      executeOnDBMSDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result", resultHandler = (row, _) => {
+      executeOnDBMSDefault(username, password, "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result", resultHandler = (row, _) => {
         row.get("result") should equal(0)
       }) should be(1)
     }
@@ -683,36 +683,36 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
   test("should respect combined privileges from config and system graph") {
     // GIVEN
-    setupUserAndGraph(rolename = "funcRole")
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO funcRole")
-    execute("DENY EXECUTE FUNCTION * ON DBMS TO funcRole")
+    setupUserAndGraph(rolename = roleName2)
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES B TO $roleName2")
+    execute(s"DENY EXECUTE FUNCTION * ON DBMS TO $roleName2")
 
     // THEN
     withClue("With DENY EXECUTE privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDBMSDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
+        executeOnDBMSDefault(username, password, "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
       }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
     }
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE DENY EXECUTE FUNCTION * ON DBMS FROM funcRole")
-    execute("DENY EXECUTE BOOSTED FUNCTION * ON DBMS TO funcRole")
+    execute(s"REVOKE DENY EXECUTE FUNCTION * ON DBMS FROM $roleName2")
+    execute(s"DENY EXECUTE BOOSTED FUNCTION * ON DBMS TO $roleName2")
 
     // THEN
     withClue("With DENY EXECUTE BOOSTED privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDBMSDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
+        executeOnDBMSDefault(username, password, "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
       }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
     }
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT EXECUTE FUNCTION * ON DBMS TO funcRole")
+    execute(s"GRANT EXECUTE FUNCTION * ON DBMS TO $roleName2")
 
     // THEN
     withClue("With GRANT EXECUTE and DENY EXECUTE BOOSTED privilege") {
-      executeOnDBMSDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result", resultHandler = (row, _) => {
+      executeOnDBMSDefault(username, password, "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result", resultHandler = (row, _) => {
         row.get("result") should equal(0)
       }) should be(1)
     }
@@ -720,18 +720,18 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
   test("should get privilege for PUBLIC from config") {
     // GIVEN
-    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
-    execute("GRANT ACCESS ON DATABASE * TO PUBLIC")
+    execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED")
+    execute(s"GRANT ACCESS ON DATABASE * TO $PUBLIC")
 
     // WHEN
-    executeOnDBMSDefault("joe", "soap", "RETURN public.function() AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault(username, password, "RETURN public.function() AS result", resultHandler = (row, _) => {
       row.get("result") should be(42)
     }) should be(1)
   }
 
   // Helper methods
 
-  def setupUserAndGraph( username: String = "joe", password: String = "soap", rolename: String = "custom" ): Unit = {
+  def setupUserAndGraph( username: String = username, password: String = password, rolename: String = roleName ): Unit = {
     super.setupUserWithCustomRole( username, password, rolename )
 
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
