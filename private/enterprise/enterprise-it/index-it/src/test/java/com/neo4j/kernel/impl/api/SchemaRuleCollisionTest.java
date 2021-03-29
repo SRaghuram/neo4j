@@ -18,6 +18,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.common.EntityType;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
@@ -27,8 +28,11 @@ import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.internal.schema.AnyTokenSchemaDescriptor;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.IndexPrototype;
+import org.neo4j.internal.schema.IndexType;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
@@ -40,6 +44,8 @@ import org.neo4j.kernel.api.exceptions.schema.AlreadyIndexedException;
 import org.neo4j.kernel.api.exceptions.schema.ConstraintWithNameAlreadyExistsException;
 import org.neo4j.kernel.api.exceptions.schema.EquivalentSchemaRuleAlreadyExistsException;
 import org.neo4j.kernel.api.exceptions.schema.IndexWithNameAlreadyExistsException;
+import org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStoreSettings;
+import org.neo4j.kernel.impl.index.schema.TokenIndexProvider;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
@@ -68,6 +74,7 @@ class SchemaRuleCollisionTest
     {
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setFileSystem( testDirectory.getFileSystem() )
+                .setConfig( RelationshipTypeScanStoreSettings.enable_scan_stores_as_token_indexes, true )
                 .impermanent()
                 .build();
         db = (GraphDatabaseAPI) dbms.database( DEFAULT_DATABASE_NAME );
@@ -100,6 +107,7 @@ class SchemaRuleCollisionTest
             ( schemaWrite, schema, name ) -> schemaWrite.nodeKeyConstraintCreate( uniqueForSchema( schema ).withName( name ) ), "node_key_constraint" );
     private static final SchemaType<ConstraintDescriptor> EXISTENCE_CONSTRAINT =
             createLabelSchemaType( SchemaWrite::nodePropertyExistenceConstraintCreate, "existence_constraint" );
+    private static final SchemaType<IndexDescriptor> ANY_TOKEN_INDEX = createAnyTokenSchemaType( "anyTokenIndex" );
 
     private static List<Arguments> allSchemaTypes()
     {
@@ -333,6 +341,46 @@ class SchemaRuleCollisionTest
         equivalentSchemaRuleExists().verify( this, relPropExistenceConstraint, name, pattern );
     }
 
+    @Test
+    void testAnyTokenIndexDifferentNameDifferentSchema() throws KernelException
+    {
+        Pattern firstPattern = new Pattern( EntityType.NODE );
+        Pattern secondPattern = new Pattern( EntityType.RELATIONSHIP );
+        String firstName = "name";
+        String secondName = "otherName";
+        Result.success().verify( this, ANY_TOKEN_INDEX, firstName, firstPattern );
+        Result.success().verify( this, ANY_TOKEN_INDEX, secondName, secondPattern );
+    }
+
+    @Test
+    void testAnyTokenIndexDifferentNameSameSchema() throws KernelException
+    {
+        Pattern pattern = new Pattern( EntityType.NODE );
+        String firstName = "name";
+        String secondName = "otherName";
+        Result.success().verify( this, ANY_TOKEN_INDEX, firstName, pattern );
+        alreadyIndexed().verify( this, ANY_TOKEN_INDEX, secondName, pattern );
+    }
+
+    @Test
+    void testAnyTokenIndexSameNameDifferentSchema() throws KernelException
+    {
+        Pattern firstPattern = new Pattern( EntityType.NODE );
+        Pattern secondPattern = new Pattern( EntityType.RELATIONSHIP );
+        String name = "name";
+        Result.success().verify( this, ANY_TOKEN_INDEX, name, firstPattern );
+        indexWithNameAlreadyExists().verify( this, ANY_TOKEN_INDEX, name, secondPattern );
+    }
+
+    @Test
+    void testAnyTokenIndexSameNameSameSchema() throws KernelException
+    {
+        Pattern pattern = new Pattern( EntityType.NODE );
+        String name = "name";
+        Result.success().verify( this, ANY_TOKEN_INDEX, name, pattern );
+        equivalentSchemaRuleExists().verify( this, ANY_TOKEN_INDEX, name, pattern );
+    }
+
     private void assertExist( SchemaRule schemaRule ) throws TransactionFailureException
     {
         try ( KernelTransaction transaction = newTransaction( db ) )
@@ -434,6 +482,32 @@ class SchemaRuleCollisionTest
         };
     }
 
+    private static SchemaType<IndexDescriptor> createAnyTokenSchemaType( String opName )
+    {
+        return new SchemaType<>()
+        {
+            @Override
+            public IndexDescriptor create( GraphDatabaseAPI db, String name, Pattern pattern ) throws KernelException
+            {
+                final AnyTokenSchemaDescriptor schema = SchemaDescriptor.forAnyEntityTokens( pattern.type );
+                IndexPrototype index = IndexPrototype.forSchema( schema, TokenIndexProvider.DESCRIPTOR ).withName( name ).withIndexType( IndexType.LOOKUP );
+                try ( KernelTransaction transaction = newTransaction( db ) )
+                {
+                    final SchemaWrite schemaWrite = transaction.schemaWrite();
+                    final IndexDescriptor result = schemaWrite.indexCreate( index );
+                    transaction.commit();
+                    return result;
+                }
+            }
+
+            @Override
+            public String toString()
+            {
+                return opName;
+            }
+        };
+    }
+
     private static KernelTransaction newTransaction( GraphDatabaseAPI db ) throws org.neo4j.internal.kernel.api.exceptions.TransactionFailureException
     {
         final Kernel kernel = db.getDependencyResolver().resolveDependency( Kernel.class );
@@ -522,11 +596,20 @@ class SchemaRuleCollisionTest
     {
         private final String labelName;
         private final String propertyName;
+        private final EntityType type;
 
         private Pattern( String labelName, String propertyName )
         {
             this.labelName = labelName;
             this.propertyName = propertyName;
+            this.type = null;
+        }
+
+        private Pattern( EntityType entityType )
+        {
+            this.labelName = null;
+            this.propertyName = null;
+            this.type = entityType;
         }
 
         @Override
