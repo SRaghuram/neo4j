@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.TestProbe;
 import akka.testkit.javadsl.TestKit;
@@ -17,6 +16,7 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
+import com.neo4j.causalclustering.discovery.akka.system.TestActorSystem;
 import com.neo4j.causalclustering.identity.IdFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +52,7 @@ class ReadReplicaViewMessageTest extends TestKit
 
     ReadReplicaViewMessageTest()
     {
-        super( ActorSystem.create( "ReadReplicaViewMessage" ) );
+        super( TestActorSystem.withDefaults( "ReadReplicaViewMessageTest" ) );
     }
 
     @AfterEach

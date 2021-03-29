@@ -9,6 +9,7 @@ import akka.actor.ActorSystem;
 import akka.actor.ExtendedActorSystem;
 import akka.testkit.javadsl.TestKit;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
+import com.neo4j.causalclustering.discovery.akka.system.TestActorSystem;
 import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -44,7 +45,7 @@ public class ReadReplicaRemovalMarshalTest implements BaseMarshalTest<ReadReplic
     @BeforeAll
     void setup()
     {
-        system = ActorSystem.create();
+        system = TestActorSystem.withDefaults( "ReadReplicaRemovalMarshalTest" );
         system.actorOf( ActorRefMarshalTest.Actor.props(), ActorRefMarshalTest.Actor.name );
     }
 

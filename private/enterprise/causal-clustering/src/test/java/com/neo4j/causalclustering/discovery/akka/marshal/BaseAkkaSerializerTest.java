@@ -20,6 +20,7 @@ import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabas
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
+import com.neo4j.causalclustering.discovery.akka.system.TestActorSystem;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.dbms.EnterpriseOperatorState;
@@ -41,7 +42,7 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseI
 
 class BaseAkkaSerializerTest
 {
-    private static ActorSystem system = ActorSystem.create();
+    private static ActorSystem system = TestActorSystem.withDefaults( "BaseAkkaSerializerTest" );
 
     static
     {

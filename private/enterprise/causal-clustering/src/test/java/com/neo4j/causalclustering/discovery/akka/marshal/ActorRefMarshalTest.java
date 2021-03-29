@@ -12,6 +12,7 @@ import akka.actor.ExtendedActorSystem;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
 import akka.testkit.javadsl.TestKit;
+import com.neo4j.causalclustering.discovery.akka.system.TestActorSystem;
 import com.neo4j.causalclustering.test_helpers.BaseMarshalTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -70,7 +71,7 @@ class ActorRefMarshalTest implements BaseMarshalTest<ActorRef>
     @BeforeAll
     static void setup()
     {
-        system = ActorSystem.create();
+        system = TestActorSystem.withDefaults( "ActorRefMarshalTest" );
         system.actorOf( ActorRefMarshalTest.Actor.props(), ActorRefMarshalTest.Actor.name );
     }
 

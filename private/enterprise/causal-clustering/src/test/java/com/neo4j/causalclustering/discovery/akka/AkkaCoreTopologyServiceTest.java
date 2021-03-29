@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
+import com.neo4j.causalclustering.discovery.akka.system.TestActorSystem;
 import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.IdFactory;
@@ -97,7 +98,7 @@ class AkkaCoreTopologyServiceTest
                 databaseId2, new EnterpriseDatabaseState( databaseId2, STOPPED ) );
         databaseStateService = new StubDatabaseStateService( databaseStates, EnterpriseDatabaseState::unknown );
 
-        system = ActorSystem.create();
+        system = TestActorSystem.withDefaults( "AkkaStandaloneTopologyServiceTest" );
         systemLifecycle = mock( ActorSystemLifecycle.class );
         testKit = new TestKit( system );
 
