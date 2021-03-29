@@ -14,8 +14,6 @@ import com.neo4j.bench.common.profiling.metrics.Series;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,7 +29,7 @@ public class VmStatChartCreatorTest
     @Test
     public void shouldCreateChartFromRawPoints()
     {
-        Instant instant = LocalDateTime.of( 2020, 12, 3, 13, 28, 37 ).toInstant( OffsetDateTime.now().getOffset() );
+        Instant instant = Instant.EPOCH.plusSeconds( 3 );
         Map<String,List<Point>> data = new HashMap<String,List<Point>>()
         {{
             put( "r", singletonList( new Point( 1, instant ) ) );
@@ -55,7 +53,7 @@ public class VmStatChartCreatorTest
 
         List<Chart> result = VmStatChartCreator.createCharts( data );
 
-        List<Long> timestamps = singletonList( 1606998517000L );
+        List<Long> timestamps = singletonList( 3000L );
         List<Chart> expected = Arrays.asList(
                 new Chart( new Layout( "Procs", new Axis( "" ) ), Arrays.asList(
                         new Series( "r: The number of runnable processes (running or waiting for run time)", timestamps, singletonList( 1.0 ) ),
