@@ -10,6 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -173,7 +174,7 @@ class FormatFamilyMigrationIT
     private void createIndex( Transaction tx )
     {
         String indexName = randomRule.nextAlphaNumericString();
-        IndexType indexType = randomRule.among( IndexType.values() );
+        IndexType indexType = randomRule.among( Arrays.asList( IndexType.BTREE, IndexType.FULLTEXT ));
         String[] indexProperties = randomRule.selection( propKeys, 1, propKeys.length, false );
         Label indexLabel = randomRule.among( labels );
 
