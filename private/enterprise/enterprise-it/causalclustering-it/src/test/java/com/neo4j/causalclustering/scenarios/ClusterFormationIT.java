@@ -46,6 +46,9 @@ class ClusterFormationIT
 {
     private static final ExecutorService executor = Executors.newCachedThreadPool( daemon( "thread-" + ClusterFormationIT.class.getSimpleName() ) );
 
+    // if the log shipping timeout is less than about 20 seconds then this test will not be reliable
+    private static final int LOG_SHIPPING_TIMEOUT_SECONDS = 40;
+
     @Inject
     private ClusterFactory clusterFactory;
 
@@ -64,12 +67,12 @@ class ClusterFormationIT
                 clusterConfig()
                         .withNumberOfCoreMembers( 3 )
                         .withNumberOfReadReplicas( 1 )
-                        .withSharedPrimaryParam( CausalClusteringSettings.log_shipping_retry_timeout, "20s" )
+                        .withSharedPrimaryParam( CausalClusteringSettings.log_shipping_retry_timeout, String.format( "%ds", LOG_SHIPPING_TIMEOUT_SECONDS ) )
         );
         cluster.start();
 
         var logShippingTimeout = cluster.randomCoreMember( false ).get().config().get( CausalClusteringSettings.log_shipping_retry_timeout );
-        assert logShippingTimeout.toSeconds() == 20; // if the log shipping timeout is less than about 10 seconds then this test will not be reliable
+        assertThat( logShippingTimeout.toSeconds() ).isEqualTo( LOG_SHIPPING_TIMEOUT_SECONDS );
 
         // then
         var leader = cluster.awaitLeader();
@@ -97,7 +100,7 @@ class ClusterFormationIT
         }
         catch ( TimeoutException e )
         {
-            fail( String.format( "Creating a node should not take so long!", e.getMessage() ) );
+            fail( String.format( "Creating a node should not take so long! (%s)", e.getMessage() ), e );
         }
         assertThat( s.getTime( MILLISECONDS ) ).isLessThan( logShippingTimeout.dividedBy( 2 ).toMillis() );
     }
