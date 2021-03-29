@@ -26,7 +26,7 @@ import org.neo4j.configuration.connectors.BoltConnectorInternalSettings
 import org.neo4j.configuration.helpers.DatabaseNameValidator
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.ast.ActionResource
-import org.neo4j.cypher.internal.ast.AdminAction
+import org.neo4j.cypher.internal.ast.AdministrationAction
 import org.neo4j.cypher.internal.ast.AllDatabasesQualifier
 import org.neo4j.cypher.internal.ast.AllDatabasesScope
 import org.neo4j.cypher.internal.ast.AllGraphsScope
@@ -210,7 +210,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
      *  Check that the current user is not blocked from database management
      *  Should fail if the blocking setting is true and the user is not the operator
      */
-    case AssertNotBlocked(action: AdminAction) => _ => {
+    case AssertNotBlocked(action: AdministrationAction) => _ => {
       val (blocked, actionString) = action match {
         case CreateDatabaseAction => (create_drop_database_is_blocked, "CREATE")
         case DropDatabaseAction => (create_drop_database_is_blocked, "DROP")
