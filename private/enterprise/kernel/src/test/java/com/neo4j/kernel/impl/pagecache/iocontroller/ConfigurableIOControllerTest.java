@@ -9,13 +9,12 @@ import org.junit.jupiter.api.Test;
 
 import java.io.Flushable;
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.ObjLongConsumer;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseInternalSettings;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.IOController;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.FlushEventOpportunity;
@@ -23,6 +22,8 @@ import org.neo4j.time.FakeClock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.io_controller_consider_external_io;
+import static org.neo4j.configuration.GraphDatabaseSettings.check_point_iops_limit;
 
 class ConfigurableIOControllerTest
 {
@@ -125,7 +126,7 @@ class ConfigurableIOControllerTest
         createIOLimiter( 0 );
 
         // Then set a limit of 100 IOPS
-        config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, 100, getClass().getSimpleName() );
+        config.setDynamic( check_point_iops_limit, 100, getClass().getSimpleName() );
 
         // Do 10*100 = 1000 IOs real quick, when we're limited to 100 IOPS.
         repeatedlyCallMaybeLimitIO( limiter, 10 );
@@ -134,7 +135,7 @@ class ConfigurableIOControllerTest
         assertThat( pauseNanosCounter.get() ).isGreaterThan( TimeUnit.SECONDS.toNanos( 9 ) );
 
         // Change back to unlimited
-        config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, -1, getClass().getSimpleName()  );
+        config.setDynamic( check_point_iops_limit, -1, getClass().getSimpleName()  );
 
         // And verify it's respected
         assertUnlimited();
@@ -148,7 +149,7 @@ class ConfigurableIOControllerTest
         // Disable the limiter...
         limiter.disable();
         // ...while a dynamic configuration update happens
-        config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, 100, getClass().getSimpleName()  );
+        config.setDynamic( check_point_iops_limit, 100, getClass().getSimpleName()  );
         // The limiter must still be disabled...
         assertUnlimited();
         // ...and re-enabling it...
@@ -166,7 +167,7 @@ class ConfigurableIOControllerTest
         // Disable the limiter...
         limiter.disable();
         // ...while a dynamic configuration update happens
-        config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, -1, getClass().getSimpleName()  );
+        config.setDynamic( check_point_iops_limit, -1, getClass().getSimpleName()  );
         // The limiter must still be disabled...
         assertUnlimited();
         // ...and re-enabling it...
@@ -174,7 +175,7 @@ class ConfigurableIOControllerTest
         // ...must maintain the limiter disabled.
         assertUnlimited();
         // Until it is re-enabled.
-        config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, 100, getClass().getSimpleName()  );
+        config.setDynamic( check_point_iops_limit, 100, getClass().getSimpleName()  );
         repeatedlyCallMaybeLimitIO( limiter, 10 );
         assertThat( pauseNanosCounter.get() ).isGreaterThan( TimeUnit.SECONDS.toNanos( 9 ) );
     }
@@ -338,7 +339,7 @@ class ConfigurableIOControllerTest
     @Test
     void ignoreExternalIOWhenDisabled()
     {
-        Config config = Config.defaults( GraphDatabaseSettings.check_point_iops_limit, 100 );
+        Config config = Config.defaults( Map.of( check_point_iops_limit, 100, io_controller_consider_external_io, true ) );
         createIOLimiter( config );
         var pageCacheTracer = new DefaultPageCacheTracer();
         var flushEvent = pageCacheTracer.beginCacheFlush();
@@ -349,13 +350,13 @@ class ConfigurableIOControllerTest
         assertEquals( 1, pageCacheTracer.ioLimitedTimes() );
         assertEquals( 0, limiter.getExternalIO() );
 
-        config.set( GraphDatabaseInternalSettings.io_controller_consider_external_io, false );
+        config.set( io_controller_consider_external_io, false );
         limiter.reportIO( 400 );
         limiter.maybeLimitIO( 1, FLUSHABLE, flushOpportunity );
         assertEquals( 1, pageCacheTracer.ioLimitedTimes() );
         assertEquals( 400, limiter.getExternalIO() );
 
-        config.set( GraphDatabaseInternalSettings.io_controller_consider_external_io, true );
+        config.set( io_controller_consider_external_io, true );
         limiter.maybeLimitIO( 1, FLUSHABLE, flushOpportunity );
         assertEquals( 2, pageCacheTracer.ioLimitedTimes() );
         assertEquals( 0, limiter.getExternalIO() );
@@ -372,7 +373,7 @@ class ConfigurableIOControllerTest
 
     private void createIOLimiter( int limit )
     {
-        createIOLimiter( Config.defaults( GraphDatabaseSettings.check_point_iops_limit, limit ) );
+        createIOLimiter( Config.defaults( Map.of( check_point_iops_limit, limit, io_controller_consider_external_io, true ) ) );
     }
 
     private void assertUnlimited()
