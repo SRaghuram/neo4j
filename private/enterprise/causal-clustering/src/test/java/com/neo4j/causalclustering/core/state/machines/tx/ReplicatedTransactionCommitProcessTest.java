@@ -13,6 +13,10 @@ import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordina
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Set;
+
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
@@ -32,6 +36,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.read_only_databases;
 import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.writable;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
@@ -126,8 +131,10 @@ class ReplicatedTransactionCommitProcessTest
     void shouldFailIfDatabaseIsReadOnly()
     {
         //given
+        var config = Config.defaults( read_only_databases, Set.of( DEFAULT_DATABASE_NAME ) );
+        var readOnlyChecker = new DatabaseReadOnlyChecker.Default( config, DEFAULT_DATABASE_NAME );
         final var commitProcess =
-                new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, leaseCoordinator, LogEntryWriterFactory.LATEST, writable() );
+                new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, leaseCoordinator, LogEntryWriterFactory.LATEST, readOnlyChecker );
 
         // when
         final var exception = assertThrows( RuntimeException.class,
