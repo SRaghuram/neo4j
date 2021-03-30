@@ -15,6 +15,7 @@ import org.neo4j.codegen.api.Eq
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.booleanValue
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.constructor
@@ -534,7 +535,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
         declareAndAssign(typeRefOf[AnyValue],"isNotNullInput",
           getNodeProperty(getLongAt(nOffset), nOffset, 8)
         ),
-        ternary(notEqual("isNotNullInput", noValue), trueValue, falseValue)
+        booleanValue(notEqual("isNotNullInput", noValue))
       )
     )
   }
@@ -921,7 +922,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
         declareAndAssign(typeRefOf[Boolean], "seenNull", constant(false)),
         declareAndAssign("orLhs", block(
           declareAndAssign("isNotNullInput", getRefAt(xOffset)),
-            ternary(notEqual("isNotNullInput", noValue), trueValue, falseValue)
+            booleanValue(notEqual("isNotNullInput", noValue))
           ),
         ),
 

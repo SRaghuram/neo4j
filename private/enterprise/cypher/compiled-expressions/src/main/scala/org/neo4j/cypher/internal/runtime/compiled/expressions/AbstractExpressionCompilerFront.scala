@@ -18,6 +18,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.booleanValue
 import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
@@ -1519,7 +1520,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case NodePropertyExists(offset, token, _) =>
       Some(
         IntermediateExpression(
-          ternary(hasNodeProperty(constant(token), offset), trueValue, falseValue),
+          booleanValue(hasNodeProperty(constant(token), offset)),
           Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case NodePropertyExistsLate(offset, key, _) =>
@@ -1528,7 +1529,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         block(
           condition(equal(loadField(f), constant(-1)))(
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-          ternary(hasNodeProperty(loadField(f), offset), trueValue, falseValue)),
+          booleanValue(hasNodeProperty(loadField(f), offset))),
         Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case RelationshipProperty(offset, token, _) =>
@@ -1555,8 +1556,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     case RelationshipPropertyExists(offset, token, _) =>
       Some(IntermediateExpression(
-        ternary(
-          hasRelationshipProperty(constant(token), offset), trueValue, falseValue),
+        booleanValue(hasRelationshipProperty(constant(token), offset)),
         Seq.empty, Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty)
       )
 
@@ -1566,18 +1566,17 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         block(
           condition(equal(loadField(f), constant(-1)))(
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-          ternary(
-            hasRelationshipProperty(loadField(f), offset), trueValue, falseValue)),
+          booleanValue(hasRelationshipProperty(loadField(f), offset))),
         Seq(f), Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case HasLabelsFromSlot(offset, resolvedLabelTokens, lateLabels) if resolvedLabelTokens.nonEmpty || lateLabels.nonEmpty =>
       val (tokenFields, inits) = tokenFieldsForLabels(lateLabels)
 
-      val predicate: IntermediateRepresentation = ternary(
+      val predicate: IntermediateRepresentation = booleanValue(
         and(resolvedLabelTokens.map { tokenId => isLabelSetOnNode(constant(tokenId), offset)
         } ++
         tokenFields.map { tokenField => isLabelSetOnNode(loadField(tokenField), offset)
-        }), trueValue, falseValue)
+        }))
 
       Some(IntermediateExpression(block(inits :+ predicate:_*),
         tokenFields, Seq(vNODE_CURSOR), Set.empty, requireNullCheck = false))
@@ -1585,11 +1584,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case HasTypesFromSlot(offset, resolvedTypeTokens, lateTypes) if resolvedTypeTokens.nonEmpty || lateTypes.nonEmpty =>
       val (tokenFields, inits) = tokenFieldsForTypes(lateTypes)
 
-      val predicate: IntermediateRepresentation = ternary(
+      val predicate: IntermediateRepresentation = booleanValue(
         and(resolvedTypeTokens.map { tokenId => isTypeSetOnRelationship(constant(tokenId), offset)
         } ++
           tokenFields.map { tokenField => isTypeSetOnRelationship(loadField(tokenField), offset)
-          }), trueValue, falseValue)
+          }))
 
       Some(IntermediateExpression(block(inits :+ predicate:_*),
         tokenFields, Seq(vRELATIONSHIP_CURSOR), Set.empty, requireNullCheck = false))
@@ -1783,7 +1782,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
            r <- compileExpression(rhs, id)
       } yield
         IntermediateExpression(
-          ternary(invoke(l.ir, method[AnyValue, Boolean, AnyRef]("equals"), r.ir), trueValue, falseValue),
+          booleanValue(invoke(l.ir, method[AnyValue, Boolean, AnyRef]("equals"), r.ir)),
           l.fields ++ r.fields, l.variables ++ r.variables, l.nullChecks ++ r.nullChecks)
 
     case NullCheck(offset, inner) =>
@@ -1799,7 +1798,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       compileExpression(inner, id).map(i => i.copy(nullChecks = i.nullChecks + equal(getRefAt(offset), noValue), requireNullCheck = true))
 
     case IsPrimitiveNull(offset) =>
-      Some(IntermediateExpression(ternary(equal(getLongAt(offset), constant(-1L)), trueValue, falseValue),
+      Some(IntermediateExpression(booleanValue(equal(getLongAt(offset), constant(-1L))),
                                   Seq.empty, Seq.empty, Set.empty))
 
     case _ => None
@@ -1809,10 +1808,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                         node: IntermediateExpression): IntermediateExpression = {
     val (tokenFields, inits) = tokenFieldsForLabels(labelNames)
 
-    val predicate: IntermediateRepresentation = ternary(and(tokenFields.map { token =>
+    val predicate: IntermediateRepresentation = booleanValue(and(tokenFields.map { token =>
       invokeStatic(method[CypherFunctions, Boolean, AnyValue, Int, DbAccess, NodeCursor]("hasLabel"),
         node.ir, loadField(token), DB_ACCESS, NODE_CURSOR)
-    }), trueValue, falseValue)
+    }))
 
     IntermediateExpression(block(inits :+ predicate: _*),
       node.fields ++ tokenFields, node.variables :+ vNODE_CURSOR, node.nullChecks)
@@ -1822,7 +1821,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                        relationship: IntermediateExpression): IntermediateExpression = {
     val (tokenFields, inits) = tokenFieldsForTypes(types)
 
-    val predicate: IntermediateRepresentation = ternary(
+    val predicate: IntermediateRepresentation = booleanValue(
       and(tokenFields.map { tokenId =>
         invokeStatic(
           method[CypherFunctions, Boolean, AnyValue, Int, DbAccess, RelationshipScanCursor]("hasType"),
@@ -1831,7 +1830,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           DB_ACCESS,
           RELATIONSHIP_CURSOR
         )
-      }), trueValue, falseValue)
+      }))
 
     IntermediateExpression(block(inits :+ predicate: _*),
       relationship.fields ++ tokenFields, relationship.variables :+ vRELATIONSHIP_CURSOR, relationship.nullChecks)
@@ -1934,10 +1933,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                 ternary(equal(localDegree, noValue),
                   constant(-1),
                   invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load[AnyValue](localDegree)))),
-              ternary(
+              booleanValue(
                 comparison(
                   invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), nodeIdIr, NODE_CURSOR), load[Int](localDegreeInt)
-                ), trueValue, falseValue)
+                ))
             ), maxDegree.fields, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }
       case Some(Left(typeId)) =>
@@ -1951,10 +1950,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                 ternary(equal(localDegree, noValue),
                   constant(-1),
                   invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load[AnyValue](localDegree)))),
-              ternary(
+              booleanValue(
                 comparison(
                   invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), nodeIdIr, constant(typeId), NODE_CURSOR), load[Int](localDegreeInt)
-                ), trueValue, falseValue)
+                ))
             ), maxDegree.fields, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }
       case Some(Right(typeName)) =>
@@ -1971,10 +1970,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                   invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load[AnyValue](localDegree)))),
               condition(equal(loadField(f), constant(-1)))(
                 setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typeName)))),
-              ternary(
+              booleanValue(
                 comparison(
                   invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load[Int](localDegreeInt)), nodeIdIr, loadField(f), NODE_CURSOR), load[Int](localDegreeInt)
-                ), trueValue, falseValue)
+                ))
             ), maxDegree.fields :+ f, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }
     }
@@ -2846,7 +2845,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       val exceptionName = namer.nextVariableName()
       val loadValue = tryCatch[RuntimeException](exceptionName)(
         //try
-        assign(returnValue, noValueOr(e)(invokeStatic(ASSERT_PREDICATE, e.ir)))
+        assign(returnValue, invokeStatic(ASSERT_PREDICATE, nullCheckIfRequired(e)))
       )(block(//catch
         assign(error, load[RuntimeException](exceptionName)),
         assign(returnValue, constant(null)))
@@ -2903,7 +2902,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           //assign returnValue to head of expressions
           tryCatch[RuntimeException](exceptionName)(
               //try
-              assign(returnValue, noValueOr(firstExpression)(invokeStatic(ASSERT_PREDICATE, firstExpression.ir)))
+              assign(returnValue, invokeStatic(ASSERT_PREDICATE, nullCheckIfRequired(firstExpression)))
           )(block(
                 //catch
                 assign(error, load[RuntimeException](exceptionName)),
@@ -3360,11 +3359,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
          } yield {
       val variableName = namer.nextVariableName()
       val invocation = if (exists) {
-        ternary(
+        booleanValue(
           invokeStatic(method[CypherFunctions, Boolean, AnyValue, AnyValue, DbAccess,
             NodeCursor, RelationshipScanCursor, PropertyCursor]("containerIndexExists"),
-            c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
-          trueValue, falseValue)
+            c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR))
       } else {
         invokeStatic(method[CypherFunctions, AnyValue, AnyValue, AnyValue, DbAccess,
           NodeCursor, RelationshipScanCursor, PropertyCursor]("containerIndex"),
@@ -3397,8 +3395,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                 invoke(DB_ACCESS, txStateHasCachedProperty, entityId, constant(prop))),
               ifElse(invoke(hasChanges, method[Optional[_], Boolean]("isEmpty")))(onNoChanges)(
                 assign(existsVariable,
-                  ternary(unbox(cast[java.lang.Boolean](
-                    invoke(hasChanges, method[Optional[_], Object]("get")))), trueValue, falseValue)))
+                  booleanValue(unbox(cast[java.lang.Boolean](
+                    invoke(hasChanges, method[Optional[_], Object]("get")))))))
             )
           }
         }
@@ -3458,8 +3456,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             declareAndAssign(hasChanges, invoke(DB_ACCESS, txStateHasCachedProperty, entityId, loadField(f))),
             ifElse(invoke(hasChanges, method[Optional[_], Boolean]("isEmpty")))(onNoChanges)(
               assign(existsVariable,
-                ternary(unbox(cast[java.lang.Boolean](
-                  invoke(hasChanges, method[Optional[_], Object]("get")))), trueValue, falseValue)))
+                booleanValue(unbox(cast[java.lang.Boolean](
+                  invoke(hasChanges, method[Optional[_], Object]("get")))))))
           )
         }
       }
@@ -3552,7 +3550,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
 object AbstractExpressionCompilerFront {
 
-  val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
+  val ASSERT_PREDICATE: Method = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
 
   private val GET_TX_STATE_NODE_PROP: Method = method[DbAccess, Value, Long, Int]("getTxStateNodePropertyOrNull")
   private val GET_TX_STATE_RELATIONSHIP_PROP: Method = method[DbAccess, Value, Long, Int]("getTxStateRelationshipPropertyOrNull")

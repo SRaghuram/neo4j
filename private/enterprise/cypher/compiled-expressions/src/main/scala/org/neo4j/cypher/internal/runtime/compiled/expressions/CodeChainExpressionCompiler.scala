@@ -16,6 +16,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.booleanValue
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.constructor
@@ -325,7 +326,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
       START
         .withCode(isNullable = true, irInfo)
         .assignTo(typeRefOf[AnyValue], varName)
-        .withCode(isNullable = false, ternary(notEqual(varName, noValue), trueValue, falseValue))
+        .withCode(isNullable = false, booleanValue(notEqual(varName, noValue)))
 
     case f: FunctionInvocation =>
       f.function match {
