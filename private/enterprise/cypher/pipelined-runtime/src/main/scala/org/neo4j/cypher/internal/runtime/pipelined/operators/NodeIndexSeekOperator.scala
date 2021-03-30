@@ -605,7 +605,7 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
     //'CompositeValueIndexCursor.methodName` instead of `CompositeValueIndexCursor<Object>.methodName
     Method(nonGenericTypeRefOf[CompositeValueIndexCursor[_]],
       typeRefOf[NodeValueIndexCursor], methodName,
-      typeRefOf[Array[NodeValueIndexCursor]])
+      Seq(typeRefOf[Array[NodeValueIndexCursor]]))
   }
 
   private def setupCursors: IntermediateRepresentation = {

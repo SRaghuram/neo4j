@@ -510,7 +510,7 @@ abstract class BaseManyQueriesRelationshipIndexSeekTaskTemplate(override val inn
     //'CompositeValueIndexCursor.methodName` instead of `CompositeValueIndexCursor<Object>.methodName
     Method(nonGenericTypeRefOf[CompositeValueIndexCursor[_]],
       typeRefOf[RelationshipValueIndexCursor], methodName,
-      typeRefOf[Array[RelationshipValueIndexCursor]])
+      Seq(typeRefOf[Array[RelationshipValueIndexCursor]]))
   }
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
