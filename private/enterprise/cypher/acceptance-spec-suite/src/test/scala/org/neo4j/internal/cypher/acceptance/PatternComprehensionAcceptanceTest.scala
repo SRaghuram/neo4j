@@ -671,4 +671,33 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
       r.toList shouldBe List(Map("p" -> Map("name" -> "badger")))
     }
   }
- }
+
+  test("should use getDegree to calculate size of a simple pattern comprehension") {
+
+    executeSingle {
+      """CREATE (a)
+        |CREATE (b)-[:REL]->()
+        |CREATE (c)-[:REL]->()
+        |CREATE (c)-[:REL]->()
+        |CREATE (d)-[:REL]->()
+        |CREATE (d)-[:REL]->()
+        |CREATE (d)-[:REL]->()
+        |""".stripMargin
+    }
+
+    val q =
+      """MATCH (n)
+        |WITH size([p = (n)-[:REL]->() | p]) AS x
+        |RETURN x""".stripMargin
+
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, q,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("GetDegree.*".r)))
+
+    res.toSet shouldBe Set(
+      Map("x" -> 0),
+      Map("x" -> 1),
+      Map("x" -> 2),
+      Map("x" -> 3),
+    )
+  }
+}
