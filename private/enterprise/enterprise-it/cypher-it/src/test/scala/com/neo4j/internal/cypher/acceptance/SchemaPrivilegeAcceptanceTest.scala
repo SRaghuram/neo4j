@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.TRUE
+
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
@@ -14,14 +15,21 @@ import org.neo4j.configuration.GraphDatabaseSettings.default_database
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.Result.ResultRow
+import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
+import org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStoreSettings
 
 class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
   private val indexName = "my_index"
   private val constraintName = "my_constraint"
   private val labelString = "Label"
   private val propString = "prop"
+
+  // Need to override until relationship property indexes are fully supported
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
+    RelationshipTypeScanStoreSettings.enable_relationship_property_indexes -> TRUE
+  )
 
   private def ShowSchemaNotAllowed(schemaType: String, additionalRole: String = "custom"): String =
     s"Show $schemaType are not allowed for user 'joe' with roles [PUBLIC, $additionalRole]."

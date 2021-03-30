@@ -37,6 +37,7 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStoreSettings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
@@ -75,6 +76,7 @@ class HighLimitIndexIT
         dbms = new TestDatabaseManagementServiceBuilder( Paths.get( "myhome" ) )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.record_format, recordFormat )
+                .setConfig( RelationshipTypeScanStoreSettings.enable_relationship_property_indexes, true )
                 .build();
         db = (GraphDatabaseAPI) dbms.database( DEFAULT_DATABASE_NAME );
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED ) )

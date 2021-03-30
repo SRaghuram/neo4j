@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.kernel.api.Kernel
+import org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStoreSettings
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.scheduler.JobScheduler
 
@@ -52,6 +53,7 @@ object ENTERPRISE {
     GraphDatabaseInternalSettings.cypher_worker_count -> Integer.valueOf(-1),
     GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(customSchedulerTracer.fold(MORSEL_SIZE)(_ => MORSEL_SIZE_FOR_SCHEDULING_TESTS)),
     GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(customSchedulerTracer.fold(MORSEL_SIZE)(_ => MORSEL_SIZE_FOR_SCHEDULING_TESTS)),
+    RelationshipTypeScanStoreSettings.enable_relationship_property_indexes -> TRUE,
     MetricsSettings.metrics_enabled -> java.lang.Boolean.FALSE
   )
 

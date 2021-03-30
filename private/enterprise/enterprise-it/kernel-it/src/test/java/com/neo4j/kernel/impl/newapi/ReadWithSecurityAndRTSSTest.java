@@ -37,6 +37,7 @@ public class ReadWithSecurityAndRTSSTest extends ReadWithSecurityTestBase<Enterp
             {
                 TestDatabaseManagementServiceBuilder builder = super.newManagementServiceBuilder( storeDir );
                 builder.setConfig( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store, true );
+                builder.setConfig( RelationshipTypeScanStoreSettings.enable_relationship_property_indexes, true );
                 return builder;
             }
         };
