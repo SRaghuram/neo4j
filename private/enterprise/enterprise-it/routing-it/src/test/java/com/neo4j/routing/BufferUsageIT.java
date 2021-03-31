@@ -76,9 +76,9 @@ class BufferUsageIT
         boltServerNettyPoolStatsBefore = getStats( BoltServer.NETTY_BUF_ALLOCATOR );
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                                                    .withNumberOfCoreMembers( 2 )
-                                                   .withSharedPrimaryParam( GraphDatabaseInternalSettings.neo_network_buffer_pool, "true" )
+                                                   .withSharedPrimaryParam( GraphDatabaseInternalSettings.managed_network_buffers, "true" )
                                                    .withNumberOfReadReplicas( 1 )
-                                                   .withSharedReadReplicaParam( GraphDatabaseInternalSettings.neo_network_buffer_pool, "true" );
+                                                   .withSharedReadReplicaParam( GraphDatabaseInternalSettings.managed_network_buffers, "true" );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
