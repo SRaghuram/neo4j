@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.pipelined
 
+import java.lang.System.lineSeparator
+
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
@@ -117,6 +119,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexContainsSca
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexEndsWithScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipIndexStartsWithSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipTypeScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RemoveLabelsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
@@ -149,8 +152,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.WriteOperatorsDbHitsTestBase
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.result.OperatorProfile
 import org.scalatest.Outcome
-
-import java.lang.System.lineSeparator
 
 object PipelinedSpecSuite {
   val SIZE_HINT = 1000
@@ -254,6 +255,8 @@ class PipelinedAssertSameNodeRewriterTest extends AssertSameNodeRewriterTestBase
 class PipelinedAssertSameNodeRewriterNoFusingTest extends AssertSameNodeRewriterTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedRelationshipIndexSeekTest extends RelationshipIndexSeekTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedRelationshipIndexSeekNoFusingTest extends RelationshipIndexSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedRelationshipIndexStartsWithSeekTest extends RelationshipIndexStartsWithSeekTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedRelationshipIndexStartsWithSeekNoFusingTest extends RelationshipIndexStartsWithSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // INDEX SCAN
 class PipelinedNodeIndexScanTest extends NodeIndexScanTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
