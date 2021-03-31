@@ -54,6 +54,7 @@ import org.neo4j.time.Stopwatch;
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
+import static org.neo4j.configuration.helpers.DatabaseReadOnlyChecker.writable;
 import static org.neo4j.kernel.extension.ExtensionFailureStrategies.ignore;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
@@ -114,7 +115,7 @@ public final class StoreMigration
             Monitors monitors = new Monitors();
             DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( storeDirectory );
             deps.satisfyDependencies( fs, config, pageCache, logService, monitors,
-                    RecoveryCleanupWorkCollector.immediate(), pageCacheTracer, databaseLayout );
+                    RecoveryCleanupWorkCollector.immediate(), pageCacheTracer, databaseLayout, writable() );
 
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DbmsInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();

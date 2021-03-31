@@ -18,9 +18,9 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.WriteOperationsNotAllowedException;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.Iterators;
-import org.neo4j.kernel.api.exceptions.ReadOnlyDbException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.ExtensionCallback;
@@ -34,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.read_only_databases;
 import static org.neo4j.configuration.GraphDatabaseSettings.writable_databases;
 import static org.neo4j.internal.helpers.collection.Iterators.count;
-import static org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store;
 import static org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStoreSettings.enable_scan_stores_as_token_indexes;
 
 @EnterpriseDbmsExtension( configurationCallback = "configure" )
@@ -48,7 +47,6 @@ class DynamicReadOnlyDatabaseIT
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        builder.setConfig( enable_relationship_type_scan_store, true );
         builder.setConfig( enable_scan_stores_as_token_indexes, true );
     }
 
@@ -64,7 +62,7 @@ class DynamicReadOnlyDatabaseIT
                 transaction.commit();
             }
         } );
-        assertThat( e ).hasRootCauseInstanceOf( ReadOnlyDbException.class );
+        assertThat( e ).isInstanceOf( WriteOperationsNotAllowedException.class );
     }
 
     @Test
@@ -210,13 +208,18 @@ class DynamicReadOnlyDatabaseIT
                 tx.createNode();
             }
         } );
-        assertThat( e ).hasRootCauseInstanceOf( ReadOnlyDbException.class );
+        assertThat( e ).isInstanceOf( WriteOperationsNotAllowedException.class );
 
         makeDbWritable();
         try ( Transaction tx = database.beginTx() )
         {
             tx.createNode();
             tx.commit();
+        }
+        try ( var transaction = database.beginTx() )
+        {
+            transaction.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
+            assertEquals( 2, Iterables.count( transaction.schema().getIndexes() ) );
         }
         makeDbReadOnly();
 
@@ -243,7 +246,7 @@ class DynamicReadOnlyDatabaseIT
                 tx.createNode();
             }
         } );
-        assertThat( e ).hasRootCauseInstanceOf( ReadOnlyDbException.class );
+        assertThat( e ).isInstanceOf( WriteOperationsNotAllowedException.class );
 
         makeDbWritable();
         try ( var transaction = database.beginTx() )
@@ -281,7 +284,7 @@ class DynamicReadOnlyDatabaseIT
                 tx.createNode();
             }
         } );
-        assertThat( e ).hasRootCauseInstanceOf( ReadOnlyDbException.class );
+        assertThat( e ).isInstanceOf( WriteOperationsNotAllowedException.class );
 
         makeDbWritable();
         try ( var transaction = database.beginTx() )

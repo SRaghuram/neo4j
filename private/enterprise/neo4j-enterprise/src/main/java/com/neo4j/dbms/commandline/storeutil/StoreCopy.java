@@ -410,9 +410,10 @@ public class StoreCopy
 
         // Open store with old reader
         LifeSupport life = new LifeSupport();
+        var readOnlyChecker = readOnly();
         try ( SchemaStore35 schemaStore35 = new SchemaStore35( from.schemaStore(), from.idSchemaStore(), config, org.neo4j.internal.id.IdType.SCHEMA,
-                new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, NullLogProvider.getInstance(), recordFormats, readOnly(), from.getDatabaseName(),
-                immutable.empty() ) )
+                new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, NullLogProvider.getInstance(), recordFormats, readOnlyChecker,
+                from.getDatabaseName(), immutable.empty() ) )
         {
             schemaStore35.initialise( true, cursorTracer );
             SchemaStorage schemaStorage35 = new SchemaStorage35( schemaStore35 );
@@ -421,7 +422,7 @@ public class StoreCopy
             Dependencies deps = new Dependencies();
             Monitors monitors = new Monitors();
             deps.satisfyDependencies( fs, config, fromPageCache, NullLogService.getInstance(), monitors, RecoveryCleanupWorkCollector.immediate(),
-                                      pageCacheTracer, from, jobScheduler, tokenHolders );
+                                      pageCacheTracer, from, jobScheduler, tokenHolders, readOnlyChecker );
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( from, DbmsInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
             DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );
