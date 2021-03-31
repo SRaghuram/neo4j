@@ -410,17 +410,37 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           getStatic[VirtualValues, MapValue]("EMPTY_MAP"), Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
       }
       else {
-        val tempVariable = namer.nextVariableName()
-        val ops = Seq(
-          declare[MapValueBuilder](tempVariable),
-          assign(tempVariable, newInstance(constructor[MapValueBuilder, Int], constant(compiled.size)))
-        ) ++ compiled.map {
-          case (k, v) => invokeSideEffect(tempVariable,
-            method[MapValueBuilder, AnyValue, String, AnyValue]("add"),
-            constant(k.name), nullCheckIfRequired(v))
-        } :+ invoke(tempVariable, method[MapValueBuilder, MapValue]("build"))
+        val sortedKeys = compiled.map(_._1.name).toArray.sorted
+        val keyToValue = compiled.map {
+          case (k, v) => k.name -> v
+        }
 
-        Some(IntermediateExpression(block(ops: _*), compiled.values.flatMap(_.fields).toSeq,
+        val sortedKeysConstant = staticConstant[Array[String]](namer.nextVariableName("KEYS"), sortedKeys)
+
+
+        val mapVariable = namer.nextVariableName("map")
+        val putOps = sortedKeys.zipWithIndex.map {
+          case (k, i)  =>
+            invoke(load[CompiledMapValue](mapVariable), method[CompiledMapValue, Unit, Int, AnyValue]("internalPut"),
+              constant(i), nullCheckIfRequired(keyToValue(k)))
+        }
+        val ops = block(
+          declare[CompiledMapValue](mapVariable),
+          assign(mapVariable, newInstance(constructor[CompiledMapValue, Array[String]], getStatic(sortedKeysConstant))),
+          block(putOps:_*),
+          load[CompiledMapValue](mapVariable))
+
+//        val tempVariable = namer.nextVariableName()
+//        val ops = Seq(
+//          declare[MapValueBuilder](tempVariable),
+//          assign(tempVariable, newInstance(constructor[MapValueBuilder, Int], constant(compiled.size)))
+//        ) ++ compiled.map {
+//          case (k, v) => invokeSideEffect(tempVariable,
+//            method[MapValueBuilder, AnyValue, String, AnyValue]("add"),
+//            constant(k.name), nullCheckIfRequired(v))
+//        } :+ invoke(tempVariable, method[MapValueBuilder, MapValue]("build"))
+//
+        Some(IntermediateExpression(ops, compiled.values.flatMap(_.fields).toSeq :+ sortedKeysConstant,
           compiled.values.flatMap(_.variables).toSeq, Set.empty, requireNullCheck = false))
       }
 
