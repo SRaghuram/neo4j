@@ -14,6 +14,7 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
@@ -25,7 +26,7 @@ import static java.lang.String.format;
                 @JsonSubTypes.Type( Deployment.Embedded.class )} )
 public abstract class Deployment implements DeploymentMode
 {
-    protected static DeploymentModes mode;
+    protected DeploymentModes mode;
 
     @JsonCreator
     public Deployment( @JsonProperty( "mode" ) DeploymentModes mode )
@@ -154,6 +155,18 @@ public abstract class Deployment implements DeploymentMode
         public Server()
         {
             this( null );
+        }
+
+        public URI uri()
+        {
+            if ( path.startsWith( "s3://" ) )
+            {
+                return URI.create( path );
+            }
+            else
+            {
+                return path().toUri();
+            }
         }
 
         public Path path()

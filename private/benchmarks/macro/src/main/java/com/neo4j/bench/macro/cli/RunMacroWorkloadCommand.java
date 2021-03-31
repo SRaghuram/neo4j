@@ -24,13 +24,16 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.infra.AWSCredentials;
+import com.neo4j.bench.infra.ArtifactStorage;
+import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
+import com.neo4j.bench.macro.agent.WorkspaceStorage;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.execution.process.ForkFailureException;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
-import com.neo4j.bench.macro.execution.process.MeasurementOptions;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.BenchmarkConfig;
@@ -52,7 +55,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
+import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -67,10 +74,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 
 import static com.google.common.collect.Sets.newHashSet;
 import static com.neo4j.bench.common.results.ErrorReportingPolicy.REPORT_THEN_FAIL;
-import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_DB_PATH;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
-import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_NEO4J_CONFIG;
-import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_WORK_DIR;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.load_csv_file_url_root;
@@ -82,13 +86,15 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
 
     private static final Logger LOG = LoggerFactory.getLogger( RunMacroWorkloadCommand.class );
 
+    private static final String CMD_DB_PATH = "--db-dir";
     @Option( type = OptionType.COMMAND,
              name = {CMD_DB_PATH},
              description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
              title = "Store directory" )
     @Required
-    File storeDir;
+    private URI storeDir;
 
+    public static final String CMD_NEO4J_CONFIG = "--neo4j-config";
     @Option( type = OptionType.COMMAND,
              name = {CMD_NEO4J_CONFIG},
              description = "Neo4j configuration file",
@@ -96,12 +102,13 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
     @Required
     private File neo4jConfigFile;
 
+    private static final String CMD_WORK_DIR = "--work-dir";
     @Option( type = OptionType.COMMAND,
              name = {CMD_WORK_DIR},
              description = "Work directory: where intermediate results, logs, profiler recordings, etc. will be written",
              title = "Work directory" )
     @Required
-    protected File workDir;
+    private File rootWorkDir;
 
     @Option( type = OptionType.COMMAND,
              name = {CMD_ERROR_POLICY},
@@ -113,7 +120,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
              name = {"--aws-endpoint-url"},
              description = "AWS endpoint URL, used during testing",
              title = "AWS endpoint URL" )
-    private String awsEndpointURL;
+    private URL awsEndpointURL;
 
     @Option( type = OptionType.COMMAND,
              name = "--aws-region",
@@ -129,7 +136,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
              name = {CMD_RECORDINGS_BASE_URI},
              description = "S3 bucket recordings and profiles were uploaded to",
              title = "Recordings and profiles S3 URI" )
-    private URI recordingsBaseUri = URI.create( "s3://benchmarking.neo4j.com/recordings/" );
+    private URI recordingsBaseUri = URI.create( "s3://storage.benchmarking.neo4j.today/recordings/" );
 
     public static final String CMD_TEST_RUN_ID = "--test-run-id";
     @Option( type = OptionType.COMMAND,
@@ -142,26 +149,48 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
     protected void doRun( RunMacroWorkloadParams params )
     {
         LOG.debug( "Running report with params {}", params );
+        AWSCredentials awsCredentials = new AWSCredentials( null, null, awsRegion );
+
+        Path workDir = createDirectories( rootWorkDir.toPath(), "execute_work_dir" );
+        Path artifactsDir = createDirectories( rootWorkDir.toPath(), "artifacts" );
 
         TestRunReport testRunReport = runReport( params,
-                                                 workDir.toPath(),
-                                                 storeDir.toPath(),
+                                                 workDir,
+                                                 artifactsDir,
+                                                 storeDir,
                                                  neo4jConfigFile.toPath(),
                                                  errorPolicy,
-                                                 testRunId );
+                                                 testRunId,
+                                                 awsCredentials,
+                                                 awsEndpointURL );
         ResultsReporter resultsReporter = new ResultsReporter( resultsStoreArgs.resultsStoreUsername(),
                                                                resultsStoreArgs.resultsStorePassword(),
                                                                resultsStoreArgs.resultsStoreUri() );
 
-        resultsReporter.reportAndUpload( testRunReport, recordingsBaseUri, workDir, awsEndpointURL, REPORT_THEN_FAIL );
+        resultsReporter.reportAndUpload( testRunReport, recordingsBaseUri, workDir.toFile(), awsRegion, awsEndpointURL, REPORT_THEN_FAIL );
+    }
+
+    private Path createDirectories( Path workDir, String name )
+    {
+        try
+        {
+            return Files.createDirectories( workDir.resolve( name ) );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 
     public static TestRunReport runReport( RunMacroWorkloadParams params,
                                            Path workDir,
-                                           Path storeDir,
+                                           Path artifactsDir,
+                                           URI storeDir,
                                            Path neo4jConfigFile,
                                            ErrorReporter.ErrorPolicy errorPolicy,
-                                           String testRunId )
+                                           String testRunId,
+                                           AWSCredentials awsCredentials,
+                                           URL awsEndpointURL )
     {
         for ( ParameterizedProfiler profiler : params.profilers() )
         {
@@ -169,29 +198,29 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             profiler.profilerType().assertEnvironmentVariablesPresent( errorOnMissingFlameGraphDependencies );
         }
 
-        MeasurementOptions measurementOptions = new MeasurementOptions( params.warmupCount(),
-                                                                        params.measurementCount(),
-                                                                        params.minMeasurementDuration(),
-                                                                        params.maxMeasurementDuration() );
         Jvm jvm = Jvm.bestEffortOrFail( params.jvm() );
-        Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( params.deployment(),
-                                                                params.neo4jEdition(),
-                                                                measurementOptions,
-                                                                jvm,
-                                                                storeDir.toAbsolutePath(),
-                                                                workDir );
-        params.deployment().assertExists();
+        Neo4jDeployment neo4jDeployment;
+        try ( ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( awsCredentials, awsEndpointURL ) )
+        {
+            WorkspaceStorage workspaceStorage = new WorkspaceStorage( artifactStorage, artifactsDir );
+            neo4jDeployment = Neo4jDeployment.workspace( params.deployment(),
+                                                         params.neo4jEdition(),
+                                                         params.measurementParams(),
+                                                         jvm,
+                                                         storeDir,
+                                                         workDir,
+                                                         workspaceStorage );
+        }
 
         try ( Resources resources = new Resources( workDir ) )
         {
             Workload workload = Workload.fromName( params.workloadName(), resources, neo4jDeployment.deployment() );
-            Store originalStore = Neo4jStore.createFrom( storeDir.toAbsolutePath(), workload.getDatabaseName() );
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( workDir, workload.benchmarkGroup() );
 
             assertQueryNames( params, workload );
 
             Neo4jConfig neo4jConfig = prepareConfig( params.executionMode(), neo4jConfigFile );
-            verifySchema( storeDir, params.neo4jEdition(), neo4jConfigFile, params.isRecreateSchema(), workload );
+            verifySchema( neo4jDeployment.originalStore(), params.neo4jEdition(), neo4jConfigFile, params.isRecreateSchema(), workload );
 
             ErrorReporter errorReporter = new ErrorReporter( errorPolicy );
             BenchmarkGroupBenchmarkMetrics allResults = new BenchmarkGroupBenchmarkMetrics();
@@ -213,7 +242,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                     Results results = ForkRunner.runForksFor( neo4jDeployment,
                                                               groupDir,
                                                               query,
-                                                              originalStore,
+                                                              neo4jDeployment.originalStore(),
                                                               params.neo4jEdition(),
                                                               neo4jConfig,
                                                               params.profilers(),
@@ -347,19 +376,16 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
         return neo4jConfig;
     }
 
-    public static void verifySchema( Path dataset, Edition edition, Path neo4jConfigFile, boolean recreateSchema, Workload workload )
+    public static void verifySchema( Store store, Edition edition, Path neo4jConfigFile, boolean recreateSchema, Workload workload )
     {
         LOG.debug( "Verifying store..." );
-        try ( Store store = Neo4jStore.createFrom( dataset, workload.getDatabaseName() ) )
+        EmbeddedDatabase.verifySchema( store, edition, neo4jConfigFile, workload.expectedSchema() );
+        if ( recreateSchema )
         {
-            EmbeddedDatabase.verifySchema( store, edition, neo4jConfigFile, workload.expectedSchema() );
-            if ( recreateSchema )
-            {
-                LOG.debug( "Preparing to recreate schema..." );
+            LOG.debug( "Preparing to recreate schema..." );
                 EmbeddedDatabase.recreateSchema( store, edition, neo4jConfigFile, workload.expectedSchema() );
-            }
-            LOG.debug( "Store verified" );
-            EmbeddedDatabase.verifyStoreFormat( store );
         }
+        LOG.debug( "Store verified" );
+        EmbeddedDatabase.verifyStoreFormat( store );
     }
 }

@@ -13,7 +13,7 @@ import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.OptionsBuilder;
-import com.neo4j.bench.macro.execution.process.MeasurementOptions;
+import com.neo4j.bench.common.tool.macro.MeasurementParams;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.options.Edition;
@@ -54,12 +54,12 @@ class InteractiveExecutionIT
                                                              workDir, // store
                                                              neo4jConfigFile );
             Path dataset = store.topLevelDirectory();
-            MeasurementOptions measurementOptions = new MeasurementOptions( 1,
-                                                                            1,
-                                                                            Duration.ofSeconds( 0 ),
-                                                                            Duration.ofSeconds( 10 ) );
+            MeasurementParams measurementParams = new MeasurementParams( 1,
+                                                                         1,
+                                                                         Duration.ofSeconds( 0 ),
+                                                                         Duration.ofSeconds( 10 ) );
             Jvm jvm = Jvm.defaultJvmOrFail();
-            Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( deployment, Edition.ENTERPRISE, measurementOptions, jvm, dataset, workDir );
+            Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( deployment, Edition.ENTERPRISE, measurementParams, jvm, dataset, workDir );
 
             Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
             OptionsBuilder optionsBuilder = new OptionsBuilder()

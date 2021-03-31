@@ -10,8 +10,10 @@ import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
+import com.neo4j.bench.common.tool.macro.BuildParams;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.MeasurementParams;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
 import com.neo4j.bench.infra.macro.MacroToolRunner;
@@ -36,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class JobParamsTest
 {
+    private static final MeasurementParams MEASUREMENT_PARAMS = new MeasurementParams( 1, 1, Duration.ofMillis( 1 ), Duration.ofMillis( 2 ) );
 
     @Test
     public void serializeAndDeserialize( @TempDir Path tempDir ) throws IOException
@@ -61,10 +64,7 @@ public class JobParamsTest
                                                                     Edition.ENTERPRISE,
                                                                     Paths.get( "jvm" ).toAbsolutePath(),
                                                                     defaultProfilers( ProfilerType.GC, ProfilerType.JFR ),
-                                                                    1,
-                                                                    1,
-                                                                    Duration.ofMillis( 1 ),
-                                                                    Duration.ofMillis( 2 ),
+                                                                    MEASUREMENT_PARAMS,
                                                                     1,
                                                                     TimeUnit.MILLISECONDS,
                                                                     Runtime.DEFAULT,
@@ -74,15 +74,14 @@ public class JobParamsTest
                                                                     false,
                                                                     false,
                                                                     Deployment.embedded(),
-                                                                    "neo4jCommit",
-                                                                    new Version( "3.4.12" ),
-                                                                    "neo4jBranch",
-                                                                    "neo4jBranchOwner",
-                                                                    123456L,
-                                                                    123455L,
-                                                                    "triggeredBy" ),
-                                        "storeName",
-                                        URI.create( "s3://dataSetBaseUri/" ) ) ),
+                                                                    new BuildParams( "neo4jCommit",
+                                                                                     new Version( "3.4.12" ),
+                                                                                     "neo4jBranch",
+                                                                                     "neo4jBranchOwner",
+                                                                                     123456L,
+                                                                                     123455L,
+                                                                                     "triggeredBy" ) ),
+                                        URI.create( "s3://dataSetUri/" ) ) ),
                         UUID.randomUUID().toString() ) );
         // when
         JobParams<?> actual = JsonUtil.deserializeJson( JsonUtil.serializeJson( jobParams ), JobParams.class );
@@ -114,10 +113,7 @@ public class JobParamsTest
                                                                     Edition.ENTERPRISE,
                                                                     Paths.get( "jvm" ).toAbsolutePath(),
                                                                     defaultProfilers( ProfilerType.GC, ProfilerType.JFR ),
-                                                                    1,
-                                                                    1,
-                                                                    Duration.ofMillis( 1 ),
-                                                                    Duration.ofMillis( 2 ),
+                                                                    MEASUREMENT_PARAMS,
                                                                     1,
                                                                     TimeUnit.MILLISECONDS,
                                                                     Runtime.DEFAULT,
@@ -127,15 +123,14 @@ public class JobParamsTest
                                                                     false,
                                                                     false,
                                                                     Deployment.server( Files.createTempDirectory( tempDir, "server" ).toString() ),
-                                                                    "neo4jCommit",
-                                                                    new Version( "3.4.12" ),
-                                                                    "neo4jBranch",
-                                                                    "neo4jBranchOwner",
-                                                                    123456L,
-                                                                    123455L,
-                                                                    "triggeredBy" ),
-                                        "storeName",
-                                        URI.create( "s3://dataSetBaseUri/" ) ) ),
+                                                                    new BuildParams( "neo4jCommit",
+                                                                                     new Version( "3.4.12" ),
+                                                                                     "neo4jBranch",
+                                                                                     "neo4jBranchOwner",
+                                                                                     123456L,
+                                                                                     123455L,
+                                                                                     "triggeredBy" ) ),
+                                        URI.create( "s3://dataSetUri/" ) ) ),
                         UUID.randomUUID().toString() ) );
         // when
 

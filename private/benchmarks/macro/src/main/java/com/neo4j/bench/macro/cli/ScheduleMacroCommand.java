@@ -137,7 +137,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             description = "Location of worker jar and other artifacts needed " +
                           "(e.g., s3://benchmarking.neo4j.com/artifacts/macro/<triggered_by>/<build_id>/<workload>/<query>/<uuid>) in S3",
             title = "Location of worker jar" )
-    private URI artifactBaseUri = URI.create( "s3://benchmarking.neo4j.com/artifacts/macro/" );
+    private URI artifactBaseUri = URI.create( "s3://storage.benchmarking.neo4j.today/artifacts/macro/" );
 
     private static final String CMD_INFRASTRUCTURE_CAPABILITIES = "--infrastructure-capabilities";
     @Option( type = OptionType.COMMAND,
@@ -153,14 +153,14 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             name = CMD_DATASET_BASE_URI,
             description = "S3 base uri to location with macro datasets",
             title = "Dataset base S3 URI" )
-    private URI dataSetBaseUri = URI.create( "s3://benchmarking.neo4j.com/datasets/macro/" );
+    private URI dataSetBaseUri = URI.create( "s3://storage.benchmarking.neo4j.today/datasets/macro/" );
 
     private static final String CMD_RECORDINGS_BASE_URI = "--recordings-base-uri";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RECORDINGS_BASE_URI},
             description = "S3 bucket recordings and profiles were uploaded to",
             title = "Recordings and profiles S3 URI" )
-    private URI recordingsBaseUri = URI.create( "s3://benchmarking.neo4j.com/recordings/" );
+    private URI recordingsBaseUri = URI.create( "s3://storage.benchmarking.neo4j.today/recordings/" );
 
     private static final String CMD_UPGRADE_STORE = "--upgrade-store";
     @Option( type = OptionType.COMMAND,
@@ -186,19 +186,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             // first start preparing the workspace
             Path workspacePath = workspaceDir.toPath();
 
-            File jobParameterJson = workspacePath.resolve( Workspace.JOB_PARAMETERS_JSON ).toFile();
-            jobParameterJson.createNewFile();
-
-            Workspace workspace = null;
-            if ( runMacroWorkloadParams.deployment().deploymentModes().equals( DeploymentModes.SERVER ) )
-            {
-                Deployment.Server server = (Deployment.Server) runMacroWorkloadParams.deployment();
-                workspace = Workspace.defaultMacroServerWorkspace( workspacePath, server.path().toString() );
-            }
-            else
-            {
-                workspace = Workspace.defaultMacroEmbeddedWorkspace( workspacePath );
-            }
+            Workspace workspace = prepareWorkspace( runMacroWorkloadParams, workspacePath );
 
             BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( infrastructure, batchStack, awsCredentials, artifactStorage );
             URI artifactBaseWorkloadURI = artifactBaseUri.resolve( URIHelper.toURIPart( runMacroWorkloadParams.triggeredBy() ) )
@@ -232,7 +220,6 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
 
                 for ( List<Query> queries : partitions )
                 {
-
                     List<String> queryNames = queries.stream().map( Query::name ).collect( toList() );
                     UUID uuid = UUID.randomUUID();
                     URI artifactBaseQueryRunURI = artifactBaseWorkloadURI.resolve( URIHelper.toURIPart( uuid.toString() ) );
@@ -241,21 +228,17 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
 
                     String testRunId = UUID.randomUUID().toString();
 
-                    JobParams jobParams = new JobParams( infraParams,
-                                                         new BenchmarkingRun(
-                                                                 new BenchmarkingTool( MacroToolRunner.class,
-                                                                                       new RunToolMacroWorkloadParams(
-                                                                                               runMacroWorkloadParams.setQueryNames( queryNames ),
-                                                                                               storeName,
-                                                                                               currentDataSetBaseUri ) ),
-                                                                 testRunId ) );
+                    Deployment deployment = addArtifactBaseUriToProduct( runMacroWorkloadParams, artifactBaseQueryRunURI, workspace );
+                    RunMacroWorkloadParams workloadParams = runMacroWorkloadParams.withQueryNames( queryNames )
+                                                                                  .withDeployment( deployment );
+                    JobParams<RunToolMacroWorkloadParams> jobParams = createJobParams( infraParams, testRunId, workloadParams, currentDataSetBaseUri );
 
                     workspace.assertArtifactsExist();
 
                     benchmarkJobScheduler.scheduleBenchmarkJob( getJobName( "macro",
                                                                             workload.name(),
-                                                                            runMacroWorkloadParams.neo4jVersion().toString(),
-                                                                            runMacroWorkloadParams.triggeredBy() ),
+                                                                            workloadParams.neo4jVersion().toString(),
+                                                                            workloadParams.triggeredBy() ),
                                                                 jobParams,
                                                                 workspace,
                                                                 artifactWorkerQueryRunURI );
@@ -367,5 +350,26 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                         InfraParams.CMD_JOB_QUEUE ) );
         }
         return infrastructure;
+    }
+
+    private JobParams<RunToolMacroWorkloadParams> createJobParams( InfraParams infraParams, String testRunId, RunMacroWorkloadParams workloadParams,
+                                                                   URI dataSetBaseUri )
+    {
+        URI datasetUri = AWSS3ArtifactStorage.createDatasetUri( dataSetBaseUri, workloadParams.neo4jVersion(), storeName );
+        RunToolMacroWorkloadParams toolParams = new RunToolMacroWorkloadParams( workloadParams, datasetUri );
+        return new JobParams<>( infraParams, new BenchmarkingRun<>( new BenchmarkingTool<>( MacroToolRunner.class, toolParams ), testRunId ) );
+    }
+
+    private Deployment addArtifactBaseUriToProduct( RunMacroWorkloadParams runMacroWorkloadParams, URI artifactBaseUri, Workspace workspace )
+    {
+        if ( runMacroWorkloadParams.deployment().deploymentModes().equals( DeploymentModes.SERVER ) )
+        {
+            URI s3URI = artifactBaseUri.resolve( workspace.getString( Workspace.NEO4J_ARCHIVE ) );
+            return Deployment.server( s3URI.toString() );
+        }
+        else
+        {
+            return runMacroWorkloadParams.deployment();
+        }
     }
 }

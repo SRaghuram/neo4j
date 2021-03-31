@@ -5,10 +5,8 @@
  */
 package com.neo4j.bench.macro.agent;
 
-import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
-import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.Extractor;
 
 import java.io.IOException;
@@ -17,75 +15,77 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Optional;
+import java.util.Set;
 
 public class WorkspaceStorage
 {
     private final ArtifactStorage artifactStorage;
     private final Path workspace;
-    private final URI artifactBaseUri;
-    private final String productArchive;
-    private final URI dataSetBaseUri;
-    private final String datasetName;
-    private final Version version;
 
-    public WorkspaceStorage( ArtifactStorage artifactStorage,
-                             Path workspace,
-                             URI artifactBaseUri,
-                             String productArchive,
-                             URI dataSetBaseUri,
-                             String datasetName,
-                             Version version )
+    public WorkspaceStorage( ArtifactStorage artifactStorage, Path workspace )
     {
         this.artifactStorage = artifactStorage;
         this.workspace = workspace;
-        this.artifactBaseUri = artifactBaseUri;
-        this.productArchive = productArchive;
-        this.dataSetBaseUri = dataSetBaseUri;
-        this.datasetName = datasetName;
-        this.version = version;
     }
 
-    public WorkspaceState download()
+    public Path resolve( URI artifactUri )
     {
-        Path neo4jTar = downloadArtifact();
-        extract( workspace, neo4jTar );
-
-        Dataset dataset = downloadDataset();
-        dataset.extractInto( workspace );
-
-        return new WorkspaceState( workspace.resolve( datasetName ), workspace.resolve( productArchive.replaceAll( "\\.(tgz|tar\\.gz)$", "" ) ) );
+        return tryLocalFile( artifactUri )
+                .orElseGet( () -> downloadCompressed( artifactUri ) );
     }
 
-    private Dataset downloadDataset()
+    private Optional<Path> tryLocalFile( URI uri )
     {
-        return artifactStorage.downloadDataset( dataSetBaseUri, version.minorVersion(), datasetName );
+        if ( uri.getScheme() == null )
+        {
+            return Optional.of( Paths.get( uri.toString() ) );
+        }
+        if ( uri.getScheme().equals( "file" ) )
+        {
+            return Optional.of( Paths.get( uri ) );
+        }
+        return Optional.empty();
     }
 
-    private void extract( Path workspace, Path neo4jTar )
+    private Path downloadCompressed( URI datasetUri )
+    {
+        Path downloaded = download( datasetUri );
+        return extract( workspace, downloaded );
+    }
+
+    private Path download( URI uri )
     {
         try
         {
-            try ( InputStream inputSteam = Files.newInputStream( neo4jTar ) )
-            {
-                Extractor.extract( workspace, inputSteam );
-            }
-            Files.delete( neo4jTar );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
-    }
-
-    private Path downloadArtifact()
-    {
-        try
-        {
-            return artifactStorage.downloadSingleFile( productArchive, workspace, artifactBaseUri );
+            return artifactStorage.downloadSingleFile( workspace, uri );
         }
         catch ( ArtifactStoreException e )
         {
             throw new RuntimeException( e );
+        }
+    }
+
+    private Path extract( Path workspace, Path path )
+    {
+        try
+        {
+            Set<Path> topLevelPaths;
+            try ( InputStream inputSteam = Files.newInputStream( path ) )
+            {
+                topLevelPaths = Extractor.extract( workspace, inputSteam );
+            }
+            Files.delete( path );
+            if ( topLevelPaths.size() != 1 )
+            {
+                throw new RuntimeException( "Archive should contain exactly one top-level file, found: " + topLevelPaths );
+            }
+            return topLevelPaths.iterator().next();
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
         }
     }
 }

@@ -16,6 +16,7 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.io.File;
 import java.net.URI;
+import java.net.URL;
 
 public class ReportTestRunArgs
 {
@@ -48,7 +49,7 @@ public class ReportTestRunArgs
             name = {CMD_AWS_ENDPOINT_URL},
             description = "AWS endpoint URL, used during testing",
             title = "AWS endpoint URL" )
-    private String awsEndpointURL;
+    private URL awsEndpointURL;
 
     private static final String CMD_ERROR_REPORTING_POLICY = "--error-reporting";
     @Option( type = OptionType.COMMAND,
@@ -72,7 +73,7 @@ public class ReportTestRunArgs
         return workDir;
     }
 
-    public String awsEndpointURL()
+    public URL awsEndpointURL()
     {
         return awsEndpointURL;
     }

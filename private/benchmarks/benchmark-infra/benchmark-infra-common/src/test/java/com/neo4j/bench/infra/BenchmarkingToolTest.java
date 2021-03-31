@@ -9,8 +9,10 @@ import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.tool.macro.BuildParams;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.MeasurementParams;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
 import com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams;
@@ -35,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class BenchmarkingToolTest
 {
+    private static final MeasurementParams MEASUREMENT_PARAMS = new MeasurementParams( 1, 1000, Duration.ofSeconds( 1 ), Duration.ofSeconds( 2 ) );
 
     @Test
     public void macroParamsSerializationTest()
@@ -47,10 +50,7 @@ public class BenchmarkingToolTest
                                                                                                       Paths.get( "java" )
                                                                                                            .toAbsolutePath(),
                                                                                                       defaultProfilers( ProfilerType.JFR ),
-                                                                                                      1,
-                                                                                                      1000,
-                                                                                                      Duration.ofSeconds( 1 ),
-                                                                                                      Duration.ofSeconds( 2 ),
+                                                                                                      MEASUREMENT_PARAMS,
                                                                                                       1,
                                                                                                       TimeUnit.MICROSECONDS,
                                                                                                       Runtime.DEFAULT,
@@ -60,15 +60,14 @@ public class BenchmarkingToolTest
                                                                                                       false,
                                                                                                       false,
                                                                                                       Deployment.embedded(),
-                                                                                                      "neo4jCommit",
-                                                                                                      new Version( "3.4.1" ),
-                                                                                                      "neo4jBranch",
-                                                                                                      "neo4jBranchOwner",
-                                                                                                      1L,
-                                                                                                      0L,
-                                                                                                      "neo4j" ),
-                                                                          "storeName",
-                                                                          URI.create( "s3://dataSetBaseUri/" ) ) );
+                                                                                                      new BuildParams( "neo4jCommit",
+                                                                                                                       new Version( "3.4.1" ),
+                                                                                                                       "neo4jBranch",
+                                                                                                                       "neo4jBranchOwner",
+                                                                                                                       1L,
+                                                                                                                       0L,
+                                                                                                                       "neo4j" ) ),
+                                                                          URI.create( "s3://dataSetUri/" ) ) );
 
         String json = JsonUtil.serializeJson( benchmarkingTool );
         BenchmarkingTool actualBenchmarkingTool = JsonUtil.deserializeJson( json, BenchmarkingTool.class );

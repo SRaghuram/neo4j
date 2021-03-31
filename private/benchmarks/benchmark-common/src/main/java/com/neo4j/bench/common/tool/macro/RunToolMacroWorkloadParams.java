@@ -9,6 +9,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.net.URI;
 
@@ -17,17 +19,14 @@ import static java.util.Objects.requireNonNull;
 public class RunToolMacroWorkloadParams
 {
     private final RunMacroWorkloadParams runMacroWorkloadParams;
-    private final String storeName;
-    private final URI dataSetBaseUri;
+    private final URI dataSetUri;
 
     @JsonCreator
     public RunToolMacroWorkloadParams( @JsonProperty( "runMacroWorkloadParams" ) RunMacroWorkloadParams runMacroWorkloadParams,
-                                       @JsonProperty( "storeName" ) String storeName,
-                                       @JsonProperty( "dataSetBaseUri" ) URI dataSetBaseUri )
+                                       @JsonProperty( "dataSetUri" ) URI dataSetUri )
     {
         this.runMacroWorkloadParams = requireNonNull( runMacroWorkloadParams );
-        this.storeName = requireNonNull( storeName );
-        this.dataSetBaseUri = requireNonNull( dataSetBaseUri );
+        this.dataSetUri = requireNonNull( dataSetUri );
     }
 
     public RunMacroWorkloadParams runMacroWorkloadParams()
@@ -35,14 +34,9 @@ public class RunToolMacroWorkloadParams
         return runMacroWorkloadParams;
     }
 
-    public String storeName()
+    public URI dataSetUri()
     {
-        return storeName;
-    }
-
-    public URI dataSetBaseUri()
-    {
-        return dataSetBaseUri;
+        return dataSetUri;
     }
 
     @Override
@@ -55,5 +49,11 @@ public class RunToolMacroWorkloadParams
     public int hashCode()
     {
         return HashCodeBuilder.reflectionHashCode( this );
+    }
+
+    @Override
+    public String toString()
+    {
+        return ToStringBuilder.reflectionToString( this, ToStringStyle.SHORT_PREFIX_STYLE );
     }
 }

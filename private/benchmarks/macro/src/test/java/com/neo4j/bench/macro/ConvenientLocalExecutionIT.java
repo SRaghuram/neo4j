@@ -14,8 +14,10 @@ import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.tool.macro.BuildParams;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.MeasurementParams;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.ErrorReporter;
@@ -24,7 +26,6 @@ import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunMacroWorkloadCommand;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
-import com.neo4j.bench.macro.execution.process.MeasurementOptions;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.Neo4jConfig;
@@ -65,6 +66,8 @@ class ConvenientLocalExecutionIT
     private static final int FORK_COUNT = 1;
     private static final int WARMUP_COUNT = 1;
     private static final int MEASUREMENT_COUNT = 1;
+    private static final MeasurementParams MEASUREMENT_PARAMS =
+            new MeasurementParams( WARMUP_COUNT, MEASUREMENT_COUNT, Duration.ofSeconds( 0 ), Duration.ofSeconds( 10 ) );
     private static final List<ParameterizedProfiler> PROFILERS = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
     private static final ExecutionMode EXECUTION_MODE = ExecutionMode.EXECUTE;
     private static final JvmArgs JVM_ARGS = JvmArgs.from( "-Xms4g", "-Xmx4g" );
@@ -80,7 +83,7 @@ class ConvenientLocalExecutionIT
     @Test
     void executeWorkload() throws Exception
     {
-        String neo4jVersion = "1.2.3";
+        Version neo4jVersion = new Version( "1.2.3" );
         String neo4jBranch = "1.2";
         String neo4jBranchOwner = "neo-technology";
         String neo4jCommit = "abcd123";
@@ -98,10 +101,7 @@ class ConvenientLocalExecutionIT
                 EDITION,
                 jvmPath,
                 PROFILERS,
-                WARMUP_COUNT,
-                MEASUREMENT_COUNT,
-                Duration.ofSeconds( 0 ),
-                Duration.ofSeconds( 10 ),
+                MEASUREMENT_PARAMS,
                 FORK_COUNT,
                 TimeUnit.MICROSECONDS,
                 RUNTIME,
@@ -111,20 +111,22 @@ class ConvenientLocalExecutionIT
                 RECREATE_SCHEMA,
                 SKIP_FLAME_GRAPHS,
                 DEPLOYMENT,
-                neo4jCommit,
-                new Version( neo4jVersion ),
-                neo4jBranch,
-                neo4jBranchOwner,
-                teamcityBuild,
-                parentTeamcityBuild,
-                triggeredBy
-        );
+                new BuildParams( neo4jCommit,
+                                 neo4jVersion,
+                                 neo4jBranch,
+                                 neo4jBranchOwner,
+                                 teamcityBuild,
+                                 parentTeamcityBuild,
+                                 triggeredBy ) );
 
         RunMacroWorkloadCommand.runReport( workloadParams,
                                            RESULT_DIR,
-                                           STORE_DIR,
+                                           RESULT_DIR.resolve( "artifacts" ),
+                                           STORE_DIR.toUri(),
                                            neo4jConfigFile(),
                                            ErrorReporter.ErrorPolicy.SKIP,
+                                           null,
+                                           null,
                                            null );
     }
 
@@ -151,13 +153,9 @@ class ConvenientLocalExecutionIT
             Path dataset = STORE_DIR;
             Store originalStore = Neo4jStore.createFrom( dataset );
             Edition edition = Edition.ENTERPRISE;
-            MeasurementOptions measurementOptions = new MeasurementOptions( WARMUP_COUNT,
-                                                                            MEASUREMENT_COUNT,
-                                                                            Duration.ofSeconds( 30 ),
-                                                                            Duration.ofMinutes( 10 ) );
             Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( DEPLOYMENT,
                                                                     edition,
-                                                                    measurementOptions,
+                                                                    MEASUREMENT_PARAMS,
                                                                     jvm,
                                                                     dataset,
                                                                     workDir );

@@ -57,8 +57,9 @@ public class RunWorkerCommand implements Runnable
     @Required
     private File workspaceDir;
 
+    private static final String CMD_BATCH_JOB_ID = "--batch-job-id";
     @Option( type = OptionType.COMMAND,
-            name = RunMacroWorkloadParams.CMD_BATCH_JOB_ID,
+            name = CMD_BATCH_JOB_ID,
             title = "AWS Batch JOB ID" )
     @Required
     private String batchJobId = "";

@@ -50,6 +50,8 @@ public interface ArtifactStorage extends AutoCloseable
      */
     Path downloadSingleFile( String fileName, Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException;
 
+    Path downloadSingleFile( Path baseDir, URI uri ) throws ArtifactStoreException;
+
     /**
      * Downloads data set for specific Neo4j version
      * @param dataSetBaseUri base uri to bucket + prefix where to look for dataset

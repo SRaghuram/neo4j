@@ -17,6 +17,7 @@ import javax.inject.Inject;
 @Command( name = "report-test-run" )
 public class ReportTestRunCommand implements Runnable
 {
+    private static final String AWS_REGION = "eu-north-1";
 
     @Inject
     private final ResultsStoreArgs resultsStoreArgs = new ResultsStoreArgs();
@@ -34,6 +35,7 @@ public class ReportTestRunCommand implements Runnable
         resultsReporter.reportAndUpload( testRunReport,
                                          reportTestRunArgs.recordingsBaseUri(),
                                          reportTestRunArgs.workDir(),
+                                         AWS_REGION,
                                          reportTestRunArgs.awsEndpointURL(),
                                          reportTestRunArgs.errorReportingPolicy() );
     }

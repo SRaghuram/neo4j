@@ -17,13 +17,15 @@ import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.profiling.RecordingDescriptor;
 import com.neo4j.bench.common.results.RunPhase;
+import com.neo4j.bench.common.tool.macro.BuildParams;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.DeploymentModes;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.MeasurementParams;
+import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.Parameters;
@@ -354,61 +356,42 @@ class EndToEndIT extends BaseEndToEndIT
                                                                  neo4jConfig );
 
         return asList( "./" + SCRIPT_NAME,
-                       // workload
-                       workloadName,
                        // db
                        emptyStoreFor.topLevelDirectory().toString(),
-                       // warmup_count
-                       "1",
-                       // measurement_count
-                       "1",
-                       // db_edition
-                       Edition.ENTERPRISE.name(),
                        // jvm
                        jvm.launchJava(),
                        // neo4j_config
                        neo4jConfig.toString(),
                        // work_dir
                        temporaryFolder.toString(),
-                       // profilers
-                       profilers.stream().map( ProfilerType::name ).collect( joining( "," ) ),
-                       // forks
-                       Integer.toString( forks ),
-                       // time_unit
-                       MILLISECONDS.name(),
                        resultStoreCredentials.boltUri(),
                        resultStoreCredentials.user(),
                        resultStoreCredentials.pass(),
-                       "neo4j_commit",
-                       // neo4j_version
-                       "3.5.1",
-                       "neo4j_branch",
-                       "neo4j_branch_owner",
-                       // teamcity_build
-                       "1",
-                       // parent_teamcity_build
-                       "0",
-                       // execution_mode
-                       executionMode.name(),
-                       // jvm_args
-                       "-Xmx1536M -Xms1536M",
-                       // recreate_schema
-                       "false",
-                       // planner
-                       Planner.DEFAULT.name(),
-                       // runtime
-                       Runtime.DEFAULT.name(),
-                       "neo4j",
                        // error_policy
                        ErrorPolicy.SKIP.name(),
-                       // embedded OR server:<path>
-                       deployment.toString(),
-                       "",
-                       //Batch Job id
-                       "123",
-                       // AWS endpoint URL
-                       "--aws-endpoint-url",
-                       awsEndpointUrl );
+                       BuildParams.CMD_NEO4J_BRANCH, "neo4j_branch",
+                       BuildParams.CMD_NEO4J_COMMIT, "neo4j_commit",
+                       BuildParams.CMD_NEO4J_OWNER, "neo4j_branch_owner",
+                       BuildParams.CMD_NEO4J_VERSION, "3.5.1",
+                       BuildParams.CMD_PARENT_TEAMCITY_BUILD, "0",
+                       BuildParams.CMD_TEAMCITY_BUILD, "1",
+                       BuildParams.CMD_TRIGGERED_BY, "neo4j",
+                       MeasurementParams.CMD_MEASUREMENT, "1",
+                       MeasurementParams.CMD_WARMUP, "1",
+                       RunMacroWorkloadParams.CMD_EDITION, Edition.ENTERPRISE.name(),
+                       RunMacroWorkloadParams.CMD_EXECUTION_MODE, executionMode.name(),
+                       RunMacroWorkloadParams.CMD_FORKS, Integer.toString( forks ),
+                       RunMacroWorkloadParams.CMD_JVM_ARGS, "-Xmx1536M -Xms1536M",
+                       RunMacroWorkloadParams.CMD_JVM_PATH, jvm.launchJava(),
+                       RunMacroWorkloadParams.CMD_NEO4J_DEPLOYMENT, deployment.toString(),
+                       RunMacroWorkloadParams.CMD_PLANNER, Planner.DEFAULT.name(),
+                       RunMacroWorkloadParams.CMD_PROFILERS, profilers.stream().map( ProfilerType::name ).collect( joining( "," ) ),
+                       RunMacroWorkloadParams.CMD_QUERIES, "",
+                       RunMacroWorkloadParams.CMD_RUNTIME, Runtime.DEFAULT.name(),
+                       RunMacroWorkloadParams.CMD_TIME_UNIT, MILLISECONDS.name(),
+                       RunMacroWorkloadParams.CMD_WORKLOAD, workloadName,
+                       "--aws-endpoint-url", awsEndpointUrl,
+                       "--recordings-base-uri", "s3://benchmarking.neo4j.com/recordings/" );
     }
 
     protected AssertOnRecordings assertOnRecordings( Resources resources, Deployment deployment, String workloadName, int forks, ExecutionMode executionMode )

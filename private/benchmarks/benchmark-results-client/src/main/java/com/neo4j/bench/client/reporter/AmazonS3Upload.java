@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -39,17 +38,10 @@ public class AmazonS3Upload implements AutoCloseable
 
     private static final Logger LOG = LoggerFactory.getLogger( AmazonS3Upload.class );
 
-    public static AmazonS3Upload create( String awsRegion, String awsEndpointURL )
+    public static AmazonS3Upload create( String awsRegion, URL awsEndpointURL )
     {
         LOG.debug( format( "creating Amazon S3 upload client with region '%s' and AWS endpoint '%s'", awsRegion, awsEndpointURL ) );
-        try
-        {
-            return new AmazonS3Upload( createAmazonS3Client( awsEndpointURL != null ? new URL( awsEndpointURL ) : null, awsRegion ) );
-        }
-        catch ( MalformedURLException e )
-        {
-            throw new RuntimeException( format( "unable to parse endpoint URL '%s'", awsEndpointURL ), e );
-        }
+        return new AmazonS3Upload( createAmazonS3Client( awsEndpointURL, awsRegion ) );
     }
 
     private static AmazonS3 createAmazonS3Client( URL endpointUrl, String region )

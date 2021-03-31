@@ -10,6 +10,7 @@ import com.neo4j.bench.model.model.Job;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,7 +140,6 @@ class BatchBenchmarkJob
     @Override
     public String toString()
     {
-        return ToStringBuilder.reflectionToString( this );
+        return ToStringBuilder.reflectionToString( this, ToStringStyle.SHORT_PREFIX_STYLE );
     }
 }
-

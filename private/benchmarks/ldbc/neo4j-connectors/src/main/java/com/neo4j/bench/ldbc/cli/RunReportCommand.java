@@ -80,6 +80,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -351,7 +352,7 @@ public class RunReportCommand implements Runnable
             name = {"--aws-endpoint-url"},
             description = "AWS endpoint URL, used during testing",
             title = "AWS endpoint URL" )
-    private String awsEndpointURL;
+    private URL awsEndpointURL;
 
     @Option(
             type = OptionType.COMMAND,
@@ -559,7 +560,7 @@ public class RunReportCommand implements Runnable
             ResultsReporter resultsReporter = new ResultsReporter( resultStoreCredentials.username(),
                                                                    resultStoreCredentials.password(),
                                                                    resultStoreCredentials.uri() );
-            resultsReporter.reportAndUpload( testRunReport, recordingsBaseUri, resultsDir, awsEndpointURL, REPORT_THEN_FAIL );
+            resultsReporter.reportAndUpload( testRunReport, recordingsBaseUri, resultsDir, awsRegion, awsEndpointURL, REPORT_THEN_FAIL );
         }
         catch ( Throwable e )
         {

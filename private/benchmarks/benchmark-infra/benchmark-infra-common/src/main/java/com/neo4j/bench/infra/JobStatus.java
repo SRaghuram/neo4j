@@ -9,6 +9,7 @@ import com.neo4j.bench.infra.aws.AWSBatchJobLogs;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.util.Optional;
 
@@ -104,6 +105,6 @@ public class JobStatus
     @Override
     public String toString()
     {
-        return ToStringBuilder.reflectionToString( this );
+        return ToStringBuilder.reflectionToString( this, ToStringStyle.SHORT_PREFIX_STYLE );
     }
 }

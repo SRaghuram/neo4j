@@ -24,12 +24,12 @@ import com.neo4j.bench.common.profiling.assist.ProfilerPidMappings;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.MeasurementParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
-import com.neo4j.bench.macro.execution.process.MeasurementOptions;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.Neo4jConfig;
@@ -41,6 +41,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javax.inject.Inject;
 
 import org.neo4j.configuration.connectors.BoltConnector;
 
@@ -51,114 +52,91 @@ public class RunSingleEmbeddedCommand implements Runnable
 {
     private static final String CMD_WORKLOAD = "--workload";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_WORKLOAD},
-             description = "Path to workload configuration file",
-             title = "Workload configuration" )
+            name = {CMD_WORKLOAD},
+            description = "Path to workload configuration file",
+            title = "Workload configuration" )
     @Required
     private String workloadName;
 
     private static final String CMD_QUERY = "--query";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_QUERY},
-             description = "Name of query, in the Workload configuration",
-             title = "Query name" )
+            name = {CMD_QUERY},
+            description = "Name of query, in the Workload configuration",
+            title = "Query name" )
     @Required
     private String queryName;
 
     private static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_DB},
-             description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
-             title = "Store directory" )
+            name = {CMD_DB},
+            description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
+            title = "Store directory" )
     @Required
     private File storeDir;
 
     private static final String CMD_EDITION = "--db-edition";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_EDITION},
-             description = "Neo4j edition: COMMUNITY or ENTERPRISE",
-             title = "Neo4j edition" )
+            name = {CMD_EDITION},
+            description = "Neo4j edition: COMMUNITY or ENTERPRISE",
+            title = "Neo4j edition" )
     private Edition edition = Edition.ENTERPRISE;
 
     private static final String CMD_NEO4J_CONFIG = "--neo4j-config";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_NEO4J_CONFIG},
-             title = "Neo4j configuration file" )
+            name = {CMD_NEO4J_CONFIG},
+            title = "Neo4j configuration file" )
     private File neo4jConfigFile;
 
     private static final String CMD_OUTPUT = "--output";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_OUTPUT},
-             description = "Output directory: where result will be written",
-             title = "Output directory" )
+            name = {CMD_OUTPUT},
+            description = "Output directory: where result will be written",
+            title = "Output directory" )
     @Required
     private File outputDir;
 
     private static final String CMD_PROFILERS = "--profilers";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_PROFILERS},
-             description = "Comma separated list of profilers to run with",
-             title = "Profilers" )
+            name = {CMD_PROFILERS},
+            description = "Comma separated list of profilers to run with",
+            title = "Profilers" )
     private String profilerNames = "";
 
     private static final String CMD_PLANNER = "--planner";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_PLANNER},
-             title = "Cypher planner" )
+            name = {CMD_PLANNER},
+            title = "Cypher planner" )
     private Planner planner = Planner.DEFAULT;
 
     private static final String CMD_RUNTIME = "--runtime";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_RUNTIME},
-             title = "Cypher runtime" )
+            name = {CMD_RUNTIME},
+            title = "Cypher runtime" )
     private Runtime runtime = Runtime.DEFAULT;
 
     private static final String CMD_MODE = "--mode";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_MODE},
-             description = "Execution mode: EXECUTE (latency), PLAN (latency)",
-             title = "Execution mode" )
+            name = {CMD_MODE},
+            description = "Execution mode: EXECUTE (latency), PLAN (latency)",
+            title = "Execution mode" )
     private ExecutionMode executionMode = ExecutionMode.EXECUTE;
 
-    private static final String CMD_WARMUP_COUNT = "--warmup-count";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_WARMUP_COUNT},
-             title = "Warmup execution count" )
-    @Required
-    private int warmupCount;
-
-    private static final String CMD_MEASUREMENT_COUNT = "--measurement-count";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_MEASUREMENT_COUNT},
-             title = "Measurement execution count" )
-    @Required
-    private int measurementCount;
-
-    private static final String CMD_MIN_MEASUREMENT_SECONDS = "--min-measurement-seconds";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_MIN_MEASUREMENT_SECONDS},
-             title = "Min measurement execution duration, in seconds" )
-    private int minMeasurementSeconds = 30; // 30 seconds
-
-    private static final String CMD_MAX_MEASUREMENT_SECONDS = "--max-measurement-seconds";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_MAX_MEASUREMENT_SECONDS},
-             title = "Max measurement execution duration, in seconds" )
-    private int maxMeasurementSeconds = 10 * 60; // 10 minutes
+    @Inject
+    private MeasurementParams measurementParams;
 
     private static final String CMD_JVM_PATH = "--jvm";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_JVM_PATH},
-             description = "Path to JVM with which this process was launched",
-             title = "Path to JVM" )
+            name = {CMD_JVM_PATH},
+            description = "Path to JVM with which this process was launched",
+            title = "Path to JVM" )
     @Required
     private File jvmFile;
 
     private static final String CMD_WORK_DIR = "--work-dir";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_WORK_DIR},
-             description = "Work directory",
-             title = "Work directory" )
+            name = {CMD_WORK_DIR},
+            description = "Work directory",
+            title = "Work directory" )
     @Required
     private File workDir = new File( System.getProperty( "user.dir" ) );
 
@@ -192,26 +170,18 @@ public class RunSingleEmbeddedCommand implements Runnable
                                           runtime,
                                           executionMode,
                                           profilerMappings(),
-                                          warmupCount,
-                                          minMeasurementSeconds,
-                                          maxMeasurementSeconds,
-                                          measurementCount );
-        }
-        catch ( Exception e )
-        {
-            Path errorFile = forkDir.logError( e );
-            throw new RuntimeException( "Error running query\n" +
-                                        "Workload          : " + workloadName + "\n" +
-                                        "Query             : " + queryName + "\n" +
-                                        "See error file at : " + errorFile.toAbsolutePath().toString(), e );
+                                          measurementParams.warmupCount(),
+                                          measurementParams.minMeasurementSeconds(),
+                                          measurementParams.maxMeasurementSeconds(),
+                                          measurementParams.measurementCount() );
         }
     }
 
     Neo4jConfig getNeo4jConfig()
     {
         return Neo4jConfigBuilder.fromFile( neo4jConfigFile )
-                .withSetting( BoltConnector.enabled, FALSE )
-                .build();
+                                 .withSetting( BoltConnector.enabled, FALSE )
+                                 .build();
     }
 
     private ProfilerPidMappings profilerMappings()
@@ -246,7 +216,7 @@ public class RunSingleEmbeddedCommand implements Runnable
             Path neo4jConfig,
             ForkDirectory forkDirectory,
             List<ProfilerType> internalProfilers,
-            MeasurementOptions measurementOptions,
+            MeasurementParams measurementParams,
             Jvm jvm,
             Path workDir )
     {
@@ -268,18 +238,11 @@ public class RunSingleEmbeddedCommand implements Runnable
                 edition.name(),
                 CMD_OUTPUT,
                 forkDirectory.toAbsolutePath(),
-                CMD_WARMUP_COUNT,
-                Integer.toString( measurementOptions.warmupCount() ),
-                CMD_MEASUREMENT_COUNT,
-                Integer.toString( measurementOptions.measurementCount() ),
-                CMD_MIN_MEASUREMENT_SECONDS,
-                Long.toString( measurementOptions.minMeasurementDuration().getSeconds() ),
-                CMD_MAX_MEASUREMENT_SECONDS,
-                Long.toString( measurementOptions.maxMeasurementDuration().getSeconds() ),
                 CMD_JVM_PATH,
                 jvm.launchJava(),
                 CMD_WORK_DIR,
                 workDir.toAbsolutePath().toString() );
+        args.addAll( measurementParams.asArgs() );
         if ( !internalProfilers.isEmpty() )
         {
             args.add( CMD_PROFILERS );

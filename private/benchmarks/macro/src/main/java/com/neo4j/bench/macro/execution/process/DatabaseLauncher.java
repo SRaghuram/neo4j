@@ -11,6 +11,7 @@ import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.profiling.assist.ExternalProfilerAssist;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.tool.macro.MeasurementParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.cli.RunSingleEmbeddedCommand;
@@ -70,7 +71,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
         }
     }
 
-    protected final MeasurementOptions measurementOptions;
+    protected final MeasurementParams measurementParams;
     protected final Jvm jvm;
     private final Store originalStore;
     protected final Path workDir;
@@ -81,7 +82,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
     protected final ExternalProfilerAssist clientAssist;
     protected final List<ProfilerType> internalProfilers;
 
-    private DatabaseLauncher( MeasurementOptions measurementOptions,
+    private DatabaseLauncher( MeasurementParams measurementParams,
                               Jvm jvm,
                               Store originalStore,
                               Path workDir,
@@ -92,7 +93,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                               ExternalProfilerAssist clientAssist,
                               List<ProfilerType> internalProfilers )
     {
-        this.measurementOptions = measurementOptions;
+        this.measurementParams = measurementParams;
         this.jvm = jvm;
         this.originalStore = originalStore;
         this.workDir = workDir;
@@ -168,7 +169,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
         private final Edition edition;
 
         public EmbeddedLauncher( Edition edition,
-                                 MeasurementOptions measurementOptions,
+                                 MeasurementParams measurementParams,
                                  Jvm jvm,
                                  Store originalStore,
                                  Path workDir,
@@ -179,7 +180,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                                  ExternalProfilerAssist clientAssist,
                                  List<ProfilerType> internalProfilers )
         {
-            super( measurementOptions, jvm, originalStore, workDir, query, neo4jConfigFile, forkDirectory, jvmArgs, clientAssist, internalProfilers );
+            super( measurementParams, jvm, originalStore, workDir, query, neo4jConfigFile, forkDirectory, jvmArgs, clientAssist, internalProfilers );
             this.edition = edition;
         }
 
@@ -198,7 +199,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                                                      neo4jConfigFile,
                                                      forkDirectory,
                                                      internalProfilers( internalProfilers, isClientForked ),
-                                                     measurementOptions,
+                                                     measurementParams,
                                                      jvm,
                                                      workDir );
         }
@@ -232,7 +233,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
         private final ExternalProfilerAssist serverAssist;
 
         public ServerLauncher( Path neo4jDir,
-                               MeasurementOptions measurementOptions,
+                               MeasurementParams measurementParams,
                                Jvm jvm,
                                Store originalStore,
                                Path workDir,
@@ -244,7 +245,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                                ExternalProfilerAssist serverAssist,
                                List<ProfilerType> internalProfilers )
         {
-            super( measurementOptions, jvm, originalStore, workDir, query, neo4jConfigFile, forkDirectory, jvmArgs, clientAssist, internalProfilers );
+            super( measurementParams, jvm, originalStore, workDir, query, neo4jConfigFile, forkDirectory, jvmArgs, clientAssist, internalProfilers );
             this.neo4jDir = neo4jDir;
             this.serverAssist = serverAssist;
         }
@@ -283,7 +284,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                                                    forkDirectory,
                                                    internalProfilers( internalProfilers, isClientForked ), // client profilers
                                                    internalProfilers, // server profilers
-                                                   measurementOptions,
+                                                   measurementParams,
                                                    jvm,
                                                    workDir );
         }

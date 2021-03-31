@@ -22,11 +22,11 @@ import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.DeploymentMode;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.MeasurementParams;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.Neo4jServerDatabase;
-import com.neo4j.bench.macro.execution.process.MeasurementOptions;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.Parameters;
@@ -37,6 +37,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javax.inject.Inject;
 
 @Command( name = "run-single-server", description = "runs one query in a new process for a single workload" )
 public class RunSingleServerCommand implements Runnable
@@ -114,31 +115,8 @@ public class RunSingleServerCommand implements Runnable
             title = "Execution mode" )
     private ExecutionMode executionMode = ExecutionMode.EXECUTE;
 
-    private static final String CMD_WARMUP_COUNT = "--warmup-count";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_WARMUP_COUNT},
-            title = "Warmup execution count" )
-    @Required
-    private int warmupCount;
-
-    private static final String CMD_MEASUREMENT_COUNT = "--measurement-count";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_MEASUREMENT_COUNT},
-            title = "Measurement execution count" )
-    @Required
-    private int measurementCount;
-
-    private static final String CMD_MIN_MEASUREMENT_SECONDS = "--min-measurement-seconds";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_MIN_MEASUREMENT_SECONDS},
-            title = "Min measurement execution duration, in seconds" )
-    private int minMeasurementSeconds = 30; // 30 seconds
-
-    private static final String CMD_MAX_MEASUREMENT_SECONDS = "--max-measurement-seconds";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_MAX_MEASUREMENT_SECONDS},
-            title = "Max measurement execution duration, in seconds" )
-    private int maxMeasurementSeconds = 10 * 60; // 10 minutes
+    @Inject
+    private MeasurementParams measurementParams;
 
     private static final String CMD_JVM_PATH = "--jvm";
     @Option( type = OptionType.COMMAND,
@@ -183,10 +161,10 @@ public class RunSingleServerCommand implements Runnable
                                       runtime,
                                       executionMode,
                                       mappings,
-                                      warmupCount,
-                                      minMeasurementSeconds,
-                                      maxMeasurementSeconds,
-                                      measurementCount );
+                                      measurementParams.warmupCount(),
+                                      measurementParams.minMeasurementSeconds(),
+                                      measurementParams.maxMeasurementSeconds(),
+                                      measurementParams.measurementCount() );
     }
 
     private ProfilerPidMappings profilerMappings( Pid clientPid, Pid serverPid )
@@ -212,7 +190,7 @@ public class RunSingleServerCommand implements Runnable
             ForkDirectory forkDirectory,
             List<ProfilerType> clientProfilers,
             List<ProfilerType> serverProfilers,
-            MeasurementOptions measurementOptions,
+            MeasurementParams measurementParams,
             Jvm jvm,
             Path workDir )
     {
@@ -234,18 +212,11 @@ public class RunSingleServerCommand implements Runnable
                 Long.toString( neo4jPid.get() ),
                 CMD_OUTPUT,
                 forkDirectory.toAbsolutePath(),
-                CMD_WARMUP_COUNT,
-                Integer.toString( measurementOptions.warmupCount() ),
-                CMD_MEASUREMENT_COUNT,
-                Integer.toString( measurementOptions.measurementCount() ),
-                CMD_MIN_MEASUREMENT_SECONDS,
-                Long.toString( measurementOptions.minMeasurementDuration().getSeconds() ),
-                CMD_MAX_MEASUREMENT_SECONDS,
-                Long.toString( measurementOptions.maxMeasurementDuration().getSeconds() ),
                 CMD_JVM_PATH,
                 jvm.launchJava(),
                 CMD_WORK_DIR,
                 workDir.toAbsolutePath().toString() );
+        args.addAll( measurementParams.asArgs() );
         if ( !clientProfilers.isEmpty() )
         {
             args.add( CMD_CLIENT_PROFILERS );

@@ -43,6 +43,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
+import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -65,7 +66,7 @@ public class RunReportCommand extends BaseRunReportCommand
             name = {"--aws-endpoint-url"},
             description = "AWS endpoint URL, used during testing",
             title = "AWS endpoint URL" )
-    private String awsEndpointURL;
+    private URL awsEndpointURL;
 
     @Option(
             type = OptionType.COMMAND,
@@ -120,11 +121,8 @@ public class RunReportCommand extends BaseRunReportCommand
         deleteDir( runReportParams.workDir() );
         TestRunReport testRunReport = run( runReportParams );
 
-        ResultStoreCredentials resultStoreCredentials = PasswordManager.getResultStoreCredentials( new ResultStoreCredentials(
-                                                                                                           resultsStoreUsername,
-                                                                                                           resultsStorePassword,
-                                                                                                           resultsStoreUri
-                                                                                                   ),
+        ResultStoreCredentials credentials = new ResultStoreCredentials( resultsStoreUsername, resultsStorePassword, resultsStoreUri );
+        ResultStoreCredentials resultStoreCredentials = PasswordManager.getResultStoreCredentials( credentials,
                                                                                                    resultsStorePasswordSecretName,
                                                                                                    AWSPasswordManager.create( awsRegion ) );
 
@@ -134,6 +132,7 @@ public class RunReportCommand extends BaseRunReportCommand
         resultsReporter.reportAndUpload( testRunReport,
                                          recordingsBaseUri,
                                          runReportParams.workDir(),
+                                         awsRegion,
                                          awsEndpointURL,
                                          REPORT_THEN_FAIL );
         deleteDir( runReportParams.workDir() );

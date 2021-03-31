@@ -6,8 +6,6 @@
 package com.neo4j.bench.infra.aws;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
@@ -19,11 +17,11 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
-import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.Workspace;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -32,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -49,18 +48,24 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
 
     private static final Logger LOG = LoggerFactory.getLogger( AWSS3ArtifactStorage.class );
 
-    public static ArtifactStorage create( AWSCredentials awsCredentials )
+    public static ArtifactStorage create( AWSCredentials awsCredentials, URL endpointUrl )
     {
-        if ( awsCredentials.hasAwsCredentials() )
+        if ( endpointUrl == null )
         {
-            AWSStaticCredentialsProvider credentialsProvider =
-                    new AWSStaticCredentialsProvider( new BasicAWSCredentials( awsCredentials.awsAccessKeyId(), awsCredentials.awsSecretAccessKey() ) );
-            return new AWSS3ArtifactStorage( s3ClientBuilder( credentialsProvider ).withRegion( awsCredentials.awsRegion() ).build() );
+            return create( awsCredentials );
         }
         else
         {
-            return create( awsCredentials.awsRegion() );
+            EndpointConfiguration endpointConfiguration = new EndpointConfiguration( endpointUrl.toString(), awsCredentials.awsRegion() );
+            return new AWSS3ArtifactStorage( s3ClientBuilder( awsCredentials.awsCredentialsProvider() )
+                                                     .withEndpointConfiguration( endpointConfiguration )
+                                                     .build() );
         }
+    }
+
+    public static ArtifactStorage create( AWSCredentials awsCredentials )
+    {
+        return new AWSS3ArtifactStorage( s3ClientBuilder( awsCredentials.awsCredentialsProvider() ).withRegion( awsCredentials.awsRegion() ).build() );
     }
 
     public static ArtifactStorage create( EndpointConfiguration endpointConfiguration )
@@ -142,7 +147,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         for ( String key : goalWorkspace.allArtifactKeys() )
         {
             String artifactPath = goalWorkspace.getString( key );
-            downloadFile( baseDir, artifactBaseURI, artifactPath );
+            downloadSingleFile( artifactPath, baseDir, artifactBaseURI );
             builder.withArtifact( key, artifactPath );
         }
         return builder.build();
@@ -151,22 +156,30 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     @Override
     public Path downloadSingleFile( String jobParameters, Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException
     {
-        return downloadFile( baseDir, artifactBaseURI, jobParameters );
+        URI uri = ensureBaseUri( artifactBaseURI ).resolve( jobParameters );
+        Path target = baseDir.resolve( jobParameters );
+        return downloadFile( uri, target );
     }
 
-    private Path downloadFile( Path baseDir, URI artifactBaseURI, String artifactPath ) throws ArtifactStoreException
+    @Override
+    public Path downloadSingleFile( Path baseDir, URI uri ) throws ArtifactStoreException
     {
-        String bucketName = artifactBaseURI.getAuthority();
-        String s3Path = getS3Path( artifactBaseURI.getPath() );
-        LOG.info( "downloading build artifacts from bucket {} at key prefix {}{}", bucketName, s3Path, artifactPath );
+        Path target = baseDir.resolve( getFilename( uri ) );
+        return downloadFile( uri, target );
+    }
 
-        S3Object s3Object = amazonS3.getObject( bucketName, s3Path + artifactPath );
-        Path absoluteArtifact = baseDir.resolve( artifactPath );
+    private Path downloadFile( URI uri, Path target ) throws ArtifactStoreException
+    {
+        String bucketName = uri.getAuthority();
+        String key = removeStart( uri.getPath(), "/" );
+        LOG.info( "downloading build artifacts from bucket {} at key prefix {}", bucketName, key );
+
+        S3Object s3Object = amazonS3.getObject( bucketName, key );
         try
         {
-            Files.createDirectories( absoluteArtifact.getParent() );
-            Files.copy( s3Object.getObjectContent(), absoluteArtifact, StandardCopyOption.REPLACE_EXISTING );
-            return absoluteArtifact;
+            Files.createDirectories( target.getParent() );
+            Files.copy( s3Object.getObjectContent(), target, StandardCopyOption.REPLACE_EXISTING );
+            return target;
         }
         catch ( IOException e )
         {
@@ -193,6 +206,24 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     {
         String path = StringUtils.removeEnd( dataSetBaseUri.getPath(), "/" );
         return StringUtils.removeStart( format( "%s/%s-enterprise-datasets/%s.tgz", path, neo4jVersion, dataset ), "/" );
+    }
+
+    public static URI createDatasetUri( URI baseUri, Version version, String dataset )
+    {
+        URI withSlash = ensureBaseUri( baseUri );
+        return withSlash.resolve( format( "%s-enterprise-datasets/%s.tgz", version.minorVersion(), dataset ) );
+    }
+
+    private static URI ensureBaseUri( URI baseUri )
+    {
+        return baseUri.resolve( StringUtils.appendIfMissing( baseUri.getPath(), "/" ) );
+    }
+
+    public static String getFilename( URI uri )
+    {
+        String path = uri.getPath();
+        int lastSegmentStart = path.lastIndexOf( '/' );
+        return path.substring( lastSegmentStart + 1 );
     }
 
     @Override

@@ -23,6 +23,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
 import static java.lang.String.format;
 
@@ -30,7 +33,7 @@ public class Extractor
 {
     private static final Logger LOG = LoggerFactory.getLogger( Extractor.class );
 
-    public static void extract( Path dir, InputStream inputSteam )
+    public static Set<Path> extract( Path dir, InputStream inputSteam )
     {
         try ( InputStream objectContent = new BufferedInputStream( inputSteam );
               InputStream compressorInput = new CompressorStreamFactory()
@@ -38,7 +41,8 @@ public class Extractor
               ArchiveInputStream archiveInput =
                       new ArchiveStreamFactory().createArchiveInputStream( ArchiveStreamFactory.TAR, compressorInput ) )
         {
-            ArchiveEntry entry = null;
+            Set<Path> topLevelPaths = new HashSet<>();
+            ArchiveEntry entry;
             while ( (entry = archiveInput.getNextEntry()) != null )
             {
                 if ( !archiveInput.canReadEntryData( entry ) )
@@ -47,6 +51,10 @@ public class Extractor
                     continue;
                 }
                 File f = dir.resolve( entry.getName() ).toFile();
+                if ( Objects.equals( f.getParentFile(), dir.toFile() ) )
+                {
+                    topLevelPaths.add( f.toPath() );
+                }
                 LOG.debug( f.toString() );
                 if ( entry.isDirectory() )
                 {
@@ -62,6 +70,7 @@ public class Extractor
                     }
                 }
             }
+            return topLevelPaths;
         }
         catch ( IOException | CompressorException | ArchiveException e )
         {

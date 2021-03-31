@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -32,7 +33,6 @@ public class ResultsReporter
     private final String resultsStoreUsername;
     private final String resultsStorePassword;
     private final URI resultsStoreUri;
-    private final String awsRegion = "eu-north-1";
 
     public ResultsReporter( String resultsStoreUsername,
                             String resultsStorePassword,
@@ -46,7 +46,8 @@ public class ResultsReporter
     public void reportAndUpload( TestRunReport testRunReport,
                                  URI recordingsBaseUri,
                                  File workDir,
-                                 String awsEndpointURL,
+                                 String awsRegion,
+                                 URL awsEndpointURL,
                                  ErrorReportingPolicy errorReportingPolicy )
     {
         Objects.requireNonNull( recordingsBaseUri.getScheme(), "Recordings URI must contain scheme" );

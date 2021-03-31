@@ -14,35 +14,71 @@ import com.neo4j.bench.common.profiling.assist.ExternalProfilerAssist;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.macro.agent.WorkspaceStorage;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.execution.process.DatabaseLauncher;
-import com.neo4j.bench.macro.execution.process.MeasurementOptions;
+import com.neo4j.bench.common.tool.macro.MeasurementParams;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.process.JvmArgs;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 
 public abstract class Neo4jDeployment<DEPLOYMENT extends Deployment, CONNECTION extends AutoCloseable>
 {
+    public static Neo4jDeployment workspace( Deployment deployment,
+                                             Edition edition,
+                                             MeasurementParams measurementParams,
+                                             Jvm jvm,
+                                             URI datasetUri,
+                                             Path workDir,
+                                             WorkspaceStorage workspaceStorage )
+    {
+        Path dataset = workspaceStorage.resolve( datasetUri );
+
+        return from( resolveProduct( workspaceStorage, deployment ),
+                     edition,
+                     measurementParams,
+                     jvm,
+                     dataset,
+                     workDir );
+    }
+
+    private static Deployment resolveProduct( WorkspaceStorage workspaceStorage, Deployment deployment )
+    {
+        if ( deployment instanceof Deployment.Server )
+        {
+            Deployment.Server server = (Deployment.Server) deployment;
+            String neo4jDir = workspaceStorage.resolve( server.uri() ).toAbsolutePath().toString();
+            Deployment resolved = Deployment.server( neo4jDir );
+            resolved.assertExists();
+            return resolved;
+        }
+        else
+        {
+            return deployment;
+        }
+    }
+
     public static Neo4jDeployment from( Deployment deployment,
                                         Edition edition,
-                                        MeasurementOptions measurementOptions,
+                                        MeasurementParams measurementParams,
                                         Jvm jvm,
                                         Path storeDir,
                                         Path workDir )
     {
         if ( deployment instanceof Deployment.Embedded )
         {
-            return new EmbeddedNeo4jDeployment( (Deployment.Embedded) deployment, edition, measurementOptions, jvm, Neo4jStore.createFrom( storeDir ),
+            return new EmbeddedNeo4jDeployment( (Deployment.Embedded) deployment, edition, measurementParams, jvm, Neo4jStore.createFrom( storeDir ),
                                                 workDir );
         }
         else if ( deployment instanceof Deployment.Server )
         {
-            return new ServerNeo4jDeployment( (Deployment.Server) deployment, measurementOptions, jvm, Neo4jStore.createFrom( storeDir ), workDir );
+            return new ServerNeo4jDeployment( (Deployment.Server) deployment, measurementParams, jvm, Neo4jStore.createFrom( storeDir ), workDir );
         }
         else
         {
@@ -51,15 +87,15 @@ public abstract class Neo4jDeployment<DEPLOYMENT extends Deployment, CONNECTION 
     }
 
     private final DEPLOYMENT deployment;
-    protected final MeasurementOptions measurementOptions;
+    protected final MeasurementParams measurementParams;
     protected final Jvm jvm;
     protected final Store originalStore;
     protected final Path workDir;
 
-    private Neo4jDeployment( DEPLOYMENT deployment, MeasurementOptions measurementOptions, Jvm jvm, Store originalStore, Path workDir )
+    private Neo4jDeployment( DEPLOYMENT deployment, MeasurementParams measurementParams, Jvm jvm, Store originalStore, Path workDir )
     {
         this.deployment = deployment;
-        this.measurementOptions = measurementOptions;
+        this.measurementParams = measurementParams;
         this.jvm = jvm;
         this.originalStore = originalStore;
         this.workDir = workDir;
@@ -68,6 +104,11 @@ public abstract class Neo4jDeployment<DEPLOYMENT extends Deployment, CONNECTION 
     public final DEPLOYMENT deployment()
     {
         return deployment;
+    }
+
+    public final Store originalStore()
+    {
+        return originalStore;
     }
 
     @Override
@@ -88,12 +129,12 @@ public abstract class Neo4jDeployment<DEPLOYMENT extends Deployment, CONNECTION 
 
         private EmbeddedNeo4jDeployment( Deployment.Embedded deployment,
                                          Edition edition,
-                                         MeasurementOptions measurementOptions,
+                                         MeasurementParams measurementParams,
                                          Jvm jvm,
                                          Store originalStore,
                                          Path workDir )
         {
-            super( deployment, measurementOptions, jvm, originalStore, workDir );
+            super( deployment, measurementParams, jvm, originalStore, workDir );
             this.edition = edition;
         }
 
@@ -114,7 +155,7 @@ public abstract class Neo4jDeployment<DEPLOYMENT extends Deployment, CONNECTION 
                                                                                  Parameters.NONE );
             List<ProfilerType> internalProfilers = ParameterizedProfiler.profilerTypes( ParameterizedProfiler.internalProfilers( parameterizedProfilers ) );
             return new DatabaseLauncher.EmbeddedLauncher( edition,
-                                                          measurementOptions,
+                                                          measurementParams,
                                                           jvm,
                                                           originalStore,
                                                           workDir,
@@ -130,12 +171,12 @@ public abstract class Neo4jDeployment<DEPLOYMENT extends Deployment, CONNECTION 
     private static class ServerNeo4jDeployment extends Neo4jDeployment<Deployment.Server,ServerDatabase>
     {
         private ServerNeo4jDeployment( Deployment.Server deployment,
-                                       MeasurementOptions measurementOptions,
+                                       MeasurementParams measurementParams,
                                        Jvm jvm,
                                        Store originalStore,
                                        Path workDir )
         {
-            super( deployment, measurementOptions, jvm, originalStore, workDir );
+            super( deployment, measurementParams, jvm, originalStore, workDir );
         }
 
         @Override
@@ -162,7 +203,7 @@ public abstract class Neo4jDeployment<DEPLOYMENT extends Deployment, CONNECTION 
                                                                                  Parameters.SERVER );
             List<ProfilerType> internalProfilers = ParameterizedProfiler.profilerTypes( ParameterizedProfiler.internalProfilers( parameterizedProfilers ) );
             return new DatabaseLauncher.ServerLauncher( deployment().path(),
-                                                        measurementOptions,
+                                                        measurementParams,
                                                         jvm,
                                                         originalStore,
                                                         workDir,

@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RunMacroWorkloadParamsTest
 {
+    private static final MeasurementParams MEASUREMENT_PARAMS = new MeasurementParams( 1, 1000, Duration.ofSeconds( 1 ), Duration.ofSeconds( 2 ) );
 
     @Test
     public void serializationTest()
@@ -34,10 +35,7 @@ public class RunMacroWorkloadParamsTest
                                                                                     Edition.COMMUNITY,
                                                                                     Paths.get( "java" ).toAbsolutePath(),
                                                                                     defaultProfilers( ProfilerType.JFR ),
-                                                                                    1,
-                                                                                    1000,
-                                                                                    Duration.ofSeconds( 1 ),
-                                                                                    Duration.ofSeconds( 2 ),
+                                                                                    MEASUREMENT_PARAMS,
                                                                                     1,
                                                                                     TimeUnit.MICROSECONDS,
                                                                                     Runtime.DEFAULT,
@@ -47,13 +45,13 @@ public class RunMacroWorkloadParamsTest
                                                                                     false,
                                                                                     false,
                                                                                     Deployment.embedded(),
-                                                                                    "neo4jCommit",
-                                                                                    new Version( "3.4.1" ),
-                                                                                    "neo4jBranch",
-                                                                                    "neo4jBranchOwner",
-                                                                                    1L,
-                                                                                    0L,
-                                                                                    "neo4j" );
+                                                                                    new BuildParams( "neo4jCommit",
+                                                                                                     new Version( "3.4.1" ),
+                                                                                                     "neo4jBranch",
+                                                                                                     "neo4jBranchOwner",
+                                                                                                     1L,
+                                                                                                     0L,
+                                                                                                     "neo4j" ) );
         RunMacroWorkloadParams
                 actualRunMacroWorkloadParams = JsonUtil.deserializeJson( JsonUtil.serializeJson( runMacroWorkloadParams ), RunMacroWorkloadParams.class );
         assertEquals( runMacroWorkloadParams, actualRunMacroWorkloadParams );
@@ -63,10 +61,7 @@ public class RunMacroWorkloadParamsTest
                                     Edition.COMMUNITY,
                                     Paths.get( "java" ).toAbsolutePath(),
                                     defaultProfilers( ProfilerType.JFR ),
-                                    1,
-                                    1000,
-                                    Duration.ofSeconds( 1 ),
-                                    Duration.ofSeconds( 2 ),
+                                    MEASUREMENT_PARAMS,
                                     1,
                                     TimeUnit.MICROSECONDS,
                                     Runtime.DEFAULT,
@@ -76,13 +71,13 @@ public class RunMacroWorkloadParamsTest
                                     false,
                                     false,
                                     Deployment.embedded(),
-                                    "neo4jCommit",
-                                    new Version( "3.4.1" ),
-                                    "neo4jBranch",
-                                    "neo4jBranchOwner",
-                                    1L,
-                                    0L,
-                                    "neo4j" );
+                                    new BuildParams( "neo4jCommit",
+                                                     new Version( "3.4.1" ),
+                                                     "neo4jBranch",
+                                                     "neo4jBranchOwner",
+                                                     1L,
+                                                     0L,
+                                                     "neo4j" ) );
 
         actualRunMacroWorkloadParams = JsonUtil.deserializeJson( JsonUtil.serializeJson( runMacroWorkloadParams ), RunMacroWorkloadParams.class );
         assertEquals( runMacroWorkloadParams, actualRunMacroWorkloadParams );

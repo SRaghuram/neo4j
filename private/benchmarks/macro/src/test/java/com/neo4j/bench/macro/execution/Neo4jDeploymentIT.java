@@ -15,8 +15,6 @@ import com.neo4j.bench.client.reporter.TarGzArchive;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.DatabaseName;
 import com.neo4j.bench.common.database.Neo4jStore;
-import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
@@ -25,13 +23,14 @@ import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.Deployment.Server;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.MeasurementParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.macro.StoreTestUtil;
-import com.neo4j.bench.macro.agent.WorkspaceState;
 import com.neo4j.bench.macro.agent.WorkspaceStorage;
 import com.neo4j.bench.macro.cli.RunMacroWorkloadCommand;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
@@ -39,7 +38,6 @@ import com.neo4j.bench.macro.execution.database.Neo4jServerDatabase;
 import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.execution.process.DatabaseLauncher;
-import com.neo4j.bench.macro.execution.process.MeasurementOptions;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.Benchmark;
@@ -53,11 +51,14 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -98,13 +99,12 @@ public class Neo4jDeploymentIT
     private static final String DATASET_NAME = "ldbc_sf001";
     private static final String S3_BUCKET = "benchmarking.neo4j.com";
     private static final URI ARTIFACT_BASE_URI = URI.create( String.format( "s3://%s/artifacts", S3_BUCKET ) );
-    private static final URI DATASET_BASE_URI = URI.create( String.format( "s3://%s/datasets", S3_BUCKET ) );
+    private static final URI DATASET_URI = URI.create( String.format( "s3://%s/datasets/4.0-enterprise-datasets/%s.tgz", S3_BUCKET, DATASET_NAME ) );
     private static final BenchmarkGroup BENCHMARK_GROUP = new BenchmarkGroup( "group" );
     private static final Benchmark BENCHMARK = benchmarkFor( "description", "simpleName", Benchmark.Mode.THROUGHPUT, Collections.emptyMap() );
     private static final ExecutionMode EXECUTION_MODE = ExecutionMode.EXECUTE;
-    private static final Version VERSION = new Version( "4.0.27" );
     private static final Edition EDITION = Edition.ENTERPRISE;
-    private static final MeasurementOptions MEASUREMENT_OPTIONS = new MeasurementOptions( 0, 0, Duration.ZERO, Duration.ZERO );
+    private static final MeasurementParams MEASUREMENT_PARAMS = new MeasurementParams( 0, 0, Duration.ZERO, Duration.ZERO );
 
     @Inject
     private TestDirectory temporaryFolder;
@@ -113,8 +113,7 @@ public class Neo4jDeploymentIT
     private Path emptyConfig;
     private S3Mock s3api;
     private ArtifactStorage artifactStorage;
-    private String packageName;
-    private String packageArchive;
+    private Deployment deployment;
     private Path resourcesDir;
     private Schema expectedSchema;
     private Path results;
@@ -130,18 +129,14 @@ public class Neo4jDeploymentIT
         this.s3api = createS3( s3Path );
         this.artifactStorage = createArtifactStorage( s3api );
 
-        Path originalDir = Paths.get( System.getenv( "NEO4J_DIR" ) );
-        this.packageName = originalDir.getFileName().toString();
-        this.packageArchive = packageName + ".tar.gz";
-        Path packageDir = temporaryFolder.directory( "package" );
-        FileUtils.copyDirectory( originalDir.toFile(), packageDir.resolve( packageName ).toFile() );
+        URI artifactUri = uploadArtifact( temporaryFolder, s3Path );
+        this.deployment = Deployment.server( artifactUri.toString() );
 
         Path dbDir = temporaryFolder.directory( "db" );
         this.resourcesDir = temporaryFolder.directory( "resources" );
         this.expectedSchema = createDataset( resourcesDir, dbDir, emptyConfig, randomId );
         this.databaseName = getDatabaseName( resourcesDir );
 
-        uploadDirectoryToS3AndRemove( s3Path, packageDir, "/artifacts", packageArchive );
         uploadDirectoryToS3AndRemove( s3Path, dbDir, "/datasets/4.0-enterprise-datasets", DATASET_NAME + ".tgz" );
 
         this.results = temporaryFolder.directory( "results" );
@@ -155,7 +150,7 @@ public class Neo4jDeploymentIT
                 .build();
     }
 
-    private static ArtifactStorage createArtifactStorage( S3Mock s3api )
+    private static ArtifactStorage createArtifactStorage( S3Mock s3api ) throws MalformedURLException
     {
         InetSocketAddress awsEndpointLocalAddress = s3api.start().localAddress();
         String awsEndpointURI = format( "http://localhost:%d", awsEndpointLocalAddress.getPort() );
@@ -166,7 +161,19 @@ public class Neo4jDeploymentIT
                                                  .build();
         s3client.createBucket( S3_BUCKET );
         s3client.shutdown();
-        return AWSS3ArtifactStorage.create( new AwsClientBuilder.EndpointConfiguration( awsEndpointURI, "eu-north-1" ) );
+        return AWSS3ArtifactStorage.create( new AWSCredentials( null, null, "eu-north-1" ), new URL( awsEndpointURI ) );
+    }
+
+    private static URI uploadArtifact( TestDirectory temporaryFolder, Path s3Path ) throws IOException
+    {
+        Path neo4jDir = Paths.get( System.getenv( "NEO4J_DIR" ) );
+        String packageName = neo4jDir.getFileName().toString();
+        String packageArchive = packageName + ".tar.gz";
+        URI artifactUri = URI.create( ARTIFACT_BASE_URI.toString() + "/" + packageArchive );
+        Path packageDir = temporaryFolder.directory( "package" );
+        FileUtils.copyDirectory( neo4jDir.toFile(), packageDir.resolve( packageName ).toFile() );
+        uploadDirectoryToS3AndRemove( s3Path, packageDir, "/artifacts", packageArchive );
+        return artifactUri;
     }
 
     private static Schema createDataset( Path resourcesDir, Path dbDir, Path neo4jConfigFile, long randomId ) throws IOException
@@ -287,41 +294,17 @@ public class Neo4jDeploymentIT
 
     private Neo4jDeployment<Server,ServerDatabase> shouldSetup( Path workspace, Path baseNeo4jConfigFile )
     {
-        WorkspaceState workspaceState = shouldDownloadWorkspace( workspace );
-        Path dataset = workspaceState.dataset();
-        // deployment won't be started so this path does not matter
-        Deployment server = Deployment.server( workspaceState.product().toAbsolutePath().toString() );
-        Neo4jDeployment<Server,ServerDatabase> deployment = Neo4jDeployment.from( server,
-                                                                                  EDITION,
-                                                                                  MEASUREMENT_OPTIONS,
-                                                                                  JVM,
-                                                                                  dataset,
-                                                                                  workspace );
-        try ( Store store = Neo4jStore.createFrom( dataset ) )
-        {
-            EmbeddedDatabase.verifySchema( store, EDITION, baseNeo4jConfigFile, expectedSchema );
-            EmbeddedDatabase.verifyStoreFormat( store );
-        }
-        return deployment;
-    }
-
-    private WorkspaceState shouldDownloadWorkspace( Path workspace )
-    {
-        WorkspaceStorage workspaceStorage = new WorkspaceStorage( artifactStorage,
-                                                                  workspace,
-                                                                  ARTIFACT_BASE_URI,
-                                                                  packageArchive,
-                                                                  DATASET_BASE_URI,
-                                                                  DATASET_NAME,
-                                                                  VERSION );
-        WorkspaceState workspaceState = workspaceStorage.download();
-
-        assertThat( workspaceState.product(), equalTo( workspace.resolve( packageName ) ) );
-        BenchmarkUtil.assertDirectoryIsNotEmpty( workspaceState.product() );
-
-        assertThat( workspaceState.dataset(), equalTo( workspace.resolve( DATASET_NAME ) ) );
-        BenchmarkUtil.assertDirectoryIsNotEmpty( workspaceState.dataset() );
-        return workspaceState;
+        WorkspaceStorage workspaceStorage = new WorkspaceStorage( artifactStorage, workspace );
+        Neo4jDeployment<Server,ServerDatabase> neo4jDeployment = Neo4jDeployment.workspace( deployment,
+                                                                                            EDITION,
+                                                                                            MEASUREMENT_PARAMS,
+                                                                                            JVM,
+                                                                                            DATASET_URI,
+                                                                                            workspace,
+                                                                                            workspaceStorage );
+        EmbeddedDatabase.verifySchema( neo4jDeployment.originalStore(), EDITION, baseNeo4jConfigFile, expectedSchema );
+        EmbeddedDatabase.verifyStoreFormat( neo4jDeployment.originalStore() );
+        return neo4jDeployment;
     }
 
     private ServerDatabase shouldStart( Path baseNeo4jConfigFile, Neo4jDeployment<Server,ServerDatabase> deployment, boolean copyStore,
