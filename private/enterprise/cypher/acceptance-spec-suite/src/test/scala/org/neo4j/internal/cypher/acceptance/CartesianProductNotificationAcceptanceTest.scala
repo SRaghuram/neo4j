@@ -16,7 +16,6 @@ import org.neo4j.cypher.internal.compiler.CypherPlanner
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.compiler.CypherPlannerFactory
 import org.neo4j.cypher.internal.compiler.ExecutionModel
-import org.neo4j.cypher.internal.compiler.StatsDivergenceCalculator
 import org.neo4j.cypher.internal.compiler.defaultUpdateStrategy
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_3
 import org.neo4j.cypher.internal.compiler.phases.PlannerContext
@@ -35,7 +34,6 @@ import org.neo4j.cypher.internal.planner.spi.IDPPlannerName
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.planning.WrappedMonitors
 import org.neo4j.cypher.internal.rewriting.rewriters.GeneratingNamer
-import org.neo4j.cypher.internal.runtime.interpreted.CSVResources
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
 import org.neo4j.cypher.internal.util.CartesianProductNotification
@@ -122,23 +120,7 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
     } )
   }
 
-  private val configuration = CypherPlannerConfiguration(
-    queryCacheSize = 128,
-    statsDivergenceCalculator = StatsDivergenceCalculator.divergenceNoDecayCalculator(0.5, 1000),
-    useErrorsOverWarnings = false,
-    idpMaxTableSize = 128,
-    idpIterationDuration = 1000,
-    errorIfShortestPathFallbackUsedAtRuntime = false,
-    errorIfShortestPathHasCommonNodesAtRuntime = true,
-    legacyCsvQuoteEscaping = false,
-    csvBufferSize = CSVResources.DEFAULT_BUFFER_SIZE,
-    nonIndexedLabelWarningThreshold = 10000L,
-    planSystemCommands = false,
-    useJavaCCParser = true,
-    obfuscateLiterals = false,
-    pipelinedBatchSizeSmall = 128,
-    pipelinedBatchSizeBig = 1024,
-  )
+  private val configuration = CypherPlannerConfiguration.defaults()
   private lazy val monitors = WrappedMonitors(kernelMonitors)
   private val metricsFactory = CachedMetricsFactory(SimpleMetricsFactory)
   private def createCompiler(): CypherPlanner[PlannerContext] = {

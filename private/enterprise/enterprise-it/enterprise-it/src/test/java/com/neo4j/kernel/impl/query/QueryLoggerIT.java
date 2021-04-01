@@ -941,6 +941,34 @@ class QueryLoggerIT
         }
     }
 
+    @Test
+    void shouldDynamicallyObfuscateAllLiterals() throws Exception
+    {
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_obfuscate_literals, false )
+                       .setConfig( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true );
+
+        buildDatabase();
+
+        String query = "MATCH (n) WHERE n.salary = 10000000.76 RETURN n";
+
+        executeQuery( query );
+        executeQuery( "CALL dbms.setConfigValue('dbms.logs.query.obfuscate_literals', 'true')" );
+        //NOTE: we must clear the cache in order to trigger replanning
+        executeQuery( "CALL db.clearQueryCaches()" );
+        executeQuery( query );
+
+        databaseManagementService.shutdown();
+
+        List<String> logLines = readAllLines( logFilename );
+        assertThat( logLines, hasSize( 4 ) );
+        assertThat( logLines.get( 0 ),
+                    endsWith( String.format( "%s - {} - runtime=pipelined - {}", "MATCH (n) WHERE n.salary = 10000000.76 RETURN n" ) ) );
+        assertThat( logLines.get( 3 ),
+                    endsWith( String.format( "%s - {} - runtime=pipelined - {}", "MATCH (n) WHERE n.salary = ****** RETURN n" ) ) );
+    }
+
     private void executeSingleQueryWithTimeZoneLog()
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
