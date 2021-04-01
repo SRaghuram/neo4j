@@ -50,6 +50,9 @@ public class CompiledMapValue extends MapValue
         }
     }
 
+    /**
+     * This populates the map, before this has been called for all items the map is in an undefined state.
+     */
     public void internalPut( int index, AnyValue value )
     {
         values[index] = value;
