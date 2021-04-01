@@ -117,7 +117,7 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
             random = SplittableRandomProvider.newRandom( threadParams.getThreadIndex() );
             prefix = String.format( "CYPHER runtime=%s ", state.runtime );
             boltFactory = boltFactory( (GraphDatabaseAPI) state.db() );
-            machine = boltFactory.newStateMachine( BOLT_VERSION, BOLT_CHANNEL );
+            machine = boltFactory.newStateMachine( BOLT_VERSION, BOLT_CHANNEL, MEMORY_TRACKER );
             var hello = new HelloMessage( map(
                     "user_agent", USER_AGENT,
                     "scheme", "basic",

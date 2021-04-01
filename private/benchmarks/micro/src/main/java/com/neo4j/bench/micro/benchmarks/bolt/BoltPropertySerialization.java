@@ -118,7 +118,7 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
             query = String.format( "CYPHER runtime=%s MATCH (n) RETURN n.prop",
                                    state.runtime );
             boltFactory = boltFactory( (GraphDatabaseAPI) state.db() );
-            machine = boltFactory.newStateMachine( BOLT_VERSION, BOLT_CHANNEL );
+            machine = boltFactory.newStateMachine( BOLT_VERSION, BOLT_CHANNEL, MEMORY_TRACKER );
             var hello = new HelloMessage( map(
                     "user_agent", USER_AGENT,
                     "scheme", "basic",

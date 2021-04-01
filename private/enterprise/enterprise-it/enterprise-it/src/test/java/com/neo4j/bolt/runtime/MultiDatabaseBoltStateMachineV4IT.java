@@ -145,7 +145,7 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     @Override
     protected AbstractBoltStateMachine newStateMachineInReadyState() throws Throwable
     {
-        BoltStateMachineV4 machine = (BoltStateMachineV4) env.newMachine( BoltProtocolV4.VERSION, BOLT_CHANNEL );
+        BoltStateMachineV4 machine = (BoltStateMachineV4) env.newMachine( BoltProtocolV4.VERSION, BOLT_CHANNEL, MEMORY_TRACKER );
         machine.process( newHelloMessage(), nullResponseHandler() );
         return machine;
     }

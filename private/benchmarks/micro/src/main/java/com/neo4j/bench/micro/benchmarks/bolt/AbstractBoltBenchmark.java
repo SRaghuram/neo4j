@@ -50,6 +50,8 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.database.TestDefaultDatabaseResolver;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
@@ -556,4 +558,6 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
     };
 
     static final BoltChannel BOLT_CHANNEL = new BoltChannel( "bolt-1", "default", CHANNEL, NULL );
+
+    static final MemoryTracker MEMORY_TRACKER = EmptyMemoryTracker.INSTANCE;
 }

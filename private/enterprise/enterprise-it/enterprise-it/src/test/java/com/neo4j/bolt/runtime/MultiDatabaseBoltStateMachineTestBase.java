@@ -21,6 +21,8 @@ import org.neo4j.bolt.v3.messaging.request.HelloMessage;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
@@ -37,6 +39,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     protected static final MapValue EMPTY_PARAMS = VirtualValues.EMPTY_MAP;
     protected static final String USER_AGENT = "BoltConnectionIT/0.0";
     protected static final BoltChannel BOLT_CHANNEL = BoltTestUtil.newTestBoltChannel( "conn-v0-test-boltchannel-id" );
+    protected static final MemoryTracker MEMORY_TRACKER = EmptyMemoryTracker.INSTANCE;
 
     @RegisterExtension
     static final SessionExtension env = new SessionExtension( TestEnterpriseDatabaseManagementServiceBuilder::new );

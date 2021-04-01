@@ -67,7 +67,7 @@ class AuthTokenTest
                 .addMocks( databaseManagementService, commercialAuthManager )
                 .build();
 
-        when( databaseManagementService.database( any() ) ).thenReturn( boltDatabaseService );
+        when( databaseManagementService.database( any(), any() ) ).thenReturn( boltDatabaseService );
     }
 
     @AfterEach
