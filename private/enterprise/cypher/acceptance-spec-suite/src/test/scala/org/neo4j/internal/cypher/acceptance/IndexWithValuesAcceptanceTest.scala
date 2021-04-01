@@ -92,7 +92,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         _ should includeSomewhere.aPlan("Projection")
             .containingArgumentForProjection("`n.prop1`" -> "cache[n.prop1]", "`n.prop2`" -> "n.prop2")
           // just for n.prop2, not for n.prop1
-          .withDBHitsBetween(2, 4)
+          .withDBHitsBetween(2, 6)
           .onTopOf(aPlan("NodeIndexSeek")
             .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
       )
@@ -161,7 +161,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         _ should (includeSomewhere.aPlan("Projection")
           .containingArgumentForProjection("`n.prop2`" -> "n.prop2")
           // just for n.prop2, not for n.prop1
-          .withDBHitsBetween(6, 12)
+          .withDBHitsBetween(6, 18)
           .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n"))
           and not(includeSomewhere.aPlan("Sort")))
       )
@@ -219,7 +219,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should includeSomewhere.aPlan("EagerAggregation")
           // just for n.prop2, not for n.prop1
-          .withDBHitsBetween(6, 12)
+          .withDBHitsBetween(6, 18)
           .onTopOf(aPlan("NodeIndexSeekByRange")
             .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
       )
@@ -233,7 +233,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN sum(n.prop2), n.prop1 AS nums", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("OrderedAggregation")
         // just for n.prop2, not for n.prop1
-        .withDBHitsBetween(6, 12)
+        .withDBHitsBetween(6, 18)
         .onTopOf(aPlan("NodeIndexSeekByRange")
           .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
       )
