@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.read_replica;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.causalclustering.readreplica.ReadReplicaIdentityModule;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
@@ -181,6 +182,12 @@ public class ReadReplica implements ClusterMember
     public boolean isShutdown()
     {
         return readReplicaGraphDatabase == null;
+    }
+
+    public boolean isConnectedToAtLeastOnePrimary()
+    {
+        var topologyService = systemDatabase.getDependencyResolver().resolveDependency( TopologyService.class );
+        return topologyService.allCoreServers().size() > 0;
     }
 
     @Override

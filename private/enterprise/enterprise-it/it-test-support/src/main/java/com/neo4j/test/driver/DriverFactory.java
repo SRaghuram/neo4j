@@ -29,12 +29,14 @@ import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.util.VisibleForTesting;
 
 public class DriverFactory extends CloseableFactory
 {
-    static final InstanceConfig defaultConfig = new InstanceConfig( AuthTokens.none(), Level.DEBUG, null, false, null );
+    private static final InstanceConfig defaultConfig = new InstanceConfig( AuthTokens.none(), Level.DEBUG, null, false, null );
 
     private static final URI BOOTSTRAP_URI = URI.create( "neo4j://ignore.com" );
+    @VisibleForTesting
     static final String LOGS_DIR = "driver-logs";
 
     private final AtomicLong driverCounter = new AtomicLong();
@@ -125,8 +127,13 @@ public class DriverFactory extends CloseableFactory
 
     public Driver graphDatabaseDriver( ServerAddressResolver resolver, InstanceConfig config ) throws IOException
     {
+        return graphDatabaseDriver( BOOTSTRAP_URI, resolver, config );
+    }
+
+    public Driver graphDatabaseDriver( URI bootstrapUri, ServerAddressResolver resolver, InstanceConfig config ) throws IOException
+    {
         config = config.withResolver( resolver );
-        return getDriver( BOOTSTRAP_URI, config );
+        return getDriver( bootstrapUri, config );
     }
 
     private Driver getDriver( URI uri, InstanceConfig instanceConfig ) throws IOException

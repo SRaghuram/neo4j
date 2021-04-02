@@ -284,7 +284,6 @@ class GetRoutingTableProcedureForSingleDCTest
         builder.readAddress( readReplicaBoltAddress );
         builder.routeAddress( coreBoltAddress0 );
         builder.routeAddress( coreBoltAddress1 );
-        System.out.println( clusterView );
 
         assertEquals( builder.build(), clusterView );
     }

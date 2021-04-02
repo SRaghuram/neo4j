@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
@@ -20,6 +21,8 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DriverExtension
@@ -50,14 +53,17 @@ class DriverFactoryExtensionTest
                     .getDependencyResolver()
                     .resolveDependency( ConnectorPortRegister.class )
                     .getLocalAddress( "bolt" );
+            Path driverLog;
             try ( var driver = driverFactory.graphDatabaseDriver( URI.create( "bolt://" + bolt ) ) )
             {
                 driver.session().run( "RETURN 1" ).consume();
+                driverLog = driverFactory.getLogFile( driver );
             }
 
             var driverLogsDir = testDirectory.homePath().resolve( DriverFactory.LOGS_DIR );
             assertTrue( fsa.isDirectory( driverLogsDir ) );
             assertTrue( fsa.fileExists( driverLogsDir.resolve( "driver-1.log" ) ) );
+            assertThat( driverLog ).isEqualTo( driverLogsDir.resolve( "driver-1.log" ) );
         }
         finally
         {
