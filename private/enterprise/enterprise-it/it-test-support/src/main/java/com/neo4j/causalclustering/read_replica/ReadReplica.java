@@ -36,7 +36,9 @@ import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Level;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.common.Cluster.TOPOLOGY_REFRESH_INTERVAL;
@@ -59,6 +61,7 @@ public class ReadReplica implements ClusterMember
     private final Neo4jLayout neo4jLayout;
     private final DatabaseLayout defaultDatabaseLayout;
     private final int index;
+    private final LogProvider logProvider;
     private final String boltSocketAddress;
     private final String intraClusterBoltSocketAddress;
     private final Path loopbackUnixDomainBoltSocketFile;
@@ -71,12 +74,13 @@ public class ReadReplica implements ClusterMember
     private GraphDatabaseFacade systemDatabase;
 
     public ReadReplica( Path parentDir, int index, int boltPort, int intraClusterBoltPort, Path loopbackUnixDomainSocketFile, int httpPort,
-            int txPort, int backupPort, int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
-            List<SocketAddress> coreMemberDiscoveryAddresses, Map<String,String> extraParams,
-            Map<String,IntFunction<String>> instanceExtraParams, String recordFormat, Monitors monitors,
-            String advertisedHost, String listenHost, ReadReplicaGraphDatabaseFactory dbFactory )
+                        int txPort, int backupPort, int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
+                        List<SocketAddress> coreMemberDiscoveryAddresses, Map<String,String> extraParams,
+                        Map<String,IntFunction<String>> instanceExtraParams, String recordFormat, Monitors monitors,
+                        String advertisedHost, String listenHost,  LogProvider logProvider, ReadReplicaGraphDatabaseFactory dbFactory )
     {
         this.index = index;
+        this.logProvider = logProvider;
 
         boltSocketAddress = format( advertisedHost, boltPort );
         intraClusterBoltSocketAddress = format( advertisedHost, intraClusterBoltPort);
@@ -87,6 +91,7 @@ public class ReadReplica implements ClusterMember
         config.set( CausalClusteringSettings.initial_discovery_members, coreMemberDiscoveryAddresses );
         config.set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( listenHost, discoveryPort ) );
         config.set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( advertisedHost, discoveryPort ) );
+        config.set( CausalClusteringSettings.middleware_logging_level, Level.DEBUG );
         config.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
         config.set( GraphDatabaseSettings.record_format, recordFormat );
         config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
@@ -147,6 +152,19 @@ public class ReadReplica implements ClusterMember
     }
 
     @Override
+    public AssertableLogProvider getAssertableLogProvider()
+    {
+        if ( logProvider instanceof AssertableLogProvider )
+        {
+            return (AssertableLogProvider) logProvider;
+        }
+        else
+        {
+            throw new IllegalStateException( String.format( "Cannot get %s as AssertableLogProvider", logProvider.getClass() ) );
+        }
+    }
+
+    @Override
     public ServerId serverId()
     {
         return systemDatabase.getDependencyResolver().resolveDependency( ReadReplicaIdentityModule.class ).serverId();
@@ -155,7 +173,13 @@ public class ReadReplica implements ClusterMember
     @Override
     public void start()
     {
-        readReplicaGraphDatabase = dbFactory.create( memberConfig, newDependencies().monitors( monitors ), discoveryServiceFactory );
+        GraphDatabaseDependencies dependencies = newDependencies().monitors( this.monitors );
+        if ( logProvider != null )
+        {
+            dependencies.userLogProvider( logProvider );
+        }
+
+        readReplicaGraphDatabase = dbFactory.create( memberConfig, dependencies, discoveryServiceFactory );
         systemDatabase = (GraphDatabaseFacade) readReplicaGraphDatabase.getManagementService().database( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
     }
 

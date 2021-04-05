@@ -41,7 +41,6 @@ class BootstrapConfigurationTest
     }
 
     @Test
-    @org.junit.jupiter.api.Disabled( "causing issues in tests" )
     void shouldChooseKqueueIfAvailable()
     {
         assumeTrue( KQueue.isAvailable() );

@@ -77,6 +77,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>log-test-utils</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-causal-clustering</artifactId>
             <version>${project.version}</version>

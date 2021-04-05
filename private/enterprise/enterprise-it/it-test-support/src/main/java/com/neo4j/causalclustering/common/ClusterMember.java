@@ -20,6 +20,7 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.monitoring.Monitors;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -85,6 +86,8 @@ public interface ClusterMember
     String intraClusterBoltAdvertisedAddress();
 
     String loopbackUnixDomainSocketFile();
+
+    AssertableLogProvider getAssertableLogProvider();
 
     default <T> void updateConfig( Setting<T> setting, T value )
     {

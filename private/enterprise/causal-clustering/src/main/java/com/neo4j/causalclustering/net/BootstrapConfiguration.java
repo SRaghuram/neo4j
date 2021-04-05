@@ -9,6 +9,7 @@ import com.neo4j.configuration.CausalClusteringInternalSettings;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
+import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 
@@ -26,11 +27,10 @@ public interface BootstrapConfiguration<TYPE extends Channel>
             {
                 return EpollBootstrapConfig.epollServerConfig();
             }
-            // TODO: kqueue is causing issues, disabling temporarily
-//            else if ( KQueue.isAvailable() )
-//            {
-//                return KQueueBootstrapConfig.kQueueServerConfig();
-//            }
+            else if ( KQueue.isAvailable() )
+            {
+                return KQueueBootstrapConfig.kQueueServerConfig();
+            }
         }
         return NioBootstrapConfig.nioServerConfig();
     }
@@ -48,11 +48,10 @@ public interface BootstrapConfiguration<TYPE extends Channel>
             {
                 return EpollBootstrapConfig.epollClientConfig();
             }
-            // TODO: kqueue is causing issues, disabling temporarily
-//            else if ( KQueue.isAvailable() )
-//            {
-//                return KQueueBootstrapConfig.kQueueClientConfig();
-//            }
+            else if ( KQueue.isAvailable() )
+            {
+                return KQueueBootstrapConfig.kQueueClientConfig();
+            }
         }
         return NioBootstrapConfig.nioClientConfig();
     }

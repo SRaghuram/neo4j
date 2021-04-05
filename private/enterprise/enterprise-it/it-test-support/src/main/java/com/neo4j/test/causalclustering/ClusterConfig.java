@@ -13,9 +13,11 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.IntFunction;
+import java.util.function.Supplier;
 
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
+import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.discovery.IpFamily.IPV4;
 
@@ -37,6 +39,7 @@ public class ClusterConfig
     private final Map<String,IntFunction<String>> instanceReadReplicaParams = new HashMap<>();
     private String recordFormat = Standard.LATEST_NAME;
     private IpFamily ipFamily = IPV4;
+    private Supplier<LogProvider> logProviderSupplier;
     private boolean useWildcard;
     private ClusterType type = ClusterType.CORES;
 
@@ -132,6 +135,12 @@ public class ClusterConfig
         return this;
     }
 
+    public ClusterConfig withLogProvider( Supplier<LogProvider> logProviderSupplier )
+    {
+        this.logProviderSupplier = logProviderSupplier;
+        return this;
+    }
+
     public ClusterConfig useWildcard( boolean useWildcard )
     {
         this.useWildcard = useWildcard;
@@ -151,11 +160,11 @@ public class ClusterConfig
         case CORES:
             return Cluster.createWithCores( parentDir, noCoreMembers, noReadReplicas, discoveryServiceType.factory(),
                                             primaryParams, instancePrimaryParams, readReplicaParams, instanceReadReplicaParams,
-                                            recordFormat, ipFamily, useWildcard );
+                                            recordFormat, ipFamily, logProviderSupplier, useWildcard );
         case STANDALONE:
             return Cluster.createWithStandalone( parentDir, noReadReplicas, discoveryServiceType.factory(),
                                                  primaryParams, readReplicaParams, instanceReadReplicaParams,
-                                                 recordFormat, ipFamily, useWildcard );
+                                                 recordFormat, ipFamily, logProviderSupplier, useWildcard );
         default:
             throw new IllegalStateException( "Type " + type + " not supported" );
         }

@@ -24,7 +24,10 @@ public class ServerNameService extends AbstractLogService
 
     public ServerNameService( LogProvider debugLogProvider, LogProvider userLogProvider, String serverName )
     {
-        this( new SimpleLogService( userLogProvider, debugLogProvider ), serverName );
+        // if LogServices are actually the same (reference equality) use single arg constructor
+        this( debugLogProvider == userLogProvider ? new SimpleLogService( debugLogProvider )
+                                                  : new SimpleLogService( userLogProvider, debugLogProvider ),
+              serverName );
     }
 
     public String getServerName()

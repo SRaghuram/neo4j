@@ -46,6 +46,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.IntFunction;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -68,6 +69,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.ports.PortAuthority;
@@ -97,7 +99,9 @@ public class Cluster implements ServerAddressResolver
             Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,String> readReplicaParams,
             Map<String,IntFunction<String>> instanceReadReplicaParams,
-            String recordFormat, IpFamily ipFamily, boolean useWildcard )
+            String recordFormat, IpFamily ipFamily,
+            Supplier<LogProvider> logProviderSupplier,
+            boolean useWildcard )
     {
         return new Cluster( parentDir, noOfCoreMembers, noOfReadReplicas,
                 discoveryServiceFactory,
@@ -107,6 +111,7 @@ public class Cluster implements ServerAddressResolver
                 instanceReadReplicaParams,
                 recordFormat,
                 ipFamily,
+                logProviderSupplier,
                 useWildcard );
     }
 
@@ -115,14 +120,18 @@ public class Cluster implements ServerAddressResolver
             Map<String,String> standaloneParams,
             Map<String,String> readReplicaParams,
             Map<String,IntFunction<String>> instanceReadReplicaParams,
-            String recordFormat, IpFamily ipFamily, boolean useWildcard )
+            String recordFormat, IpFamily ipFamily,
+            Supplier<LogProvider> logProviderSupplier,
+            boolean useWildcard )
     {
         return new Cluster( parentDir, noOfReadReplicas,
                 discoveryServiceFactory,
                 standaloneParams,
                 readReplicaParams,
                 instanceReadReplicaParams,
-                recordFormat, ipFamily, useWildcard );
+                recordFormat, ipFamily,
+                logProviderSupplier,
+                useWildcard );
     }
 
     private static final int DEFAULT_TIMEOUT_MS = (int) MINUTES.toMillis( 3 );
@@ -136,6 +145,7 @@ public class Cluster implements ServerAddressResolver
     private final Map<String,String> readReplicaParams;
     private final Map<String,IntFunction<String>> instanceReadReplicaParams;
     private final String recordFormat;
+    private final Supplier<LogProvider> logProviderSupplier;
     private final DiscoveryServiceFactory discoveryServiceFactory;
     private final String defaultListenHost;
     private final String defaultAdvertisedHost;
@@ -153,7 +163,9 @@ public class Cluster implements ServerAddressResolver
             Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,String> readReplicaParams,
             Map<String,IntFunction<String>> instanceReadReplicaParams,
-            String recordFormat, IpFamily ipFamily, boolean useWildcard )
+            String recordFormat, IpFamily ipFamily,
+            Supplier<LogProvider> logProviderSupplier,
+            boolean useWildcard )
     {
         this.discoveryServiceFactory = discoveryServiceFactory;
         this.parentDir = parentDir;
@@ -162,6 +174,7 @@ public class Cluster implements ServerAddressResolver
         this.readReplicaParams = readReplicaParams;
         this.instanceReadReplicaParams = instanceReadReplicaParams;
         this.recordFormat = recordFormat;
+        this.logProviderSupplier = logProviderSupplier;
         defaultListenHost = useWildcard ? ipFamily.wildcardAddress() : ipFamily.localhostAddress();
         defaultAdvertisedHost = ipFamily.localhostName();
         List<SocketAddress> initialHosts = initialHosts( noOfCoreMembers, coreParams, instanceCoreParams );
@@ -178,7 +191,9 @@ public class Cluster implements ServerAddressResolver
             Map<String,String> standaloneParams,
             Map<String,String> readReplicaParams,
             Map<String,IntFunction<String>> instanceReadReplicaParams,
-            String recordFormat, IpFamily ipFamily, boolean useWildcard )
+            String recordFormat, IpFamily ipFamily,
+            Supplier<LogProvider> logProviderSupplier,
+            boolean useWildcard )
     {
         this.discoveryServiceFactory = discoveryServiceFactory;
         this.parentDir = parentDir;
@@ -187,6 +202,7 @@ public class Cluster implements ServerAddressResolver
         this.readReplicaParams = readReplicaParams;
         this.instanceReadReplicaParams = instanceReadReplicaParams;
         this.recordFormat = recordFormat;
+        this.logProviderSupplier = logProviderSupplier;
         defaultListenHost = useWildcard ? ipFamily.wildcardAddress() : ipFamily.localhostAddress();
         defaultAdvertisedHost = ipFamily.localhostName();
         List<SocketAddress> initialHosts = initialHosts( 1, standaloneParams, emptyMap() );
@@ -794,9 +810,11 @@ public class Cluster implements ServerAddressResolver
         var backupPort = PortAuthority.allocatePort();
         var listenHost = getListenHost( 0, standaloneParams, emptyMap() );
         var advertisedHost = getAdvertisedHost( 0, standaloneParams, emptyMap() );
+        var logProvider = getLogProvider();
 
         return new StandaloneMember( initialHosts.get( 0 ).getPort(), txPort, boltPort, intraClusterBoltPort, loopbackBoltFile, httpPort, backupPort,
-                initialHosts, discoveryServiceFactory, recordFormat, parentDir, standaloneParams, listenHost, advertisedHost );
+                                     initialHosts, discoveryServiceFactory, recordFormat, parentDir, standaloneParams, listenHost, advertisedHost,
+                                     logProvider );
     }
 
     private void createCoreMembers( final int noOfCoreMembers,
@@ -837,6 +855,7 @@ public class Cluster implements ServerAddressResolver
         var backupPort = PortAuthority.allocatePort();
         var listenHost = getListenHost( index, extraParams, instanceExtraParams );
         var advertisedHost = getAdvertisedHost( index, extraParams, instanceExtraParams );
+        var logProvider = getLogProvider();
 
         return new CoreClusterMember(
                 index,
@@ -856,8 +875,13 @@ public class Cluster implements ServerAddressResolver
                 extraParams,
                 instanceExtraParams,
                 listenHost,
-                advertisedHost
-        );
+                advertisedHost,
+                logProvider );
+    }
+
+    private LogProvider getLogProvider()
+    {
+        return this.logProviderSupplier == null ? null : this.logProviderSupplier.get();
     }
 
     private ReadReplica createReadReplica( int index,
@@ -875,6 +899,7 @@ public class Cluster implements ServerAddressResolver
         var txPort = PortAuthority.allocatePort();
         var backupPort = PortAuthority.allocatePort();
         var listenHost = getListenHost( index, extraParams, instanceExtraParams );
+        var logProvider = getLogProvider();
         var advertisedHost = getAdvertisedHost( index, extraParams, instanceExtraParams );
 
         return new ReadReplica(
@@ -895,6 +920,7 @@ public class Cluster implements ServerAddressResolver
                 monitors,
                 advertisedHost,
                 listenHost,
+                logProvider,
                 ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory ) ->
                         new TestReadReplicaGraphDatabase( config, dependencies, discoveryServiceFactory, ReadReplicaEditionModule::new )
         );

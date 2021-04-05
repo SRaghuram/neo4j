@@ -26,28 +26,30 @@ import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
+import org.neo4j.logging.LogProvider;
 
 import static java.util.Collections.emptyMap;
 
 public class StandaloneMember extends CoreClusterMember
 {
-    public StandaloneMember(  int discoveryPort,
-                              int txPort,
-                              int boltPort,
-                              int intraClusterBoltPort,
-                              Path loopbackBoltFile,
-                              int httpPort,
-                              int backupPort,
-                              List<SocketAddress> discoveryAddresses,
-                              DiscoveryServiceFactory discoveryServiceFactory,
-                              String recordFormat,
-                              Path parentDir,
-                              Map<String, String> extraParams,
-                              String listenHost,
-                              String advertisedHost )
+    public StandaloneMember( int discoveryPort,
+                             int txPort,
+                             int boltPort,
+                             int intraClusterBoltPort,
+                             Path loopbackBoltFile,
+                             int httpPort,
+                             int backupPort,
+                             List<SocketAddress> discoveryAddresses,
+                             DiscoveryServiceFactory discoveryServiceFactory,
+                             String recordFormat,
+                             Path parentDir,
+                             Map<String, String> extraParams,
+                             String listenHost,
+                             String advertisedHost,
+                             LogProvider logProvider )
     {
         super( discoveryPort, discoveryPort, txPort, 0, boltPort, intraClusterBoltPort, loopbackBoltFile, httpPort, backupPort, 2, discoveryAddresses,
-               discoveryServiceFactory, recordFormat, parentDir, extraParams, emptyMap(), listenHost, advertisedHost );
+               discoveryServiceFactory, recordFormat, parentDir, extraParams, emptyMap(), listenHost, advertisedHost, logProvider );
 
         config.set( EnterpriseEditionSettings.enable_clustering_in_standalone, true );
         config.set( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.SINGLE );

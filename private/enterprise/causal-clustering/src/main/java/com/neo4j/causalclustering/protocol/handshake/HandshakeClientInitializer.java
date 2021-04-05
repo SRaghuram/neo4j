@@ -110,7 +110,7 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
 
     private void initiateHandshake( Channel channel, HandshakeClient handshakeClient )
     {
-        debugLog.info( "Initiating handshake on channel %s", channel );
+        debugLog.info( "Initiating handshake on channel %s [%s]", channel, channel.getClass() );
 
         SimpleNettyChannel channelWrapper = new SimpleNettyChannel( channel, debugLog );
         handshakeClient.initiate( channelWrapper, applicationProtocolRepository, modifierProtocolRepository );

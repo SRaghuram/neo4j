@@ -53,7 +53,9 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Level;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.common.Cluster.TOPOLOGY_REFRESH_INTERVAL;
@@ -85,6 +87,7 @@ public class CoreClusterMember implements ClusterMember
     private final Path loopbackBoltServerUnixDomainSocketFile;
     private final SocketAddress discoveryAddress;
     private final String raftListenAddress;
+    private final LogProvider logProvider;
     private DatabaseManagementService managementService;
     protected GraphDatabaseFacade defaultDatabase;
     protected GraphDatabaseFacade systemDatabase;
@@ -110,12 +113,14 @@ public class CoreClusterMember implements ClusterMember
                               DiscoveryServiceFactory discoveryServiceFactory,
                               String recordFormat,
                               Path parentDir,
-                              Map<String, String> extraParams,
-                              Map<String, IntFunction<String>> instanceExtraParams,
+                              Map<String,String> extraParams,
+                              Map<String,IntFunction<String>> instanceExtraParams,
                               String listenHost,
-                              String advertisedHost )
+                              String advertisedHost,
+                              LogProvider logProvider )
     {
         this.index = index;
+        this.logProvider = logProvider;
         this.discoveryAddress = new SocketAddress( advertisedHost, discoveryPort );
 
         boltSocketAddress = format( advertisedHost, boltPort );
@@ -231,6 +236,11 @@ public class CoreClusterMember implements ClusterMember
     public void start()
     {
         var dependencies = GraphDatabaseDependencies.newDependencies().monitors( this.monitors );
+        if ( logProvider != null )
+        {
+            dependencies.userLogProvider( logProvider );
+        }
+
         managementService = createManagementService( dependencies );
         defaultDatabase = (GraphDatabaseFacade) managementService.database( config().get( default_database ) );
         systemDatabase = (GraphDatabaseFacade) managementService.database( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
@@ -401,6 +411,19 @@ public class CoreClusterMember implements ClusterMember
         catch ( UnsatisfiedDependencyException | NullPointerException ignored )
         {
             return Optional.empty();
+        }
+    }
+
+    @Override
+    public AssertableLogProvider getAssertableLogProvider()
+    {
+        if ( logProvider instanceof AssertableLogProvider )
+        {
+            return (AssertableLogProvider) logProvider;
+        }
+        else
+        {
+            throw new IllegalStateException( String.format( "Cannot get %s as AssertableLogProvider", logProvider.getClass() ) );
         }
     }
 }

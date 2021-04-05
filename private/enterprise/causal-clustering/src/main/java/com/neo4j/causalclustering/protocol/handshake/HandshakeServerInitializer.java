@@ -49,7 +49,7 @@ public class HandshakeServerInitializer extends ChannelInitializer<SocketChannel
     {
         if ( config.get( inbound_connection_initialization_logging_enabled ) )
         {
-            log.info( "Installing handshake server on channel %s", ch );
+            log.info( "Installing handshake server on channel %s [%s]", ch,  ch.getClass() );
         }
 
         pipelineBuilderFactory.server( ch, log )
