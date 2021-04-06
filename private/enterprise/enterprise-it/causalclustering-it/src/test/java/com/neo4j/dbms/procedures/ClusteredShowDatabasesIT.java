@@ -450,10 +450,7 @@ class ClusteredShowDatabasesIT
                     .map( ClusterMember::boltAdvertisedAddress )
                     .collect( Collectors.toSet() );
 
-            // follower which is configured as dbms.read_only and will be unable to bootstrap a database.
             var misConfiguredCore = cluster.addCoreMemberWithIndex( additionalCoreIndex );
-            misConfiguredCore.updateConfig( GraphDatabaseSettings.read_only_database_default, true );
-
             misConfiguredCore.start();
 
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
@@ -466,6 +463,7 @@ class ClusteredShowDatabasesIT
                               containsRole( "read_replica", defaultDatabases, 2 ), timeoutSeconds, SECONDS );
 
             // when
+            misConfiguredCore.updateConfig( GraphDatabaseSettings.record_format, "f00" );
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
             waitForClusterToReachLocalState( initialMembers, getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME ), STARTED );
 
