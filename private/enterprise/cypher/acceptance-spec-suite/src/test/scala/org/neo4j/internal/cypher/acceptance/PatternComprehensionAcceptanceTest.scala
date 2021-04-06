@@ -691,7 +691,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
         |RETURN x""".stripMargin
 
     val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, q,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("GetDegree.*".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgument("size((n)-[:REL]->()) AS x")))
 
     res.toSet shouldBe Set(
       Map("x" -> 0),
