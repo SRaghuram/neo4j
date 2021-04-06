@@ -19,6 +19,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.WriteOperationsNotAllowedException;
+import org.neo4j.graphdb.schema.IndexType;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -28,12 +29,14 @@ import org.neo4j.test.extension.Inject;
 
 import static java.lang.String.join;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.read_only_databases;
 import static org.neo4j.configuration.GraphDatabaseSettings.writable_databases;
 import static org.neo4j.internal.helpers.collection.Iterators.count;
+import static org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store;
 import static org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStoreSettings.enable_scan_stores_as_token_indexes;
 
 @EnterpriseDbmsExtension( configurationCallback = "configure" )
@@ -47,7 +50,7 @@ class DynamicReadOnlyDatabaseIT
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        builder.setConfig( enable_scan_stores_as_token_indexes, true );
+        builder.setConfig( enable_relationship_type_scan_store, true );
     }
 
     @Test
@@ -163,7 +166,7 @@ class DynamicReadOnlyDatabaseIT
         try ( var transaction = database.beginTx() )
         {
             transaction.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
-            assertEquals( 3, Iterables.count( transaction.schema().getIndexes() ) );
+            assertEquals( 1, Iterables.count( transaction.schema().getIndexes() ) );
         }
         try ( var transaction = database.beginTx() )
         {
@@ -186,13 +189,73 @@ class DynamicReadOnlyDatabaseIT
         try ( var transaction = database.beginTx() )
         {
             transaction.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
-            assertEquals( 3, Iterables.count( transaction.schema().getIndexes() ) );
+            assertEquals( 1, Iterables.count( transaction.schema().getIndexes() ) );
         }
         try ( var transaction = database.beginTx() )
         {
             Node node = transaction.createNode( indexedLabel );
             node.setProperty( propertyName, propertyName );
             transaction.commit();
+        }
+    }
+
+    @Test
+    void failToDropFulltextIndexAfterReadOnlyDbSwitch()
+    {
+        makeDbReadOnly();
+        String propertyName = "indexedProperty";
+        Label indexedLabel = Label.label( "indexedLabel" );
+
+        makeDbWritable();
+
+        createFulltextNodeIndex( database, indexedLabel, propertyName );
+        try ( var transaction = database.beginTx() )
+        {
+            transaction.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
+            assertEquals( 1, Iterables.count( transaction.schema().getIndexes() ) );
+        }
+        try ( var transaction = database.beginTx() )
+        {
+            Node node = transaction.createNode( indexedLabel );
+            node.setProperty( propertyName, propertyName );
+            transaction.commit();
+        }
+
+        makeDbReadOnly();
+
+        var e = assertThrows( Throwable.class, () -> database.executeTransactionally( "CALL db.index.fulltext.drop('ftsNodes')" ) );
+        assertThat( e ).hasRootCauseInstanceOf( WriteOperationsNotAllowedException.class );
+    }
+
+    @Test
+    void failToDropLuceneIndexAfterReadOnlyDbSwitch()
+    {
+        String propertyName = "indexedProperty";
+        Label indexedLabel = Label.label( "Label" );
+        makeDbWritable();
+
+        database.executeTransactionally( "CREATE INDEX testIndex FOR (n:Label) ON (n.indexedProperty) OPTIONS { indexProvider: 'lucene+native-3.0'}" );
+        try ( var transaction = database.beginTx() )
+        {
+            transaction.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
+            assertEquals( 1, Iterables.count( transaction.schema().getIndexes() ) );
+        }
+
+        assertDoesNotThrow( () ->
+        {
+            try ( var transaction = database.beginTx() )
+            {
+                Node node = transaction.createNode( indexedLabel );
+                node.setProperty( propertyName, propertyName );
+                transaction.commit();
+            }
+        } );
+
+        makeDbReadOnly();
+
+        try ( Transaction transaction = database.beginTx() )
+        {
+            assertThrows( WriteOperationsNotAllowedException.class, () -> transaction.schema().getIndexByName( "testIndex" ).drop() );
         }
     }
 
@@ -215,11 +278,6 @@ class DynamicReadOnlyDatabaseIT
         {
             tx.createNode();
             tx.commit();
-        }
-        try ( var transaction = database.beginTx() )
-        {
-            transaction.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
-            assertEquals( 2, Iterables.count( transaction.schema().getIndexes() ) );
         }
         makeDbReadOnly();
 
@@ -295,7 +353,7 @@ class DynamicReadOnlyDatabaseIT
         try ( var transaction = database.beginTx() )
         {
             transaction.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
-            assertEquals( 3, Iterables.count( transaction.schema().getIndexes() ) );
+            assertEquals( 1, Iterables.count( transaction.schema().getIndexes() ) );
         }
 
         try ( var transaction = database.beginTx() )
