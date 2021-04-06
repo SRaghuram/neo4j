@@ -21,6 +21,7 @@ import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.internal.recordstorage.RecordStorageEngineFactory;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -37,11 +38,13 @@ import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_3;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.EphemeralNeo4jLayoutExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.EphemeralPageCacheExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -367,6 +370,19 @@ class RecordFormatSelectorTest
         assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV4_3.RECORD_FORMATS, StandardV4_0.RECORD_FORMATS ) ).isFalse();
         assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV3_4.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isFalse();
         assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( PageAlignedV4_1.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isFalse();
+    }
+
+    @Test
+    void shouldNotThrowOnUnknownStoreVersion()
+    {
+        StoreId store = new StoreId( 0,0, MetaDataStore.versionStringToLong( StandardV4_0.RECORD_FORMATS.storeVersion() ) );
+        StoreId sameStoreUnknownVersion = new StoreId( 0,0, MetaDataStore.versionStringToLong( "foo" ) );
+
+        RecordStorageEngineFactory sef = new RecordStorageEngineFactory();
+        assertThatThrownBy( () -> sef.versionInformation( sameStoreUnknownVersion.getStoreVersion() ) ).isInstanceOf( IllegalArgumentException.class );
+
+        assertThat( store.compatibleIncludingMinorUpgrade( sef, sameStoreUnknownVersion ) ).isFalse();
+        assertThat( sameStoreUnknownVersion.compatibleIncludingMinorUpgrade( sef, store ) ).isFalse();
     }
 
     private void verifySelectForStore( PageCache pageCache, RecordFormats format ) throws IOException
