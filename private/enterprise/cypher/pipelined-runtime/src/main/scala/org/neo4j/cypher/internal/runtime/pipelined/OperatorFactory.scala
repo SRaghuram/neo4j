@@ -416,6 +416,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           physicalPlan.argumentSizes(id))
 
       case plans.DirectedRelationshipTypeScan(column, startNode, relType, endNode, _) =>
+        indexRegistrator.registerTypeScan()
         new DirectedRelationshipTypeScanOperator(WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           slots.getLongOffsetFor(startNode),
@@ -424,6 +425,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           physicalPlan.argumentSizes(id))
 
       case plans.UndirectedRelationshipTypeScan(column, startNode, relType, endNode, _) =>
+        indexRegistrator.registerTypeScan()
         new UndirectedRelationshipTypeScanOperator(WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           slots.getLongOffsetFor(startNode),

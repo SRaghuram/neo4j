@@ -181,7 +181,7 @@ class EagerizationAcceptanceTest
   }
 
   test("should introduce eagerness between MATCH with undirected rel type scan and DELETE relationships") {
-    restartWithConfig(databaseConfig() ++ Map(RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store -> java.lang.Boolean.TRUE))
+    restartWithConfig(databaseConfig() ++ Map(RelationshipTypeScanStoreSettings.enable_scan_stores_as_token_indexes -> java.lang.Boolean.TRUE))
     val a = createNode()
     val b = createNode()
     relate(a, b, "T")
@@ -194,7 +194,7 @@ class EagerizationAcceptanceTest
   }
 
   test("should introduce eagerness between MATCH with directed rel type scan and DELETE relationships") {
-    restartWithConfig(databaseConfig() ++ Map(RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store -> java.lang.Boolean.TRUE))
+    restartWithConfig(databaseConfig() ++ Map(RelationshipTypeScanStoreSettings.enable_scan_stores_as_token_indexes -> java.lang.Boolean.TRUE))
     val a = createNode()
     val b = createNode()
     relate(a, b, "T")
@@ -2688,7 +2688,7 @@ class EagerizationAcceptanceTest
   }
 
   test("should not be eager if creating relationship from left-most relationship (inlined REL-type)") {
-    restartWithConfig(databaseConfig() ++ Map(RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store -> java.lang.Boolean.TRUE))
+    restartWithConfig(databaseConfig() ++ Map(RelationshipTypeScanStoreSettings.enable_scan_stores_as_token_indexes -> java.lang.Boolean.TRUE))
     relate(createNode(), createNode(), "REL")
     relate(createNode(), createNode(), "REL")
 

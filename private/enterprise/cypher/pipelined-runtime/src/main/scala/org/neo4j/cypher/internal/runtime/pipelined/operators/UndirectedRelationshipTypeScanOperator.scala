@@ -18,9 +18,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.internal.kernel.api.IndexQueryConstraints.unconstrained
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor
-import org.neo4j.internal.schema.IndexOrder
+import org.neo4j.internal.kernel.api.TokenPredicate
 
 class UndirectedRelationshipTypeScanOperator(val workIdentity: WorkIdentity,
                                              relOffset: Int,
@@ -55,7 +56,7 @@ class UndirectedRelationshipTypeScanOperator(val workIdentity: WorkIdentity,
         typeIndexCursor = resources.cursorPools.relationshipTypeIndexCursorPool.allocateAndTrace()
         relationshipCursor = resources.cursorPools.relationshipScanCursorPool.allocateAndTrace()
         val read = state.queryContext.transactionalContext.dataRead
-        read.relationshipTypeScan(id, typeIndexCursor, IndexOrder.NONE)
+        read.relationshipTypeScan(state.relTypeTokenReadSession.get, typeIndexCursor, unconstrained(), new TokenPredicate(id))
         true
       }
     }

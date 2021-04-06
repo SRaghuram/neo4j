@@ -38,7 +38,7 @@ private class UndirectedIterator(relOffset: Int,
   private var lastEnd: Long = -1L
 
   private val query = state.query
-  private val relIterator = query.getRelationshipsByType(relToken)
+  private val relIterator = query.getRelationshipsByType(state.relTypeTokenReadSession.get, relToken)
 
   def next(): CypherRow = {
     val context = state.newRowWithArgument(rowFactory)

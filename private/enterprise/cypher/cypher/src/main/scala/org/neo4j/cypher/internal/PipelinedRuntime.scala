@@ -81,6 +81,7 @@ import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.graphdb.QueryStatistics
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.TokenReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.util.VisibleForTesting
 import org.neo4j.values.AnyValue
@@ -350,6 +351,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       new PipelinedRuntimeResult(executablePipelines,
         executionGraphDefinition,
         queryIndexes.initiateLabelAndSchemaIndexes(queryContext),
+        queryIndexes.initiateRelationshipTokenIndex(queryContext),
         nExpressionSlots,
         prePopulateResults,
         inputDataStream,
@@ -427,6 +429,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 class PipelinedRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
                              executionGraphDefinition: ExecutionGraphDefinition,
                              queryIndexes: Array[IndexReadSession],
+                             relTokenIndex: Option[TokenReadSession],
                              nExpressionSlots: Int,
                              prePopulateResults: Boolean,
                              inputDataStream: InputDataStream,
@@ -504,6 +507,7 @@ class PipelinedRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline]
       params,
       schedulerTracer,
       queryIndexes,
+      relTokenIndex,
       nExpressionSlots,
       prePopulateResults,
       subscriber,

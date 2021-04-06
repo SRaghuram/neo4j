@@ -22,7 +22,7 @@ case class DirectedRelationshipTypeScanSlottedPipe(relOffset: Int, fromOffset: I
     val typeId = typ.getId(state.query)
     if (typeId == LazyType.UNKNOWN) ClosingIterator.empty
     else {
-      PrimitiveLongHelper.map(state.query.getRelationshipsByType(typeId), { relId =>
+      PrimitiveLongHelper.map(state.query.getRelationshipsByType(state.relTypeTokenReadSession.get, typeId), { relId =>
         val context = state.newRowWithArgument(rowFactory)
         val relationship = state.query.relationshipById(relId)
         context.setLongAt(relOffset, relId)

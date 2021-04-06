@@ -25,6 +25,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.TokenReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 
@@ -50,6 +51,7 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
                                        params: Array[AnyValue],
                                        schedulerTracer: SchedulerTracer,
                                        queryIndexes: Array[IndexReadSession],
+                                       relTokenIndex: Option[TokenReadSession],
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
                                        subscriber: QuerySubscriber,
@@ -80,6 +82,7 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
                                 tracker,
                                 morselSize,
                                 queryIndexes,
+                                relTokenIndex,
                                 numberOfWorkers = 1,
                                 nExpressionSlots,
                                 prePopulateResults,

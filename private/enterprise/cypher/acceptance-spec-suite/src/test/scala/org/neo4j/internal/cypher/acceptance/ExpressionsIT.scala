@@ -5486,6 +5486,7 @@ class InterpretedExpressionIT extends ExpressionsIT {
       params,
       cursors,
       Array.empty,
+      None,
       expressionVariables,
       DO_NOTHING_SUBSCRIBER,
       NoOpQueryMemoryTracker)

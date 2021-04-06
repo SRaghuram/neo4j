@@ -40,6 +40,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.TokenReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 
@@ -234,6 +235,7 @@ object SlottedPipeOperator {
       morselQueryState.params,
       resources.expressionCursors,
       morselQueryState.queryIndexes,
+      morselQueryState.relTypeTokenReadSession,
       resources.expressionVariables(morselQueryState.nExpressionSlots),
       morselQueryState.subscriber,
       memoryTracker,
@@ -256,6 +258,7 @@ class FeedPipeQueryState(query: QueryContext,
                          params: Array[AnyValue],
                          cursors: ExpressionCursors,
                          queryIndexes: Array[IndexReadSession],
+                         relTypeTokenReadSession: Option[TokenReadSession],
                          expressionVariables: Array[AnyValue],
                          subscriber: QuerySubscriber,
                          memoryTracker: QueryMemoryTracker,
@@ -267,22 +270,22 @@ class FeedPipeQueryState(query: QueryContext,
                          input: InputDataStream = NoInput,
                          val profileInformation: InterpretedProfileInformation = null,
                          var morselCursor: MorselFullCursor = null)
-  extends QueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator, initialContext,
+  extends QueryState(query, resources, params, cursors, queryIndexes, relTypeTokenReadSession, expressionVariables, subscriber, memoryTracker, decorator, initialContext,
     cachedIn, lenientCreateRelationship, prePopulateResults, input) {
 
   override def withDecorator(decorator: PipeDecorator): FeedPipeQueryState = {
-    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator,
+    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, relTypeTokenReadSession, expressionVariables, subscriber, memoryTracker, decorator,
       initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morselCursor)
   }
 
   override def withInitialContext(initialContext: CypherRow): FeedPipeQueryState = {
-    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator, Some(initialContext),
+    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, relTypeTokenReadSession, expressionVariables, subscriber, memoryTracker, decorator, Some(initialContext),
       cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morselCursor)
   }
 
 
   override def withQueryContext(query: QueryContext): FeedPipeQueryState = {
-    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator,
+    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, relTypeTokenReadSession, expressionVariables, subscriber, memoryTracker, decorator,
       initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morselCursor)
   }
 }

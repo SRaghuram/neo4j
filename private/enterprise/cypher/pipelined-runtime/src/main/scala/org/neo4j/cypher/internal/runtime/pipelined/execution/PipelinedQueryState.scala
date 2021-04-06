@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.NullPipeDecorator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.profiler.Profiler
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.TokenReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 
@@ -25,6 +26,7 @@ case class PipelinedQueryState(queryContext: QueryContext,
                                flowControl: FlowControl,
                                morselSize: Int,
                                override val queryIndexes: Array[IndexReadSession],
+                               override val relTypeTokenReadSession: Option[TokenReadSession],
                                numberOfWorkers: Int,
                                nExpressionSlots: Int,
                                override val prePopulateResults: Boolean,
@@ -37,6 +39,7 @@ case class PipelinedQueryState(queryContext: QueryContext,
     params,
     null,
     queryIndexes,
+    relTypeTokenReadSession,
     null,
     subscriber,
     memoryTracker,
@@ -64,6 +67,7 @@ case class PipelinedQueryState(queryContext: QueryContext,
       params,
       resources.expressionCursors,
       queryIndexes,
+      relTypeTokenReadSession,
       resources.expressionVariables(nExpressionSlots),
       subscriber,
       memoryTracker,

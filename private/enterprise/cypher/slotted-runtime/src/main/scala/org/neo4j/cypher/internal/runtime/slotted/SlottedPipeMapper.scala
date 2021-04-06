@@ -275,9 +275,11 @@ class SlottedPipeMapper(fallback: PipeMapper,
           indexRegistrator.registerQueryIndex(typeToken, properties),  indexOrder, slots)(id)
 
       case DirectedRelationshipTypeScan(name, start, typ, end, _) =>
+        indexRegistrator.registerTypeScan()
         DirectedRelationshipTypeScanSlottedPipe(slots.getLongOffsetFor(name), slots.getLongOffsetFor(start), LazyType(typ), slots.getLongOffsetFor(end))(id)
 
       case UndirectedRelationshipTypeScan(name, start, typ, end, _) =>
+        indexRegistrator.registerTypeScan()
         UndirectedRelationshipTypeScanSlottedPipe(slots.getLongOffsetFor(name), slots.getLongOffsetFor(start), LazyType(typ), slots.getLongOffsetFor(end))(id)
 
       case DirectedRelationshipIndexContainsScan(name, startNode, endNode, typeToken, property, valueExpr, _, indexOrder) =>
