@@ -17,7 +17,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
-import org.neo4j.storageengine.api.StoreVersion;
 
 public class StoreCopyProcess
 {
@@ -49,20 +48,10 @@ public class StoreCopyProcess
                 storageEngineFactory ) )
         {
             //Check version compatibility before copy, just in case
-            StoreVersion remoteStoreVersion;
-            try
-            {
-                remoteStoreVersion = storageEngineFactory.versionInformation( expectedStoreId.getStoreVersion() );
-            }
-            catch ( Exception e )
-            {
-                throw new IllegalStateException( "Store copy failed due to unknown store version. " + expectedStoreId.getStoreVersion(), e );
-            }
-
-            if ( !copiedStoreRecovery.canRecoverRemoteStore( config, tempStore.databaseLayout(), remoteStoreVersion ) )
+            if ( !copiedStoreRecovery.canRecoverRemoteStore( config, tempStore.databaseLayout(), expectedStoreId.getStoreVersion() ) )
             {
                 throw new IllegalStateException( "Store copy failed due to store version mismatch. The copied database will not be able to recover." +
-                        " Copied store version " + remoteStoreVersion + " incompatible with current configuration." );
+                        " Copied store version " + expectedStoreId.getStoreVersion() + " incompatible with current configuration." );
             }
             remoteStore.copy( addressProvider, expectedStoreId, tempStore.databaseLayout() );
             try

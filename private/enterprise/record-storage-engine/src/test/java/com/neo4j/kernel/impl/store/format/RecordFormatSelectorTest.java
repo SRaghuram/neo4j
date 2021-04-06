@@ -375,8 +375,8 @@ class RecordFormatSelectorTest
     @Test
     void shouldNotThrowOnUnknownStoreVersion()
     {
-        StoreId store = new StoreId( 0,0, MetaDataStore.versionStringToLong( StandardV4_0.RECORD_FORMATS.storeVersion() ) );
-        StoreId sameStoreUnknownVersion = new StoreId( 0,0, MetaDataStore.versionStringToLong( "foo" ) );
+        StoreId store = new StoreId( 0, 0, MetaDataStore.versionStringToLong( StandardV4_0.RECORD_FORMATS.storeVersion() ) );
+        StoreId sameStoreUnknownVersion = new StoreId( 0, 0, MetaDataStore.versionStringToLong( "foo" ) );
 
         RecordStorageEngineFactory sef = new RecordStorageEngineFactory();
         assertThatThrownBy( () -> sef.versionInformation( sameStoreUnknownVersion.getStoreVersion() ) ).isInstanceOf( IllegalArgumentException.class );

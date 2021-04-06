@@ -20,7 +20,6 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageEngineFactory;
-import org.neo4j.storageengine.api.StoreVersion;
 import org.neo4j.storageengine.api.StoreVersionCheck;
 import org.neo4j.storageengine.migration.UpgradeNotAllowedException;
 
@@ -56,11 +55,11 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         shutdown = true;
     }
 
-    public synchronized boolean canRecoverRemoteStore( Config config, DatabaseLayout databaseLayout, StoreVersion remoteStoreVersion )
+    public synchronized boolean canRecoverRemoteStore( Config config, DatabaseLayout databaseLayout, long remoteStoreVersion )
     {
         StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck( fs, databaseLayout, config, pageCache, NullLogService.getInstance(),
                 databaseTracers.getPageCacheTracer() );
-        return canRecoverRemoteStore( storeVersionCheck, remoteStoreVersion, config );
+        return canRecoverRemoteStore( storeVersionCheck, storeVersionCheck.storeVersionToString( remoteStoreVersion ), config );
     }
 
     public synchronized void recoverCopiedStore( Config config, DatabaseLayout databaseLayout ) throws DatabaseShutdownException, IOException
@@ -77,7 +76,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         if ( storeVersion.isPresent() )
         {
             //It is ok to have recover an older version of the store. In that case we will migrate it after recovery. Minor migrations are fast
-            if ( !canRecoverRemoteStore( storeVersionCheck, storeVersionCheck.versionInformation( storeVersion.get() ), config ) )
+            if ( !canRecoverRemoteStore( storeVersionCheck, storeVersion.get(), config ) )
             {
                 throw new RuntimeException( failedToStartMessage( config ) );
             }
@@ -97,7 +96,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         }
     }
 
-    private boolean canRecoverRemoteStore( StoreVersionCheck storeVersionCheck, StoreVersion remoteStoreVersion, Config config )
+    private boolean canRecoverRemoteStore( StoreVersionCheck storeVersionCheck, String remoteStoreVersion, Config config )
     {
         return StoreValidation.validRemoteToUseStoreFrom( storeVersionCheck, remoteStoreVersion, config, storageEngineFactory );
     }

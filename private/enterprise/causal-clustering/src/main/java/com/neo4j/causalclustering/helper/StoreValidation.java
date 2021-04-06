@@ -41,13 +41,23 @@ public class StoreValidation
      * @param storageEngineFactory A {@link StorageEngineFactory}. Used to compare the {@link StoreId#getStoreVersion()}.
      * @return {@code true} if it is (version-wise) safe to use the remote store as the local store, {@code false} otherwise.
      */
-    public static boolean validRemoteToUseStoreFrom( StoreVersionCheck storeVersionCheck, StoreVersion remoteStoreVersion, Config config,
+    public static boolean validRemoteToUseStoreFrom( StoreVersionCheck storeVersionCheck, String remoteStoreVersion, Config config,
             StorageEngineFactory storageEngineFactory )
     {
         //Here we handle two situations
         //1. Normal operation where we are on the same version on the same store.
         //2. During rolling upgrade where we also allow to fetch from an older compatible store, where we can recover and migrate it to match.
         //   It is not allowed to fetch a newer store, to (most likely) old jars.
+
+        StoreVersion storeVersion;
+        try
+        {
+            storeVersion = storageEngineFactory.versionInformation( remoteStoreVersion );
+        }
+        catch ( Exception e )
+        {
+            return false; //Unknown remote version, not compatible!
+        }
 
         StoreVersion version;
         if ( config.get( GraphDatabaseSettings.allow_upgrade ) && storeVersionCheck.isVersionConfigured() )
@@ -59,9 +69,9 @@ public class StoreValidation
         {
             //Either no migration will happen, or we're migrating to the latest version of the current format.
             //Check that is it compatible to apply transactions on (recovery etc..)
-            version = remoteStoreVersion.latest();
+            version = storeVersion.latest();
         }
-        return remoteStoreVersion.isCompatibleWithIncludingMinorMigration( version );
+        return storeVersion.isCompatibleWithIncludingMinorMigration( version );
     }
 
 }
