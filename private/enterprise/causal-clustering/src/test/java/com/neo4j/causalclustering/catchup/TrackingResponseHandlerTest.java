@@ -8,13 +8,18 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.catchup.storecopy.FileChunk;
 import org.junit.jupiter.api.Test;
 
+import java.nio.channels.ClosedChannelException;
+import java.time.Clock;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class TrackingResponseHandlerTest
 {
@@ -44,5 +49,29 @@ class TrackingResponseHandlerTest
         trackingResponseHandler.setResponseHandler( catchUpResponseAdaptor, new CompletableFuture<>() );
 
         assertFalse( trackingResponseHandler.millisSinceLastResponse().isPresent() );
+    }
+
+    @Test
+    void newResponseHandlerShouldFailImmediatelyIfChannelIsAlreadyClosed() throws Exception
+    {
+        // given
+        var trackingResponseHandler = new TrackingResponseHandler( Clock.systemDefaultZone(), null );
+        var requestOutcomeSignal = new CompletableFuture<Void>();
+        trackingResponseHandler.onClose();
+
+        // when
+        trackingResponseHandler.setResponseHandler( new CatchupResponseAdaptor<Void>(), requestOutcomeSignal );
+
+        // then
+        assertThat( requestOutcomeSignal.isDone() ).isTrue();
+        try
+        {
+            requestOutcomeSignal.get();
+            fail();
+        }
+        catch ( ExecutionException e )
+        {
+            assertThat( e.getCause() ).isInstanceOf( ClosedChannelException.class );
+        }
     }
 }

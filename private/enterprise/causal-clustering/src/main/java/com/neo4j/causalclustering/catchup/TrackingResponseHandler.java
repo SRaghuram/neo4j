@@ -39,6 +39,7 @@ class TrackingResponseHandler implements CatchupResponseHandler
     private CatchupResponseCallback delegate;
     private CompletableFuture<?> requestOutcomeSignal;
     private long lastResponseTime = NO_RESPONSE_TIME;
+    private volatile boolean closed;
 
     TrackingResponseHandler( Clock clock, Channel flowControl )
     {
@@ -54,9 +55,14 @@ class TrackingResponseHandler implements CatchupResponseHandler
         this.lastResponseTime = NO_RESPONSE_TIME;
     }
 
-    void setResponseHandler( CatchupResponseCallback responseHandler, CompletableFuture<?>
+    synchronized void setResponseHandler( CatchupResponseCallback responseHandler, CompletableFuture<?>
             requestOutcomeSignal )
     {
+        if ( closed )
+        {
+            signalChannelClosed( requestOutcomeSignal );
+            return;
+        }
         this.delegate = responseHandler;
         this.requestOutcomeSignal = requestOutcomeSignal;
         this.lastResponseTime = NO_RESPONSE_TIME;
@@ -156,7 +162,13 @@ class TrackingResponseHandler implements CatchupResponseHandler
     }
 
     @Override
-    public void onClose()
+    public synchronized void onClose()
+    {
+        closed = true;
+        signalChannelClosed( requestOutcomeSignal );
+    }
+
+    private void signalChannelClosed( CompletableFuture<?> requestOutcomeSignal )
     {
         requestOutcomeSignal.completeExceptionally( new ClosedChannelException() );
     }
