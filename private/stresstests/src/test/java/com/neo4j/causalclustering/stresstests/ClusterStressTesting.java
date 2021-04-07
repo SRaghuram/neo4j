@@ -6,6 +6,8 @@
 package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.helper.Workload;
+import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +24,7 @@ import org.neo4j.function.ThrowingAction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheSupportExtension;
@@ -29,6 +32,7 @@ import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 @ExtendWith( {DefaultFileSystemExtension.class, PageCacheSupportExtension.class} )
+@DriverExtension
 class ClusterStressTesting
 {
     private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
@@ -38,6 +42,8 @@ class ClusterStressTesting
     private FileSystemAbstraction fileSystem;
     @Inject
     private PageCache pageCache;
+    @Inject
+    private DriverFactory driverFactory;
 
     @BeforeEach
     void setup()
@@ -49,12 +55,12 @@ class ClusterStressTesting
     @Test
     void shouldBehaveCorrectlyUnderStress() throws Exception
     {
-        stressTest( new Config(), fileSystem, pageCache );
+        stressTest( new Config(), fileSystem, pageCache, driverFactory );
     }
 
-    static void stressTest( Config config, FileSystemAbstraction fileSystem, PageCache pageCache ) throws Exception
+    static void stressTest( Config config, FileSystemAbstraction fileSystem, PageCache pageCache, DriverFactory driverFactory ) throws Exception
     {
-        Resources resources = new Resources( fileSystem, pageCache, config );
+        Resources resources = new Resources( fileSystem, pageCache, config, driverFactory );
         Control control = new Control( config );
         Log log = config.logProvider().getLog( ClusterStressTesting.class );
 

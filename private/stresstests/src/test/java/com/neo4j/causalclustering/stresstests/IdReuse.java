@@ -18,12 +18,11 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.dbms.identity.ServerId;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.NotFoundException;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.WriteOperationsNotAllowedException;
-import org.neo4j.internal.helpers.collection.Iterables;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
+import org.neo4j.driver.exceptions.DatabaseException;
+import org.neo4j.driver.exceptions.NoSuchRecordException;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.logging.Log;
@@ -40,8 +39,6 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
  */
 class IdReuse
 {
-    private static final RelationshipType RELATIONSHIP_TYPE = RelationshipType.withName( "testType" );
-
     /**
      * Validate free ids. All must be unique.
      */
@@ -137,60 +134,60 @@ class IdReuse
 
     static class IdReuseSetup extends Preparation
     {
-        private final Cluster cluster;
+        private final Resources resource;
 
         IdReuseSetup( Resources resources )
         {
             super();
-            cluster = resources.cluster();
+            this.resource = resources;
+
         }
 
         @Override
         protected void prepare() throws Exception
         {
-            for ( int i = 0; i < 1_000; i++ )
+            try
             {
-                try
+                for ( int i = 0; i < 1_000; i++ )
                 {
-                    cluster.primaryTx( ( db, tx ) -> {
+                    try ( Session session = resource.driver().session( SessionConfig.builder().build() ) )
+                    {
                         for ( int j = 0; j < 1_000; j++ )
                         {
-                            Node start = tx.createNode();
-                            Node end = tx.createNode();
-                            start.createRelationshipTo( end, RELATIONSHIP_TYPE );
+                            var firstIndex = resource.getNextNodeIndex();
+                            var secondIndex = resource.getNextNodeIndex();
+                            Map<String,Object> parameters = Map.of( "id1", firstIndex, "id2", secondIndex );
+                            createTwoNodesWithRelationship( session, parameters );
                         }
-                        tx.commit();
-                    } );
+                    }
                 }
-                catch ( WriteOperationsNotAllowedException e )
-                {
-                    // skip
-                }
+            }
+            catch ( DatabaseException e )
+            {
+                // skip
             }
         }
     }
 
     static class InsertionWorkload extends Workload
     {
-        private Cluster cluster;
+        private final Resources resource;
 
         InsertionWorkload( Control control, Resources resources )
         {
             super( control );
-            this.cluster = resources.cluster();
+            this.resource = resources;
         }
 
         @Override
         protected void doWork()
         {
-            try
+            try ( Session session = resource.driver().session( SessionConfig.builder().build() ) )
             {
-                cluster.primaryTx( ( db, tx ) -> {
-                    Node nodeStart = tx.createNode();
-                    Node nodeEnd = tx.createNode();
-                    nodeStart.createRelationshipTo( nodeEnd, RELATIONSHIP_TYPE );
-                    tx.commit();
-                } );
+                var firstIndex = resource.getNextNodeIndex();
+                var secondIndex = resource.getNextNodeIndex();
+                Map<String,Object> parameters = Map.of( "id1", firstIndex, "id2", secondIndex );
+                createTwoNodesWithRelationship( session, parameters );
             }
             catch ( Throwable e )
             {
@@ -247,29 +244,25 @@ class IdReuse
     {
         private final SecureRandom rnd = new SecureRandom();
         private final int idHighRange;
-        private Cluster cluster;
+        private final Driver driver;
 
-        DeletionWorkload( Control control, Resources resources )
+        DeletionWorkload( Control control, Driver driver )
         {
             super( control );
-            this.cluster = resources.cluster();
+            this.driver = driver;
             this.idHighRange = 2_000_000;
         }
 
         @Override
         protected void doWork()
         {
-            try
+            try ( Session session = driver.session( SessionConfig.builder().build() ) )
             {
-                cluster.primaryTx( ( db, tx ) -> {
-                    Node node = tx.getNodeById( rnd.nextInt( idHighRange ) );
-                    Iterables.stream( node.getRelationships() ).forEach( Relationship::delete );
-                    node.delete();
-
-                    tx.commit();
-                } );
+                int nodeIndex = rnd.nextInt( idHighRange );
+                //delete node and all relationships
+                session.writeTransaction( tx -> tx.run( "MATCH (n {id: $id}) DETACH DELETE n", Map.of( "id", nodeIndex ) ) ).consume();
             }
-            catch ( NotFoundException e )
+            catch ( NoSuchRecordException e )
             {
                 // Expected
             }
@@ -284,5 +277,17 @@ class IdReuse
                 throw new RuntimeException( "DeletionWorkload", e );
             }
         }
+    }
+
+    private static void createTwoNodesWithRelationship( Session session, Map<String,Object> parameters )
+    {
+        session.writeTransaction( tx -> tx.run( "CREATE (n:Person{id: $id1})", parameters) );
+        session.writeTransaction( tx -> tx.run( "CREATE (n:Person{id: $id2})", parameters) );
+        session.writeTransaction( tx -> tx.run( "MATCH\n" +
+                                                "  (a:Person),\n" +
+                                                "  (b:Person)\n" +
+                                                "WHERE a.id = $id1 AND b.id = $id2 \n" +
+                                                "CREATE (a)-[r:testType]->(b)\n" +
+                                                "RETURN type(r)", parameters) ).consume();
     }
 }

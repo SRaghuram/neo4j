@@ -9,12 +9,15 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.driver.DriverFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
+import org.neo4j.driver.Driver;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PageCache;
@@ -27,22 +30,19 @@ import static com.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 class Resources
 {
     private final Cluster cluster;
+    private final Driver driver;
     private final Path clusterDir;
     private final Path backupDir;
     private final FileSystemAbstraction fileSystem;
     private final PageCache pageCache;
     private final LogProvider logProvider;
+    private final AtomicLong nodeIdCounter = new AtomicLong();
 
-    Resources( FileSystemAbstraction fileSystem, PageCache pageCache, Config config ) throws IOException
-    {
-        this( fileSystem, pageCache, new Log4jLogProvider( System.out ), config );
-    }
-
-    private Resources( FileSystemAbstraction fileSystem, PageCache pageCache, LogProvider logProvider, Config config ) throws IOException
+    Resources( FileSystemAbstraction fileSystem, PageCache pageCache, Config config, DriverFactory driverFactory ) throws IOException
     {
         this.fileSystem = fileSystem;
         this.pageCache = pageCache;
-        this.logProvider = logProvider;
+        this.logProvider = new Log4jLogProvider( System.out );
 
         var numberOfCores = config.numberOfCores();
         var numberOfReadReplicas = config.numberOfEdges();
@@ -67,11 +67,17 @@ class Resources
                 .withIpFamily( IpFamily.IPV4 )
                 .useWildcard( false );
         cluster = clusterConfig.build( clusterDir );
+        driver = driverFactory.graphDatabaseDriver( cluster );
     }
 
     public Cluster cluster()
     {
         return cluster;
+    }
+
+    public Driver driver()
+    {
+        return driver;
     }
 
     public FileSystemAbstraction fileSystem()
@@ -113,5 +119,10 @@ class Resources
     public Clock clock()
     {
         return Clock.systemUTC();
+    }
+
+    public long getNextNodeIndex()
+    {
+        return nodeIdCounter.getAndIncrement();
     }
 }
