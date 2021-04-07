@@ -18,7 +18,7 @@ public final class RaiseAvailabilityGuardHandler implements DatabasePanicEventHa
         this.db = db;
     }
 
-    public static DatabasePanicEventHandler factory( Database db )
+    public static DatabasePanicEventHandler create( Database db )
     {
         return new RaiseAvailabilityGuardHandler( db );
     }

@@ -14,7 +14,7 @@ public final class PanicDbmsIfSystemDatabaseHandler implements DatabasePanicEven
         this.panicker = panicker;
     }
 
-    public static DatabasePanicEventHandler factory( Panicker panicker )
+    public static DatabasePanicEventHandler create( Panicker panicker )
     {
         return new PanicDbmsIfSystemDatabaseHandler( panicker );
     }

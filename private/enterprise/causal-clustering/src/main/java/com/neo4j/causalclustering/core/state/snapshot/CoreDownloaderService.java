@@ -43,7 +43,7 @@ public class CoreDownloaderService extends LifecycleAdapter
 
     private PersistentSnapshotDownloader currentJob;
     private JobHandle<?> jobHandle;
-    private boolean stopped;
+    private volatile boolean stopped;
 
     public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, StoreDownloadContext context, CoreSnapshotService snapshotService,
                                   ReplicatedDatabaseEventService databaseEventService, CommandApplicationProcess applicationProcess, LogProvider logProvider,

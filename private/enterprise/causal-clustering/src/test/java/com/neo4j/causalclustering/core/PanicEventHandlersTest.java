@@ -93,7 +93,7 @@ public class PanicEventHandlersTest
                                                                        list.add( info.getCause() );
                                                                        return list;
                                                                    } ),
-                                                           PanicDbmsIfSystemDatabaseHandler.factory( panicService.panicker() )
+                                                           PanicDbmsIfSystemDatabaseHandler.create( panicService.panicker() )
             ) );
         }
     }

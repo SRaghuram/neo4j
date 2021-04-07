@@ -8,9 +8,13 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
+import com.neo4j.causalclustering.core.state.snapshot.SnapshotFailedException.Status;
 import com.neo4j.dbms.error_handling.DatabasePanicEvent;
 import com.neo4j.dbms.error_handling.Panicker;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.Database;
@@ -22,7 +26,6 @@ import static com.neo4j.dbms.error_handling.DatabasePanicReason.SNAPSHOT_FAILED;
 
 class PersistentSnapshotDownloader implements Runnable
 {
-
     static final String DOWNLOAD_SNAPSHOT = "download of snapshot";
     static final String SHUTDOWN = "shutdown";
 
@@ -36,8 +39,8 @@ class PersistentSnapshotDownloader implements Runnable
     private final TimeoutStrategy strategy;
     private final Panicker panicker;
     private final CoreSnapshotMonitor coreSnapshotMonitor;
-    private volatile State state;
-    private volatile boolean stopped;
+    private final AtomicBoolean stopped;
+    private final AtomicReference<State> state;
 
     PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess, CoreDownloader downloader,
                                   CoreSnapshotService snapshotService, ReplicatedDatabaseEventService databaseEventService, StoreDownloadContext context,
@@ -53,21 +56,21 @@ class PersistentSnapshotDownloader implements Runnable
         this.strategy = strategy;
         this.panicker = panicker;
         this.coreSnapshotMonitor = monitors.newMonitor( CoreSnapshotMonitor.class );
-        this.state = State.INITIATED;
+        this.stopped = new AtomicBoolean( false );
+        this.state = new AtomicReference<>( State.INITIALIZED );
     }
 
     private enum State
     {
-        INITIATED,
+        INITIALIZED,
         RUNNING,
-        COMPLETED,
-        PANICKED
+        COMPLETED
     }
 
     @Override
     public void run()
     {
-        if ( !moveToRunningState() )
+        if ( !state.compareAndSet( State.INITIALIZED, State.RUNNING ) )
         {
             return;
         }
@@ -84,7 +87,7 @@ class PersistentSnapshotDownloader implements Runnable
             var snapshot = downloadSnapshotAndStore( context );
             log.info( "Core snapshot downloaded: %s", snapshot );
 
-            if ( stopped )
+            if ( stopped.get() )
             {
                 log.warn( "Not starting kernel after store copy because database has been requested to stop" );
             }
@@ -120,11 +123,9 @@ class PersistentSnapshotDownloader implements Runnable
         {
             log.warn( "Core snapshot could not be downloaded" );
             log.warn( "Not starting kernel after failed store copy" );
-            if ( e.status() == SnapshotFailedException.Status.UNRECOVERABLE )
+            if ( e.status() == Status.UNRECOVERABLE )
             {
-                log.error( "Unrecoverable error when downloading core snapshot and store.", e );
-                panicker.panic( new DatabasePanicEvent( context.databaseId(), SNAPSHOT_FAILED, e ) );
-                state = State.PANICKED;
+                panic( e );
             }
             else
             {
@@ -133,18 +134,13 @@ class PersistentSnapshotDownloader implements Runnable
         }
         catch ( Throwable e )
         {
-            log.error( "Unrecoverable error when downloading core snapshot and store.", e );
-            panicker.panic( new DatabasePanicEvent( context.databaseId(), SNAPSHOT_FAILED, e ) );
-            state = State.PANICKED;
+            panic( e );
         }
         finally
         {
-            if ( state != State.PANICKED )
-            {
-                applicationProcess.resumeApplier( DOWNLOAD_SNAPSHOT );
-                coreSnapshotMonitor.downloadSnapshotComplete( databaseId );
-                state = State.COMPLETED;
-            }
+            state.compareAndSet( State.RUNNING, State.COMPLETED );
+            applicationProcess.resumeApplier( DOWNLOAD_SNAPSHOT );
+            coreSnapshotMonitor.downloadSnapshotComplete( databaseId );
         }
     }
 
@@ -169,11 +165,11 @@ class PersistentSnapshotDownloader implements Runnable
         while ( true )
         {
             // check if we were stopped before doing a potentially long running catchup operation
-            if ( stopped )
+            if ( stopped.get() )
             {
                 log.info( "Persistent snapshot downloader was stopped before download succeeded" );
                 throw new SnapshotFailedException( "Persistent snapshot downloader was stopped before download succeeded",
-                        SnapshotFailedException.Status.TERMINAL );
+                        Status.TERMINAL );
             }
 
             try
@@ -182,7 +178,7 @@ class PersistentSnapshotDownloader implements Runnable
             }
             catch ( SnapshotFailedException e )
             {
-                if ( e.status() != SnapshotFailedException.Status.RETRYABLE )
+                if ( e.status() != Status.RETRYABLE )
                 {
                     throw e;
                 }
@@ -191,32 +187,42 @@ class PersistentSnapshotDownloader implements Runnable
         }
     }
 
-    private synchronized boolean moveToRunningState()
+    void stop()
     {
-        if ( state != State.INITIATED )
+        if ( !stopped.compareAndSet( false, true ) )
         {
-            return false;
+            return;
         }
-        else
+
+        applicationProcess.pauseApplier( SHUTDOWN );
+        while ( state.get() != State.COMPLETED )
         {
-            state = State.RUNNING;
-            return true;
+            try
+            {
+                Thread.sleep( 100 );
+            }
+            catch ( InterruptedException e )
+            {
+                Thread.currentThread().interrupt(); // do nothing
+            }
         }
     }
 
-    void stop() throws InterruptedException
+    private void panic( Throwable e )
     {
-        applicationProcess.pauseApplier( SHUTDOWN );
-        stopped = true;
+        log.error( "Unrecoverable error when downloading core snapshot and store.", e );
+        panicker.panic( new DatabasePanicEvent( context.databaseId(), SNAPSHOT_FAILED, e ) );
 
-        while ( !hasCompleted() )
+        if ( !stopped.compareAndSet( false, true ) )
         {
-            Thread.sleep( 100 );
+            return;
         }
+
+        applicationProcess.pauseApplier( SHUTDOWN );
     }
 
     boolean hasCompleted()
     {
-        return state == State.COMPLETED || state == State.PANICKED;
+        return state.get() == State.COMPLETED;
     }
 }

@@ -19,7 +19,7 @@ public final class StopDatabaseHandler implements DatabasePanicEventHandler
         this.internalOperator = internalOperator;
     }
 
-    public static DatabasePanicEventHandler factory( ClusterInternalDbmsOperator internalOperator )
+    public static DatabasePanicEventHandler create( ClusterInternalDbmsOperator internalOperator )
     {
         return new StopDatabaseHandler( internalOperator );
     }

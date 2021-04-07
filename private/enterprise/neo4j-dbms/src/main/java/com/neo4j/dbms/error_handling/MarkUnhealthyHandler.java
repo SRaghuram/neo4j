@@ -17,7 +17,7 @@ public final class MarkUnhealthyHandler implements DatabasePanicEventHandler
         this.db = db;
     }
 
-    public static DatabasePanicEventHandler factory( Database db )
+    public static DatabasePanicEventHandler create( Database db )
     {
         return new MarkUnhealthyHandler( db );
     }

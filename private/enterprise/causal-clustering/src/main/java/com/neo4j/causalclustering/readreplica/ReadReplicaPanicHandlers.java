@@ -30,10 +30,10 @@ public class ReadReplicaPanicHandlers extends DatabasePanicHandlers
             DatabaseStartAborter databaseStartAborter )
     {
         return List.of(
-                RaiseAvailabilityGuardHandler.factory( kernelDatabase ),
-                MarkUnhealthyHandler.factory( kernelDatabase ),
+                RaiseAvailabilityGuardHandler.create( kernelDatabase ),
+                MarkUnhealthyHandler.create( kernelDatabase ),
                 databaseStartAborter,
-                StopDatabaseHandler.factory( clusterInternalOperator )
+                StopDatabaseHandler.create( clusterInternalOperator )
         );
     }
 }

@@ -38,14 +38,14 @@ class CorePanicHandlers extends DatabasePanicHandlers
             PanicService panicService, DatabaseStartAborter databaseStartAborter )
     {
         return List.of(
-                RaiseAvailabilityGuardHandler.factory( kernelDatabase ),
-                MarkUnhealthyHandler.factory( kernelDatabase ),
+                RaiseAvailabilityGuardHandler.create( kernelDatabase ),
+                MarkUnhealthyHandler.create( kernelDatabase ),
                 applicationProcess,
                 raftMachine,
                 databaseStartAborter,
-                StopDatabaseHandler.factory( clusterInternalOperator ),
+                StopDatabaseHandler.create( clusterInternalOperator ),
                 // panic Dbms should always be the last handler
-                PanicDbmsIfSystemDatabaseHandler.factory( panicService.panicker() )
+                PanicDbmsIfSystemDatabaseHandler.create( panicService.panicker() )
         );
     }
 }

@@ -16,6 +16,7 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDisp
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
+import org.mockito.Mockito;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -36,10 +37,14 @@ import static com.neo4j.dbms.error_handling.DatabasePanicReason.SNAPSHOT_FAILED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
@@ -55,17 +60,17 @@ class PersistentSnapshotDownloaderTest
     private final CoreSnapshot snapshot = mock( CoreSnapshot.class );
 
     private CoreDownloader coreDownloader = mock( CoreDownloader.class );
-    private CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
-    private ReplicatedDatabaseEventService databaseEventService = mock( ReplicatedDatabaseEventService.class );
+    private final CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
+    private final ReplicatedDatabaseEventService databaseEventService = mock( ReplicatedDatabaseEventService.class );
 
-    private Database database = mock( Database.class );
-    private StoreDownloadContext downloadContext = mock( StoreDownloadContext.class );
+    private final Database database = mock( Database.class );
+    private final StoreDownloadContext downloadContext = mock( StoreDownloadContext.class );
     private StoreCopyHandle storeCopyHandle;
 
-    private NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
 
-    private ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
-    private SimpleTransactionIdStore txIdStore = new SimpleTransactionIdStore();
+    private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
+    private final SimpleTransactionIdStore txIdStore = new SimpleTransactionIdStore();
 
     private PersistentSnapshotDownloader createDownloader()
     {
@@ -302,16 +307,18 @@ class PersistentSnapshotDownloaderTest
     void shouldNotResumeApplicationProcessOnPanic() throws SnapshotFailedException
     {
         var snapshotFailedException = new SnapshotFailedException( "Unrecoverable", SnapshotFailedException.Status.UNRECOVERABLE );
-        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow(
-                snapshotFailedException );
-        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow( snapshotFailedException );
+        var persistentSnapshotDownloader = createDownloader();
+        var inOrder = Mockito.inOrder( applicationProcess );
 
         // when
         persistentSnapshotDownloader.run();
 
         // then
         verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, SNAPSHOT_FAILED, snapshotFailedException ) );
-        verify( applicationProcess, never() ).resumeApplier( any() );
+        inOrder.verify( applicationProcess, times( 2 ) ).pauseApplier( any() );
+        inOrder.verify( applicationProcess ).resumeApplier( any() );
+        verifyNoMoreInteractions( applicationProcess );
     }
 
     @Test

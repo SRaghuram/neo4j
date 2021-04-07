@@ -75,7 +75,7 @@ public class DatabaseStartAborter implements DatabaseStartupController, Database
         abortPreventionSets.remove( namedDatabaseId, reason );
     }
 
-    private boolean mayUserAbort( NamedDatabaseId namedDatabaseId )
+    private boolean isUserAllowedToAbort( NamedDatabaseId namedDatabaseId )
     {
         return !abortPreventionSets.containsKey( namedDatabaseId );
     }
@@ -83,7 +83,7 @@ public class DatabaseStartAborter implements DatabaseStartupController, Database
     @Override
     public void onPanic( DatabasePanicEvent panic )
     {
-        cachedDesiredStates.put( panic.databaseId(), CachedDesiredState.panickedState( clock.instant() ) );
+        cachedDesiredStates.put( panic.databaseId(), CachedDesiredState.panickedState() );
     }
 
     public void resetFor( NamedDatabaseId namedDatabaseId )
@@ -114,7 +114,7 @@ public class DatabaseStartAborter implements DatabaseStartupController, Database
         var desiredState = getDesiredState( namedDatabaseId );
 
         return desiredState.shouldAbortDueToPanic() ||
-               mayUserAbort( namedDatabaseId ) &&
+               isUserAllowedToAbort( namedDatabaseId ) &&
                ( globalAvailabilityGuard.isShutdown() || desiredState.shouldAbort() );
     }
 
@@ -164,9 +164,9 @@ public class DatabaseStartAborter implements DatabaseStartupController, Database
             return new CachedDesiredState( createdAt, state, false );
         }
 
-        static CachedDesiredState panickedState( Instant createdAt )
+        static CachedDesiredState panickedState()
         {
-            return new CachedDesiredState( createdAt, null, true );
+            return new CachedDesiredState( null, null, true );
         }
 
         private CachedDesiredState( Instant createdAt, OperatorState state, boolean panickedTombstone )
@@ -191,8 +191,12 @@ public class DatabaseStartAborter implements DatabaseStartupController, Database
 
         boolean isTimeToDie( Clock clock, Duration ttl )
         {
+            if ( panickedTombstone )
+            {
+                return false; // panicked states never expire
+            }
             var elapsed = Duration.between( this.createdAt, clock.instant() );
-            return  !panickedTombstone && elapsed.compareTo( ttl ) >= 0; // panicked states never expire
+            return elapsed.compareTo( ttl ) >= 0;
         }
     }
 }
