@@ -264,11 +264,13 @@ class StoreCopyOnUpgradeIT
         static final String PARENT_FORMAT = StandardV4_0.NAME;
         private final Capability[] capabilities;
         private final String storeVersion;
+        private final RecordFormats[] compatibleFormatForRollingUpgrade;
 
         Extended_StandardV4_0( boolean additive )
         {
             capabilities = ArrayUtil.concat( super.capabilities(), new ExtraStorageCapability( additive ) );
             storeVersion = additive ? "4.0-eac" : "4.0-eic";
+            compatibleFormatForRollingUpgrade = additive ? new RecordFormats[] {StandardV4_0.RECORD_FORMATS} : new RecordFormats[0];
         }
 
         @Override
@@ -281,6 +283,12 @@ class StoreCopyOnUpgradeIT
         public Capability[] capabilities()
         {
             return capabilities;
+        }
+
+        @Override
+        public RecordFormats[] compatibleVersionsForRollingUpgrade()
+        {
+            return compatibleFormatForRollingUpgrade;
         }
     }
 

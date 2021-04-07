@@ -48,17 +48,6 @@ public class StoreValidation
         //1. Normal operation where we are on the same version on the same store.
         //2. During rolling upgrade where we also allow to fetch from an older compatible store, where we can recover and migrate it to match.
         //   It is not allowed to fetch a newer store, to (most likely) old jars.
-
-        StoreVersion storeVersion;
-        try
-        {
-            storeVersion = storageEngineFactory.versionInformation( remoteStoreVersion );
-        }
-        catch ( Exception e )
-        {
-            return false; //Unknown remote version, not compatible!
-        }
-
         StoreVersion version;
         if ( config.get( GraphDatabaseSettings.allow_upgrade ) && storeVersionCheck.isVersionConfigured() )
         {
@@ -69,9 +58,16 @@ public class StoreValidation
         {
             //Either no migration will happen, or we're migrating to the latest version of the current format.
             //Check that is it compatible to apply transactions on (recovery etc..)
-            version = storeVersion.latest();
+            try
+            {
+                version = storageEngineFactory.versionInformation( remoteStoreVersion ).latest();
+            }
+            catch ( Exception e )
+            {
+                return false; //Unknown remote version, not compatible!
+            }
         }
-        return storeVersion.isCompatibleWithIncludingMinorMigration( version );
+        return storageEngineFactory.rollingUpgradeCompatibility().isVersionCompatibleForRollingUpgrade( remoteStoreVersion, version.storeVersion() );
     }
 
 }

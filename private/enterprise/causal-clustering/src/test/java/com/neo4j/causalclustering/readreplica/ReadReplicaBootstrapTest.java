@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
@@ -55,7 +54,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
-import org.neo4j.storageengine.api.StoreVersion;
+import org.neo4j.storageengine.migration.RollingUpgradeCompatibility;
 
 import static com.neo4j.causalclustering.readreplica.ReadReplicaBootstrapTest.Outcome.DELETE_AND_STORE_COPY;
 import static com.neo4j.causalclustering.readreplica.ReadReplicaBootstrapTest.Outcome.DO_NOTHING;
@@ -512,18 +511,15 @@ class ReadReplicaBootstrapTest
     {
         Database kernelDatabase = mock( Database.class );
         StorageEngineFactory sef = mock( StorageEngineFactory.class );
-        when( sef.versionInformation( anyLong() ) ).thenAnswer( inv ->
+
+        RollingUpgradeCompatibility compatibility = mock( RollingUpgradeCompatibility.class );
+        when( sef.rollingUpgradeCompatibility() ).thenReturn( compatibility );
+
+        when( compatibility.isVersionCompatibleForRollingUpgrade( anyLong(), anyLong() ) ).thenAnswer( inv ->
         {
-            StoreVersion storeVersion = mock( StoreVersion.class );
-            when( storeVersion.storeVersion() ).thenReturn( inv.getArgument( 0 ).toString() );
-            when( storeVersion.isCompatibleWithIncludingMinorMigration( any() ) )
-                    .thenAnswer( check ->
-                    {
-                        long v1 = Long.parseLong( storeVersion.storeVersion() );
-                        long v2 = Long.parseLong( check.getArgument( 0, StoreVersion.class ).storeVersion() );
-                        return v1 < v2 && v1 / 10 == v2 / 10; //Makeup format for same family identification
-                    } );
-            return storeVersion;
+            long v1 = inv.getArgument( 0, Long.class );
+            long v2 = inv.getArgument( 1, Long.class );
+            return v1 < v2 && v1 / 10 == v2 / 10; //Makeup format for same family identification
         });
         when( kernelDatabase.getStorageEngineFactory() ).thenReturn( sef );
         final var databaseLayout = mock( DatabaseLayout.class );

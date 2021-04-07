@@ -5,6 +5,8 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit;
 
+import com.neo4j.kernel.impl.store.format.highlimit.v400.HighLimitV4_0_0;
+
 import org.neo4j.kernel.impl.store.format.BaseRecordFormats;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
@@ -122,5 +124,11 @@ public class HighLimit extends BaseRecordFormats
     public String name()
     {
         return NAME;
+    }
+
+    @Override
+    public RecordFormats[] compatibleVersionsForRollingUpgrade()
+    {
+        return new RecordFormats[] {HighLimitV4_0_0.RECORD_FORMATS};
     }
 }

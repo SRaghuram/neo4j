@@ -21,7 +21,6 @@ import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.internal.recordstorage.RecordStorageEngineFactory;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -35,16 +34,13 @@ import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
-import org.neo4j.kernel.impl.store.format.standard.StandardV4_3;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.EphemeralNeo4jLayoutExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.EphemeralPageCacheExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -60,7 +56,6 @@ import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.defaultFormat;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.findSuccessor;
-import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.isStoreFormatsCompatibleIncludingMinorUpgradable;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForConfig;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForStore;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForStoreOrConfig;
@@ -361,28 +356,6 @@ class RecordFormatSelectorTest
         assertEquals( HighLimitV3_4_0.RECORD_FORMATS, findSuccessor( HighLimitV3_2_0.RECORD_FORMATS ).get() );
         assertEquals( HighLimitV4_0_0.RECORD_FORMATS, findSuccessor( HighLimitV3_4_0.RECORD_FORMATS ).get() );
         assertEquals( HighLimit.RECORD_FORMATS, findSuccessor( HighLimitV4_0_0.RECORD_FORMATS ).get() );
-    }
-
-    @Test
-    void shouldFindMinorUpgradableFormatsCompatible()
-    {
-        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV4_0.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isTrue();
-        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV4_3.RECORD_FORMATS, StandardV4_0.RECORD_FORMATS ) ).isFalse();
-        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV3_4.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isFalse();
-        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( PageAlignedV4_1.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isFalse();
-    }
-
-    @Test
-    void shouldNotThrowOnUnknownStoreVersion()
-    {
-        StoreId store = new StoreId( 0, 0, MetaDataStore.versionStringToLong( StandardV4_0.RECORD_FORMATS.storeVersion() ) );
-        StoreId sameStoreUnknownVersion = new StoreId( 0, 0, MetaDataStore.versionStringToLong( "foo" ) );
-
-        RecordStorageEngineFactory sef = new RecordStorageEngineFactory();
-        assertThatThrownBy( () -> sef.versionInformation( sameStoreUnknownVersion.getStoreVersion() ) ).isInstanceOf( IllegalArgumentException.class );
-
-        assertThat( store.compatibleIncludingMinorUpgrade( sef, sameStoreUnknownVersion ) ).isFalse();
-        assertThat( sameStoreUnknownVersion.compatibleIncludingMinorUpgrade( sef, store ) ).isFalse();
     }
 
     private void verifySelectForStore( PageCache pageCache, RecordFormats format ) throws IOException

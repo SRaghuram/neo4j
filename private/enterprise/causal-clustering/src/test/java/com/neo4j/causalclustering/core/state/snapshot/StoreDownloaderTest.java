@@ -32,7 +32,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
-import org.neo4j.storageengine.api.StoreVersion;
+import org.neo4j.storageengine.migration.RollingUpgradeCompatibility;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -222,18 +222,13 @@ class StoreDownloaderTest
         when( database.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         StorageEngineFactory sef = mock( StorageEngineFactory.class );
-        when( sef.versionInformation( anyLong() ) ).thenAnswer( inv ->
+        RollingUpgradeCompatibility compatibility = mock( RollingUpgradeCompatibility.class );
+        when( sef.rollingUpgradeCompatibility() ).thenReturn( compatibility );
+        when( compatibility.isVersionCompatibleForRollingUpgrade( anyLong(), anyLong() ) ).thenAnswer( inv ->
         {
-            StoreVersion storeVersion = mock( StoreVersion.class );
-            when( storeVersion.storeVersion() ).thenReturn( inv.getArgument( 0 ).toString() );
-            when( storeVersion.isCompatibleWithIncludingMinorMigration( any() ) )
-                    .thenAnswer( check ->
-                    {
-                        long v1 = Long.parseLong( storeVersion.storeVersion() );
-                        long v2 = Long.parseLong( check.getArgument( 0, StoreVersion.class ).storeVersion() );
-                        return v1 < v2 && v1 / 10 == v2 / 10; //Makeup format for same family identification
-                    } );
-            return storeVersion;
+            long v1 = inv.getArgument( 0, Long.class );
+            long v2 = inv.getArgument( 1, Long.class );
+            return v1 < v2 && v1 / 10 == v2 / 10; //Makeup format for same family identification
         });
         when( database.getStorageEngineFactory() ).thenReturn( sef );
 
