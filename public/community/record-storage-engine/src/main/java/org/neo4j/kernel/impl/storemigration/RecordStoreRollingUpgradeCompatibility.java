@@ -30,6 +30,9 @@ import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.storageengine.migration.RollingUpgradeCompatibility;
 
 import static org.neo4j.kernel.impl.store.MetaDataStore.versionLongToString;
+import static org.neo4j.kernel.impl.store.format.StoreVersion.ALIGNED_V4_1;
+import static org.neo4j.kernel.impl.store.format.StoreVersion.HIGH_LIMIT_V4_0_0;
+import static org.neo4j.kernel.impl.store.format.StoreVersion.STANDARD_V4_0;
 
 public class RecordStoreRollingUpgradeCompatibility implements RollingUpgradeCompatibility
 {
@@ -53,6 +56,9 @@ public class RecordStoreRollingUpgradeCompatibility implements RollingUpgradeCom
 
         //Known compatibilities. Future versions in newer releases can be added manually here to add knowledge about if that is compatible to our local one
         //e.g compatibilityMap.put( "SF4.3.0", Set.of( STANDARD_V4_0.versionString() ) );
+        compatibilityMap.put( "SF4.3.0", Set.of( STANDARD_V4_0.versionString() ) );
+        compatibilityMap.put( "AF4.3.0", Set.of( ALIGNED_V4_1.versionString() ) );
+        compatibilityMap.put( "HL4.3.0", Set.of( HIGH_LIMIT_V4_0_0.versionString() ) );
     }
 
     @Override

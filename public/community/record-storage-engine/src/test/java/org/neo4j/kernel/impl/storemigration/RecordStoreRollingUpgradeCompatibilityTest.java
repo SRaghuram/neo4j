@@ -22,11 +22,9 @@ package org.neo4j.kernel.impl.storemigration;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.recordstorage.RecordStorageEngineFactory;
-import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
-import org.neo4j.kernel.impl.store.format.standard.StandardV4_3;
 import org.neo4j.storageengine.migration.RollingUpgradeCompatibility;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,12 +37,15 @@ class RecordStoreRollingUpgradeCompatibilityTest
     @Test
     void shouldFindMinorUpgradableFormatsCompatible()
     {
-        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV4_0.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isTrue();
-        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV4_3.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isTrue();
-        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV4_3.RECORD_FORMATS, StandardV4_0.RECORD_FORMATS ) ).isFalse();
-        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( StandardV3_4.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isFalse();
-        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( PageAlignedV4_1.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isFalse();
-        assertThat( isStoreFormatsCompatibleIncludingMinorUpgradable( PageAlignedV4_1.RECORD_FORMATS, StandardV4_3.RECORD_FORMATS ) ).isFalse();
+        final String SF4_3 = "SF4.3.0";
+        final String AF4_3 = "AF4.3.0";
+        assertThat( rollingUpgradeCompatibility.isVersionCompatibleForRollingUpgrade( StandardV4_0.RECORD_FORMATS.storeVersion(), SF4_3 ) ).isTrue();
+        assertThat( rollingUpgradeCompatibility.isVersionCompatibleForRollingUpgrade( PageAlignedV4_1.RECORD_FORMATS.storeVersion(), AF4_3 ) ).isTrue();
+        assertThat( rollingUpgradeCompatibility.isVersionCompatibleForRollingUpgrade( SF4_3, SF4_3 ) ).isTrue();
+        assertThat( rollingUpgradeCompatibility.isVersionCompatibleForRollingUpgrade( SF4_3, StandardV4_0.RECORD_FORMATS.storeVersion() ) ).isFalse();
+        assertThat( rollingUpgradeCompatibility.isVersionCompatibleForRollingUpgrade( StandardV3_4.RECORD_FORMATS.storeVersion(), SF4_3 ) ).isFalse();
+        assertThat( rollingUpgradeCompatibility.isVersionCompatibleForRollingUpgrade( PageAlignedV4_1.RECORD_FORMATS.storeVersion(), SF4_3 ) ).isFalse();
+        assertThat( rollingUpgradeCompatibility.isVersionCompatibleForRollingUpgrade( PageAlignedV4_1.RECORD_FORMATS.storeVersion(), SF4_3 ) ).isFalse();
     }
 
     @Test
@@ -52,10 +53,5 @@ class RecordStoreRollingUpgradeCompatibilityTest
     {
         assertThat( rollingUpgradeCompatibility.isVersionCompatibleForRollingUpgrade( StandardV4_0.RECORD_FORMATS.storeVersion(), "foo" ) ).isFalse();
         assertThat( rollingUpgradeCompatibility.isVersionCompatibleForRollingUpgrade( "foo", StandardV4_0.RECORD_FORMATS.storeVersion() ) ).isFalse();
-    }
-
-    private boolean isStoreFormatsCompatibleIncludingMinorUpgradable( RecordFormats format, RecordFormats otherFormat )
-    {
-        return rollingUpgradeCompatibility.isVersionCompatibleForRollingUpgrade( format.storeVersion(), otherFormat.storeVersion() );
     }
 }
