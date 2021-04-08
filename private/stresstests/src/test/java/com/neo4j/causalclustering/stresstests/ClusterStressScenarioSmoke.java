@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
-import com.neo4j.test.driver.DriverExtension;
-import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.internal.helpers.Exceptions.findCauseOrSuppressed;
 
 @ExtendWith( {DefaultFileSystemExtension.class, PageCacheSupportExtension.class} )
-@DriverExtension
 class ClusterStressScenarioSmoke
 {
     private Config config;
@@ -31,8 +28,6 @@ class ClusterStressScenarioSmoke
     private FileSystemAbstraction fileSystem;
     @Inject
     private PageCache pageCache;
-    @Inject
-    private DriverFactory driverFactory;
 
     @BeforeEach
     void setup()
@@ -45,28 +40,28 @@ class ClusterStressScenarioSmoke
     void stressBackupRandomMemberAndStartStop() throws Exception
     {
         config.workloads( Workloads.CreateNodesWithProperties, Workloads.BackupRandomMember, Workloads.StartStopRandomMember );
-        stressTest( config, fileSystem, pageCache, driverFactory );
+        stressTest( config, fileSystem, pageCache );
     }
 
     @Test
     void stressCatchupNewReadReplica() throws Exception
     {
         config.workloads( Workloads.CreateNodesWithProperties, Workloads.CatchupNewReadReplica, Workloads.StartStopRandomCore );
-        stressTest( config, fileSystem, pageCache, driverFactory );
+        stressTest( config, fileSystem, pageCache );
     }
 
     @Test
     void stressReplaceRandomMember() throws Exception
     {
         config.workloads( Workloads.CreateNodesWithProperties, Workloads.ReplaceRandomMember );
-        stressTest( config, fileSystem, pageCache, driverFactory );
+        stressTest( config, fileSystem, pageCache );
     }
 
     @Test
     void stressStartStopLeader() throws Exception
     {
         config.workloads( Workloads.CreateNodesWithProperties, Workloads.StartStopDefaultDatabaseLeader );
-        stressTest( config, fileSystem, pageCache, driverFactory );
+        stressTest( config, fileSystem, pageCache );
     }
 
     @Test
@@ -75,7 +70,7 @@ class ClusterStressScenarioSmoke
         try
         {
             config.workloads( Workloads.FailingWorkload, Workloads.StartStopRandomCore );
-            stressTest( config, fileSystem, pageCache, driverFactory );
+            stressTest( config, fileSystem, pageCache );
             fail( "Should throw" );
         }
         catch ( RuntimeException rte )
@@ -96,7 +91,7 @@ class ClusterStressScenarioSmoke
         config.workloads( Workloads.IdReuseInsertion, Workloads.IdReuseDeletion, Workloads.IdReuseDeletion, Workloads.IdReuseReelection );
         config.validations( Validations.ConsistencyCheck, Validations.IdReuseUniqueFreeIds );
 
-        stressTest( config, fileSystem, pageCache, driverFactory );
+        stressTest( config, fileSystem, pageCache );
     }
 
     @Test
@@ -105,7 +100,7 @@ class ClusterStressScenarioSmoke
         config.numberOfDatabases( 10 );
         config.workloads( Workloads.CreateManyDatabases );
 
-        stressTest( config, fileSystem, pageCache, driverFactory );
+        stressTest( config, fileSystem, pageCache );
     }
 
     @Test
@@ -116,6 +111,6 @@ class ClusterStressScenarioSmoke
         config.workDurationMinutes( 5 );
         config.workloads( Workloads.VmPauseDuringBecomingLeader );
 
-        stressTest( config, fileSystem, pageCache, driverFactory );
+        stressTest( config, fileSystem, pageCache );
     }
 }

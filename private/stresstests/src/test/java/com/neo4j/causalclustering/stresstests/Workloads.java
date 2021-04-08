@@ -89,7 +89,7 @@ enum Workloads
                 @Override
                 Workload create( Control control, Resources resources, Config config )
                 {
-                    return new IdReuse.DeletionWorkload( control, resources.driver() );
+                    return new IdReuse.DeletionWorkload( control, resources );
                 }
             },
     IdReuseReelection
