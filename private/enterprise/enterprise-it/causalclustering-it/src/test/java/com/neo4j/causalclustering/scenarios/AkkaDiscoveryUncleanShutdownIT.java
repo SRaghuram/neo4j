@@ -52,6 +52,7 @@ import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow;
@@ -97,7 +98,8 @@ class AkkaDiscoveryUncleanShutdownIT
         runningCores = List.copyOf( cluster.primaryMembers() );
         removedCoreIds = new HashSet<>();
         assertOverviews();
-        checkClusterHealthy();
+
+        assertEventuallyDoesNotThrow( "cluster healthcheck passes", this::checkClusterHealthy, 1, TimeUnit.MINUTES );
     }
 
     @ParameterizedTest( name = "minimum_core_cluster_size_at_runtime={0}" )
@@ -223,11 +225,11 @@ class AkkaDiscoveryUncleanShutdownIT
         int leaderCount = runningCores.size() > 1 ? 1 : 0;
         int followerCount = runningCores.size() - leaderCount;
 
-        Stream<String> databaseNames = Stream.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME );
+        Set<String> databaseNames = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME );
 
         var expected = Matchers.allOf(
                 ClusterOverviewHelper.containsMemberAddresses( runningCores ),
-                Matchers.allOf( databaseNames.map( db -> Matchers.allOf(
+                Matchers.allOf( databaseNames.stream().map( db -> Matchers.allOf(
                         ClusterOverviewHelper.containsRole( LEADER, db, leaderCount ),
                         ClusterOverviewHelper.containsRole( FOLLOWER, db, followerCount ),
                         ClusterOverviewHelper.doesNotContainRole( READ_REPLICA, db )
