@@ -150,19 +150,17 @@ class ConvenientLocalExecutionIT
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( RESULT_DIR, workload.benchmarkGroup() );
             BenchmarkGroupBenchmarkMetricsPrinter printer = new BenchmarkGroupBenchmarkMetricsPrinter( true );
             Jvm jvm = Jvm.bestEffort( JDK_DIR );
-            Path dataset = STORE_DIR;
-            Store originalStore = Neo4jStore.createFrom( dataset );
             Edition edition = Edition.ENTERPRISE;
             Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( DEPLOYMENT,
                                                                     edition,
                                                                     MEASUREMENT_PARAMS,
                                                                     jvm,
-                                                                    dataset,
-                                                                    workDir );
+                                                                    STORE_DIR,
+                                                                    workDir,
+                                                                    workload.getDatabaseName() );
             ForkRunner.runForksFor( neo4jDeployment,
                                     groupDir,
                                     query.copyWith( PLANNER ).copyWith( RUNTIME ),
-                                    originalStore,
                                     EDITION,
                                     neo4jConfig(),
                                     PROFILERS,

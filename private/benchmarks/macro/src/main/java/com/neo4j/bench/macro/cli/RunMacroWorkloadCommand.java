@@ -13,7 +13,6 @@ import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.command.ResultsStoreArgs;
-import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
@@ -30,7 +29,6 @@ import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.macro.agent.WorkspaceStorage;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
-import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.execution.process.ForkFailureException;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
@@ -199,22 +197,24 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
         }
 
         Jvm jvm = Jvm.bestEffortOrFail( params.jvm() );
-        Neo4jDeployment neo4jDeployment;
-        try ( ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( awsCredentials, awsEndpointURL ) )
-        {
-            WorkspaceStorage workspaceStorage = new WorkspaceStorage( artifactStorage, artifactsDir );
-            neo4jDeployment = Neo4jDeployment.workspace( params.deployment(),
-                                                         params.neo4jEdition(),
-                                                         params.measurementParams(),
-                                                         jvm,
-                                                         storeDir,
-                                                         workDir,
-                                                         workspaceStorage );
-        }
 
         try ( Resources resources = new Resources( workDir ) )
         {
-            Workload workload = Workload.fromName( params.workloadName(), resources, neo4jDeployment.deployment() );
+            Workload workload = Workload.fromName( params.workloadName(), resources, params.deployment() );
+            Neo4jDeployment neo4jDeployment;
+            try ( ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( awsCredentials, awsEndpointURL ) )
+            {
+                WorkspaceStorage workspaceStorage = new WorkspaceStorage( artifactStorage, artifactsDir );
+                neo4jDeployment = Neo4jDeployment.workspace( params.deployment(),
+                                                             params.neo4jEdition(),
+                                                             params.measurementParams(),
+                                                             jvm,
+                                                             storeDir,
+                                                             workDir,
+                                                             workspaceStorage,
+                                                             workload.getDatabaseName() );
+            }
+
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( workDir, workload.benchmarkGroup() );
 
             assertQueryNames( params, workload );
@@ -242,7 +242,6 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                     Results results = ForkRunner.runForksFor( neo4jDeployment,
                                                               groupDir,
                                                               query,
-                                                              neo4jDeployment.originalStore(),
                                                               params.neo4jEdition(),
                                                               neo4jConfig,
                                                               params.profilers(),
@@ -383,7 +382,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
         if ( recreateSchema )
         {
             LOG.debug( "Preparing to recreate schema..." );
-                EmbeddedDatabase.recreateSchema( store, edition, neo4jConfigFile, workload.expectedSchema() );
+            EmbeddedDatabase.recreateSchema( store, edition, neo4jConfigFile, workload.expectedSchema() );
         }
         LOG.debug( "Store verified" );
         EmbeddedDatabase.verifyStoreFormat( store );

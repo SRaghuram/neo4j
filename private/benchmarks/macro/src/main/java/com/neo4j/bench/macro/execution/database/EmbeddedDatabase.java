@@ -149,7 +149,15 @@ public class EmbeddedDatabase implements Database
     public static EmbeddedDatabase startWith( Store store, Edition edition, Neo4jConfig neo4jConfig )
     {
         DatabaseManagementService managementService = newDb( store, edition, neo4jConfig );
-        return new EmbeddedDatabase( store, managementService );
+        try
+        {
+            return new EmbeddedDatabase( store, managementService );
+        }
+        catch ( RuntimeException e )
+        {
+            managementService.shutdown();
+            throw e;
+        }
     }
 
     private EmbeddedDatabase( Store store, DatabaseManagementService managementService )

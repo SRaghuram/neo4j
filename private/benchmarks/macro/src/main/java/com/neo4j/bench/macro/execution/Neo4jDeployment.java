@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.macro.execution;
 
+import com.neo4j.bench.common.database.DatabaseName;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
@@ -36,7 +37,8 @@ public abstract class Neo4jDeployment<DEPLOYMENT extends Deployment, CONNECTION 
                                              Jvm jvm,
                                              URI datasetUri,
                                              Path workDir,
-                                             WorkspaceStorage workspaceStorage )
+                                             WorkspaceStorage workspaceStorage,
+                                             DatabaseName databaseName )
     {
         Path dataset = workspaceStorage.resolve( datasetUri );
 
@@ -45,7 +47,8 @@ public abstract class Neo4jDeployment<DEPLOYMENT extends Deployment, CONNECTION 
                      measurementParams,
                      jvm,
                      dataset,
-                     workDir );
+                     workDir,
+                     databaseName );
     }
 
     private static Deployment resolveProduct( WorkspaceStorage workspaceStorage, Deployment deployment )
@@ -69,16 +72,17 @@ public abstract class Neo4jDeployment<DEPLOYMENT extends Deployment, CONNECTION 
                                         MeasurementParams measurementParams,
                                         Jvm jvm,
                                         Path storeDir,
-                                        Path workDir )
+                                        Path workDir,
+                                        DatabaseName databaseName )
     {
+        Neo4jStore store = Neo4jStore.createFrom( storeDir, databaseName );
         if ( deployment instanceof Deployment.Embedded )
         {
-            return new EmbeddedNeo4jDeployment( (Deployment.Embedded) deployment, edition, measurementParams, jvm, Neo4jStore.createFrom( storeDir ),
-                                                workDir );
+            return new EmbeddedNeo4jDeployment( (Deployment.Embedded) deployment, edition, measurementParams, jvm, store, workDir );
         }
         else if ( deployment instanceof Deployment.Server )
         {
-            return new ServerNeo4jDeployment( (Deployment.Server) deployment, measurementParams, jvm, Neo4jStore.createFrom( storeDir ), workDir );
+            return new ServerNeo4jDeployment( (Deployment.Server) deployment, measurementParams, jvm, store, workDir );
         }
         else
         {

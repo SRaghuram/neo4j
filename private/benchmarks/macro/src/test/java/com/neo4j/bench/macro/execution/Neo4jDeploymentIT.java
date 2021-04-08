@@ -51,7 +51,6 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -301,7 +300,8 @@ public class Neo4jDeploymentIT
                                                                                             JVM,
                                                                                             DATASET_URI,
                                                                                             workspace,
-                                                                                            workspaceStorage );
+                                                                                            workspaceStorage,
+                                                                                            databaseName );
         EmbeddedDatabase.verifySchema( neo4jDeployment.originalStore(), EDITION, baseNeo4jConfigFile, expectedSchema );
         EmbeddedDatabase.verifyStoreFormat( neo4jDeployment.originalStore() );
         return neo4jDeployment;

@@ -59,7 +59,13 @@ class InteractiveExecutionIT
                                                                          Duration.ofSeconds( 0 ),
                                                                          Duration.ofSeconds( 10 ) );
             Jvm jvm = Jvm.defaultJvmOrFail();
-            Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( deployment, Edition.ENTERPRISE, measurementParams, jvm, dataset, workDir );
+            Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( deployment,
+                                                                    Edition.ENTERPRISE,
+                                                                    measurementParams,
+                                                                    jvm,
+                                                                    dataset,
+                                                                    workDir,
+                                                                    workload.getDatabaseName() );
 
             Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
             OptionsBuilder optionsBuilder = new OptionsBuilder()

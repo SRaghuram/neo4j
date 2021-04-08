@@ -50,7 +50,6 @@ public class ForkRunner
     public static Results runForksFor( Neo4jDeployment neo4jDeployment,
                                        BenchmarkGroupDirectory groupDir,
                                        Query query,
-                                       Store store,
                                        Edition edition,
                                        Neo4jConfig neo4jConfig,
                                        List<ParameterizedProfiler> profilers,
@@ -104,7 +103,7 @@ public class ForkRunner
                 if ( forkNumber == 0 )
                 {
                     runPlanExportFork( query,
-                                       store,
+                                       neo4jDeployment.originalStore(),
                                        edition,
                                        neo4jConfigFile,
                                        forkDirectory,

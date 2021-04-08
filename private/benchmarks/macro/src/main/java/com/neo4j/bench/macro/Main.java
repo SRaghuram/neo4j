@@ -8,7 +8,6 @@ package com.neo4j.bench.macro;
 import com.github.rvesse.airline.Cli;
 import com.github.rvesse.airline.builder.CliBuilder;
 import com.github.rvesse.airline.help.Help;
-import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.Resources;
@@ -74,7 +73,6 @@ public class Main
             Results results = ForkRunner.runForksFor( neo4jDeployment,
                                                       benchmarkGroupDir,
                                                       query,
-                                                      Neo4jStore.createFrom( options.storeDir() ),
                                                       options.edition(),
                                                       options.neo4jConfig(),
                                                       options.profilers(),
