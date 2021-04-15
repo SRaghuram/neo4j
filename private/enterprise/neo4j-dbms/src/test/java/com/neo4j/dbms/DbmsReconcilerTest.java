@@ -15,6 +15,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -83,9 +84,9 @@ class DbmsReconcilerTest
         var dbName = "foo";
         var id = idRepository.getByName( "foo" )
                 .orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: foo" ) );
-        var operator = new FixedDbmsOperator( Map.of( dbName, new EnterpriseDatabaseState( id, UNKNOWN )) );
+        var operator = new ImmutableDbmsOperator( Map.of( dbName, new EnterpriseDatabaseState( id, UNKNOWN )) );
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
+        var reconciler = new DbmsReconciler( Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
 
         // when INITIAL -> UNKNOWN
         // note: ??? -> UNKNOWN should always be an invalid transition as the UNKNOWN state may not be desired by an operator
@@ -102,9 +103,9 @@ class DbmsReconcilerTest
     void emptyReconciliationRequestsShouldCompleteImmediately() throws InterruptedException
     {
         // given
-        var operator = new LocalDbmsOperator( idRepository );
+        var operator = new LocalDbmsOperator();
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
+        var reconciler = new DbmsReconciler( Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
         var waitingFinished = new CountDownLatch( 1 );
         var result = reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() );
 
@@ -120,12 +121,12 @@ class DbmsReconcilerTest
     }
 
     @Test
-    void shouldCacheSimpleReconciliationRequests() throws Exception
+    void shouldCacheSimpleReconciliationRequests()
     {
         // given
         // an operator desiring foo as started
         var foo = idRepository.getRaw( "foo" );
-        var operator = new LocalDbmsOperator( idRepository );
+        var operator = new LocalDbmsOperator();
         // a database manager which blocks on starting databases
         var startingLatch = new CountDownLatch( 1 );
         var isStarting = new AtomicBoolean( false );
@@ -141,16 +142,16 @@ class DbmsReconcilerTest
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
 
         // a reconciler with a proper multi threaded executor
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
+        var reconciler = new DbmsReconciler( Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
 
         // when
         // the reconciler is already executing a long running job
-        operator.startDatabase( foo.name() );
+        operator.startDatabase( foo );
         var startFoo = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
         assertEventually( "Reconciler should be starting foo!", isStarting::get, TRUE, 10, SECONDS );
 
         // and a second job gets created. It waits and is put in an internal cache
-        operator.stopDatabase( foo.name() );
+        operator.stopDatabase( foo );
         var stopFooA = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
 
         // then
@@ -160,7 +161,7 @@ class DbmsReconcilerTest
         assertEquals( stopFooA, stopFooB, "The reconciler results should be equal for the cached job!" );
 
         // the reconciler should pick up the latest state at the time each job starts
-        operator.startDatabase( foo.name() );
+        operator.startDatabase( foo );
         startingLatch.countDown();
         startFoo.awaitAll();
         stopFooA.awaitAll();
@@ -171,12 +172,12 @@ class DbmsReconcilerTest
     }
 
     @Test
-    void shouldNotReturnCachedSimpleJobForPriorityRequests() throws Exception
+    void shouldNotReturnCachedSimpleJobForPriorityRequests()
     {
         // given
         // an operator desiring foo as started
         var foo = idRepository.getRaw( "foo" );
-        var operator = new LocalDbmsOperator( idRepository );
+        var operator = new LocalDbmsOperator();
 
         // a database manager which blocks on starting databases
         var startingLatch = new CountDownLatch( 1 );
@@ -193,20 +194,20 @@ class DbmsReconcilerTest
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
 
         // a reconciler with a proper multi threaded executor
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
+        var reconciler = new DbmsReconciler( Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
         // when
         // the reconciler is already executing a long running job
-        operator.startDatabase( foo.name() );
+        operator.startDatabase( foo );
         var startFoo = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
         assertEventually( "Reconciler should be starting foo!", isStarting::get, TRUE, 10, SECONDS );
 
         // and a second job gets created. It waits and is put in an internal cache
-        operator.stopDatabase( foo.name() );
+        operator.stopDatabase( foo );
         var stopFooA = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
 
         // then
         // A third reconciliation attempts would return the cached job, but its forced, so it won't
-        operator.stopDatabase( foo.name() );
+        operator.stopDatabase( foo );
         var stopFooB = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.priorityTarget( foo ).build() );
 
         // then
@@ -235,12 +236,12 @@ class DbmsReconcilerTest
 
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
 
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
+        var reconciler = new DbmsReconciler( Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
         var databaseStateService = new EnterpriseDatabaseStateService( reconciler, databaseManager );
 
         // when
-        var operator = new LocalDbmsOperator( idRepository );
-        operator.startDatabase( "foo" );
+        var operator = new LocalDbmsOperator();
+        operator.startDatabase( foo );
 
         reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() ).awaitAll();
         var startFailure = databaseStateService.causeOfFailure( foo );
@@ -268,12 +269,12 @@ class DbmsReconcilerTest
                                                .from( INITIAL ).to( STARTED ).doTransitions( transitionWithCleanup )
                                                .build();
 
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
+        var reconciler = new DbmsReconciler( Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
         var databaseStateService = new EnterpriseDatabaseStateService( reconciler, databaseManager );
 
         // when
-        var operator = new LocalDbmsOperator( idRepository );
-        operator.startDatabase( "foo" );
+        var operator = new LocalDbmsOperator();
+        operator.startDatabase( foo );
 
         reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() ).awaitAll();
         var startFailure = databaseStateService.causeOfFailure( foo );
@@ -299,11 +300,11 @@ class DbmsReconcilerTest
 
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
 
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
+        var reconciler = new DbmsReconciler( Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
         var databaseStateService = new EnterpriseDatabaseStateService( reconciler, databaseManager );
 
-        var operator = new LocalDbmsOperator( idRepository );
-        operator.startDatabase( "foo" );
+        var operator = new LocalDbmsOperator();
+        operator.startDatabase( foo );
 
         // when/then
         assertThrows( DatabaseManagementException.class, () -> reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() ).join( foo ) );
@@ -341,12 +342,12 @@ class DbmsReconcilerTest
 
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
 
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), logProvider, jobScheduler, transitionsTable );
+        var reconciler = new DbmsReconciler( Config.defaults(), logProvider, jobScheduler, transitionsTable );
 
-        var operator = new LocalDbmsOperator( idRepository );
+        var operator = new LocalDbmsOperator();
 
         // when
-        operator.startDatabase( "foo" );
+        operator.startDatabase( foo );
         reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() ).awaitAll();
 
         // then
@@ -369,7 +370,7 @@ class DbmsReconcilerTest
     }
 
     @Test
-    void shouldLogPanicOnlyOnce() throws Exception
+    void shouldLogPanicOnlyOnce()
     {
         // given
         var logProvider = new AssertableLogProvider();
@@ -381,10 +382,11 @@ class DbmsReconcilerTest
 
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
 
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), logProvider, jobScheduler, transitionsTable );
+        var reconciler = new DbmsReconciler( Config.defaults(), logProvider, jobScheduler, transitionsTable );
 
         var operator = new StandaloneInternalDbmsOperator( nullLogProvider() );
-        operator.connect( new OperatorConnector( reconciler ) );
+        var connector = new OperatorConnector( reconciler );
+        connector.setOperators( Set.of( operator ) );
 
         // when
         operator.stopOnPanic( foo, failure );
@@ -415,5 +417,52 @@ class DbmsReconcilerTest
                                                     "Run `SHOW DATABASES` for further information.", "[foo]" );
         LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.WARN )
                      .doesNotContainMessage( "Panicked database foo was reconciled to state 'offline'" );
+    }
+
+    @Test
+    void shouldFailAndErrorForDatabaseWithoutDesiredState() throws Exception
+    {
+        // given
+        var logProvider = new AssertableLogProvider();
+        var foo = idRepository.getRaw( "foo" );
+        var latchA = new CountDownLatch( 1 );
+        var latchB = new CountDownLatch( 1 );
+
+        var databaseManager = new StubMultiDatabaseManager();
+        databaseManager.start();
+        databaseManager.addOnCreationAction( foo, db ->
+        {
+            try
+            {
+                latchB.countDown();
+                latchA.await();
+            }
+            catch ( InterruptedException e )
+            {
+               Thread.currentThread().interrupt(); // Do nothing
+            }
+        } );
+
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+        var reconciler = new DbmsReconciler( Config.defaults(), logProvider, jobScheduler, transitionsTable );
+
+        var operator = new MutableDbmsOperator( Map.of( "foo", new EnterpriseDatabaseState( foo, STARTED ) ) );
+
+        // when
+        reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() );
+        latchB.await();
+        var result = reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() );
+        operator.setDesired( Map.of() );
+        latchA.countDown();
+
+        // then
+        result.await( foo );
+        var state = reconciler.getReconcilerEntryOrDefault( foo, () -> EnterpriseDatabaseState.initial( foo ) );
+        assertEquals( STARTED, state.operatorState() );
+        assertTrue( state.hasFailed() );
+        LogAssertions.assertThat( logProvider )
+                     .forClass( DbmsReconciler.class )
+                     .forLevel( AssertableLogProvider.Level.ERROR )
+                     .containsMessages( "No operator desires a state for database foo any more. This is likely an error!" );
     }
 }

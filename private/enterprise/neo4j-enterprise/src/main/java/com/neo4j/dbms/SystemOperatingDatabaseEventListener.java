@@ -9,9 +9,9 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventList
 
 class SystemOperatingDatabaseEventListener implements ReplicatedDatabaseEventListener
 {
-    private final SystemGraphDbmsOperator systemOperator;
+    private final RuntimeSystemGraphDbmsOperator systemOperator;
 
-    SystemOperatingDatabaseEventListener( SystemGraphDbmsOperator systemOperator )
+    SystemOperatingDatabaseEventListener( RuntimeSystemGraphDbmsOperator systemOperator )
     {
         this.systemOperator = systemOperator;
     }

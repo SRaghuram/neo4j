@@ -8,6 +8,7 @@ package com.neo4j.dbms;
 import com.neo4j.dbms.database.DatabaseOperationCountsListener;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
@@ -36,8 +37,8 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     private final GlobalModule globalModule;
     private final MultiDatabaseManager<?> databaseManager;
     private final LocalDbmsOperator localOperator;
-    protected final SystemGraphDbmsOperator systemOperator;
-    private final StartupOperator startupOperator;
+    protected final RuntimeSystemGraphDbmsOperator systemOperator;
+    private final StartupSystemGraphDbmsOperator startupOperator;
     private final ShutdownOperator shutdownOperator;
     private final StandaloneInternalDbmsOperator internalDbmsOperator;
     private final SystemDatabaseCommitEventListener systemCommitListener;
@@ -45,6 +46,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final EnterpriseDatabaseStateService databaseStateService;
     protected final DbmsReconciler reconciler;
+    private final OperatorConnector connector;
 
     public StandaloneDbmsReconcilerModule( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager, ReconciledTransactionTracker reconciledTxTracker,
             EnterpriseSystemGraphDbmsModel dbmsModel )
@@ -60,18 +62,20 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         this.globalModule = globalModule;
         this.databaseManager = databaseManager;
         this.databaseIdRepository = databaseManager.databaseIdRepository();
-        this.localOperator = new LocalDbmsOperator( databaseIdRepository );
+        this.localOperator = new LocalDbmsOperator();
         this.reconciledTxTracker = reconciledTxTracker;
-        this.startupOperator = new StartupOperator( dbmsModel, globalModule.getGlobalConfig(), internalLogProvider );
-        this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, reconciledTxTracker, internalLogProvider );
+        this.startupOperator = new StartupSystemGraphDbmsOperator( dbmsModel, globalModule.getGlobalConfig(), internalLogProvider );
+        this.systemOperator = new RuntimeSystemGraphDbmsOperator( dbmsModel, reconciledTxTracker, internalLogProvider );
         this.shutdownOperator = new ShutdownOperator( databaseManager, globalModule.getGlobalConfig() );
         this.internalDbmsOperator = new StandaloneInternalDbmsOperator( globalModule.getLogService().getInternalLogProvider() );
         this.reconciler = reconciler;
         this.systemCommitListener = new SystemDatabaseCommitEventListener( systemOperator );
         this.databaseStateService = new EnterpriseDatabaseStateService( reconciler, databaseManager );
+        this.connector = new OperatorConnector( reconciler );
 
         globalModule.getGlobalDependencies().satisfyDependency( reconciler );
         globalModule.getGlobalDependencies().satisfyDependency( databaseStateService );
+        globalModule.getGlobalDependencies().satisfyDependency( connector ); // For PanicIT
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
 
         var operationCounts = globalModule.getGlobalDependencies().resolveDependency( DatabaseOperationCounts.Counter.class );
@@ -82,8 +86,6 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     public void start() throws Exception
     {
         registerWithListenerService( globalModule );
-        var connector = new OperatorConnector( reconciler );
-        operators().forEach( op -> op.connect( connector ) );
         startInitialDatabases();
     }
 
@@ -93,11 +95,14 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     }
 
     /**
-     * Blocking call. Just syntactic sugar around a {@link StartupOperator}. Used to transition default databases to
+     * Blocking call. Just syntactic sugar around a {@link StartupSystemGraphDbmsOperator}. Used to transition default databases to
      * desired initial states at DatabaseManager startup
      */
     private void startInitialDatabases() throws DatabaseManagementException
     {
+        var startupOperators = Stream.concat( Stream.of( startupOperator ), internalOperators() )
+                                     .collect( Collectors.toUnmodifiableSet() );
+        connector.setOperators( startupOperators );
         // Initially trigger system operator to start system db, it always desires the system db to be STARTED
         startupOperator.startSystem();
 
@@ -113,8 +118,12 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         // from the transactional threads.
         reconciledTxTracker.enable( lastClosedTxId );
 
-        // When startup operator is done the system operator has to be triggered. This is to reconcile changes that
-        // might have been committed to the system database when startup operator was working.
+        // When startup system operator is done the runtime system operator has to be triggered.
+        // This is to reconcile changes that might have been committed to the system database
+        // when startup operator was working.
+        var runtimeOperators = Stream.concat( Stream.of( systemOperator ), internalOperators() )
+                                     .collect( Collectors.toUnmodifiableSet() );
+        connector.setOperators( runtimeOperators );
         systemOperator.updateDesiredStates();
         systemOperator.trigger( ReconcilerRequest.simple() ).awaitAll();
     }
@@ -140,9 +149,9 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         return databaseStateService;
     }
 
-    protected Stream<DbmsOperator> operators()
+    protected Stream<DbmsOperator> internalOperators()
     {
-        return Stream.of( localOperator, systemOperator, startupOperator, shutdownOperator, internalDbmsOperator );
+        return Stream.of( localOperator, shutdownOperator, internalDbmsOperator );
     }
 
     protected void registerWithListenerService( GlobalModule globalModule )
@@ -155,6 +164,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     protected void unregisterWithListenerService( GlobalModule globalModule )
     {
         globalModule.getDatabaseEventListeners().unregisterDatabaseEventListener( internalDbmsOperator );
+        globalModule.getTransactionEventListeners().unregisterTransactionEventListener( SYSTEM_DATABASE_NAME, systemCommitListener );
     }
 
     /**
@@ -189,7 +199,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     private static DbmsReconciler createReconciler( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager )
     {
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
-        return new DbmsReconciler( databaseManager, globalModule.getGlobalConfig(), globalModule.getLogService().getInternalLogProvider(),
+        return new DbmsReconciler( globalModule.getGlobalConfig(), globalModule.getLogService().getInternalLogProvider(),
                 globalModule.getJobScheduler(), transitionsTable );
     }
 
@@ -202,9 +212,9 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
 
     private static class SystemDatabaseCommitEventListener extends TransactionEventListenerAdapter<Object>
     {
-        private final SystemGraphDbmsOperator systemOperator;
+        private final RuntimeSystemGraphDbmsOperator systemOperator;
 
-        SystemDatabaseCommitEventListener( SystemGraphDbmsOperator systemOperator )
+        SystemDatabaseCommitEventListener( RuntimeSystemGraphDbmsOperator systemOperator )
         {
             this.systemOperator = systemOperator;
         }

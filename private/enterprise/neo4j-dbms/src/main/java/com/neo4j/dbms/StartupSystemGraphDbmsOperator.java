@@ -5,11 +5,11 @@
  */
 package com.neo4j.dbms;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -28,14 +28,14 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABA
  * (in most cases STARTED) at startup.
  * The system database should be reconciled as first.
  */
-class StartupOperator extends DbmsOperator
+class StartupSystemGraphDbmsOperator extends DbmsOperator
 {
     private final int startupChunk;
     private final EnterpriseSystemGraphDbmsModel dbmsModel;
     private final Log log;
-    private volatile Map<String, EnterpriseDatabaseState> ownDesired;
+    private final Map<String, EnterpriseDatabaseState> desired;
 
-    StartupOperator( EnterpriseSystemGraphDbmsModel dbmsModel, Config config, LogProvider logProvider )
+    StartupSystemGraphDbmsOperator( EnterpriseSystemGraphDbmsModel dbmsModel, Config config, LogProvider logProvider )
     {
         int parallelism = config.get( GraphDatabaseSettings.reconciler_maximum_parallelism );
         if ( parallelism == 0 )
@@ -45,13 +45,13 @@ class StartupOperator extends DbmsOperator
         this.startupChunk = parallelism;
         this.dbmsModel = dbmsModel;
         this.log = logProvider.getLog( getClass() );
-        unsetDesired();
+        this.desired = new ConcurrentHashMap<>();
     }
 
     @Override
     protected Map<String,EnterpriseDatabaseState> desired0()
     {
-        return ownDesired;
+        return desired;
     }
 
     void startSystem()
@@ -59,52 +59,46 @@ class StartupOperator extends DbmsOperator
         // Initially trigger system operator to start system db, it always desires the system db to be STARTED
         log.info( "Starting up '%s' database", NAMED_SYSTEM_DATABASE_ID.name() );
         // Only system is needed to be reconciled
-        setDesired( Map.of(NAMED_SYSTEM_DATABASE_ID.name(), new EnterpriseDatabaseState( NAMED_SYSTEM_DATABASE_ID, STARTED ) ) );
-        var result = trigger( ReconcilerRequest.simple() );
-        result.join( NAMED_SYSTEM_DATABASE_ID );
+        desired.put( NAMED_SYSTEM_DATABASE_ID.name(), new EnterpriseDatabaseState( NAMED_SYSTEM_DATABASE_ID, STARTED ) );
+        trigger( ReconcilerRequest.simple() ).join( NAMED_SYSTEM_DATABASE_ID );
         log.info( "'%s' database started", NAMED_SYSTEM_DATABASE_ID.name() );
-        unsetDesired();
     }
 
     void startAllNonSystem()
     {
         // Manually kick off the reconciler to start all other databases in the system database, now that the system database is started
         // We do this ordered in a batch providing that on all eventual cluster members the same databases are started
-        var allDatabases = dbmsModel.getDatabaseStates().values().stream().filter( state -> !state.databaseId().equals( NAMED_SYSTEM_DATABASE_ID ) );
-        var batches = batchDatabasesToStop( allDatabases );
+        var allDatabases = dbmsModel.getDatabaseStates().values().stream()
+                                    .filter( state -> !state.databaseId().equals( NAMED_SYSTEM_DATABASE_ID ) );
+        var batches = batchDatabasesToStart( allDatabases );
 
         batches.forEach( databaseBatch ->
         {
-            var desiredUpdate = databaseBatch.stream().collect( Collectors.toMap( state -> state.databaseId().name(), Function.identity() ) );
-            var batchedNames = desiredUpdate.values().stream().map( EnterpriseDatabaseState::databaseId ).collect( Collectors.toSet() );
-            log.info( "Handling databases at startup: %s", batchedNames );
+            var desiredUpdate = databaseBatch.stream()
+                                             .collect( Collectors.toMap( state -> state.databaseId().name(), Function.identity() ) );
+            var batchLogMessage = desiredUpdate.values().stream()
+                                               .map( EnterpriseDatabaseState::toShortString )
+                                               .collect( Collectors.joining( ", " ) );
+            var batchNames = databaseBatch.stream()
+                                          .map( EnterpriseDatabaseState::databaseId )
+                                          .collect( Collectors.toSet() );
+
+            log.info( "Reconciling databases to desired states at startup: %s", batchLogMessage );
             // Only these databases are needed to be reconciled
-            setDesired( desiredUpdate );
-            var result = trigger( ReconcilerRequest.simple() );
-            result.await( batchedNames );
-            unsetDesired();
+            desired.putAll( desiredUpdate );
+            trigger( ReconcilerRequest.simple() ).await( batchNames );
         } );
 
-        log.info( "All databases were handled at startup" );
+        log.info( "All databases were reconciled at startup" );
     }
 
-    private synchronized void setDesired( Map<String,EnterpriseDatabaseState> desired )
-    {
-        ownDesired = Map.copyOf( desired );
-    }
-
-    private synchronized void unsetDesired()
-    {
-        ownDesired = Map.of();
-    }
-
-    private Stream<List<EnterpriseDatabaseState>> batchDatabasesToStop( Stream<EnterpriseDatabaseState> states )
+    private Stream<List<EnterpriseDatabaseState>> batchDatabasesToStart( Stream<EnterpriseDatabaseState> states )
     {
         var idx = new AtomicInteger( 0 );
 
         var groups = states.sorted( Comparator.comparing( state -> state.databaseId().name() ) )
                 .collect( Collectors.groupingBy( ignored -> idx.getAndIncrement() / startupChunk ) );
 
-        return new TreeMap<>( groups ).values().stream().map( ArrayList::new );
+        return new TreeMap<>( groups ).values().stream();
     }
 }

@@ -18,13 +18,15 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABA
 /**
  * Operator driving database management operations in response to changes in the system database
  */
-class SystemGraphDbmsOperator extends DbmsOperator
+class RuntimeSystemGraphDbmsOperator extends DbmsOperator
 {
     private final EnterpriseSystemGraphDbmsModel dbmsModel;
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final Log log;
 
-    SystemGraphDbmsOperator( EnterpriseSystemGraphDbmsModel dbmsModel, ReconciledTransactionTracker reconciledTxTracker, LogProvider logProvider )
+    RuntimeSystemGraphDbmsOperator( EnterpriseSystemGraphDbmsModel dbmsModel,
+                             ReconciledTransactionTracker reconciledTxTracker,
+                             LogProvider logProvider )
     {
         this.dbmsModel = dbmsModel;
         this.reconciledTxTracker = reconciledTxTracker;

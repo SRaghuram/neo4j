@@ -20,7 +20,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 
 /**
  * Simple holder for a Collection of concurrently executing {@link CompletableFuture}s
- * returned from {@link DbmsReconciler#reconcile(List, ReconcilerRequest)}. Provides the ability
+ * returned from {@link DbmsReconciler#reconcile(Collection, ReconcilerRequest)}. Provides the ability
  * for calling methods to selectively block on reconciler completion.
  *
  * Note: awaiting on the reconciliation of particular databases is relaxed. If you await
@@ -96,7 +96,7 @@ public final class ReconcilerResult
     /**
      * Await the completion of the reconciliation job for the given database
      *
-     * Note: despite the use of {@code future.join()} internally, this method should not throw. This is because all exceptions which occur
+     * Note: despite the use of {@code future.join()} internally, this method should not throw. This is because all *expected* exceptions which occur
      * during reconciliation jobs are caught and wrapped in {@link ReconcilerStepResult}s. If you wish to rethrow any exceptions which may
      * have occurred, please use {@link ReconcilerResult#join(NamedDatabaseId)} or similar.
      */

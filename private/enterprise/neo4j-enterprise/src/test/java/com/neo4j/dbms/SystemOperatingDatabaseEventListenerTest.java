@@ -12,7 +12,7 @@ import static org.mockito.Mockito.verify;
 
 class SystemOperatingDatabaseEventListenerTest
 {
-    private SystemGraphDbmsOperator systemOperator = mock( SystemGraphDbmsOperator.class );
+    private RuntimeSystemGraphDbmsOperator systemOperator = mock( RuntimeSystemGraphDbmsOperator.class );
     private SystemOperatingDatabaseEventListener listener = new SystemOperatingDatabaseEventListener( systemOperator );
 
     @Test

@@ -15,9 +15,12 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Optional;
 
 import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.ExtensionCallback;
@@ -94,7 +97,8 @@ class DatabaseOperationCountMetricsIT
 
         // when heal and start
         Files.move( fooTrxLogRenamed, fooTrxLog );
-        graphDatabaseAPI.getDependencyResolver().resolveDependency( LocalDbmsOperator.class ).startDatabase( "foo" );
+        var fooId = databaseId( "foo", graphDatabaseAPI );
+        graphDatabaseAPI.getDependencyResolver().resolveDependency( LocalDbmsOperator.class ).startDatabase( fooId.get() );
         // then
         assertDatabaseCount( metrics, 5, 6, 2, 1, 1, 1 );
     }
@@ -125,5 +129,13 @@ class DatabaseOperationCountMetricsIT
         {
             throw new UncheckedIOException( io );
         }
+    }
+
+    private static Optional<NamedDatabaseId> databaseId( String databaseName, GraphDatabaseAPI gdb )
+    {
+        var resolver = gdb.getDependencyResolver();
+        var databaseManager = resolver.resolveDependency( DatabaseManager.class );
+        var idRepo = databaseManager.databaseIdRepository();
+        return idRepo.getByName( databaseName );
     }
 }

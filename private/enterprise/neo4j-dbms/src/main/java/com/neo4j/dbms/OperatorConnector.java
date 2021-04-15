@@ -5,23 +5,31 @@
  */
 package com.neo4j.dbms;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Collection;
+import java.util.Set;
+
+import static java.util.function.Predicate.not;
 
 public class OperatorConnector
 {
     private final DbmsReconciler reconciler;
-    private final List<DbmsOperator> operators = new CopyOnWriteArrayList<>();
+    protected volatile Set<DbmsOperator> operators;
 
     OperatorConnector( DbmsReconciler reconciler )
     {
         this.reconciler = reconciler;
+        this.operators = Set.of();
     }
 
-    void register( DbmsOperator operator )
+    synchronized void setOperators( final Collection<DbmsOperator> operators )
     {
-        operators.add( operator );
+        var replacementOperators = Set.copyOf( operators );
+        var removedOperators = this.operators.stream().filter( not( replacementOperators::contains ) );
+        var newOperators = replacementOperators.stream().filter( not( this.operators::contains ) );
+
+        removedOperators.forEach( op -> op.disconnect( this ) );
+        newOperators.forEach( op -> op.connect( this ) );
+        this.operators = replacementOperators;
     }
 
     /**
@@ -36,8 +44,8 @@ public class OperatorConnector
      * @param request a request that contains information about the requested reconciliation attempt.
      * @return the collection of database reconciliation operations caused by this trigger call
      */
-    public ReconcilerResult trigger( ReconcilerRequest request )
+    public synchronized ReconcilerResult trigger( ReconcilerRequest request )
     {
-        return reconciler.reconcile( new ArrayList<>( operators ), request );
+        return reconciler.reconcile( operators, request );
     }
 }

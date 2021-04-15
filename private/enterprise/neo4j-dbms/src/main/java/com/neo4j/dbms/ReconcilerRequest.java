@@ -65,7 +65,7 @@ public final class ReconcilerRequest
     /**
      * Builds a request that may ignore previous reconciliation failures for the target databases.
      * Databases may be the targets of reconciler requests when they are explicitly updated by a user
-     * (e.g. via the system graph and accompanying {@link SystemGraphDbmsOperator}).
+     * (e.g. via the system graph and accompanying {@link RuntimeSystemGraphDbmsOperator}).
      *
      * @return a populated reconciler request builder.
      * @param databases the subset of databases to be treated as explicit targets of the next reconciliation

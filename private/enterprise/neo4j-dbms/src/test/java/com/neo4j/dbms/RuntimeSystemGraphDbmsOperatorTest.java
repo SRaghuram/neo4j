@@ -7,6 +7,7 @@ package com.neo4j.dbms;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -26,7 +27,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
-class SystemGraphDbmsOperatorTest
+class RuntimeSystemGraphDbmsOperatorTest
 {
 
     @Test
@@ -41,12 +42,12 @@ class SystemGraphDbmsOperatorTest
         );
         var dbmsModel = new StubEnterpriseSystemGraphDbmsModel( databaseUpdates, systemGraphDbStates );
         var transactionTracker = new DefaultReconciledTransactionTracker( NullLogService.getInstance() );
-        var operator = new SystemGraphDbmsOperator( dbmsModel, transactionTracker, nullLogProvider() );
+        var operator = new RuntimeSystemGraphDbmsOperator( dbmsModel, transactionTracker, nullLogProvider() );
 
         var dbmsReconciler = mock( DbmsReconciler.class );
         when( dbmsReconciler.reconcile( anyList(), any() ) ).thenReturn( ReconcilerResult.EMPTY );
         var connector = new TestOperatorConnector( dbmsReconciler );
-        operator.connect( connector );
+        connector.setOperators( List.of( operator ) );
 
         // when
         operator.transactionCommitted( 1L, mock( TransactionData.class ) );
@@ -68,12 +69,12 @@ class SystemGraphDbmsOperatorTest
         );
         var dbmsModel = new StubEnterpriseSystemGraphDbmsModel( databaseUpdates, systemGraphDbStates );
         var transactionTracker = new DefaultReconciledTransactionTracker( NullLogService.getInstance() );
-        var operator = new SystemGraphDbmsOperator( dbmsModel, transactionTracker, nullLogProvider() );
+        var operator = new RuntimeSystemGraphDbmsOperator( dbmsModel, transactionTracker, nullLogProvider() );
 
         var dbmsReconciler = mock( DbmsReconciler.class );
         when( dbmsReconciler.reconcile( anyList(), any() ) ).thenReturn( ReconcilerResult.EMPTY );
         var connector = new TestOperatorConnector( dbmsReconciler );
-        operator.connect( connector );
+        connector.setOperators( List.of( operator ) );
 
         // when
         operator.transactionCommitted( 1L, mock( TransactionData.class ) );

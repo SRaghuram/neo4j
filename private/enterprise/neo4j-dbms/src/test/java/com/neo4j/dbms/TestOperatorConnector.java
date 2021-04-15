@@ -6,6 +6,7 @@
 package com.neo4j.dbms;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -15,9 +16,8 @@ import org.neo4j.internal.helpers.collection.Pair;
 
 public class TestOperatorConnector extends OperatorConnector
 {
-    private List<Pair<Map<String,EnterpriseDatabaseState>,ReconcilerRequest>> triggerCalls;
-    private DbmsOperator operator;
-    private DbmsReconciler reconciler;
+    private final List<Pair<Map<String,EnterpriseDatabaseState>,ReconcilerRequest>> triggerCalls;
+    private final DbmsReconciler reconciler;
 
     TestOperatorConnector( DbmsReconciler reconciler )
     {
@@ -27,17 +27,13 @@ public class TestOperatorConnector extends OperatorConnector
     }
 
     @Override
-    void register( DbmsOperator operator )
-    {
-        this.operator = operator;
-    }
-
-    @Override
     public ReconcilerResult trigger( ReconcilerRequest request )
     {
-        var desired = new HashMap<>( operator.desired() );
+        var operators = List.copyOf( super.operators );
+
+        var desired = DbmsReconciler.desiredStates( operators );
         triggerCalls.add( Pair.of( desired, request ) );
-        return reconciler.reconcile( Collections.singletonList( operator ), request );
+        return reconciler.reconcile( operators, request );
     }
 
     List<Pair<Map<String,EnterpriseDatabaseState>,ReconcilerRequest>> triggerCalls()

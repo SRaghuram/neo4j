@@ -9,20 +9,28 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CompletableFuture;
 
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -31,14 +39,15 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedData
 
 class ClusterInternalDbmsOperatorTest
 {
-    private OperatorConnector connector = mock( OperatorConnector.class );
-    private ClusterInternalDbmsOperator operator = new ClusterInternalDbmsOperator( NullLogProvider.getInstance() );
+    private final DbmsReconciler reconciler = mock( DbmsReconciler.class );
+    private final TestOperatorConnector connector = new TestOperatorConnector( reconciler );
+    private final ClusterInternalDbmsOperator operator = new ClusterInternalDbmsOperator( NullLogProvider.getInstance() );
 
     @BeforeEach
     void setup()
     {
-        when( connector.trigger( any( ReconcilerRequest.class ) ) ).thenReturn( ReconcilerResult.EMPTY );
-        operator.connect( connector );
+        when( reconciler.reconcile( anyCollection(), any( ReconcilerRequest.class ) ) ).thenReturn( ReconcilerResult.EMPTY );
+        connector.setOperators( List.of( operator ) );
     }
 
     @Test
@@ -57,13 +66,13 @@ class ClusterInternalDbmsOperatorTest
         var stoppedDatabase = operator.stopForStoreCopy( someDb );
 
         // then
-        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.simple() );
+        verify( reconciler, times( 1 ) ).reconcile( anyCollection(), any( ReconcilerRequest.class ) );
 
         // when
         stoppedDatabase.release();
 
         // then
-        verify( connector, times( 2 ) ).trigger( ReconcilerRequest.simple() );
+        verify( reconciler, times( 2 ) ).reconcile( anyCollection(), any( ReconcilerRequest.class ) );
     }
 
     @Test
@@ -142,6 +151,22 @@ class ClusterInternalDbmsOperatorTest
     }
 
     @Test
+    void shouldThrowWhenFailsToPutDatabaseInStoreCopying()
+    {
+        // given
+        var e = new RuntimeException();
+        var someDb = randomNamedDatabaseId();
+        var actualState = new EnterpriseDatabaseState( someDb, STARTED );
+        var desiredState = new EnterpriseDatabaseState( someDb, STORE_COPYING );
+        var stepResult = new ReconcilerStepResult( actualState, e, desiredState );
+        var result = new ReconcilerResult( Map.of( someDb.name(), CompletableFuture.completedFuture( stepResult ) ) );
+        when( reconciler.reconcile( anyCollection(), any( ReconcilerRequest.class ) ) ).thenReturn( result );
+
+        // when
+        assertThrows( RuntimeException.class, () -> operator.stopForStoreCopy( someDb ) );
+    }
+
+    @Test
     void shouldNotDesireStoreCopyingWhileBootstrapping()
     {
         // given
@@ -179,16 +204,18 @@ class ClusterInternalDbmsOperatorTest
     {
         // given
         var someDb = randomNamedDatabaseId();
-        var desiredStateOnTrigger = new AtomicReference<EnterpriseOperatorState>();
-        captureDesiredStateWhenOperatorTriggered( someDb, desiredStateOnTrigger );
         var e = new IllegalStateException();
+        var expectedDesired = Map.of( someDb.name(), new EnterpriseDatabaseState( someDb, STOPPED ) );
+        var expectedRequest = ReconcilerRequest.panickedTarget( someDb, e ).build();
+        var expectedTriggerCall = Pair.of( expectedDesired, expectedRequest );
 
         // when
         operator.stopOnPanic( someDb, e );
+        var triggerCalls = connector.triggerCalls();
 
         // then
-        assertEquals( STOPPED, desiredStateOnTrigger.get() );
-        verify( connector ).trigger( ReconcilerRequest.panickedTarget( someDb, e ).build() );
+        assertThat( triggerCalls ).hasSize( 1 );
+        assertThat( triggerCalls ).contains( expectedTriggerCall );
     }
 
     @Test
@@ -196,15 +223,22 @@ class ClusterInternalDbmsOperatorTest
     {
         // given
         var someDb = randomNamedDatabaseId();
-        var desiredStateOnTrigger = new AtomicReference<EnterpriseOperatorState>();
-        captureDesiredStateWhenOperatorTriggered( someDb, desiredStateOnTrigger );
+        var e = new IllegalStateException();
+        var panicDesired = Map.of( someDb.name(), new EnterpriseDatabaseState( someDb, STOPPED ) );
+        var panicRequest = ReconcilerRequest.panickedTarget( someDb, e ).build();
+        var panicTriggerCall = Pair.of( panicDesired, panicRequest );
+        var storeCopyDesired = Map.of( someDb.name(), new EnterpriseDatabaseState( someDb, STORE_COPYING ) );
+        var storeCopyTriggerCall = Pair.of( storeCopyDesired, ReconcilerRequest.simple() );
 
         // when
         operator.stopForStoreCopy( someDb );
-        operator.stopOnPanic( someDb, new IllegalStateException() );
+        operator.stopOnPanic( someDb, e );
+
+        var triggerCalls = connector.triggerCalls();
 
         // then
-        assertEquals( STOPPED, desiredStateOnTrigger.get() );
+        assertThat( triggerCalls ).hasSize( 2 );
+        assertThat( triggerCalls ).containsExactly( storeCopyTriggerCall, panicTriggerCall );
     }
 
     @Test
@@ -220,16 +254,7 @@ class ClusterInternalDbmsOperatorTest
         assertTrue( storeCopyHandle.release() );
 
         // then
-        verify( connector ).trigger( ReconcilerRequest.panickedTarget( someDb, e ).build() );
+        verify( reconciler, atMostOnce() ).reconcile( anyCollection(), eq( ReconcilerRequest.panickedTarget( someDb, e ).build() ) );
     }
 
-    private void captureDesiredStateWhenOperatorTriggered( NamedDatabaseId namedDatabaseId, AtomicReference<EnterpriseOperatorState> stateRef )
-    {
-        when( connector.trigger( any( ReconcilerRequest.class ) ) ).thenAnswer( invocation ->
-        {
-            var desiredState = operator.desired().get( namedDatabaseId.name() );
-            stateRef.set( desiredState.operatorState() );
-            return ReconcilerResult.EMPTY;
-        } );
-    }
 }

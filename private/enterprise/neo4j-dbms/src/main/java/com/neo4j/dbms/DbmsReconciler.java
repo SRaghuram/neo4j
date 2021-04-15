@@ -5,8 +5,7 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.dbms.database.MultiDatabaseManager;
-
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -30,7 +29,6 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementException;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.internal.helpers.Exceptions;
@@ -59,7 +57,7 @@ import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.exponential;
  * will be executed strictly sequentially. In fact, each state transition (all their resulting steps) are executed sequentially
  * for a given database.
  *
- * For example, if a user requests (via the `{@link SystemGraphDbmsOperator}`) that the STOPPED database foo is STARTED and
+ * For example, if a user requests (via the `{@link RuntimeSystemGraphDbmsOperator}`) that the STOPPED database foo is STARTED and
  * shortly afterward requests that foo is DROPPED, the reconciler will block the thread performing the DROPPED transition
  * until the STARTED transition has successfully finished. Also, the sequence of steps required for the DROPPED transition is
  * calculated only once the thread is unblocked. In other words the transition required is STARTED->STOPPED->DROPPED,
@@ -81,8 +79,6 @@ public class DbmsReconciler
     private final ReconcilerExecutors executors;
     private final Map<String,CompletableFuture<ReconcilerStepResult>> waitingJobCache;
 
-    private final MultiDatabaseManager<? extends DatabaseContext> databaseManager;
-    private final BinaryOperator<EnterpriseDatabaseState> precedence;
     protected final Log log;
     private final boolean canRetry;
     private final Map<String,EnterpriseDatabaseState> currentStates;
@@ -90,11 +86,8 @@ public class DbmsReconciler
     private final List<DatabaseStateChangedListener> listeners;
     private final ReconcilerLocks locks;
 
-    DbmsReconciler( MultiDatabaseManager<? extends DatabaseContext> databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler,
-            TransitionsTable transitionsTable )
+    DbmsReconciler( Config config, LogProvider logProvider, JobScheduler scheduler, TransitionsTable transitionsTable )
     {
-        this.databaseManager = databaseManager;
-
         this.canRetry = config.get( GraphDatabaseSettings.reconciler_may_retry );
         this.strategy = exponential( config.get( GraphDatabaseSettings.reconciler_minimum_backoff ).toMillis(),
                                      config.get( GraphDatabaseSettings.reconciler_maximum_backoff ).toMillis(),
@@ -105,12 +98,11 @@ public class DbmsReconciler
         this.currentStates = new ConcurrentHashMap<>();
         this.waitingJobCache = new ConcurrentHashMap<>();
         this.log = logProvider.getLog( getClass() );
-        this.precedence = EnterpriseOperatorState.minByOperatorState( EnterpriseDatabaseState::operatorState );
         this.transitionsTable = transitionsTable;
         this.listeners = new CopyOnWriteArrayList<>();
     }
 
-    ReconcilerResult reconcile( List<DbmsOperator> operators, ReconcilerRequest request )
+    ReconcilerResult reconcile( Collection<DbmsOperator> operators, ReconcilerRequest request )
     {
         var namesOfDbsToReconcile = operators.stream()
                 .flatMap( op -> op.desired().keySet().stream() )
@@ -162,16 +154,18 @@ public class DbmsReconciler
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue, precedence ) );
     }
 
-    private static Map<String,EnterpriseDatabaseState> desiredStates( List<DbmsOperator> operators, BinaryOperator<EnterpriseDatabaseState> precedence )
+    static Map<String,EnterpriseDatabaseState> desiredStates( Collection<DbmsOperator> operators )
     {
+        var precedence = EnterpriseOperatorState.minByOperatorState( EnterpriseDatabaseState::operatorState );
         return operators.stream()
                 .map( DbmsOperator::desired )
                 .reduce( new HashMap<>(), ( l, r ) -> DbmsReconciler.combineDesiredStates( l, r, precedence ) );
     }
 
-    EnterpriseDatabaseState getReconcilerEntryOrDefault( NamedDatabaseId namedDatabaseId, Supplier<EnterpriseDatabaseState> initial )
+    final EnterpriseDatabaseState getReconcilerEntryOrDefault( NamedDatabaseId databaseId, Supplier<EnterpriseDatabaseState> initial )
     {
-        return Optional.ofNullable( currentStates.get( namedDatabaseId.name() ) ).orElseGet( initial );
+        var currentState = currentStates.get( databaseId.name() );
+        return currentState == null ? initial.get() : currentState;
     }
 
     protected EnterpriseDatabaseState initialReconcilerEntry( NamedDatabaseId namedDatabaseId )
@@ -206,10 +200,10 @@ public class DbmsReconciler
      * As the desired state of each database is calculated dynamically when a reconciliation actually starts
      * (after acquiring a lock), if a job is triggered for a database whilst another is already waiting, we just give the caller a reference
      * to the waiting job. Any changes to the database's desired state which caused that additional call to
-     * {@link DbmsReconciler#reconcile(List, ReconcilerRequest)} will be picked up by the earlier waiting job when it finally starts reconciling.
+     * {@link DbmsReconciler#reconcile(Collection, ReconcilerRequest)} will be picked up by the earlier waiting job when it finally starts reconciling.
      */
     private synchronized CompletableFuture<ReconcilerStepResult> scheduleReconciliationJob( String databaseName, ReconcilerRequest request,
-            List<DbmsOperator> operators )
+            Collection<DbmsOperator> operators )
     {
         var jobCanBeCached = request.canUseCacheFor( databaseName );
         if ( jobCanBeCached )
@@ -230,7 +224,7 @@ public class DbmsReconciler
         var job = reconcilerJobHandle
                 .thenCompose( ignored -> preReconcile( databaseName, operators, request, preReconcileExecutor ) )
                 .thenCompose( desiredState -> doTransitions( databaseName, desiredState, request ) )
-                .whenComplete( ( result, throwable ) -> postReconcile( databaseName, request, result, throwable ) );
+                .handle( ( result, throwable ) -> postReconcile( databaseName, request, result, throwable ) );
 
         if ( jobCanBeCached )
         {
@@ -243,7 +237,7 @@ public class DbmsReconciler
         return job;
     }
 
-    private CompletableFuture<EnterpriseDatabaseState> preReconcile( String databaseName, List<DbmsOperator> operators, ReconcilerRequest request,
+    private CompletableFuture<EnterpriseDatabaseState> preReconcile( String databaseName, Collection<DbmsOperator> operators, ReconcilerRequest request,
             Executor executor )
     {
         Supplier<EnterpriseDatabaseState> preReconcileJob = () ->
@@ -260,7 +254,7 @@ public class DbmsReconciler
                     waitingJobCache.remove( databaseName );
                 }
 
-                var desiredState = desiredStates( operators, precedence ).get( databaseName );
+                var desiredState = desiredStates( operators ).get( databaseName );
                 if ( desiredState == null )
                 {
                     throw new IllegalStateException( format( "No operator desires a state for database %s any more. " +
@@ -368,7 +362,7 @@ public class DbmsReconciler
             //   - The assignment of nextState is the "hair that broke the camel's back" and throws and OOM.
             //   - There are way too many steps and doTransitionStep eventually throws a StackOverflowError.
             //   Since in this case we don't know what would have been the failed state we leave the database in the last state it successfully reached
-            //   and just set that to failed with the catched Throwable
+            //   and just set that to failed with the caught Throwable
             return result.withError( throwable );
         }
     }
@@ -416,7 +410,7 @@ public class DbmsReconciler
         }
     }
 
-    private void postReconcile( String databaseName, ReconcilerRequest request, ReconcilerStepResult result, Throwable throwable )
+    private ReconcilerStepResult postReconcile( String databaseName, ReconcilerRequest request, ReconcilerStepResult result, Throwable throwable )
     {
         try
         {
@@ -430,6 +424,7 @@ public class DbmsReconciler
                 stateChanged( previousState, nextState );
                 return nextState;
             } );
+            return result;
         }
         finally
         {

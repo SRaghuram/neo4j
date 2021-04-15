@@ -99,7 +99,15 @@ public class ClusterInternalDbmsOperator extends DbmsOperator
     {
         StoreCopyHandle storeCopyHandle = new StoreCopyHandle( this, namedDatabaseId );
         storeCopying.add( storeCopyHandle );
-        triggerReconcilerOnStoreCopy( namedDatabaseId );
+        try
+        {
+            triggerReconcilerOnStoreCopy( namedDatabaseId );
+        }
+        catch ( Exception e )
+        {
+            storeCopying.remove( storeCopyHandle );
+            throw e;
+        }
         return storeCopyHandle;
     }
 
@@ -122,7 +130,7 @@ public class ClusterInternalDbmsOperator extends DbmsOperator
         {
             return false;
         }
-        trigger( ReconcilerRequest.simple() ).await( namedDatabaseId );
+        trigger( ReconcilerRequest.simple() ).join( namedDatabaseId );
         return true;
     }
 

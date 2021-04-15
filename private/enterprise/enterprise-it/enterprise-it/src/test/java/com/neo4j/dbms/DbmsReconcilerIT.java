@@ -79,7 +79,7 @@ class DbmsReconcilerIT
         // given
         // a fake operator that desires a state invalid for a standalone database
         var invalidDesiredState = new EnterpriseDatabaseState( db.databaseId(), DIRTY );
-        var fixedOperator = new FixedDbmsOperator( Map.of( db.databaseName(), invalidDesiredState ) );
+        var fixedOperator = new ImmutableDbmsOperator( Map.of( db.databaseName(), invalidDesiredState ) );
 
         // when
         // reconciler fails to reconcile the state transition
@@ -98,7 +98,7 @@ class DbmsReconcilerIT
         // given
         // a fake operator that desires a state invalid for a standalone database
         var invalidDesiredState = new EnterpriseDatabaseState( db.databaseId(), DIRTY );
-        var fixedOperator = new FixedDbmsOperator( Map.of( db.databaseName(), invalidDesiredState ) );
+        var fixedOperator = new ImmutableDbmsOperator( Map.of( db.databaseName(), invalidDesiredState ) );
 
         // a failed database
         var reconcilerResult = reconciler.reconcile( List.of( fixedOperator ), ReconcilerRequest.simple() );
@@ -106,7 +106,7 @@ class DbmsReconcilerIT
         assertTrue( databaseStateService.causeOfFailure( db.databaseId() ).isPresent(), "Database is expected to be failed" );
 
         // when
-        localOperator.stopDatabase( db.databaseName() );
+        localOperator.stopDatabase( db.databaseId() );
 
         assertEventually( "Database should be stopped",
                 () -> databaseStateService.stateOfDatabase( db.databaseId() ).operatorState(), equalityCondition( STOPPED ), 10, SECONDS );

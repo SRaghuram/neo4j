@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -208,8 +209,8 @@ class DbmsReconcilerModuleTest
         assertSame( reconcilerModule.databaseStateService().stateOfDatabase( fooId ).operatorState(), DIRTY );
 
         // when
-        var startOperator = new LocalDbmsOperator( idRepository );
-        startOperator.startDatabase( fooId.name() );
+        var startOperator = new LocalDbmsOperator();
+        startOperator.startDatabase( fooId );
         var startException = assertThrows( Exception.class,
                 () -> reconcilerModule.reconciler.reconcile( List.of( startOperator ), ReconcilerRequest.priorityTarget( fooId ).build() ).joinAll(),
                 "dirty to not dropped not allowed" );
@@ -313,8 +314,8 @@ class DbmsReconcilerModuleTest
 
     private void dropDatabase( NamedDatabaseId fooId, StandaloneDbmsReconcilerModule reconcilerModule )
     {
-        var dropOperator = new LocalDbmsOperator( idRepository );
-        dropOperator.dropDatabase( fooId.name() );
+        var dropOperator = new LocalDbmsOperator();
+        dropOperator.dropDatabase( fooId );
         reconcilerModule.reconciler.reconcile( List.of( dropOperator ), ReconcilerRequest.priorityTarget( fooId ).build() ).awaitAll();
     }
 
@@ -325,7 +326,7 @@ class DbmsReconcilerModuleTest
 
         StubReconciler( CompletableFuture<Void> handle )
         {
-            super( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler,
+            super( Config.defaults(), NullLogProvider.getInstance(), jobScheduler,
                    StandaloneDbmsReconcilerModule.createTransitionsTable( new ReconcilerTransitions( databaseManager ) ) );
             this.handle = handle;
             this.ongoingReconciliationJobs = new AtomicInteger( 0 );
@@ -337,7 +338,7 @@ class DbmsReconcilerModuleTest
         }
 
         @Override
-        ReconcilerResult reconcile( List<DbmsOperator> operators, ReconcilerRequest request )
+        ReconcilerResult reconcile( Collection<DbmsOperator> operators, ReconcilerRequest request )
         {
             // The fake result still needs to contain the correct database names
             var namesOfDbsToReconcile = operators.stream()

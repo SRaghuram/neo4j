@@ -37,12 +37,12 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
-class StartupOperatorTest
+class StartupSystemGraphDbmsOperatorTest
 {
     private EnterpriseSystemGraphDbmsModel dbmsModel = mock( EnterpriseSystemGraphDbmsModel.class );
     private int startBatchSize = 4;
     private Config config = Config.defaults( GraphDatabaseSettings.reconciler_maximum_parallelism, startBatchSize );
-    private StartupOperator operator = new StartupOperator( dbmsModel, config, NullLogProvider.nullLogProvider() );
+    private StartupSystemGraphDbmsOperator operator = new StartupSystemGraphDbmsOperator( dbmsModel, config, NullLogProvider.nullLogProvider() );
     private DbmsReconciler dbmsReconciler = mock( DbmsReconciler.class );
     private TestOperatorConnector connector = new TestOperatorConnector( dbmsReconciler );
     private List<NamedDatabaseId> databases =
@@ -53,7 +53,7 @@ class StartupOperatorTest
     void setup()
     {
         when( dbmsReconciler.reconcile( anyList(), any() ) ).thenReturn( ReconcilerResult.EMPTY );
-        operator.connect( connector );
+        connector.setOperators( List.of( operator ) );
         when( dbmsModel.getDatabaseStates() ).thenReturn( databases.stream().collect( Collectors.toMap(
                 NamedDatabaseId::name, db -> new EnterpriseDatabaseState( db, STARTED ) ) ) );
     }
@@ -62,7 +62,6 @@ class StartupOperatorTest
     void shouldStartSystemDatabase()
     {
         operator.startSystem();
-        assertTrue( operator.desired().isEmpty() );
 
         var triggerCalls = connector.triggerCalls();
 
@@ -77,7 +76,6 @@ class StartupOperatorTest
     void shouldStartAllDatabases()
     {
         operator.startAllNonSystem();
-        assertTrue( operator.desired().isEmpty() );
 
         var triggerCalls = connector.triggerCalls();
 
@@ -94,13 +92,13 @@ class StartupOperatorTest
         assertTrue( operator.desired().isEmpty() );
         operator.startSystem();
         operator.startAllNonSystem();
-        assertTrue( operator.desired().isEmpty() );
 
         var triggerCalls = connector.triggerCalls();
 
         var expectedTriggerCalls = 1 + (int) Math.ceil( (double) (databases.size() - 1) / startBatchSize );
         assertEquals( expectedTriggerCalls, triggerCalls.size() );
 
+        var previous = Map.<String,EnterpriseDatabaseState>of();
         var desiredPerTrigger = triggerCalls.stream().map( Pair::first ).collect( Collectors.toList() );
 
         var batches = new ArrayList<Map<String,EnterpriseDatabaseState>>();
@@ -109,8 +107,10 @@ class StartupOperatorTest
         for ( var desired : desiredPerTrigger )
         {
             var desiredCopy = new HashMap<>( desired );
+            desiredCopy.keySet().removeAll( previous.keySet() );
             batches.add( desiredCopy );
             orderedDatabaseNames.addAll( desiredCopy.keySet().stream().sorted().collect( Collectors.toList() ) );
+            previous = desired;
         }
 
         var allExpectedDatabaseNames = Stream.concat( Stream.of( SYSTEM_DATABASE_NAME ),

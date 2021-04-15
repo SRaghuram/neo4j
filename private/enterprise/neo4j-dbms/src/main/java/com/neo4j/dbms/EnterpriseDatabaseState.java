@@ -97,7 +97,7 @@ public class EnterpriseDatabaseState implements DatabaseState
         return String.format( "from %s to %s", toShortString( currentState ), toShortString( desiredState ) );
     }
 
-    private static String toShortString( EnterpriseDatabaseState state )
+    public static String toShortString( EnterpriseDatabaseState state )
     {
         return state == null ? "unknown" :
                 String.format( "%s%s{db=%s}", state.hasFailed() ? "FAILED/" : "", state.operatorState(), state.namedDatabaseId.logPrefix() );

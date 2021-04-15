@@ -7,11 +7,15 @@ package com.neo4j.dbms;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.neo4j.util.VisibleForTesting;
 import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class DbmsOperator
 {
-    private OperatorConnector connector;
+    private final AtomicReference<OperatorConnector> connected = new AtomicReference<>();
     final Map<String,EnterpriseDatabaseState> desired = new ConcurrentHashMap<>();
 
     /**
@@ -20,8 +24,21 @@ public abstract class DbmsOperator
     final void connect( OperatorConnector connector )
     {
         Objects.requireNonNull( connector );
-        this.connector = connector;
-        connector.register( this );
+        this.connected.compareAndSet( null, connector );
+    }
+
+    /**
+     * Disconnects the operator from the reconciler. Future triggers will return `ReconcilerResult.EMPTY`
+     */
+    final void disconnect( OperatorConnector connector )
+    {
+        this.connected.compareAndSet( connector, null );
+    }
+
+    @VisibleForTesting
+    final Optional<OperatorConnector> connected()
+    {
+        return Optional.ofNullable( connected.get() );
     }
 
     protected Map<String,EnterpriseDatabaseState> desired0()
@@ -39,6 +56,7 @@ public abstract class DbmsOperator
 
     final ReconcilerResult trigger( ReconcilerRequest request )
     {
+        var connector = this.connected.get();
         if ( connector == null )
         {
             return ReconcilerResult.EMPTY;

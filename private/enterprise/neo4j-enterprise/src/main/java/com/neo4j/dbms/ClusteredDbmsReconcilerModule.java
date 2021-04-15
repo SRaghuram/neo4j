@@ -43,9 +43,9 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     }
 
     @Override
-    protected Stream<DbmsOperator> operators()
+    protected Stream<DbmsOperator> internalOperators()
     {
-        return Stream.concat( super.operators(), Stream.of( internalOperator, quarantineOperator ) );
+        return Stream.concat( super.internalOperators(), Stream.of( internalOperator, quarantineOperator ) );
     }
 
     @Override
@@ -92,7 +92,7 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     {
         var logProvider = globalModule.getLogService().getInternalLogProvider();
         var transitionsTable = createTransitionsTable( new ClusterReconcilerTransitions( databaseManager, quarantineOperator ) );
-        return new ClusteredDbmsReconciler( databaseManager, globalModule.getGlobalConfig(), logProvider, globalModule.getJobScheduler(),
+        return new ClusteredDbmsReconciler( globalModule.getGlobalConfig(), logProvider, globalModule.getJobScheduler(),
                 stateStorageFactory, transitionsTable, quarantineOperator );
     }
 }

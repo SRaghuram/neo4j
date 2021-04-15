@@ -29,10 +29,10 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
     private final ClusterStateStorageFactory stateStorageFactory;
     private final QuarantineOperator quarantineOperator;
 
-    ClusteredDbmsReconciler( ClusteredMultiDatabaseManager databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler,
+    ClusteredDbmsReconciler( Config config, LogProvider logProvider, JobScheduler scheduler,
                             ClusterStateStorageFactory stateStorageFactory, TransitionsTable transitionsTable, QuarantineOperator quarantineOperator )
     {
-        super( databaseManager, config, logProvider, scheduler, transitionsTable );
+        super( config, logProvider, scheduler, transitionsTable );
         this.logProvider = logProvider;
         this.stateStorageFactory = stateStorageFactory;
         this.quarantineOperator = quarantineOperator;
