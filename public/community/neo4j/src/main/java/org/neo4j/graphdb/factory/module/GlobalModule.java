@@ -268,7 +268,7 @@ public class GlobalModule
         storageEngineFactory = StorageEngineFactory.selectStorageEngine();
         globalDependencies.satisfyDependency( storageEngineFactory );
 
-        dbmsReadOnlyChecker = new DbmsReadOnlyChecker.Default( globalConfig );
+        dbmsReadOnlyChecker = new DbmsReadOnlyChecker.Default( globalConfig, neo4jLayout.databasesDirectory() );
 
         checkLegacyDefaultDatabase();
     }

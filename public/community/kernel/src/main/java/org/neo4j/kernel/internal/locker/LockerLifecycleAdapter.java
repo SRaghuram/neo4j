@@ -33,6 +33,9 @@ public class LockerLifecycleAdapter extends LifecycleAdapter
     @Override
     public synchronized void start()
     {
+        if (locker instanceof DatabaseLocker &&
+                ((DatabaseLocker)locker).isReadOnlyLock())
+            return;
         locker.checkLock();
     }
 

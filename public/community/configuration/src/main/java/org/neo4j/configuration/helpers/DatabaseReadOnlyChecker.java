@@ -42,6 +42,11 @@ public interface DatabaseReadOnlyChecker
      */
     boolean isReadOnly();
 
+    default boolean isAliasDatabaseName()
+    {
+        return false;
+    }
+
     /**
      * Check if database is a read only and throw exception if its not.
      */
@@ -68,6 +73,11 @@ public interface DatabaseReadOnlyChecker
         public boolean isReadOnly()
         {
             return dbmsChecker.isReadOnly( databaseName );
+        }
+
+        @Override
+        public boolean isAliasDatabaseName() {
+            return dbmsChecker.isAliasDatabaseName( databaseName );
         }
 
         @Override

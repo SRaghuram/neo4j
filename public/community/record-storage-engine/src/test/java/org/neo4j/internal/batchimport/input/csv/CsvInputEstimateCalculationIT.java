@@ -90,6 +90,7 @@ import static org.neo4j.internal.batchimport.input.RandomEntityDataGenerator.con
 import static org.neo4j.internal.batchimport.input.csv.DataFactories.defaultFormatNodeFileHeader;
 import static org.neo4j.internal.batchimport.input.csv.DataFactories.defaultFormatRelationshipFileHeader;
 import static org.neo4j.internal.batchimport.staging.ExecutionMonitor.INVISIBLE;
+import static org.neo4j.internal.batchimport.staging.ExecutionMonitors.invisible;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.kernel.impl.store.NoStoreHeader.NO_STORE_HEADER;
@@ -162,8 +163,8 @@ class CsvInputEstimateCalculationIT
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            new ParallelBatchImporter( databaseLayout, fs, PageCacheTracer.NULL, PBI_CONFIG, NullLogService.getInstance(),
-                    INVISIBLE, EMPTY, config, format, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY,
+            new ParallelBatchImporter( databaseLayout, fs, null, PageCacheTracer.NULL, PBI_CONFIG, NullLogService.getInstance(),
+                    invisible(), EMPTY, config, format, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY,
                     LogFilesInitializer.NULL, EmptyMemoryTracker.INSTANCE ).doImport( input );
 
             // then compare estimates with actual disk sizes

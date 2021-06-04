@@ -33,7 +33,7 @@ import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.storageengine.api.RelationshipDirection.OUTGOING;
 import static org.neo4j.storageengine.api.RelationshipDirection.directionOfStrict;
 
-class RecordRelationshipTraversalCursor extends RecordRelationshipCursor implements StorageRelationshipTraversalCursor
+public class RecordRelationshipTraversalCursor extends RecordRelationshipCursor implements StorageRelationshipTraversalCursor
 {
     private ReadTracer tracer;
 
@@ -53,7 +53,7 @@ class RecordRelationshipTraversalCursor extends RecordRelationshipCursor impleme
     private GroupState groupState;
     private boolean open;
 
-    RecordRelationshipTraversalCursor( RelationshipStore relationshipStore, RelationshipGroupStore groupStore, RelationshipGroupDegreesStore groupDegreesStore,
+    protected RecordRelationshipTraversalCursor( RelationshipStore relationshipStore, RelationshipGroupStore groupStore, RelationshipGroupDegreesStore groupDegreesStore,
             PageCursorTracer cursorTracer )
     {
         super( relationshipStore, cursorTracer );

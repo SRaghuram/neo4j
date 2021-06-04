@@ -22,23 +22,37 @@ package org.neo4j.storageengine.api;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
+import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
+
 /**
  * Cursor that can read property data.
  */
 public interface StoragePropertyCursor extends StorageCursor
 {
+    public enum OWNER_TYPE
+    {
+        NODE,
+        RELATIONSHIP,
+        NONE;
+    }
     /**
      * Initializes this cursor to that reading node properties at the given {@code reference}.
      * @param reference reference to start reading node properties at.
      */
     void initNodeProperties( long reference );
-
+    public default void initNodeProperties( long reference, long owner )
+    {
+        initNodeProperties( reference );
+    }
     /**
      * Initializes this cursor to that reading relationship properties at the given {@code reference}.
      * @param reference reference to start reading relationship properties at.
      */
     void initRelationshipProperties( long reference );
-
+    public default void initRelationshipProperties( long reference, long owner )
+    {
+        initRelationshipProperties( reference );
+    }
     /**
      * @return property key of the property this cursor currently is placed at.
      */
@@ -53,4 +67,14 @@ public interface StoragePropertyCursor extends StorageCursor
      * @return value of the property this cursor currently is placed at.
      */
     Value propertyValue();
+
+    public default OWNER_TYPE getOwnerType()
+    {
+        return OWNER_TYPE.NONE;
+    }
+
+    public default long getOwner()
+    {
+        return NO_ID;
+    }
 }

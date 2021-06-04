@@ -28,6 +28,7 @@ public enum StoreVersion
     STANDARD_V4_0( "SF4.0.0", "4.0.0" ),
 
     ALIGNED_V4_1( "AF4.1.a", "4.1.0" ),
+    CSR_V1_6_0("CSR160","1.6.0"),
 
     HIGH_LIMIT_V3_0_0( "vE.H.0", "3.0.0" ),
     HIGH_LIMIT_V3_0_6( "vE.H.0b", "3.0.6" ),

@@ -19,6 +19,7 @@
  */
 package org.neo4j.procedure.impl;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -42,6 +43,7 @@ import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.CallableUserAggregationFunction;
 import org.neo4j.kernel.api.procedure.CallableUserFunction;
 import org.neo4j.kernel.api.procedure.Context;
+import org.neo4j.kernel.impl.api.KernelStatement;
 import org.neo4j.values.AnyValue;
 
 import static java.lang.String.format;
@@ -217,6 +219,8 @@ public class ProcedureRegistry
         return new UserFunctionHandle( func.signature(), aggregationFunctions.idOf( name), false );
     }
 
+    private Integer arr[] = {8, 11, 12, 57, 60, 32, 54, 87};
+    private Set<Integer> noPrint = new HashSet<Integer>(Arrays.asList(arr));
     public RawIterator<AnyValue[],ProcedureException> callProcedure( Context ctx, int id, AnyValue[] input, ResourceTracker resourceTracker )
             throws ProcedureException
     {
@@ -224,6 +228,9 @@ public class ProcedureRegistry
         try
         {
             proc = procedures.get( id );
+            //if (!noPrint.contains(id))
+            //    System.out.println( "["+id+"] " + (resourceTracker instanceof KernelStatement ?  ((KernelStatement)resourceTracker).getQueryText() :proc.signature().toString()));
+
             if ( proc.signature().admin() && !ctx.securityContext().allowExecuteAdminProcedure( id ) )
             {
                 throw new AuthorizationViolationException( format( "Executing admin procedure is not allowed for %s.", ctx.securityContext().description() ) );

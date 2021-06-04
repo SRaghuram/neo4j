@@ -88,6 +88,14 @@
             <artifactId>neo4j-wal</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>core</artifactId>
+            <scope>system</scope>
+            <version>1.6.0</version>
+            <systemPath>/Users/sraghuram/myws/gds-projects/May05/graph-analytics160/public/packaging/build/libs/neo4j-graph-data-science-1.6.0-alpha05.jar</systemPath>
+        </dependency>
+
 
         <dependency>
             <groupId>org.neo4j</groupId>
@@ -158,6 +166,12 @@
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-kernel</artifactId>
+            <version>4.3.0-SNAPSHOT</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

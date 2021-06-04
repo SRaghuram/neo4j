@@ -51,6 +51,7 @@ import org.neo4j.internal.kernel.api.exceptions.TransactionApplyKernelException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException;
+import org.neo4j.internal.recordstorage.CSR.CSRRecordStorageReader;
 import org.neo4j.internal.recordstorage.NeoStoresDiagnostics.NeoStoreIdUsage;
 import org.neo4j.internal.recordstorage.NeoStoresDiagnostics.NeoStoreRecords;
 import org.neo4j.internal.recordstorage.NeoStoresDiagnostics.NeoStoreVersions;
@@ -70,10 +71,8 @@ import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.StoreType;
-import org.neo4j.kernel.impl.store.format.RecordFormat;
-import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
-import org.neo4j.kernel.impl.store.format.RecordFormats;
-import org.neo4j.kernel.impl.store.format.RecordStorageCapability;
+import org.neo4j.kernel.impl.store.format.*;
+import org.neo4j.kernel.impl.store.format.CSR.CSRBaseUtils;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.MetaDataRecord;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -116,7 +115,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private static final String SCHEMA_CACHE_START_TAG = "schemaCacheStart";
     private static final String TOKENS_INIT_TAG = "tokensInitialisation";
 
-    private final NeoStores neoStores;
+    private final ArrayList<NeoStores> neoStores = new ArrayList<>();
     private final DatabaseLayout databaseLayout;
     private final TokenHolders tokenHolders;
     private final Health databaseHealth;
@@ -184,7 +183,25 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         this.usingTokenIndexes = config.get( RelationshipTypeScanStoreSettings.enable_scan_stores_as_token_indexes );
 
         StoreFactory factory = new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, fs, logProvider, cacheTracer, readOnlyChecker );
-        neoStores = factory.openAllNeoStores( createStoreIfNotExists );
+        if (databaseLayout.storeTypes != null && databaseLayout.isReadOnlyDB()) {
+            ArrayList<StoreType> storeTypes = StoreType.onlyHouseKeepingStores();
+            for (int i = 0; i < databaseLayout.storeTypes.length; i++)
+            {
+                if (databaseLayout.storeTypes[i].equalsIgnoreCase("node"))
+                    storeTypes.add( StoreType.NODE );
+                else if (databaseLayout.storeTypes[i].equalsIgnoreCase("relationship"))
+                    storeTypes.add( StoreType.RELATIONSHIP );
+                else if (databaseLayout.storeTypes[i].equalsIgnoreCase("property"))
+                    storeTypes.add( StoreType.PROPERTY );
+                else if (databaseLayout.storeTypes[i].equalsIgnoreCase("array"))
+                    storeTypes.add( StoreType.PROPERTY_ARRAY );
+                else if (databaseLayout.storeTypes[i].equalsIgnoreCase("string"))
+                    storeTypes.add( StoreType.PROPERTY_STRING );
+            }
+            neoStores.add( factory.openNeoStores(createStoreIfNotExists, storeTypes.toArray(new StoreType[0])) );
+        }
+        else
+            neoStores.add( factory.openAllNeoStores( createStoreIfNotExists ));
         for ( IdType idType : IdType.values() )
         {
             idGeneratorWorkSyncs.put( idType, new WorkSync<>( idGeneratorFactory.get( idType ) ) );
@@ -192,10 +209,10 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
         try
         {
-            schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
+            schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores.get(0).getSchemaStore(), tokenHolders );
             schemaCache = new SchemaCache( constraintSemantics, indexConfigCompleter );
 
-            integrityValidator = new IntegrityValidator( neoStores );
+            integrityValidator = new IntegrityValidator( neoStores.get(0) );
             cacheAccess = new BridgingCacheAccess( schemaCache, schemaState, tokenHolders );
 
             denseNodeThreshold = config.get( GraphDatabaseSettings.dense_node_threshold );
@@ -203,7 +220,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             countsStore = openCountsStore( pageCache, fs, databaseLayout, logProvider, recoveryCleanupWorkCollector, readOnlyChecker, cacheTracer );
 
             RecordFormats format =
-                    RecordFormatSelector.selectForVersion( MetaDataStore.versionLongToString( neoStores.getMetaDataStore().getStoreVersion() ) );
+                    RecordFormatSelector.selectForVersion( MetaDataStore.versionLongToString( neoStores.get(0).getMetaDataStore().getStoreVersion() ) );
             groupDegreesStore = format.hasCapability( RecordStorageCapability.GROUP_DEGREES_STORE )
                                 ? openDegreesStore( pageCache, fs, databaseLayout, recoveryCleanupWorkCollector, readOnlyChecker, cacheTracer )
                                 : RelationshipGroupDegreesStore.DISABLED;
@@ -212,7 +229,8 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         }
         catch ( Throwable failure )
         {
-            neoStores.close();
+            for (NeoStores neoStore: neoStores)
+                neoStore.close();
             throw failure;
         }
     }
@@ -233,16 +251,16 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         // Graph store application. The order of the decorated store appliers is irrelevant
         if ( consistencyCheckApply && mode.needsAuxiliaryStores() )
         {
-            appliers.add( new ConsistencyCheckingApplierFactory( neoStores ) );
+            appliers.add( new ConsistencyCheckingApplierFactory( neoStores.get( 0 ) ) );
         }
-        appliers.add( new NeoStoreTransactionApplierFactory( mode, neoStores, cacheAccess, lockService( mode ) ) );
+        appliers.add( new NeoStoreTransactionApplierFactory( mode, neoStores.get( 0 ), cacheAccess, lockService( mode ) ) );
         if ( mode.needsHighIdTracking() )
         {
-            appliers.add( new HighIdTransactionApplierFactory( neoStores ) );
+            appliers.add( new HighIdTransactionApplierFactory( neoStores.get( 0 ) ) );
         }
         if ( mode.needsCacheInvalidationOnUpdates() )
         {
-            appliers.add( new CacheInvalidationTransactionApplierFactory( neoStores, cacheAccess ) );
+            appliers.add( new CacheInvalidationTransactionApplierFactory( neoStores.get( 0 ), cacheAccess ) );
         }
         if ( mode.needsAuxiliaryStores() )
         {
@@ -268,14 +286,14 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
                 public void initialize( CountsAccessor.Updater updater, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
                 {
                     log.warn( "Missing counts store, rebuilding it." );
-                    new CountsComputer( neoStores, pageCache, pageCacheTracer, layout, memoryTracker, log ).initialize( updater, cursorTracer, memoryTracker );
+                    new CountsComputer( neoStores.get( 0 ), pageCache, pageCacheTracer, layout, memoryTracker, log ).initialize( updater, cursorTracer, memoryTracker );
                     log.warn( "Counts store rebuild completed." );
                 }
 
                 @Override
                 public long lastCommittedTxId()
                 {
-                    return neoStores.getMetaDataStore().getLastCommittedTransactionId();
+                    return neoStores.get( 0 ).getMetaDataStore().getLastCommittedTransactionId();
                 }
             }, readOnlyChecker, pageCacheTracer, GBPTreeGenericCountsStore.NO_MONITOR, layout.getDatabaseName() );
         }
@@ -291,7 +309,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         try
         {
             return new GBPTreeRelationshipGroupDegreesStore( pageCache, layout.relationshipGroupDegreesStore(), fs, recoveryCleanupWorkCollector,
-                    new DegreesRebuildFromStore( neoStores ), readOnlyChecker, pageCacheTracer,
+                    new DegreesRebuildFromStore( neoStores.get( 0 ) ), readOnlyChecker, pageCacheTracer,
                     GBPTreeGenericCountsStore.NO_MONITOR, layout.getDatabaseName() );
         }
         catch ( IOException e )
@@ -303,13 +321,19 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     @Override
     public RecordStorageReader newReader()
     {
-        return new RecordStorageReader( tokenHolders, neoStores, countsStore, groupDegreesStore, schemaCache );
+        if (neoStores.size() > 1) {
+            if (neoStores.get( 1 ).getRecordFormats().storeVersion().equals(StoreVersion.CSR_V1_6_0.versionString()))
+                return new CSRRecordStorageReader(tokenHolders, neoStores, countsStore, groupDegreesStore, schemaCache);
+        }
+        if (neoStores.get( 0 ).getRecordFormats().storeVersion().equals(StoreVersion.CSR_V1_6_0.versionString()))
+            return new CSRRecordStorageReader(tokenHolders, neoStores, countsStore, groupDegreesStore, schemaCache);
+        return new RecordStorageReader( tokenHolders, neoStores.get( 0 ), countsStore, groupDegreesStore, schemaCache );
     }
 
     @Override
     public RecordStorageCommandCreationContext newCommandCreationContext( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
-        return new RecordStorageCommandCreationContext( neoStores, denseNodeThreshold, this::relaxedLockingForDenseNodes, cursorTracer, memoryTracker );
+        return new RecordStorageCommandCreationContext( neoStores.get( 0 ), denseNodeThreshold, this::relaxedLockingForDenseNodes, cursorTracer, memoryTracker );
     }
 
     @Override
@@ -363,7 +387,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     {
         if ( txState != null )
         {
-            KernelVersion version = neoStores.getMetaDataStore().kernelVersion();
+            KernelVersion version = neoStores.get( 0 ).getMetaDataStore().kernelVersion();
             Preconditions
                     .checkState( version.isAtLeast( KernelVersion.V4_2 ), "Can not write older version than %s. Requested %s", KernelVersion.V4_2, version );
 
@@ -374,7 +398,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             LogCommandSerialization serialization = RecordStorageCommandReaderFactory.INSTANCE.get( version );
             TransactionRecordState recordState =
                     creationContext.createTransactionRecordState( integrityValidator, lastTransactionIdWhenStarted, locks, lockTracer,
-                            serialization, lockVerificationFactory.create( locks, txState, neoStores ) );
+                            serialization, lockVerificationFactory.create( locks, txState, neoStores.get( 0 ) ) );
 
             // Visit transaction state and populate these record state objects
             TxStateVisitor txStateVisitor = new TransactionToRecordStateVisitor( recordState, schemaState,
@@ -392,7 +416,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             countsRecordState.extractCommands( commands, transactionMemoryTracker );
 
             //Verify sufficient locks
-            CommandLockVerification commandLockVerification = commandLockVerificationFactory.create( locks, txState, neoStores );
+            CommandLockVerification commandLockVerification = commandLockVerificationFactory.create( locks, txState, neoStores.get( 0 ) );
             commandLockVerification.verifySufficientlyLocked( commands );
         }
     }
@@ -400,7 +424,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     @Override
     public List<StorageCommand> createUpgradeCommands( KernelVersion versionToUpgradeTo )
     {
-        MetaDataStore metaDataStore = neoStores.getMetaDataStore();
+        MetaDataStore metaDataStore = neoStores.get( 0 ).getMetaDataStore();
         KernelVersion currentVersion = metaDataStore.kernelVersion();
         Preconditions.checkState( currentVersion.isAtLeast( KernelVersion.V4_2 ),
                 "Upgrade transaction was introduced in %s and must be done from at least %s. Tried upgrading from %s to %s",
@@ -451,12 +475,12 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     {
         if ( usingTokenIndexes )
         {
-            return new BatchContextImpl( indexUpdateListener, indexUpdatesSync, neoStores.getNodeStore(), neoStores.getPropertyStore(),
+            return new BatchContextImpl( indexUpdateListener, indexUpdatesSync, neoStores.get( 0 ).getNodeStore(), neoStores.get( 0 ).getPropertyStore(),
                     this, schemaCache, initialBatch.cursorTracer(), otherMemoryTracker, batchApplier.getIdUpdateListenerSupplier().get() );
         }
 
-        return new LegacyBatchContext( indexUpdateListener, labelScanStoreSync, relationshipTypeScanStoreSync, indexUpdatesSync, neoStores.getNodeStore(),
-                neoStores.getPropertyStore(), this, schemaCache, initialBatch.cursorTracer(), otherMemoryTracker,
+        return new LegacyBatchContext( indexUpdateListener, labelScanStoreSync, relationshipTypeScanStoreSync, indexUpdatesSync, neoStores.get( 0 ).getNodeStore(),
+                neoStores.get( 0 ).getPropertyStore(), this, schemaCache, initialBatch.cursorTracer(), otherMemoryTracker,
                 batchApplier.getIdUpdateListenerSupplier().get() );
     }
 
@@ -486,7 +510,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     {
         try ( var cursor = cacheTracer.createPageCursorTracer( STORAGE_ENGINE_START_TAG ) )
         {
-            neoStores.start( cursor );
+            neoStores.get( 0 ).start( cursor );
             countsStore.start( cursor, otherMemoryTracker );
             groupDegreesStore.start( cursor, otherMemoryTracker );
             idController.start();
@@ -511,7 +535,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     @Override
     public void shutdown() throws Exception
     {
-        executeAll( countsStore::close, groupDegreesStore::close, neoStores::close );
+        executeAll( countsStore::close, groupDegreesStore::close, neoStores.get( 0 )::close );
     }
 
     @Override
@@ -519,15 +543,15 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     {
         countsStore.checkpoint( cursorTracer );
         groupDegreesStore.checkpoint( cursorTracer );
-        neoStores.flush( cursorTracer );
+        neoStores.get( 0 ).flush( cursorTracer );
     }
 
     @Override
     public void dumpDiagnostics( Log errorLog, DiagnosticsLogger diagnosticsLog )
     {
-        DiagnosticsManager.dump( new NeoStoreIdUsage( neoStores ), errorLog, diagnosticsLog );
-        DiagnosticsManager.dump( new NeoStoreRecords( neoStores ), errorLog, diagnosticsLog );
-        DiagnosticsManager.dump( new NeoStoreVersions( neoStores ), errorLog, diagnosticsLog );
+        DiagnosticsManager.dump( new NeoStoreIdUsage( neoStores.get( 0 ) ), errorLog, diagnosticsLog );
+        DiagnosticsManager.dump( new NeoStoreRecords( neoStores.get( 0 ) ), errorLog, diagnosticsLog );
+        DiagnosticsManager.dump( new NeoStoreVersions( neoStores.get( 0 ) ), errorLog, diagnosticsLog );
     }
 
     @Override
@@ -553,7 +577,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         }
         for ( StoreType type : StoreType.values() )
         {
-            final RecordStore<AbstractBaseRecord> recordStore = neoStores.getRecordStore( type );
+            final RecordStore<AbstractBaseRecord> recordStore = neoStores.get( 0 ).getRecordStore( type );
             StoreFileMetadata metadata = new StoreFileMetadata( recordStore.getStorageFile(), recordStore.getRecordSize() );
             replayable.add( metadata );
         }
@@ -561,7 +585,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
     private boolean relaxedLockingForDenseNodes()
     {
-        return neoStores.getMetaDataStore().kernelVersion().isAtLeast( KernelVersion.V4_3_D4 );
+        return neoStores.get( 0 ).getMetaDataStore().kernelVersion().isAtLeast( KernelVersion.V4_3_D4 );
     }
 
     /**
@@ -573,7 +597,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     @VisibleForTesting
     public NeoStores testAccessNeoStores()
     {
-        return neoStores;
+        return neoStores.get( 0 );
     }
 
     @VisibleForTesting
@@ -585,7 +609,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     @Override
     public StoreId getStoreId()
     {
-        return neoStores.getMetaDataStore().getStoreId();
+        return neoStores.get( 0 ).getMetaDataStore().getStoreId();
     }
 
     @Override
@@ -596,9 +620,10 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             @Override
             public void init()
             {
-                try ( var cursorTracer = cacheTracer.createPageCursorTracer( TOKENS_INIT_TAG ) )
-                {
-                    tokenHolders.setInitialTokens( StoreTokens.allTokens( neoStores ), cursorTracer );
+                for (NeoStores neoStore: neoStores) {
+                    try (var cursorTracer = cacheTracer.createPageCursorTracer(TOKENS_INIT_TAG)) {
+                        tokenHolders.setInitialTokens(StoreTokens.allTokens(neoStore), cursorTracer);
+                    }
                 }
                 loadSchemaCache();
             }
@@ -620,6 +645,27 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     @Override
     public MetadataProvider metadataProvider()
     {
-        return neoStores.getMetaDataStore();
+        return neoStores.get( 0 ).getMetaDataStore();
+    }
+
+    public void initiateForCSR()
+    {
+        //RecordFormats format =
+        //        RecordFormatSelector.selectForVersion( MetaDataStore.versionLongToString( neoStores.getMetaDataStore().getStoreVersion() ) );
+        for (NeoStores neoStore: neoStores) {
+            if (neoStore.getRecordFormats().storeVersion().equals(StoreVersion.CSR_V1_6_0.versionString())) {
+                //if (databaseLayout.getDatabaseName().endsWith(".gds")) {
+                CSRBaseUtils.getInstance(neoStore, tokenHolders).csrSetup();
+                CSRBaseUtils.getInstance(neoStore, tokenHolders).getKeyMapsFromGDSStore();
+                System.out.println("LABELS:" + StoreTokens.allTokens(neoStore).getLabelTokens(PageCursorTracer.NULL).toString());
+                System.out.println("PROPS:" + StoreTokens.allTokens(neoStore).getPropertyKeyTokens(PageCursorTracer.NULL).toString());
+                System.out.println("RELS:" + StoreTokens.allTokens(neoStore).getRelationshipTypeTokens(PageCursorTracer.NULL).toString());
+                try {
+                    flushAndForce(PageCursorTracer.NULL);
+                } catch (IOException io) {
+                    //do nothing
+                }
+            }
+        }
     }
 }

@@ -26,6 +26,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -34,6 +35,8 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.counts.CountsAccessor;
+import org.neo4j.graphalgo.NodeLabel;
+import org.neo4j.graphalgo.api.CSRGraph;
 import org.neo4j.internal.batchimport.cache.GatheringMemoryStatsVisitor;
 import org.neo4j.internal.batchimport.cache.MemoryStatsVisitor;
 import org.neo4j.internal.batchimport.cache.NodeLabelsCache;
@@ -55,8 +58,10 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
+import org.neo4j.kernel.impl.store.format.CSR.CSRBaseUtils;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.logging.Log;
@@ -167,6 +172,8 @@ public class ImportLogic implements Closeable
     private long peakMemoryUsage;
     private long availableMemoryForLinking;
 
+    public static boolean IMPORT_IN_PROGRESS = false;
+
     /**
      * @param databaseLayout directory which the db will be created in.
      * @param neoStore {@link BatchingNeoStores} to import into.
@@ -194,6 +201,7 @@ public class ImportLogic implements Closeable
         this.memoryTracker = memoryTracker;
         this.executionMonitor = ExecutionSupervisors.withDynamicProcessorAssignment( executionMonitor, config );
         this.maxMemory = config.maxMemoryUsage();
+        IMPORT_IN_PROGRESS = true;
     }
 
     public void initialize( Input input ) throws IOException
@@ -556,6 +564,7 @@ public class ImportLogic implements Closeable
                 bytesToString( peakMemoryUsage ) ) );
         log.info( "Import completed successfully, took " + duration( totalTimeMillis ) + ". " + additionalInformation );
         closeAll( nodeRelationshipCache, nodeLabelsCache, idMapper );
+        IMPORT_IN_PROGRESS = false;
     }
 
     private void updatePeakMemoryUsage()
@@ -609,5 +618,42 @@ public class ImportLogic implements Closeable
     private void executeStage( Stage stage )
     {
         ExecutionSupervisors.superviseExecution( executionMonitor, stage );
+    }
+
+    public void setCSRData( String graphName )
+    {
+        CSRBaseUtils.getInstance( this.neoStore.getNeoStores()).setCSRGraphName( graphName );
+        CSRGraph graph = (CSRGraph) neoStore.getNeoStores().getCSRGraphStore( graphName ).getGraph();
+        //node
+        neoStore.getNodeStore().setHighestPossibleIdInUse(graph.toOriginalNodeId(graph.nodeCount()-1));
+        Iterator<NodeLabel> labels = graph.availableNodeLabels().iterator();
+        while (labels.hasNext())
+            neoStore.getLabelRepository().getOrCreateId( labels.next().name);
+        //relationships
+        neoStore.getRelationshipStore().setHighestPossibleIdInUse( graph.relationshipCount() -1);
+        //properties
+        Iterator<String> props = graph.availableNodeProperties().iterator();
+        long highPropId = 0;
+        while (props.hasNext())
+        {
+            String property = props.next();
+            highPropId += graph.nodeProperties( property ).size();
+            neoStore.getPropertyKeyRepository().getOrCreateId( property );
+        }
+
+        neoStore.getPropertyStore().setHighestPossibleIdInUse( highPropId );
+        neoStore.getNodeStore().getPagedFile().increaseLastPageIdTo( 0 );
+        neoStore.getRelationshipStore().getPagedFile().increaseLastPageIdTo( 0 );
+        neoStore.getPropertyStore().getPagedFile().increaseLastPageIdTo( 0 );
+        try {
+            neoStore.getNodeStore().getPagedFile().flushAndForce();
+            neoStore.getRelationshipStore().getPagedFile().flushAndForce();
+            neoStore.getPropertyStore().getPagedFile().flushAndForce();
+            neoStore.getLabelRepository().flush(PageCursorTracer.NULL);
+        } catch (IOException ioe)
+        {
+            System.out.println("ERROR: unable to force the nodestore to disk");
+        }
+
     }
 }

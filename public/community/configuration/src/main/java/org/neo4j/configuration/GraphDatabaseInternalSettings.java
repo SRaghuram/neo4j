@@ -681,4 +681,9 @@ public class GraphDatabaseInternalSettings implements SettingsDeclaration
     @Internal
     public static Setting<List<String>> neo_byte_buffer_pool_buckets_override =
             newBuilder( "unsupported.dbms.memory.neo_byte_buffer_pool.buckets_override", listOf( STRING ), List.of() ).build();
+
+    @Internal
+    @Description( "The default index provider used for managing full-text indexes. Only 'fulltext-1.0' is supported." )
+    public static final Setting<String> readonly_database_name_suffix =
+            newBuilder( "unsupported.dbms.config.read0nly_dbname_suffix", STRING, "" ).build();
 }

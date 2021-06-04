@@ -95,7 +95,7 @@ public class StoreUpgraderInterruptionTestIT
     private final TestDirectory directory = TestDirectory.testDirectory();
     private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
     private final PageCacheRule pageCacheRule = new PageCacheRule();
-    private final BatchImporterFactory batchImporterFactory = BatchImporterFactory.withHighestPriority();
+    private final BatchImporterFactory batchImporterFactory = (BatchImporterFactory) BatchImporterFactory.withHighestPriority();
 
     @Rule
     public RuleChain ruleChain = RuleChain.outerRule( directory )

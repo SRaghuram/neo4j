@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.helpers.DbmsReadOnlyChecker;
 import org.neo4j.io.fs.FileUtils;
 
 import static java.util.Collections.emptyList;
@@ -100,7 +101,7 @@ public final class Neo4jLayout
         var databasesRootDirectory = config.get( GraphDatabaseInternalSettings.databases_root_path );
         var txLogsRootDirectory = config.get( GraphDatabaseSettings.transaction_logs_root_path );
         var scriptRootDirectory = config.get( GraphDatabaseSettings.script_root_path );
-        return new Neo4jLayout( homeDirectory, dataDirectory, databasesRootDirectory, txLogsRootDirectory, scriptRootDirectory );
+        return new Neo4jLayout( homeDirectory, dataDirectory, databasesRootDirectory, txLogsRootDirectory, scriptRootDirectory, config );
     }
 
     public static Neo4jLayout ofFlat( Path homeDirectory )
@@ -115,13 +116,15 @@ public final class Neo4jLayout
         return of( config );
     }
 
-    private Neo4jLayout( Path homeDirectory, Path dataDirectory, Path databasesRootDirectory, Path txLogsRootDirectory, Path scriptRootDirectory )
+    private Config config;
+    private Neo4jLayout( Path homeDirectory, Path dataDirectory, Path databasesRootDirectory, Path txLogsRootDirectory, Path scriptRootDirectory, Config config )
     {
         this.homeDirectory = FileUtils.getCanonicalFile( homeDirectory );
         this.dataDirectory = FileUtils.getCanonicalFile( dataDirectory );
         this.databasesRootDirectory = FileUtils.getCanonicalFile( databasesRootDirectory );
         this.txLogsRootDirectory = FileUtils.getCanonicalFile( txLogsRootDirectory );
         this.scriptRootDirectory = FileUtils.getCanonicalFile( scriptRootDirectory );
+        this.config = config;
     }
 
     /**
@@ -134,7 +137,7 @@ public final class Neo4jLayout
     {
         try ( Stream<Path> list = Files.list( databasesRootDirectory) )
         {
-            return list.filter( Files::isDirectory ).map( directory -> DatabaseLayout.of( this, directory.getFileName().toString() ) ).collect( toList() );
+            return list.filter( Files::isDirectory ).map( directory -> DatabaseLayout.of( this, directory.getFileName().toString(), config ) ).collect( toList() );
         }
         catch ( NoSuchFileException e )
         {
@@ -155,7 +158,12 @@ public final class Neo4jLayout
      */
     public DatabaseLayout databaseLayout( String databaseName )
     {
-        return DatabaseLayout.of( this, databaseName );
+        return DatabaseLayout.of( this, databaseName, config );
+    }
+
+    public DatabaseLayout databaseLayout(String databaseName, DbmsReadOnlyChecker dbmsReadOnlyChecker)
+    {
+        return DatabaseLayout.of( this, databaseName, config, dbmsReadOnlyChecker );
     }
 
     /**

@@ -58,6 +58,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.os.OsBeanUtil;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
@@ -167,24 +168,22 @@ class CsvImporter implements Importer
               OutputStream outputStream = FileSystemUtils.createOrOpenAsOutputStream( fileSystem, internalLogFile, true );
               Log4jLogProvider logProvider = Util.configuredLogProvider( databaseConfig, outputStream ) )
         {
-            ExecutionMonitor executionMonitor = verbose ? new SpectrumExecutionMonitor( 2, TimeUnit.SECONDS, stdOut,
-                    SpectrumExecutionMonitor.DEFAULT_WIDTH ) : ExecutionMonitors.defaultVisible();
+            //ExecutionMonitor executionMonitor = verbose ? new SpectrumExecutionMonitor( 2, TimeUnit.SECONDS, stdOut,
+            //        SpectrumExecutionMonitor.DEFAULT_WIDTH ) : ExecutionMonitors.defaultVisible();
 
             BatchImporter importer = BatchImporterFactory.withHighestPriority().instantiate(
                     databaseLayout,
-                    fileSystem,
+                    fileSystem, null,
                     pageCacheTracer,
                     importConfig,
-                    new SimpleLogService( NullLogProvider.getInstance(), logProvider ),
-                    executionMonitor,
-                    EMPTY,
+                    logProvider,
                     databaseConfig,
-                    RecordFormatSelector.selectForConfig( databaseConfig, logProvider ),
-                    new PrintingImportLogicMonitor( stdOut, stdErr ),
+                    false,
                     jobScheduler,
                     badCollector,
-                    TransactionLogInitializer.getLogFilesInitializer(),
-                    memoryTracker );
+                    memoryTracker,
+                    System.out, System.err
+                     );
 
             printOverview( databaseLayout.databaseDirectory(), nodeFiles, relationshipFiles, importConfig, stdOut );
 

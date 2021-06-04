@@ -49,7 +49,7 @@ import static java.util.Objects.requireNonNull;
 import static org.neo4j.util.FeatureToggles.flag;
 import static org.neo4j.util.FeatureToggles.getInteger;
 
-final class MuninnPagedFile extends PageList implements PagedFile, Flushable
+public final class MuninnPagedFile extends PageList implements PagedFile, Flushable
 {
     static final int UNMAPPED_TTE = -1;
     private static final boolean mergePagesOnFlush = flag( MuninnPagedFile.class, "mergePagesOnFlush", true );
@@ -692,7 +692,7 @@ final class MuninnPagedFile extends PageList implements PagedFile, Flushable
     /**
      * Make sure that the lastPageId is at least the given pageId
      */
-    void increaseLastPageIdTo( long newLastPageId )
+    public void increaseLastPageIdTo(long newLastPageId)
     {
         long current;
         long update;

@@ -21,6 +21,7 @@ package org.neo4j.storageengine.api;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.List;
 
 import org.neo4j.annotations.service.Service;
@@ -172,8 +173,19 @@ public interface StorageEngineFactory
      * @return the selected {@link StorageEngineFactory}.
      * @throws IllegalStateException if there were no candidates.
      */
+    static Collection<StorageEngineFactory> allAvailableStorageEngines()
+    {
+        return Services.loadAll( StorageEngineFactory.class );
+    }
+
+    static StorageEngineFactory selectDefaultStorageEngine()
+    {
+        Collection<StorageEngineFactory> storageEngineFactories = allAvailableStorageEngines();
+        return storageEngineFactories.stream().filter( engine -> engine.getClass().getSimpleName().equals( "RecordStorageEngineFactory" ) ).findFirst().get();
+    }
     static StorageEngineFactory selectStorageEngine()
     {
-        return Iterables.single( Services.loadAll( StorageEngineFactory.class ) );
+        //return Iterables.single( Services.loadAll( StorageEngineFactory.class ) );
+        return selectDefaultStorageEngine();
     }
 }

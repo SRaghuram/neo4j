@@ -69,7 +69,7 @@ public class DefaultPropertyCursor extends TraceableCursor<DefaultPropertyCursor
 
         init( read, assertOpen );
         this.type = NODE;
-        storeCursor.initNodeProperties( reference );
+        storeCursor.initNodeProperties( reference, nodeReference );
         this.entityReference = nodeReference;
 
         // Transaction state
@@ -90,7 +90,7 @@ public class DefaultPropertyCursor extends TraceableCursor<DefaultPropertyCursor
         assert relationshipReference != NO_ID;
 
         init( read, assertOpen );
-        storeCursor.initRelationshipProperties( reference );
+        storeCursor.initRelationshipProperties( reference, relationshipReference );
         this.entityReference = relationshipReference;
 
         // Transaction state

@@ -46,7 +46,7 @@ import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIP
 
 public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor
 {
-    private final NodeStore read;
+    protected final NodeStore read;
     private final RelationshipGroupDegreesStore groupDegreesStore;
     private final PageCursorTracer cursorTracer;
     private final RelationshipStore relationshipStore;
@@ -62,7 +62,7 @@ public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor
     private RecordRelationshipScanCursor relationshipScanCursor;
     private RecordLoadOverride loadMode;
 
-    RecordNodeCursor( NodeStore read, RelationshipStore relationshipStore, RelationshipGroupStore groupStore, RelationshipGroupDegreesStore groupDegreesStore,
+    protected RecordNodeCursor( NodeStore read, RelationshipStore relationshipStore, RelationshipGroupStore groupStore, RelationshipGroupDegreesStore groupDegreesStore,
             PageCursorTracer cursorTracer )
     {
         super( NO_ID );

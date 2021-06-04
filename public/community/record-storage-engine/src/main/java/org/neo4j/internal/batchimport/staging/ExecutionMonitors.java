@@ -35,4 +35,38 @@ public class ExecutionMonitors
     {
         return new HumanUnderstandableExecutionMonitor( NO_MONITOR );
     }
+
+    private static final ExecutionMonitor INVISIBLE = new ExecutionMonitor()
+    {
+        @Override
+        public void start( StageExecution execution )
+        {   // Do nothing
+        }
+
+        @Override
+        public void end( StageExecution execution, long totalTimeMillis )
+        {   // Do nothing
+        }
+
+        @Override
+        public long nextCheckTime()
+        {
+            return Long.MAX_VALUE;
+        }
+
+        @Override
+        public void check( StageExecution execution )
+        {   // Do nothing
+        }
+
+        @Override
+        public void done( boolean successful, long totalTimeMillis, String additionalInformation )
+        {   // Do nothing
+        }
+    };
+
+    public static ExecutionMonitor invisible()
+    {
+        return INVISIBLE;
+    }
 }

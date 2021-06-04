@@ -106,7 +106,10 @@ public class KernelStatement extends CloseableResourceManager implements Stateme
         this.versionContextSupplier = versionContextSupplier;
         this.namedDatabaseId = namedDatabaseId;
     }
-
+    public String getQueryText()
+    {
+        return executingQuery == null? null : executingQuery.getQueryText();
+    }
     public QueryRegistry queryRegistration()
     {
         return queryRegistry;

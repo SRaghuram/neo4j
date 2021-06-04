@@ -46,6 +46,7 @@ import java.util.stream.Stream;
 import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.internal.batchimport.BaseBatchImporterFactory;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.Pair;
@@ -136,7 +137,7 @@ class RecordStorageMigratorIT
     private RandomRule randomRule;
 
     private DatabaseLayout migrationLayout;
-    private BatchImporterFactory batchImporterFactory;
+    private BaseBatchImporterFactory batchImporterFactory;
 
     private final MigrationProgressMonitor progressMonitor = SILENT;
     private final JobScheduler jobScheduler = new ThreadPoolJobScheduler();

@@ -19,20 +19,20 @@
  */
 package org.neo4j.io.layout;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.helpers.DbmsReadOnlyChecker;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.io.fs.FileUtils;
 
@@ -50,7 +50,7 @@ public class DatabaseLayout
     private static final String DATABASE_LOCK_FILENAME = "database_lock";
     private static final String BACKUP_TOOLS_FOLDER = "tools";
 
-    private final Path databaseDirectory;
+    private Path databaseDirectory;
     private final Neo4jLayout neo4jLayout;
     private final String databaseName;
 
@@ -67,18 +67,89 @@ public class DatabaseLayout
         return Neo4jLayout.of( config ).databaseLayout( config.get( GraphDatabaseSettings.default_database ) );
     }
 
-    static DatabaseLayout of( Neo4jLayout neo4jLayout, String databaseName )
+    static DatabaseLayout of( Neo4jLayout neo4jLayout, String databaseName, Config config )
     {
-        return new DatabaseLayout( neo4jLayout, databaseName );
+        return new DatabaseLayout( neo4jLayout, databaseName, config, null );
     }
 
-    protected DatabaseLayout( Neo4jLayout neo4jLayout, String databaseName )
+    static DatabaseLayout of( Neo4jLayout neo4jLayout, String databaseName, Config config, DbmsReadOnlyChecker dbmsReadOnlyChecker )
     {
+        return new DatabaseLayout( neo4jLayout, databaseName, config, dbmsReadOnlyChecker );
+    }
+    public String[] storeTypes = null;
+    Config config;
+    static String readonlySuffix = null;
+    private DbmsReadOnlyChecker dbmsReadOnlyChecker;
+    protected DatabaseLayout( Neo4jLayout neo4jLayout, String databaseName, Config config, DbmsReadOnlyChecker dbmsReadOnlyChecker )
+    {
+        this.config = config;
+        this.dbmsReadOnlyChecker = dbmsReadOnlyChecker;
+        readonlySuffix = config.get( GraphDatabaseInternalSettings.readonly_database_name_suffix );
         var normalizedName = new NormalizedDatabaseName( databaseName ).name();
         this.neo4jLayout = neo4jLayout;
-        this.databaseDirectory = FileUtils.getCanonicalFile( neo4jLayout.databasesDirectory().resolve( normalizedName ) );
+        String dirPath = normalizedName;
+        String[] dbParts = normalizedName.split("\\.");
+        if (dbParts.length > 1) {
+            if (normalizedName.endsWith(".gds") && dbParts.length <= 3)
+            {
+                if (dbParts.length == 2) {
+                    dirPath = dbParts[dbParts.length - 2];
+                    if (!(new File(neo4jLayout.databasesDirectory()+File.separator+dirPath)).exists())
+                        dirPath = normalizedName;
+                }
+                else
+                    // length == 3 - make the middle the directory
+                    dirPath = dbParts[1];
+            }
+            else
+                storeTypes = dbParts;
+        }
+        this.databaseDirectory = FileUtils.getCanonicalFile( neo4jLayout.databasesDirectory().resolve( dirPath ) );
         this.databaseName = normalizedName;
     }
+
+    public String[] getExistingDBNames()
+    {
+        File file = new File(String.valueOf(neo4jLayout.databasesDirectory()));
+        File[] files = file.listFiles();
+        String[] dbNames = new String[files.length];
+        for (int i = 0; i < files.length; i++)
+            dbNames[i] = files[i].getName();
+        return dbNames;
+    }
+
+    public boolean isDBDirectoryPresent(String name)
+    {
+        File dirfile = new File(String.valueOf(neo4jLayout.databasesDirectory()));
+        File[] files = dirfile.listFiles();
+        for (File file: files) {
+            if (file.getName().equalsIgnoreCase(name))
+                return true;
+        }
+        return false;
+    }
+
+    public boolean isReadOnlyDB()
+    {
+        if ( dbmsReadOnlyChecker != null)
+            return dbmsReadOnlyChecker.isReadOnly( this.databaseName );
+        return false;
+        //return isReadOnlyDB( this.databaseName );
+    }
+    /*static public boolean isReadOnlyDB(String dbName)
+    {
+        String[] dbParts = dbName.split("\\.");
+        if (dbParts.length == 1)
+            return false;
+        if (readonlySuffix == null)
+            return false;
+        String[] suffixes = readonlySuffix.split(";");
+        for (String suffix: suffixes)
+            if ( dbName.endsWith( "."+ suffix ))
+                return true;
+        return false;
+    }*/
+
 
     public Path getTransactionLogsDirectory()
     {

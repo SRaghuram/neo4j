@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.store;
 
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -190,4 +191,24 @@ public enum StoreType
         }
         return Optional.empty();
     }
+
+    public static boolean isInMemoryStore(StoreType type)
+    {
+        if (type == StoreType.NODE || type == StoreType.RELATIONSHIP || type == StoreType.PROPERTY || type == StoreType.RELATIONSHIP_GROUP)
+            return true;
+        return false;
+    }
+    public static ArrayList<StoreType> onlyHouseKeepingStores()
+    {
+        ArrayList<StoreType> storeType = new ArrayList<>();
+        StoreType[] all = StoreType.values();
+        for (StoreType type: all)
+        {
+            if (!(type == StoreType.NODE || type == StoreType.RELATIONSHIP || type == StoreType.PROPERTY || type == StoreType.RELATIONSHIP_GROUP
+            || type == StoreType.PROPERTY_ARRAY || type == StoreType.PROPERTY_STRING))
+                storeType.add(type);
+        }
+        return storeType;//.toArray(new StoreType[0]);
+    }
+
 }

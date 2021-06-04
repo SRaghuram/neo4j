@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.internal.locker;
 
+import org.neo4j.configuration.helpers.DbmsReadOnlyChecker;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 
@@ -27,8 +28,17 @@ import org.neo4j.io.layout.DatabaseLayout;
  */
 public class DatabaseLocker extends GlobalFileLocker
 {
+    private DatabaseLayout databaseLayout;
     public DatabaseLocker( FileSystemAbstraction fileSystemAbstraction, DatabaseLayout databaseLayout )
     {
         super( fileSystemAbstraction, databaseLayout.databaseLockFile() );
+        this.databaseLayout = databaseLayout;
+    }
+
+    public boolean isReadOnlyLock()
+    {
+        if (databaseLayout.isReadOnlyDB())
+            return true;
+        return false;
     }
 }

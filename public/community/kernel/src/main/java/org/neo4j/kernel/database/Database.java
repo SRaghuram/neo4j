@@ -411,27 +411,31 @@ public class Database extends LifecycleAdapter
         init(); // Ensure we're initialized
         try
         {
-            // Upgrade the store before we begin
-            upgradeStore( databaseConfig, databasePageCache, otherDatabaseMemoryTracker );
-
-            // Check the tail of transaction logs and validate version
-            LogEntryReader logEntryReader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
-
-            LogFiles logFiles = getLogFiles( logEntryReader );
-
-            databaseMonitors.addMonitorListener( new LoggingLogFileMonitor( msgLog ) );
-            databaseMonitors.addMonitorListener( new LoggingLogTailScannerMonitor( internalLogProvider.getLog( AbstractLogTailScanner.class ) ) );
-            databaseMonitors.addMonitorListener(
-                    new ReverseTransactionCursorLoggingMonitor( internalLogProvider.getLog( ReversedSingleFileTransactionCursor.class ) ) );
-
             var pageCacheTracer = tracers.getPageCacheTracer();
+            boolean storageExists = storageEngineFactory.storageExists(fs, databaseLayout, databasePageCache);
+            LogEntryReader logEntryReader = null;
+            //if (!readOnlyDatabaseChecker.isReadOnly()) {
+            if (!readOnlyDatabaseChecker.isAliasDatabaseName()) {
+                // Upgrade the store before we begin
+                upgradeStore( databaseConfig, databasePageCache, otherDatabaseMemoryTracker );
 
-            boolean storageExists = storageEngineFactory.storageExists( fs, databaseLayout, databasePageCache );
-            validateStoreAndTxLogs( logFiles, pageCacheTracer, storageExists );
+                // Check the tail of transaction logs and validate version
+                logEntryReader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
 
-            performRecovery( fs, databasePageCache, tracers, databaseConfig, databaseLayout, storageEngineFactory, internalLogProvider, databaseMonitors,
-                    extensionFactories, Optional.of( logFiles ), new RecoveryStartupChecker( startupController, namedDatabaseId ),
-                    otherDatabaseMemoryTracker, clock );
+                LogFiles logFiles = getLogFiles(logEntryReader);
+
+                databaseMonitors.addMonitorListener(new LoggingLogFileMonitor(msgLog));
+                databaseMonitors.addMonitorListener(new LoggingLogTailScannerMonitor(internalLogProvider.getLog(AbstractLogTailScanner.class)));
+                databaseMonitors.addMonitorListener(
+                        new ReverseTransactionCursorLoggingMonitor(internalLogProvider.getLog(ReversedSingleFileTransactionCursor.class)));
+
+
+                validateStoreAndTxLogs(logFiles, pageCacheTracer, storageExists);
+
+                performRecovery(fs, databasePageCache, tracers, databaseConfig, databaseLayout, storageEngineFactory, internalLogProvider, databaseMonitors,
+                            extensionFactories, Optional.of(logFiles), new RecoveryStartupChecker(startupController, namedDatabaseId),
+                            otherDatabaseMemoryTracker, clock);
+            }
 
             // Build all modules and their services
             DatabaseSchemaState databaseSchemaState = new DatabaseSchemaState( internalLogProvider );
@@ -447,11 +451,14 @@ public class Database extends LifecycleAdapter
             databaseDependencies.satisfyDependency( metadataProvider );
 
             //Recreate the logFiles after storage engine to get access to dependencies
-            logFiles = getLogFiles( logEntryReader );
+            LogFiles logFiles = //readOnlyDatabaseChecker.isReadOnly() ? null :
+                    readOnlyDatabaseChecker.isAliasDatabaseName() ? null : getLogFiles( logEntryReader );
 
             life.add( storageEngine );
             life.add( storageEngine.schemaAndTokensLifecycle() );
-            life.add( logFiles );
+            //if (!readOnlyDatabaseChecker.isReadOnly())
+            if (!readOnlyDatabaseChecker.isAliasDatabaseName())
+                life.add( logFiles );
 
             // Token indexes
             NeoStoreIndexStoreView neoStoreIndexStoreView = new NeoStoreIndexStoreView( lockService, storageEngine::newReader, databaseConfig, scheduler );
@@ -477,14 +484,15 @@ public class Database extends LifecycleAdapter
 
             CheckPointerImpl.ForceOperation forceOperation =
                     new DefaultForceOperation( indexingService, labelScanStore, relationshipTypeScanStore, storageEngine );
-            DatabaseTransactionLogModule transactionLogModule =
+            DatabaseTransactionLogModule transactionLogModule = readOnlyDatabaseChecker.isAliasDatabaseName() ? null:
+                    //readOnlyDatabaseChecker.isReadOnly() ? null :
                     buildTransactionLogs( logFiles, databaseConfig, internalLogProvider, scheduler, forceOperation,
                             logEntryReader, metadataProvider, databaseMonitors, databaseDependencies );
 
             databaseTransactionEventListeners = new DatabaseTransactionEventListeners( databaseFacade, transactionEventListeners, namedDatabaseId );
             final DatabaseKernelModule kernelModule = buildKernel(
                     logFiles,
-                    transactionLogModule.transactionAppender(),
+                    transactionLogModule == null ? null : transactionLogModule.transactionAppender(),
                     indexingService,
                     databaseSchemaState,
                     labelScanStore,
@@ -501,7 +509,9 @@ public class Database extends LifecycleAdapter
             this.kernelModule = kernelModule;
 
             databaseDependencies.satisfyDependency( databaseSchemaState );
-            databaseDependencies.satisfyDependency( logEntryReader );
+            //if (!readOnlyDatabaseChecker.isReadOnly())
+            if (!readOnlyDatabaseChecker.isAliasDatabaseName())
+                databaseDependencies.satisfyDependency( logEntryReader );
             databaseDependencies.satisfyDependency( storageEngine );
             databaseDependencies.satisfyDependency( labelScanStore );
             databaseDependencies.satisfyDependency( relationshipTypeScanStore );
@@ -516,18 +526,24 @@ public class Database extends LifecycleAdapter
             var providerSpi = QueryEngineProvider.spi( internalLogProvider, databaseMonitors, scheduler, life, getKernel(), databaseConfig );
             this.executionEngine = QueryEngineProvider.initialize( databaseDependencies, databaseFacade, engineProvider, isSystem(), providerSpi );
 
-            this.checkpointerLifecycle = new CheckpointerLifecycle( transactionLogModule.checkPointer(), databaseHealth, ioController );
 
             life.add( databaseHealth );
             life.add( databaseAvailabilityGuard );
             life.add( databaseAvailability );
-            life.setLast( checkpointerLifecycle );
+            //if (!readOnlyDatabaseChecker.isReadOnly()) {
+            if (!readOnlyDatabaseChecker.isAliasDatabaseName()) {
+                this.checkpointerLifecycle = new CheckpointerLifecycle(transactionLogModule.checkPointer(), databaseHealth, ioController);
+                life.setLast(checkpointerLifecycle);
+            }
 
-            databaseDependencies.resolveDependency( DbmsDiagnosticsManager.class ).dumpDatabaseDiagnostics( this );
+            //if (!readOnlyDatabaseChecker.isReadOnly())
+            if (!readOnlyDatabaseChecker.isAliasDatabaseName())
+                databaseDependencies.resolveDependency(DbmsDiagnosticsManager.class).dumpDatabaseDiagnostics(this);
             life.start();
 
 //            registerUpgradeListener();
             eventListeners.databaseStart( namedDatabaseId );
+            storageEngine.initiateForCSR();
 
             /*
              * At this point recovery has completed and the database is ready for use. Whatever panic might have
@@ -945,8 +961,11 @@ public class Database extends LifecycleAdapter
 
     public void prepareToDrop()
     {
-        prepareStop( alwaysTrue() );
-        checkpointerLifecycle.setCheckpointOnShutdown( false );
+        //if (!readOnlyDatabaseChecker.isReadOnly()) {
+        if (!readOnlyDatabaseChecker.isAliasDatabaseName()) {
+            prepareStop(alwaysTrue());
+            checkpointerLifecycle.setCheckpointOnShutdown(false);
+        }
     }
 
     public synchronized void drop()
@@ -956,7 +975,9 @@ public class Database extends LifecycleAdapter
             prepareToDrop();
             stop();
         }
-        deleteDatabaseFiles( List.of( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory() ) );
+        //if (!readOnlyDatabaseChecker.isReadOnly())
+        if (!readOnlyDatabaseChecker.isAliasDatabaseName())
+            deleteDatabaseFiles( List.of( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory() ) );
         eventListeners.databaseDrop( namedDatabaseId );
     }
 

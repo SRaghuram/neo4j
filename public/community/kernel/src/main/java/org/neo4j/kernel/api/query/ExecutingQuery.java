@@ -130,6 +130,10 @@ public class ExecutingQuery
         );
         onTransactionBound( new TransactionBinding( namedDatabaseId, hitsSupplier, faultsSupplier, activeLockCount ) );
     }
+    public String getQueryText()
+    {
+        return obfuscatedQueryText;
+    }
 
     public static class TransactionBinding
     {

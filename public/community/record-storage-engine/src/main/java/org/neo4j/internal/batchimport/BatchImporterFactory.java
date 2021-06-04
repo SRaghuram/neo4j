@@ -19,6 +19,8 @@
  */
 package org.neo4j.internal.batchimport;
 
+import java.io.PrintStream;
+import java.util.Collection;
 import java.util.NoSuchElementException;
 
 import org.neo4j.annotations.service.Service;
@@ -27,31 +29,94 @@ import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.service.NamedService;
 import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.LogFilesInitializer;
 
-@Service
-public abstract class BatchImporterFactory implements NamedService
+public abstract class BatchImporterFactory extends BaseBatchImporterFactory
 {
-    private final int priority;
+    //private final int priority;
+
+    @Override
+    public String getName()
+    {
+        return "standard";
+    }
+    /*public String getName()
+    {
+        return StorageEngineType.STANDARD_LEGACY.engineTypeString();
+    }*/
 
     protected BatchImporterFactory( int priority )
     {
-        this.priority = priority;
+        super( priority );
     }
 
-    public abstract BatchImporter instantiate( DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem,
-            PageCacheTracer pageCacheTracer, Configuration config, LogService logService, ExecutionMonitor executionMonitor,
-            AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, ImportLogic.Monitor monitor,
-            JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker );
+    public abstract BatchImporter instantiate(DatabaseLayout directoryStructure,
+                                              FileSystemAbstraction fileSystem,
+                                              PageCache externalPageCache,
+                                              PageCacheTracer pageCacheTracer,
+                                              Configuration configuration,
+                                              Log4jLogProvider logProvider,
+                                              Config dbConfig,
+                                              boolean verbose,
+                                              JobScheduler jobScheduler,
+                                              Collector badCollector,
+                                              MemoryTracker memoryTracker,
+                                              PrintStream stdOut, PrintStream stdErr);
 
-    public static BatchImporterFactory withHighestPriority()
+
+    /*public boolean forStorageType( StorageEngineType storageEngineType)
+    { return true; }
+
+    public static BaseBatchImporterFactory withHighestPriority( StorageEngineType storageEngineType )
+    {
+        BaseBatchImporterFactory highestPrioritized = null;
+        Collection<BaseBatchImporterFactory> candidates = Services.loadAll( BaseBatchImporterFactory.class);
+        for ( BaseBatchImporterFactory candidate : Services.loadAll( BaseBatchImporterFactory.class ) )
+        {
+            if (!candidate.forStorageType( storageEngineType ))
+                continue;
+            if ( highestPrioritized == null || candidate.priority > highestPrioritized.priority )
+            {
+                highestPrioritized = candidate;
+            }
+        }
+        if ( highestPrioritized == null )
+        {
+            throw new NoSuchElementException( "No batch importers found" );
+        }
+        if (highestPrioritized != null)
+            System.out.println("Using [" + highestPrioritized.getName() + "] importer.");
+        else
+            System.out.println("No suitable importer was found.");
+        return highestPrioritized;
+    }*/
+    public static BaseBatchImporterFactory withHighestPriority()
+    {
+        BaseBatchImporterFactory highestPrioritized = null;
+        Collection<BaseBatchImporterFactory> candidates = Services.loadAll( BaseBatchImporterFactory.class);
+        for ( BaseBatchImporterFactory candidate : candidates )
+        {
+            if ( highestPrioritized == null || candidate.priority > highestPrioritized.priority )
+            {
+                highestPrioritized = candidate;
+            }
+        }
+        if ( highestPrioritized == null )
+        {
+            throw new NoSuchElementException( "No batch importers found" );
+        }
+        return highestPrioritized;
+    }
+    public  BatchImporterFactory withHighestPriority1()
     {
         BatchImporterFactory highestPrioritized = null;
         for ( BatchImporterFactory candidate : Services.loadAll( BatchImporterFactory.class ) )

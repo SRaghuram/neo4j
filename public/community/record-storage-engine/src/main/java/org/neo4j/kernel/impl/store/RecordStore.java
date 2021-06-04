@@ -26,6 +26,7 @@ import java.util.List;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.id.IdSequence;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.Record;
@@ -52,7 +53,12 @@ public interface RecordStore<RECORD extends AbstractBaseRecord> extends IdSequen
      * @return the {@link Path} that backs this store.
      */
     Path getStorageFile();
+    PagedFile getPagedFile();
 
+    default NeoStores getParentNeoStore()
+    {
+        return null;
+    }
     /**
      * @return high id of this store, i.e an id higher than any in use record.
      */
@@ -407,6 +413,12 @@ public interface RecordStore<RECORD extends AbstractBaseRecord> extends IdSequen
         {
             return actual.getStorageFile();
         }
+
+        @Override
+        public PagedFile getPagedFile() {
+            return actual.getPagedFile();
+        }
+
 
         @Override
         public long getHighId()

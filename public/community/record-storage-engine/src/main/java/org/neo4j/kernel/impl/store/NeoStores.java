@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.function.Consumer;
 
 import org.neo4j.configuration.Config;
@@ -32,7 +33,11 @@ import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.function.ThrowingConsumer;
+import org.neo4j.graphalgo.core.loading.CSRGraphStore;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.internal.batchimport.cache.NumberArrayFactories;
+import org.neo4j.internal.batchimport.cache.NumberArrayFactory;
+import org.neo4j.internal.batchimport.cache.PageCacheArrayFactoryMonitor;
 import org.neo4j.internal.diagnostics.DiagnosticsLogger;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.internal.id.IdGeneratorFactory;
@@ -42,6 +47,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.format.CSR.CSRRecordFormat;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
@@ -49,6 +55,7 @@ import org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLog;
 import org.neo4j.storageengine.api.format.CapabilityType;
 
 import static org.apache.commons.lang3.ArrayUtils.contains;
@@ -61,7 +68,7 @@ import static org.neo4j.kernel.impl.store.MetaDataStore.versionLongToString;
  * anything but extends the AbstractStore for the "type and version" validation
  * performed in there.
  */
-public class NeoStores implements AutoCloseable
+public class NeoStores extends NeoStoresBase implements AutoCloseable
 {
     private static final String ID_USAGE_LOGGER_TAG = "idUsageLogger";
 
@@ -118,6 +125,8 @@ public class NeoStores implements AutoCloseable
         try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( OPEN_ALL_STORES_TAG ) )
         {
             verifyRecordFormat( storeTypes, cursorTracer );
+            if (recordFormats.name().equals(CSRRecordFormat.NAME) && !this.layout.getDatabaseName().equalsIgnoreCase("temp"))
+                recordFormats.setParent( this );
             try
             {
                 for ( StoreType type : storeTypes )
@@ -141,6 +150,36 @@ public class NeoStores implements AutoCloseable
         initializedStores = storeTypes;
     }
 
+    public String getDatabaseName()
+    {
+        return layout.getDatabaseName();
+    }
+
+    public CSRGraphStore getCSRGraphStore( String csrGraphName)
+    {
+        if (csrGraphName == null)
+            return null;
+        return CSRGraphStore.GDSStores.get( csrGraphName );
+
+        /*String dbName = null;
+        if (this.layout.getDatabaseName().endsWith(".gds"))
+        {
+            String[] parts =  this.layout.getDatabaseName().split("\\.");
+            dbName = parts[parts.length -2];
+        }
+        else
+            dbName = this.layout.getDatabaseName();
+        //String dbName = (this.layout.getDatabaseName().endsWith(".gds")) ? this.layout.getDatabaseName().split("\\.")[0] : this.layout.getDatabaseName();
+        Iterator<CSRGraphStore> csrGraphStores = CSRGraphStore.GDSStores.iterator();
+        while (csrGraphStores.hasNext())
+        {
+            CSRGraphStore csrGraphStore = csrGraphStores.next();
+            if (csrGraphStore.databaseId().name().equalsIgnoreCase(dbName)) {
+                return csrGraphStore;
+            }
+        }
+        return null;*/
+    }
     /**
      * Closes the node,relationship,property and relationship type stores.
      */
@@ -251,9 +290,11 @@ public class NeoStores implements AutoCloseable
         visitStores( store -> store.getIdGenerator().checkpoint( cursorTracer ) );
     }
 
+    private StoreType currentStoreType;
     private CommonAbstractStore openStore( StoreType type, PageCursorTracer cursorTracer )
     {
         int storeIndex = type.ordinal();
+        currentStoreType = type;
         CommonAbstractStore store = type.open( this, cursorTracer );
         stores[storeIndex] = store;
         return store;
@@ -261,6 +302,7 @@ public class NeoStores implements AutoCloseable
 
     private <T extends CommonAbstractStore> T initialize( T store, PageCursorTracer cursorTracer )
     {
+        store.setContext( this, currentStoreType, layout );
         store.initialise( createIfNotExist, cursorTracer );
         return store;
     }
@@ -583,5 +625,11 @@ public class NeoStores implements AutoCloseable
     public static boolean isStorePresent( FileSystemAbstraction fs, DatabaseLayout databaseLayout )
     {
         return fs.fileExists( databaseLayout.metadataStore() );
+    }
+
+    public NumberArrayFactory getNumberArrayFactory()
+    {
+        return NumberArrayFactories.auto( pageCache, pageCacheTracer, this.layout.databaseDirectory(), true,
+                new PageCacheArrayFactoryMonitor(), NullLog.getInstance(), this.layout.getDatabaseName() );
     }
 }

@@ -44,6 +44,7 @@ import java.util.function.Supplier;
 import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.io.IOUtils;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.CursorException;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
@@ -698,7 +699,8 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
         {
             try
             {
-                readOnlyChecker.check();
+                if (!openOptions.contains(GBPTreeOpenOptions.OPEN_EVEN_IF_READONLY))
+                    readOnlyChecker.check();
             }
             catch ( Exception roe )
             {
@@ -747,7 +749,7 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
         // First time
         monitor.noStoreFile();
         // We need to create this index
-        PagedFile pagedFile = pageCache.map( indexFile, pageCache.pageSize(), databaseName, openOptions.newWith( CREATE ) );
+        PagedFile pagedFile = pageCache.map( indexFile, pageCache.pageSize(), databaseName, openOptions.newWithout( GBPTreeOpenOptions.OPEN_EVEN_IF_READONLY).newWith( CREATE ) );
         created = true;
         return pagedFile;
     }
@@ -755,7 +757,7 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
     private void loadState( PagedFile pagedFile, Header.Reader headerReader, PageCursorTracer cursorTracer ) throws IOException
     {
         Pair<TreeState,TreeState> states = loadStatePages( pagedFile, cursorTracer );
-        TreeState state = TreeStatePair.selectNewestValidState( states );
+        TreeState state = readOnlyChecker.isReadOnly() ? states.getLeft() :  TreeStatePair.selectNewestValidState( states );
         try ( PageCursor cursor = pagedFile.io( state.pageId(), PF_SHARED_READ_LOCK, cursorTracer ) )
         {
             PageCursorUtil.goTo( cursor, "header data", state.pageId() );
@@ -833,7 +835,8 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
     private void writeState( PagedFile pagedFile, Header.Writer headerWriter, PageCursorTracer cursorTracer ) throws IOException
     {
         Pair<TreeState,TreeState> states = readStatePages( pagedFile, cursorTracer );
-        TreeState oldestState = TreeStatePair.selectOldestOrInvalid( states );
+        TreeState oldestState = //DatabaseLayout.isReadOnlyDB(databaseName)? states.getLeft() :
+             TreeStatePair.selectOldestOrInvalid( states );
         long pageToOverwrite = oldestState.pageId();
         Root root = this.root;
         try ( PageCursor cursor = pagedFile.io( pageToOverwrite, PagedFile.PF_SHARED_WRITE_LOCK, cursorTracer ) )
@@ -1393,7 +1396,7 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
      */
     public Writer<KEY,VALUE> writer( double ratioToKeepInLeftOnSplit, PageCursorTracer cursorTracer ) throws IOException
     {
-        assertNotReadOnly( "Open tree writer." );
+        //assertNotReadOnly( "Open tree writer." );
         return unsafeWriter( ratioToKeepInLeftOnSplit, cursorTracer );
     }
 

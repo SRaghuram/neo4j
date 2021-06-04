@@ -40,14 +40,7 @@ import org.neo4j.collection.PrimitiveLongArrayQueue;
 import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.counts.CountsStorage;
 import org.neo4j.exceptions.UnderlyingStorageException;
-import org.neo4j.index.internal.gbptree.GBPTree;
-import org.neo4j.index.internal.gbptree.GBPTreeConsistencyCheckVisitor;
-import org.neo4j.index.internal.gbptree.GBPTreeVisitor;
-import org.neo4j.index.internal.gbptree.MetadataMismatchException;
-import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
-import org.neo4j.index.internal.gbptree.Seeker;
-import org.neo4j.index.internal.gbptree.TreeFileNotFoundException;
-import org.neo4j.index.internal.gbptree.Writer;
+import org.neo4j.index.internal.gbptree.*;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -155,7 +148,7 @@ public class GBPTreeGenericCountsStore implements CountsStorage
         try
         {
             return new GBPTree<>( pageCache, file, layout, GBPTree.NO_MONITOR, header, header, recoveryCollector, readOnlyChecker, pageCacheTracer,
-                    immutable.empty(), databaseName, name );
+                    immutable.with(GBPTreeOpenOptions.OPEN_EVEN_IF_READONLY), databaseName, name );
         }
         catch ( TreeFileNotFoundException e )
         {
@@ -172,7 +165,7 @@ public class GBPTreeGenericCountsStore implements CountsStorage
         // Execute the initial counts building if we need to, i.e. if instantiation of this counts store had to create it
         if ( rebuilder != null )
         {
-            checkState( !readOnlyChecker.isReadOnly(), "Counts store needs rebuilding, most likely this database needs to be recovered." );
+            //checkState( !readOnlyChecker.isReadOnly(), "Counts store needs rebuilding, most likely this database needs to be recovered." );
             try ( CountUpdater updater = directUpdater( cursorTracer ) )
             {
                 rebuilder.rebuild( updater, cursorTracer, memoryTracker );

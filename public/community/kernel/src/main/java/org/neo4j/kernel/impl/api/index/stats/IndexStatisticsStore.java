@@ -30,12 +30,7 @@ import java.util.function.BiConsumer;
 
 import org.neo4j.annotations.documented.ReporterFactory;
 import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
-import org.neo4j.index.internal.gbptree.GBPTree;
-import org.neo4j.index.internal.gbptree.GBPTreeConsistencyCheckVisitor;
-import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
-import org.neo4j.index.internal.gbptree.Seeker;
-import org.neo4j.index.internal.gbptree.TreeFileNotFoundException;
-import org.neo4j.index.internal.gbptree.Writer;
+import org.neo4j.index.internal.gbptree.*;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -99,7 +94,7 @@ public class IndexStatisticsStore extends LifecycleAdapter implements IndexStati
         try
         {
             tree = new GBPTree<>( pageCache, path, layout, GBPTree.NO_MONITOR, GBPTree.NO_HEADER_READER, GBPTree.NO_HEADER_WRITER,
-                    recoveryCleanupWorkCollector, readOnlyChecker, pageCacheTracer, immutable.empty(), databaseName, "Statistics store" );
+                    recoveryCleanupWorkCollector, readOnlyChecker, pageCacheTracer, immutable.with(GBPTreeOpenOptions.OPEN_EVEN_IF_READONLY), databaseName, "Statistics store" );
         }
         catch ( TreeFileNotFoundException e )
         {

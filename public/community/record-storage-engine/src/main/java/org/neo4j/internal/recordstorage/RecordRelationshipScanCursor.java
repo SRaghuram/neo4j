@@ -38,7 +38,7 @@ public class RecordRelationshipScanCursor extends RecordRelationshipCursor imple
     private boolean open;
     private boolean batched;
 
-    RecordRelationshipScanCursor( RelationshipStore relationshipStore, PageCursorTracer cursorTracer )
+    protected RecordRelationshipScanCursor( RelationshipStore relationshipStore, PageCursorTracer cursorTracer )
     {
         super( relationshipStore, cursorTracer );
     }

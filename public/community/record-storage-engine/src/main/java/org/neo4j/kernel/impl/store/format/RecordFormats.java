@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.store.format;
 
 import org.neo4j.annotations.service.Service;
+import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.MetaDataRecord;
@@ -137,5 +138,14 @@ public interface RecordFormats
     default RecordFormats[] compatibleVersionsForRollingUpgrade()
     {
         return new RecordFormats[0];
+    }
+
+    public default RecordFormats setParent(NeoStores neoStores)
+    {
+        return this;
+    }
+    public default  NeoStores getParent()
+    {
+        return null;
     }
 }

@@ -21,6 +21,7 @@ package org.neo4j.kernel.impl.storemigration;
 
 import java.nio.file.Path;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 
@@ -28,9 +29,9 @@ class LegacyDatabaseLayout extends DatabaseLayout
 {
     private final LegacyTransactionLogsLocator logsLocator;
 
-    LegacyDatabaseLayout( Neo4jLayout storeLayout, String databaseName, LegacyTransactionLogsLocator logsLocator )
+    LegacyDatabaseLayout( Neo4jLayout storeLayout, String databaseName, LegacyTransactionLogsLocator logsLocator, Config config )
     {
-        super( storeLayout, databaseName );
+        super( storeLayout, databaseName, config, null );
         this.logsLocator = logsLocator;
     }
 

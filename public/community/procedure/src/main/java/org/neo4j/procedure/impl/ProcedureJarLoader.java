@@ -93,6 +93,7 @@ class ProcedureJarLoader
         Callables out = new Callables();
         for ( URL jarFile : jarFilesURLs )
         {
+            System.out.println("Loading from [" + jarFile.getPath() + "]");
             loadProcedures( jarFile, loader, out );
         }
         return out;
@@ -137,7 +138,7 @@ class ProcedureJarLoader
             throw new RuntimeException( e );
         }
     }
-
+static int count = 0, badCount = 0;
     private RawIterator<Class<?>,IOException> listClassesIn( URL jar, ClassLoader loader ) throws IOException
     {
         ZipInputStream zip = new ZipInputStream( jar.openStream() );
@@ -162,7 +163,6 @@ class ProcedureJarLoader
                         if ( name.endsWith( ".class" ) )
                         {
                             String className = name.substring( 0, name.length() - ".class".length() ).replace( '/', '.' );
-
                             try
                             {
                                 Class<?> aClass = loader.loadClass( className );
@@ -171,11 +171,17 @@ class ProcedureJarLoader
                                 // This way, even if some of the classes in a jar cannot be loaded, we still check
                                 // the others.
                                 aClass.getDeclaredMethods();
+                                count++;
                                 return aClass;
                             }
-                            catch ( UnsatisfiedLinkError | NoClassDefFoundError | VerifyError | Exception e )
+                            catch (  UnsatisfiedLinkError | NoClassDefFoundError | VerifyError | Exception e )
                             {
                                 log.warn( "Failed to load `%s` from plugin jar `%s`: %s", className, jar.getFile(), e.getMessage() );
+                            }
+                            catch ( IncompatibleClassChangeError ie)
+                            {
+                                log.warn( "11Failed to load `%s` from plugin jar `%s`: %s", className, jar.getFile(), ie.getMessage() );
+                                System.out.println( "["+ (++badCount)+"]["+(count++)+"] Failed to load ["+ className+"]["+ ie.getMessage() );
                             }
                         }
                     }

@@ -134,7 +134,7 @@ public class LogsUpgrader
 
     private DatabaseLayout buildLegacyLogsLayout( DatabaseLayout databaseLayout )
     {
-        return new LegacyDatabaseLayout( databaseLayout.getNeo4jLayout(), databaseLayout.getDatabaseName(), legacyLogsLocator );
+        return new LegacyDatabaseLayout( databaseLayout.getNeo4jLayout(), databaseLayout.getDatabaseName(), legacyLogsLocator, config );
     }
 
     private LogFiles buildLogFiles( DatabaseLayout layout )

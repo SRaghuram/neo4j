@@ -158,6 +158,10 @@ public interface Configuration
         return true;
     }
 
+    default void setParallelRecordReads( boolean allow )
+    {
+    }
+
     /**
      * Controls whether or not to read records in parallel in stages where there's concurrent record writing.
      * Enabling will probably increase concurrent I/O to a point which reduces performance if underlying storage
@@ -269,10 +273,22 @@ public interface Configuration
             return defaults.parallelRecordWrites();
         }
 
+        //@Override
+        //public boolean parallelRecordReads()
+        //{
+        //    return defaults.parallelRecordReads();
+       // }
+        boolean allowParallelRecordReads = true;
+        @Override
+        public void setParallelRecordReads( boolean allow )
+        {
+            allowParallelRecordReads = allow;
+        }
         @Override
         public boolean parallelRecordReads()
         {
-            return defaults.parallelRecordReads();
+            // Defaults to true since this benefits most environments
+            return allowParallelRecordReads;
         }
 
         @Override

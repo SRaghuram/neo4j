@@ -35,6 +35,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.DatabaseReadOnlyChecker;
 import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.function.Predicates;
+import org.neo4j.index.internal.gbptree.GBPTreeOpenOptions;
 import org.neo4j.internal.diagnostics.DiagnosticsLogger;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.id.FreeIds;
@@ -43,10 +44,12 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdSequence;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.id.IdValidator;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.format.CSR.CSRBaseUtils;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.Record;
@@ -100,6 +103,8 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
 
     private final String databaseName;
     private final ImmutableSet<OpenOption> openOptions;
+    public static boolean[] accessTest = new boolean[]{false, false};
+    private boolean[][] storetypeAccessed = new boolean[2][StoreType.values().length];
 
     /**
      * Opens and validates the store contained in <CODE>file</CODE>
@@ -145,6 +150,10 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
         this.openOptions = openOptions;
         this.readOnlyChecker = readOnlyChecker;
         this.log = logProvider.getLog( getClass() );
+        for (int i = 0; i < StoreType.values().length; i++) {
+            storetypeAccessed[0][i] = false;
+            storetypeAccessed[1][i] = false;
+        }
     }
 
     protected void initialise( boolean createIfNotExists, PageCursorTracer cursorTracer )
@@ -162,7 +171,15 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
             closeAndThrow( e );
         }
     }
-
+    protected DatabaseLayout layout;
+    private NeoStores parentNeoStores;
+    private StoreType storeType;
+    public void setContext( NeoStores neoStores, StoreType storeType, DatabaseLayout layout)
+    {
+        this.parentNeoStores = neoStores;
+        this.storeType = storeType;
+        this.layout = layout;
+    }
     private void closeAndThrow( Exception e )
     {
         closeStoreFile();
@@ -233,7 +250,7 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
 
                     // Create the id generator, and also open it because some stores may need the id generator when initializing their store
                     idGenerator = idGeneratorFactory.create( pageCache, idFile, idType, getNumberOfReservedLowIds(), false, recordFormat.getMaxId(),
-                            readOnlyChecker, configuration, cursorTracer, openOptions );
+                            readOnlyChecker, configuration, cursorTracer, openOptions);//.newWith(GBPTreeOpenOptions.READONLY_ANY_STATE) );
 
                     // Map the file (w/ the CREATE flag) and initialize the header
                     pagedFile = pageCache.map( storageFile, filePageSize, databaseName, openOptions.newWith( CREATE ) );
@@ -622,7 +639,7 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
     private void openIdGenerator( PageCursorTracer cursorTracer ) throws IOException
     {
         idGenerator = idGeneratorFactory.open( pageCache, idFile, getIdType(), () -> scanForHighId( cursorTracer ), recordFormat.getMaxId(), readOnlyChecker,
-                configuration, cursorTracer, openOptions );
+                configuration, cursorTracer, openOptions);//.newWith(GBPTreeOpenOptions.READONLY_ANY_STATE) );
     }
 
     /**
@@ -866,17 +883,30 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
         // Mark the record with this id regardless of whether or not we load the contents of it.
         // This is done in this method since there are multiple call sites and they all want the id
         // on that record, so it's to ensure it isn't forgotten.
-        record.setId( id );
-        long pageId = pageIdForRecord( id );
-        int offset = offsetForId( id );
-        if ( cursor.next( pageId ) )
+        if (accessTest[0] && !storetypeAccessed[0][this.storeType.ordinal()])
         {
-            cursor.setOffset( offset );
-            readRecordFromPage( id, record, mode, cursor );
+            storetypeAccessed[0][this.storeType.ordinal()] = true;
+            System.out.println("Read Access["+this.storeType.name()+"]\n"+ Thread.currentThread().getStackTrace());
         }
-        else
+        if (!this.layout.getDatabaseName().equalsIgnoreCase("system") && this.storeType == StoreType.PROPERTY)
+            record.setId( id );
+        if (!this.layout.getDatabaseName().equalsIgnoreCase("system"))
+            record.setId( id );
+        if (this.layout.getDatabaseName().endsWith(".gds") && CSRBaseUtils.gdsStoreExists(this.layout.getDatabaseName()) &&
+                StoreType.isInMemoryStore(this.storeType))
         {
-            verifyAfterNotRead( record, mode );
+            recordFormat.read( record, cursor, FORCE, recordSize, recordsPerPage );
+        }
+        else {
+            record.setId(id);
+            long pageId = pageIdForRecord(id);
+            int offset = offsetForId(id);
+            if (cursor.next(pageId)) {
+                cursor.setOffset(offset);
+                readRecordFromPage(id, record, mode, cursor);
+            } else {
+                verifyAfterNotRead(record, mode);
+            }
         }
     }
 
@@ -893,12 +923,12 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
             long id = record.getId() + 1;
             record.setId( id );
             long pageId = cursor.getCurrentPageId();
-            if ( (cursor.getOffset() >= recordsEndOffset) || (pageId < 0) )
-            {
-                if ( !cursor.next() )
-                {
-                    verifyAfterNotRead( record, mode );
-                    return;
+            if (!this.layout.getDatabaseName().endsWith(".gds") || !CSRBaseUtils.gdsStoreExists(this.layout.getDatabaseName())) {
+                if ((cursor.getOffset() >= recordsEndOffset) || (pageId < 0)) {
+                    if (!cursor.next()) {
+                        verifyAfterNotRead(record, mode);
+                        return;
+                    }
                 }
             }
             readRecordFromPage( id, record, mode, cursor );
@@ -928,6 +958,11 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
         long id = record.getId();
         IdValidator.assertValidId( getIdType(), id, recordFormat.getMaxId() );
 
+        if (accessTest[1] && !storetypeAccessed[1][this.storeType.ordinal()])
+        {
+            storetypeAccessed[1][this.storeType.ordinal()] = true;
+            System.out.println("Write Access["+this.storeType.name()+"]\n"+ Thread.currentThread().getStackTrace());
+        }
         long pageId = pageIdForRecord( id );
         int offset = offsetForId( id );
         try
@@ -1127,4 +1162,17 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
     {
         return ((IntStoreHeader) storeHeader).value();
     }
+
+    @Override
+    public PagedFile getPagedFile()
+    {
+        return this.pagedFile;
+    }
+
+    @Override
+    public NeoStores getParentNeoStore()
+    {
+        return parentNeoStores;
+    }
+
 }

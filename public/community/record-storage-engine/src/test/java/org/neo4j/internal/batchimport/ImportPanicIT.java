@@ -42,6 +42,7 @@ import org.neo4j.internal.batchimport.input.csv.CsvInput;
 import org.neo4j.internal.batchimport.input.csv.DataFactories;
 import org.neo4j.internal.batchimport.input.csv.DataFactory;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
@@ -84,8 +85,8 @@ class ImportPanicIT
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             BatchImporter importer = new ParallelBatchImporter(
-                    databaseLayout, testDirectory.getFileSystem(), PageCacheTracer.NULL,
-                    Configuration.DEFAULT, NullLogService.getInstance(), ExecutionMonitor.INVISIBLE, AdditionalInitialIds.EMPTY,
+                    databaseLayout, testDirectory.getFileSystem(), null, PageCacheTracer.NULL,
+                    Configuration.DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), AdditionalInitialIds.EMPTY,
                     Config.defaults(), StandardV3_4.RECORD_FORMATS, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY,
                     LogFilesInitializer.NULL, EmptyMemoryTracker.INSTANCE );
             Iterable<DataFactory> nodeData =

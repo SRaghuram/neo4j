@@ -107,7 +107,8 @@ public class CountsComputer implements CountsBuilder
         try ( NodeLabelsCache cache = new NodeLabelsCache( numberArrayFactory, nodes.getHighId(), highLabelId, memoryTracker ) )
         {
             Configuration configuration = Configuration.defaultConfiguration( databaseLayout.databaseDirectory() );
-
+            if (databaseLayout.getDatabaseName().endsWith(".gds"))
+                configuration.setParallelRecordReads( false );
             // Count nodes
             superviseDynamicExecution(
                     new NodeCountsStage( configuration, cache, nodes, highLabelId, countsUpdater, progressMonitor, pageCacheTracer ) );

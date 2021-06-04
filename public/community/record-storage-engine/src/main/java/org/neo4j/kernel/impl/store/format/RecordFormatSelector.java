@@ -37,6 +37,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.MetaDataStore;
+import org.neo4j.kernel.impl.store.format.CSR.CSRBaseUtils;
 import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
 import org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -158,6 +159,13 @@ public class RecordFormatSelector
                 if ( value != MetaDataRecordFormat.FIELD_NOT_PRESENT )
                 {
                     String storeVersion = MetaDataStore.versionLongToString( value );
+                    boolean gdsStoreExists = (CSRBaseUtils.getInstance(databaseLayout.getDatabaseName()) != null &&
+                            CSRBaseUtils.getInstance(databaseLayout.getDatabaseName()).csrSetup());
+                    if (databaseLayout.getDatabaseName().endsWith(".gds") && gdsStoreExists)
+                    {
+                        System.out.println("Setting store version for ["+databaseLayout.getDatabaseName()+"] with CSR160");
+                        storeVersion = "CSR160";
+                    }
 
                     for ( RecordFormats format : allFormats() )
                     {
@@ -329,7 +337,7 @@ public class RecordFormatSelector
     }
 
     @Nonnull
-    private static RecordFormats selectSpecificFormat( String recordFormat )
+    public static RecordFormats selectSpecificFormat( String recordFormat )
     {
         RecordFormats formats = loadRecordFormat( recordFormat );
         if ( formats == null )

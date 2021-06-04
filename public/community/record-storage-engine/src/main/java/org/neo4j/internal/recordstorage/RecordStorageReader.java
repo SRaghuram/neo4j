@@ -29,6 +29,10 @@ import org.neo4j.common.EntityType;
 import org.neo4j.common.TokenNameLookup;
 import org.neo4j.counts.CountsAccessor;
 import org.neo4j.internal.counts.RelationshipGroupDegreesStore;
+import org.neo4j.internal.recordstorage.CSR.CSRRecordNodeCursor;
+import org.neo4j.internal.recordstorage.CSR.CSRRecordPropertyCursor;
+import org.neo4j.internal.recordstorage.CSR.CSRRecordRelationshipScanCursor;
+import org.neo4j.internal.recordstorage.CSR.CSRRecordRelationshipTraversalCursor;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
@@ -39,6 +43,7 @@ import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.RelationshipGroupStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
+import org.neo4j.kernel.impl.store.format.StoreVersion;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.AllRelationshipsScan;
@@ -67,7 +72,7 @@ public class RecordStorageReader implements StorageReader
 
     private boolean closed;
 
-    RecordStorageReader( TokenHolders tokenHolders, NeoStores neoStores, CountsAccessor counts, RelationshipGroupDegreesStore groupDegreesStore,
+    protected RecordStorageReader( TokenHolders tokenHolders, NeoStores neoStores, CountsAccessor counts, RelationshipGroupDegreesStore groupDegreesStore,
             SchemaCache schemaCache )
     {
         this.tokenHolders = tokenHolders;
@@ -88,6 +93,7 @@ public class RecordStorageReader implements StorageReader
     {
         this( null, stores, null, null, null );
     }
+
 
     @Override
     public Iterator<IndexDescriptor> indexGetForSchema( SchemaDescriptor descriptor )

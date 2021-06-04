@@ -27,5 +27,6 @@ import java.nio.file.OpenOption;
 public enum GBPTreeOpenOptions implements OpenOption
 {
     // do not flush index file on close
-    NO_FLUSH_ON_CLOSE
+    NO_FLUSH_ON_CLOSE,
+    OPEN_EVEN_IF_READONLY
 }

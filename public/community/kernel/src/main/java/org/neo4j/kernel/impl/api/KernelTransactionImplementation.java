@@ -831,6 +831,8 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     public Write dataWrite() throws InvalidTransactionTypeKernelException
     {
         accessCapability.assertCanWrite();
+        if (this.getDatabaseName().endsWith(".gds"))
+            throw new InvalidTransactionTypeKernelException("Only Read operations are allowed on database ["+this.getDatabaseName()+"]");
         upgradeToDataWrites();
         return operations;
     }

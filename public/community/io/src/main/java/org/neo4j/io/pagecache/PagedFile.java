@@ -22,6 +22,7 @@ package org.neo4j.io.pagecache;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import org.neo4j.io.pagecache.impl.muninn.MuninnPagedFile;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 /**
@@ -199,4 +200,14 @@ public interface PagedFile extends AutoCloseable
      * An name of the database the mapped file belongs to.
      */
     String getDatabaseName();
+    public default void increaseLastPageIdTo(long pageId)
+    {
+        //do nothing on default
+        if (this instanceof MuninnPagedFile)
+        {
+            ((MuninnPagedFile)this).increaseLastPageIdTo( 0 );
+        }
+        else
+            System.out.println("Default increaseLastPageIdTo");
+    }
 }

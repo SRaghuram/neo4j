@@ -146,11 +146,13 @@ public final class LogHeaderReader
 
     static long decodeLogVersion( long encLogVersion )
     {
-        return encLogVersion & 0x00FF_FFFF_FFFF_FFFFL;
+        //return encLogVersion & 0x00FF_FFFF_FFFF_FFFFL;
+        return (((encLogVersion & 0x00FF_FFFF_FFFF_FFFFL) << 8) >> 8);
     }
 
     static byte decodeLogFormatVersion( long encLogVersion )
     {
         return (byte) ((encLogVersion >> 56) & 0xFF);
     }
+
 }

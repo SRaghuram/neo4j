@@ -55,23 +55,23 @@ import static org.neo4j.kernel.impl.store.record.RecordLoad.ALWAYS;
 public class RecordPropertyCursor extends PropertyRecord implements StoragePropertyCursor
 {
     private static final int MAX_BYTES_IN_SHORT_STRING_OR_SHORT_ARRAY = 32;
-    private static final int INITIAL_POSITION = -1;
+    protected static final int INITIAL_POSITION = -1;
     public static final int DEFAULT_PROPERTY_BUFFER_CAPACITY = 512;
 
-    private final PropertyStore propertyStore;
+    protected final PropertyStore propertyStore;
     private final PageCursorTracer cursorTracer;
     private final MemoryTracker memoryTracker;
-    private long next;
+    protected long next;
     private int block;
     private ScopedBuffer scopedBuffer;
     private ByteBuffer buffer;
     private PageCursor page;
     private PageCursor stringPage;
     private PageCursor arrayPage;
-    private boolean open;
+    protected boolean open;
     private RecordLoadOverride loadMode;
 
-    RecordPropertyCursor( PropertyStore propertyStore, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+    protected RecordPropertyCursor( PropertyStore propertyStore, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         super( NO_ID );
         this.propertyStore = propertyStore;
@@ -96,7 +96,7 @@ public class RecordPropertyCursor extends PropertyRecord implements StoragePrope
      * In this implementation property ids are unique among nodes AND relationships so they all init the same way
      * @param reference properties reference, actual property record id.
      */
-    private void init( long reference )
+    protected void init( long reference )
     {
         if ( getId() != NO_ID )
         {

@@ -20,9 +20,12 @@
 package org.neo4j.tooling;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.commandline.Util;
 import org.neo4j.configuration.Config;
 import org.neo4j.csv.reader.CharSeeker;
 import org.neo4j.csv.reader.CharSeekers;
@@ -44,7 +47,9 @@ import org.neo4j.internal.batchimport.staging.SpectrumExecutionMonitor;
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemUtils;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
@@ -52,9 +57,12 @@ import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.logging.log4j.Log4jLogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 
 import static java.lang.System.currentTimeMillis;
+import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.configuration.SettingValueParsers.parseLongWithUnit;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.calculateMaxMemoryFromPercent;
@@ -168,13 +176,14 @@ public class QuickImport
                 System.out.println( "Seed " + randomSeed );
                 final JobScheduler jobScheduler = life.add( createScheduler() );
                 boolean verbose = args.getBoolean( "v" );
+                OutputStream outputStream = FileSystemUtils.createOrOpenAsOutputStream( fileSystem, dbConfig.get( store_internal_log_path ), true );
+                Log4jLogProvider logProvider = Util.configuredLogProvider( dbConfig, outputStream );
                 ExecutionMonitor monitor = verbose ? new SpectrumExecutionMonitor( 2, TimeUnit.SECONDS, System.out, 100 ) : defaultVisible();
                 consumer = BatchImporterFactory.withHighestPriority().instantiate(
-                        DatabaseLayout.ofFlat( dir ), fileSystem, PageCacheTracer.NULL, importConfig, new SimpleLogService( logging, logging ),
-                        monitor, EMPTY, dbConfig, RecordFormatSelector.selectForConfig( dbConfig, logging ), NO_MONITOR, jobScheduler,
-                        Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
+                        DatabaseLayout.ofFlat( dir ), fileSystem, null, PageCacheTracer.NULL, importConfig, logProvider,
+                        dbConfig, false, jobScheduler,
+                        Collector.EMPTY, INSTANCE, System.out, System.err );
             }
-            consumer.doImport( input );
         }
     }
 

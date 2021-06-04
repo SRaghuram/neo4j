@@ -563,7 +563,7 @@ public class StoreUpgraderTest
             MigrationProgressMonitor progressMonitor, PageCacheTracer pageCacheTracer, boolean forceUpgrade )
     {
         NullLogService instance = NullLogService.getInstance();
-        BatchImporterFactory batchImporterFactory = BatchImporterFactory.withHighestPriority();
+        BatchImporterFactory batchImporterFactory = (BatchImporterFactory) BatchImporterFactory.withHighestPriority();
         RecordStorageMigrator defaultMigrator = new RecordStorageMigrator( fileSystem, pageCache, getTuningConfig(), instance, jobScheduler, pageCacheTracer,
                 batchImporterFactory, INSTANCE );
         StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();

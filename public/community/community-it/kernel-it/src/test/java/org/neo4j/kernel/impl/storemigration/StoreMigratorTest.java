@@ -94,7 +94,7 @@ class StoreMigratorTest
     @Inject
     private RandomRule random;
     private JobScheduler jobScheduler;
-    private final BatchImporterFactory batchImporterFactory = BatchImporterFactory.withHighestPriority();
+    private final BatchImporterFactory batchImporterFactory = (BatchImporterFactory) BatchImporterFactory.withHighestPriority();
 
     @BeforeEach
     void setUp()

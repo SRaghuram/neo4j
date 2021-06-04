@@ -180,4 +180,6 @@ public interface StorageEngine extends Lifecycle
      * @return an interface for accessing data in the storage.
      */
     StorageReader newReader();
+    default void initiateForCSR()
+    {};
 }

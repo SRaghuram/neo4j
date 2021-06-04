@@ -126,7 +126,8 @@ public class ModularDatabaseCreationContext implements DatabaseCreationContext
         this.idController = idContext.getIdController();
         this.transactionsMemoryPool = globalModule.getTransactionsMemoryPool();
         this.otherMemoryPool = globalModule.getOtherMemoryPool();
-        this.databaseLayout = globalModule.getNeo4jLayout().databaseLayout( namedDatabaseId.name() );
+        this.dbmsReadOnlyChecker = globalModule.getDbmsReadOnlyChecker();
+        this.databaseLayout = globalModule.getNeo4jLayout().databaseLayout( namedDatabaseId.name(), dbmsReadOnlyChecker );
         this.databaseLogService = new DatabaseLogService( namedDatabaseId, globalModule.getLogService() );
         this.scheduler = globalModule.getJobScheduler();
         this.globalDependencies = globalDependencies;
@@ -158,7 +159,6 @@ public class ModularDatabaseCreationContext implements DatabaseCreationContext
         this.accessCapabilityFactory = editionComponents.getAccessCapabilityFactory();
         this.leaseService = leaseService;
         this.startupController = editionComponents.getStartupController();
-        this.dbmsReadOnlyChecker = globalModule.getDbmsReadOnlyChecker();
     }
 
     @Override

@@ -21,16 +21,28 @@ package org.neo4j.internal.batchimport;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
+import org.neo4j.importer.PrintingImportLogicMonitor;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
+import org.neo4j.internal.batchimport.staging.SpectrumExecutionMonitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.kernel.impl.store.format.RecordFormats;
-import org.neo4j.logging.internal.LogService;
+import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.storageengine.api.LogFilesInitializer;
+
+import java.io.PrintStream;
+import java.util.concurrent.TimeUnit;
+
+import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
+import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectSpecificFormat;
 
 @ServiceProvider
 public class StandardBatchImporterFactory extends BatchImporterFactory
@@ -47,6 +59,25 @@ public class StandardBatchImporterFactory extends BatchImporterFactory
     }
 
     @Override
+    public BatchImporter instantiate(DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
+                                     PageCacheTracer pageCacheTracer, Configuration configuration, Log4jLogProvider logProvider,
+                                     Config dbConfig, boolean verbose, JobScheduler jobScheduler, Collector badCollector,
+                                     MemoryTracker memoryTracker, PrintStream stdOut, PrintStream stdErr) {
+        return  instantiate( directoryStructure,
+                fileSystem,
+                externalPageCache,
+                pageCacheTracer,
+                configuration,
+                logProvider,
+                dbConfig,
+                verbose,
+                jobScheduler,
+                badCollector,
+                memoryTracker,
+                stdOut,  stdErr, null);
+    }
+
+    /*@Override
     public BatchImporter instantiate( DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem,
             PageCacheTracer pageCacheTracer, Configuration config,
             LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats,
@@ -55,5 +86,37 @@ public class StandardBatchImporterFactory extends BatchImporterFactory
     {
         return new ParallelBatchImporter( directoryStructure, fileSystem, pageCacheTracer, config, logService, executionMonitor,
                 additionalInitialIds, dbConfig, recordFormats, monitor, scheduler, badCollector, logFilesInitializer, memoryTracker );
+    }*/
+    @Override
+    public ParallelBatchImporter instantiate(DatabaseLayout directoryStructure,
+                                             FileSystemAbstraction fileSystem,
+                                             PageCache externalPageCache,
+                                             PageCacheTracer pageCacheTracer,
+                                             Configuration config,
+                                             Log4jLogProvider logProvider,
+                                             Config dbConfig,
+                                             boolean verbose,
+                                             JobScheduler jobScheduler,
+                                             Collector badCollector,
+                                             MemoryTracker memoryTracker, PrintStream stdOut, PrintStream stdErr, String graphName )
+    {
+        ExecutionMonitor executionMonitor = verbose ? new SpectrumExecutionMonitor( 2, TimeUnit.SECONDS, stdOut,
+                SpectrumExecutionMonitor.DEFAULT_WIDTH ) : ExecutionMonitors.defaultVisible();
+        //PrintingImportLogicMonitor pLogicMonitor = new PrintingImportLogicMonitor(stdOut, stdErr);
+        return new ParallelBatchImporter( directoryStructure,
+                fileSystem,
+                externalPageCache,
+                pageCacheTracer,
+                config,
+                new SimpleLogService(NullLogProvider.getInstance(), logProvider),
+                executionMonitor,
+                EMPTY,
+                dbConfig,
+                directoryStructure.getDatabaseName().endsWith(".gds") ? selectSpecificFormat("CSR") : RecordFormatSelector.selectForConfig(dbConfig, logProvider),
+                ImportLogic.NO_MONITOR,
+                jobScheduler,
+                badCollector,
+                TransactionLogInitializer.getLogFilesInitializer(),
+                memoryTracker, graphName );
     }
 }

@@ -20,6 +20,10 @@
 package org.neo4j.configuration.helpers;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
+
+import java.io.File;
+import java.nio.file.Path;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.read_only_database_default;
@@ -44,13 +48,25 @@ public interface DbmsReadOnlyChecker
 
     boolean isReadOnly( String databaseName );
 
+    default boolean isAliasDatabaseName( String databaseName )
+    {
+        return false;
+    }
+
     class Default implements DbmsReadOnlyChecker
     {
         private final Config config;
+        private Path dbDir = null;
 
         public Default( Config config )
         {
             this.config = config;
+        }
+
+        public Default( Config config, Path dbPath )
+        {
+            this.config = config;
+            this.dbDir = dbPath;
         }
 
         @Override
@@ -59,18 +75,48 @@ public interface DbmsReadOnlyChecker
             return check( config, databaseName );
         }
 
-        private static boolean check( Config config, String databaseName )
+        private boolean check( Config config, String databaseName )
         {
             //System database can't be read only
             if ( SYSTEM_DATABASE_NAME.equals( databaseName ) )
             {
                 return false;
             }
-
             return config.get( read_only_databases ).contains( databaseName ) ||
-                    defaultsToReadOnlyAndNotWritable( config, databaseName );
+                    defaultsToReadOnlyAndNotWritable( config, databaseName ) || bySuffixInName ( config, databaseName );
         }
 
+        @Override
+        public boolean isAliasDatabaseName( String databaseName )
+        {
+            return bySuffixInName ( config, databaseName );
+        }
+
+        public boolean bySuffixInName( Config config, String name)
+        {
+            String[] dbParts = name.split("\\.");
+            if (dbParts.length == 1)
+                return false;
+            String lastSuffix = dbParts[ dbParts.length -1 ];
+            String dbName = dbParts[ dbParts.length -2 ];
+            boolean bySuffixInName = false;
+            String readonlySuffix = config.get( GraphDatabaseInternalSettings.readonly_database_name_suffix );
+            if (readonlySuffix != null) {
+                String[] suffixes = readonlySuffix.split(";");
+                for (String suffix : suffixes)
+                    if (lastSuffix.equalsIgnoreCase( suffix )) {
+                        bySuffixInName = true;
+                        break;
+                    }
+            }
+
+            if (dbDir != null)
+            {
+                if (!(new File(dbDir+File.separator+ dbName)).exists())
+                   return false;
+            }
+            return bySuffixInName;
+        }
         private static boolean defaultsToReadOnlyAndNotWritable( Config config, String databaseName )
         {
             return config.get( read_only_database_default ) && !config.get( writable_databases ).contains( databaseName );

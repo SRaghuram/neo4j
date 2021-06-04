@@ -22,10 +22,9 @@ package org.neo4j.kernel.impl.storemigration;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.collections.impl.factory.Sets;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.Writer;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,20 +39,9 @@ import org.neo4j.common.EntityType;
 import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.batchimport.AdditionalInitialIds;
-import org.neo4j.internal.batchimport.BatchImporter;
-import org.neo4j.internal.batchimport.BatchImporterFactory;
-import org.neo4j.internal.batchimport.Configuration;
-import org.neo4j.internal.batchimport.ImportLogic;
-import org.neo4j.internal.batchimport.InputIterable;
-import org.neo4j.internal.batchimport.InputIterator;
-import org.neo4j.internal.batchimport.input.Collector;
-import org.neo4j.internal.batchimport.input.IdType;
-import org.neo4j.internal.batchimport.input.Input;
+import org.neo4j.internal.batchimport.*;
+import org.neo4j.internal.batchimport.input.*;
 import org.neo4j.internal.batchimport.input.Input.Estimates;
-import org.neo4j.internal.batchimport.input.InputChunk;
-import org.neo4j.internal.batchimport.input.InputEntityVisitor;
-import org.neo4j.internal.batchimport.input.ReadableGroups;
 import org.neo4j.internal.batchimport.staging.CoarseBoundedProgressExecutionMonitor;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
@@ -104,6 +92,7 @@ import org.neo4j.kernel.impl.transaction.log.files.RangeLogVersionVisitor;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.LogFilesInitializer;
@@ -171,12 +160,12 @@ public class RecordStorageMigrator extends AbstractStoreMigrationParticipant
     private final PageCache pageCache;
     private final JobScheduler jobScheduler;
     private final PageCacheTracer cacheTracer;
-    private final BatchImporterFactory batchImporterFactory;
+    private final BaseBatchImporterFactory batchImporterFactory;
     private final MemoryTracker memoryTracker;
 
-    public RecordStorageMigrator( FileSystemAbstraction fileSystem, PageCache pageCache, Config config,
-            LogService logService, JobScheduler jobScheduler, PageCacheTracer cacheTracer,
-            BatchImporterFactory batchImporterFactory, MemoryTracker memoryTracker )
+    public RecordStorageMigrator(FileSystemAbstraction fileSystem, PageCache pageCache, Config config,
+                                 LogService logService, JobScheduler jobScheduler, PageCacheTracer cacheTracer,
+                                 BaseBatchImporterFactory batchImporterFactory, MemoryTracker memoryTracker )
     {
         super( "Store files" );
         this.fileSystem = fileSystem;
@@ -438,18 +427,25 @@ public class RecordStorageMigrator extends AbstractStoreMigrationParticipant
     {
         prepareBatchImportMigration( sourceDirectoryStructure, migrationDirectoryStructure, oldFormat, newFormat );
 
-        try ( NeoStores legacyStore = instantiateLegacyStore( oldFormat, sourceDirectoryStructure ) )
+        Path badFile = sourceDirectoryStructure.file( BadCollector.BAD_FILE_NAME );
+        try (NeoStores legacyStore = instantiateLegacyStore( oldFormat, sourceDirectoryStructure );
+             OutputStream badOutput = new BufferedOutputStream( Files.newOutputStream( badFile ) );
+             Collector badCollector = Collectors.badCollector( badOutput, 0 ))
         {
             Configuration importConfig = new Configuration.Overridden( defaultConfiguration( sourceDirectoryStructure.databaseDirectory() ), config );
             AdditionalInitialIds additionalInitialIds =
                     readAdditionalIds( lastTxId, lastTxChecksum, lastTxLogVersion, lastTxLogByteOffset );
 
             // We have to make sure to keep the token ids if we're migrating properties/labels
+            //BatchImporter importer = batchImporterFactory.instantiate(
+            //        migrationDirectoryStructure, fileSystem, cacheTracer, importConfig, logService,
+            //        migrationBatchImporterMonitor( legacyStore, progressReporter,
+            //                importConfig ), additionalInitialIds, config, newFormat, ImportLogic.NO_MONITOR, jobScheduler, Collector.STRICT,
+            //        LogFilesInitializer.NULL, memoryTracker );
             BatchImporter importer = batchImporterFactory.instantiate(
-                    migrationDirectoryStructure, fileSystem, cacheTracer, importConfig, logService,
-                    migrationBatchImporterMonitor( legacyStore, progressReporter,
-                            importConfig ), additionalInitialIds, config, newFormat, ImportLogic.NO_MONITOR, jobScheduler, Collector.STRICT,
-                    LogFilesInitializer.NULL, memoryTracker );
+                    migrationDirectoryStructure, fileSystem, pageCache, cacheTracer, importConfig, (Log4jLogProvider) logService.getInternalLogProvider(),
+                    config,true, jobScheduler, badCollector,
+                    memoryTracker, null, null );
             InputIterable nodes = () -> legacyNodesAsInput( legacyStore, requiresPropertyMigration, cacheTracer, memoryTracker );
             InputIterable relationships = () -> legacyRelationshipsAsInput( legacyStore, requiresPropertyMigration, cacheTracer, memoryTracker );
             long propertyStoreSize = storeSize( legacyStore.getPropertyStore() ) / 2 +
